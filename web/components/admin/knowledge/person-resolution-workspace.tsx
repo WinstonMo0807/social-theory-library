@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { UserRound, ChevronDown } from "lucide-react";
 import { authorityRequest, type AuthorityDetail } from "@/lib/api/person-authority.client";
 import { RecycleControl } from "@/components/admin/recycle-control";
@@ -90,7 +92,7 @@ export function PersonPicker({ sourceId = "", credential }: { sourceId?: string;
   return <section className={`admin-panel ${styles.panel}`} aria-label={label}>
     <h2>{label}</h2>
     <form className={styles.search} onSubmit={search}><label>{label}<input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={200} placeholder="输入名称或已核验译名" /></label><button className="button secondary" type="submit">查找</button></form>
-    {error ? <Failure message={error} retry={retry} /> : loading ? <p role="status">正在读取人物…</p> : data ? <>
+    {error ? <Failure message={error} retry={retry} /> : loading ? <LoadingState role="status">正在读取人物…</LoadingState> : data ? <>
       <ul className={styles.people}>{data.results.filter((row) => row.id !== sourceId).map((row) => <li key={row.id}><Link prefetch={false} href={sourceId ? personPage(sourceId, row.id) : personPage(row.id)}><PersonLabel person={row} /><b>{sourceId ? "设为保留人物" : "检查重复记录"}</b></Link></li>)}</ul>
       {!data.results.some((row) => row.id !== sourceId) ? <p>未找到符合条件的其他人物，请换一个名称查找。</p> : null}
       {data.has_more ? <p>这里只显示前20项，请补充名称缩小范围。</p> : null}
@@ -106,7 +108,7 @@ export function History({ sourceId, credential }: { sourceId: string; credential
   const { data, error, loading, retry } = useApiResource<MergeHistory[]>(personApi.history(sourceId), credential);
   return <section className={`admin-panel ${styles.panel}`} aria-label="最近合并记录"><div className={styles.heading}><h2>最近合并记录</h2><ActionButton className="button secondary" onClick={retry}>刷新操作记录</ActionButton></div>
     <p>网络中断或重新打开页面后，可在这里核对已保存的操作。最多显示最近20次。</p>
-    {error ? <Failure message={error} retry={retry} /> : loading ? <p role="status">正在读取操作记录…</p> : data?.length ? <ul className={styles.rows}>{data.map((row) => <li key={row.id}><Link prefetch={false} href={personPage(sourceId, "", row.id)}>{row.rolled_back_at ? "已撤回的合并" : "已执行的合并"} · {new Date(row.created_at).toLocaleString("zh-CN")}</Link><small>{row.id}</small></li>)}</ul> : <p>暂无已保存的合并记录。仅此列表为空不能证明仍在传输的请求未执行。</p>}
+    {error ? <Failure message={error} retry={retry} /> : loading ? <LoadingState role="status">正在读取操作记录…</LoadingState> : data?.length ? <ul className={styles.rows}>{data.map((row) => <li key={row.id}><Link prefetch={false} href={personPage(sourceId, "", row.id)}>{row.rolled_back_at ? "已撤回的合并" : "已执行的合并"} · {new Date(row.created_at).toLocaleString("zh-CN")}</Link><small>{row.id}</small></li>)}</ul> : <p>暂无已保存的合并记录。仅此列表为空不能证明仍在传输的请求未执行。</p>}
   </section>;
 }
 
@@ -168,7 +170,7 @@ export function BusinessImpact({ impact }: { impact: PersonBusinessImpact }) {
 export function PreviewLoader({ sourceId, targetId, credential }: { sourceId: string; targetId: string; credential: string }) {
   const resource = useApiResource<PersonPreview>(personApi.preview(sourceId, targetId), credential);
   return <section className={`admin-panel ${styles.panel} ${styles.mergePreview}`} aria-label="合并影响预览"><h2>合并候选比较与影响</h2>
-    {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新预览" /> : resource.loading ? <p role="status">正在核对双方资料与关联…</p> : resource.data ? <MergeReview key={resource.data.fingerprint} preview={resource.data} sourceId={sourceId} targetId={targetId} credential={credential} refresh={resource.retry} /> : null}
+    {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新预览" /> : resource.loading ? <LoadingState role="status">正在核对双方资料与关联…</LoadingState> : resource.data ? <MergeReview key={resource.data.fingerprint} preview={resource.data} sourceId={sourceId} targetId={targetId} credential={credential} refresh={resource.retry} /> : null}
   </section>;
 }
 
@@ -221,7 +223,7 @@ function MergeReview({ preview, sourceId, targetId, credential, refresh }: { pre
 export function RecordWorkspace({ recordId, credential }: { recordId: string; credential: string }) {
   const resource = useApiResource<PersonMerge>(personApi.record(recordId), credential);
   return <section className={`admin-panel ${styles.panel}`} aria-label="人物合并操作记录"><h2>人物合并操作记录</h2>
-    {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新读取操作" /> : resource.loading ? <p role="status">正在核对操作与当前撤回条件…</p> : resource.data ? <RecordReview key={`${resource.data.id}:${resource.data.status}:${rollbackState(resource.data).fingerprint}`} record={resource.data} credential={credential} refresh={resource.retry} /> : null}
+    {resource.error ? <Failure message={resource.error} retry={resource.retry} label="重新读取操作" /> : resource.loading ? <LoadingState role="status">正在核对操作与当前撤回条件…</LoadingState> : resource.data ? <RecordReview key={`${resource.data.id}:${resource.data.status}:${rollbackState(resource.data).fingerprint}`} record={resource.data} credential={credential} refresh={resource.retry} /> : null}
   </section>;
 }
 

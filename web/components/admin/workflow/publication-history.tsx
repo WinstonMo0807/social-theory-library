@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useRef, useState } from "react";
 import type { components } from "@/lib/api/generated/schema";
 import { apiRequest } from "@/lib/api";
@@ -38,7 +40,7 @@ export function PublicationHistory({ editionId, token, canPublish, onChanged }: 
     } finally { submitting.current = false; setBusy(false); }
   }
   return <details className="admin-panel"><summary>公开版本历史</summary>
-    {loading ? <p role="status">正在读取历史…</p> : null}
+    {loading ? <LoadingState role="status">正在读取历史…</LoadingState> : null}
     {error ? <p role="alert">{error}<button type="button" onClick={retry}>重试</button></p> : null}
     {data?.map((row) => <article key={row.id}><strong>第 {row.revision} 次发布</strong><p>{row.title}</p>
       {row.is_current ? <span>当前公开</span> : row.can_rollback ? <button type="button" disabled={!canPublish || busy} onClick={() => void restore(row)}>恢复此公开版本</button> : <span>未曾正式公开，不能恢复</span>}

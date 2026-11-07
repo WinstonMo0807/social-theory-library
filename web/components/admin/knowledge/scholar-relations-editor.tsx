@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -24,7 +26,7 @@ const newRelation = (scholarId:string):ScholarRelation => ({id:"",source_scholar
 export function ScholarRelationsEditor(props:Props) {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<RelationWorkspace key={`${user.id}:${epoch}:${props.scholarId}`} {...props} owner={String(user.id)}/>:<p role="status">正在核对编辑账户…</p>;
+  return user?<RelationWorkspace key={`${user.id}:${epoch}:${props.scholarId}`} {...props} owner={String(user.id)}/>:<LoadingState role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnly=false,onGuardChange,onSaved,owner,sourceRequest,onSourceOpened}:Props&{owner:string}) {
@@ -98,9 +100,9 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
     {!detailOnly?<header className="v307-editor-heading"><div>{!embedded?<Link href={`/admin/scholars/${scholarId}?section=theory`}>返回学者编辑</Link>:null}<h2>{profile?.preferred_name||"学者"} · 学术关系</h2><p>明确两端、方向与出处；保存草稿与公开发布分别进行。</p></div><button type="button" className="button secondary" disabled={busy||ime||Boolean(command.recovery)||!canCreate} onClick={()=>select("")}>新建关系</button></header>:null}
     {error?<p className="form-message" role="alert">{error}<button type="button" disabled={busy||ime||dirty||Boolean(command.recovery)} onClick={()=>{loadedId.current="";setAttempt(value=>value+1);}}>重新读取</button></p>:null}{message?<p role="status">{message}</p>:null}
     {command.recovery?<aside role="status"><p>原操作结果尚未确认。请先查询或停止原请求，不能另建关系或重复发布。</p><button type="button" disabled={busy||ime} onClick={()=>void recover()}>查询原操作</button>{command.canRetry?<button type="button" disabled={busy||ime} onClick={()=>void act("retry")}>重试原操作</button>:null}<button type="button" disabled={busy||ime} onClick={()=>{if(window.confirm("停止尚未执行的原请求？已经完成的操作会返回原结果。"))void recover(true);}}>停止未执行请求</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
-    <div className="scholar-relations-workspace"><aside className="fixed-editor-panel">{!detailOnly?<nav className="scholar-relation-index" aria-label="当前学者关系">{loading?<p>正在读取关系…</p>:collection.results.length?collection.results.map(row=><button type="button" key={row.id} disabled={busy||ime||Boolean(command.recovery)} aria-current={row.id===selectedId?"true":undefined} onClick={()=>select(row.id)}><strong>{row.source_name} {relationArrow(row.direction)} {row.target_name}</strong><small>{scholarRelationLabels[row.relation_type]} · {scholarRelationStatus(row)}</small></button>):<p>尚未建立条目关系，可从新建关系开始。</p>}
+    <div className="scholar-relations-workspace"><aside className="fixed-editor-panel">{!detailOnly?<nav className="scholar-relation-index" aria-label="当前学者关系">{loading?<LoadingState>正在读取关系…</LoadingState>:collection.results.length?collection.results.map(row=><button type="button" key={row.id} disabled={busy||ime||Boolean(command.recovery)} aria-current={row.id===selectedId?"true":undefined} onClick={()=>select(row.id)}><strong>{row.source_name} {relationArrow(row.direction)} {row.target_name}</strong><small>{scholarRelationLabels[row.relation_type]} · {scholarRelationStatus(row)}</small></button>):<p>尚未建立条目关系，可从新建关系开始。</p>}
       {collection.count>24?<div><button type="button" disabled={page<=1||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value-1)}>上一页</button><span>第 {page} 页 · 共 {collection.count} 项</span><button type="button" disabled={!collection.next||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value+1)}>下一页</button></div>:null}</nav>:null}
-      <form className="fixed-editor-fields" onSubmit={event=>{event.preventDefault();event.stopPropagation();void act("save");}}><h3>{draft.id?"编辑当前关系":"新建关系"}</h3><p>{dirty?"有未保存输入":draft.id?scholarRelationStatus(draft):"填写两端学者"}</p>{loadingRecord?<p role="status">正在读取所选关系…</p>:null}
+      <form className="fixed-editor-fields" onSubmit={event=>{event.preventDefault();event.stopPropagation();void act("save");}}><h3>{draft.id?"编辑当前关系":"新建关系"}</h3><p>{dirty?"有未保存输入":draft.id?scholarRelationStatus(draft):"填写两端学者"}</p>{loadingRecord?<LoadingState role="status">正在读取所选关系…</LoadingState>:null}
         <fieldset disabled={locked||!draft.id&&!canCreate}>
           <EntityPicker label="第一位学者" endpoint="/catalog/admin/scholars/" nameField="preferred_name" values={draft.source_scholar?[{id:draft.source_scholar,name:live.source_name}]:[]} onChange={values=>{const value=values.at(-1);setDraft({...draft,source_scholar:value?.id||"",source_name:value?.name||""});}}/>
           <EntityPicker label="第二位学者" endpoint="/catalog/admin/scholars/" nameField="preferred_name" values={draft.target_scholar?[{id:draft.target_scholar,name:live.target_name}]:[]} onChange={values=>{const value=values.at(-1);setDraft({...draft,target_scholar:value?.id||"",target_name:value?.name||""});}}/>

@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { MediaPlacement } from "@/components/media-placement";
 
 import { createRequestKey } from "../../lib/request-key";
@@ -36,7 +38,7 @@ export function ReaderNotebook({ assetId, initialKind = "all" }: { assetId?: str
   const next = `/account/notes${assetId ? `/${assetId}` : ""}${context.size ? `?${context}` : ""}`;
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(next)}`); }, [state.status, next]);
   if (state.status === "forbidden" || state.status === "temporary_error") return <main className={styles.page}><h1>阅读记录暂时无法读取</h1><p role="alert">{state.message}</p><button onClick={retry}>重新核对登录</button></main>;
-  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><p role="status">正在核对登录状态…</p></main>;
+  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState role="status">正在核对登录状态…</LoadingState></main>;
   return <Notebook key={`${state.user.id}:${assetId || "all"}:${context.get("booklist") || ""}:${context.get("work") || ""}:${context.get("project") || ""}`} owner={String(state.user.id)} assetId={assetId} initialKind={initialKind} />;
 }
 
@@ -91,7 +93,7 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
         <div className={styles.toolbar}><span>共 {data?.count ?? "—"} 条记录</span><label>排序<select value={filters.order} onChange={event => change("order", event.target.value)}><option value="newest">日期（新 → 旧）</option><option value="oldest">日期（旧 → 新）</option></select></label></div>
         <div className={styles.selectAll}><label><input type="checkbox" checked={rows.length > 0 && chosen.length === rows.length} disabled={!rows.length} onChange={event => setSelected(event.target.checked ? rows.map(value => value.key) : [])} />选择本页</label><span>已选择 {chosen.length} 条</span></div>
         <NotebookActions owner={owner} chosen={chosen} onChanged={reload} />
-        {list.error ? <Failure message={list.error} retry={list.reload} /> : !data ? <p role="status">正在读取本人记录…</p> : !rows.length ? <div className={styles.empty}><BookOpen size={30} /><h2>这里还没有阅读记录</h2><p>在原文中保存笔记、摘录或书签后，可在这里继续整理。</p><Link href="/explore">查找阅读材料</Link></div> : <ol className={styles.list}>{rows.map(value => <li key={value.key} data-selected={selected.includes(value.key)} data-focused={focus?.id === value.id && focus.category === value.category}>
+        {list.error ? <Failure message={list.error} retry={list.reload} /> : !data ? <LoadingState role="status">正在读取本人记录…</LoadingState> : !rows.length ? <div className={styles.empty}><BookOpen size={30} /><h2>这里还没有阅读记录</h2><p>在原文中保存笔记、摘录或书签后，可在这里继续整理。</p><Link href="/explore">查找阅读材料</Link></div> : <ol className={styles.list}>{rows.map(value => <li key={value.key} data-selected={selected.includes(value.key)} data-focused={focus?.id === value.id && focus.category === value.category}>
           <input type="checkbox" aria-label={`选择${value.work.title}的${labels[value.kind]}`} checked={selected.includes(value.key)} onChange={event => setSelected(current => event.target.checked ? [...current, value.key] : current.filter(key => key !== value.key))} />
           <button className={styles.record} disabled={Boolean(editing)} onClick={() => open(value)}><span className={styles.recordTop}><em data-kind={value.kind}>{labels[value.kind]}</em><time dateTime={value.updated_at}>{date(value.updated_at)}</time></span><strong>{value.work.title}</strong><p>{value.kind === "bookmark" ? value.label || "页面书签" : value.kind === "note" ? value.body || "尚未填写笔记" : value.saved_quote || "未保存摘录文字"}</p><small>{value.work.authors.join("、")}{value.work.year ? ` · ${value.work.year}` : ""} · PDF 第 {value.pdf_page} 页</small></button>
         </li>)}</ol>}

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { ArrowRight, Check, FileText, LockKeyhole, RefreshCw, X } from "lucide-react";
@@ -197,7 +199,7 @@ function AuditUploadWorkspace({ ownerId, retrySession }: { ownerId: string; retr
         <header><h2 id="audit-tasks-title">我的任务{tasks.data ? `（${tasks.data.count}）` : ""}</h2><span><LockKeyhole size={12} />仅本人可见</span><button type="button" aria-label="刷新任务列表" disabled={tasks.loading || busy || Boolean(action)} onClick={tasks.reload}><RefreshCw size={14} /></button></header>
         {tasks.error ? <div className="stl4-audit-upload-error" role="alert"><p>{tasks.error}</p><button type="button" onClick={tasks.reload}>{tasks.pollPaused ? "继续读取进度" : "重新读取任务"}</button></div> : null}
         {actionError ? <p className="stl4-audit-upload-error" role="alert">{actionError}</p> : null}
-        {tasks.loading ? <p className="stl4-audit-upload-empty" role="status">正在读取任务…</p> : tasks.data?.results.length ? <div className="stl4-audit-task-list">{tasks.data.results.map(record => <article key={record.id} className="stl4-audit-task">
+        {tasks.loading ? <LoadingState className="stl4-audit-upload-empty" role="status">正在读取任务…</LoadingState> : tasks.data?.results.length ? <div className="stl4-audit-task-list">{tasks.data.results.map(record => <article key={record.id} className="stl4-audit-task">
           <div className="stl4-audit-task-file"><FileText size={23} aria-hidden="true" /><div><h3>{record.data.filename}</h3><p>{typeof record.data.file_size_bytes === "number" ? fileSize(record.data.file_size_bytes) : record.data.filetype?.toUpperCase()}<time dateTime={record.created_at}>{new Date(record.created_at).toLocaleDateString("zh-CN")}</time></p></div></div>
           {isTaskRunning(record.status) ? <AuditProgress record={record} /> : <div className={`stl4-audit-task-status${record.status === "completed" ? " is-complete" : ""}`}><span aria-hidden="true">{record.status === "completed" ? <Check size={15} /> : "·"}</span><strong>{auditStatuses[record.status || ""] || "任务已保存"}</strong></div>}
           {record.status === "partial" ? <p className="stl4-audit-task-hint">已解析内容保留，未识别或未匹配的部分可在报告中继续核对。</p> : record.status === "failed" ? <p className="stl4-audit-task-hint">本次处理未完成，已保存结果保留。可以重试或先查看。</p> : null}

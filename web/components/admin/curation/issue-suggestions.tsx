@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, Lightbulb, RefreshCw, UserRound, X } from "lucide-react";
@@ -56,7 +58,7 @@ export function IssueSuggestions({issueId,version,disabled,blocks,request,onInse
     <div className={styles.sourceSearch}><label><span className="sr-only">材料建议关键词</span><input type="search" maxLength={200} placeholder={page?.query || "输入材料关键词…"} value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();if(!locked){setSearch(query.trim());refresh();}}}}/></label><button type="button" disabled={locked} onClick={()=>{setSearch(query.trim());refresh();}}>查找建议</button></div>
     <nav aria-label="材料建议类型">{[["all","全部"],["work","书目"],["person","人物"],["concept","概念"]].map(([value,label])=><button type="button" key={value} disabled={locked} aria-pressed={kind===value} onClick={()=>{setKind(value);setBatch(1);}}>{label}</button>)}</nav>
     {message?<p role="status">{message}{pending&&!busy?<button type="button" onClick={()=>{setPending(null);setBatch(1);setAttempt(value=>value+1);}}>重新读取核对</button>:null}</p>:null}
-    {error?<p role="alert">{error}<button type="button" onClick={refresh}>重试读取</button></p>:!page?<p role="status">正在查找公开材料…</p>:<>
+    {error?<p role="alert">{error}<button type="button" onClick={refresh}>重试读取</button></p>:!page?<LoadingState role="status">正在查找公开材料…</LoadingState>:<>
       {stale?<p className={styles.warning} role="alert">文章已产生新修订，请先读取最新草稿并核对，再重新获取建议。</p>:null}
       <div className={styles.suggestionGrid}>{page.results.map(row=><article key={row.key}>
         <span className={styles.suggestionKind}>{labels[row.kind]}</span><div className={styles.suggestionTitle}>{row.source.image_url?<EditorialImage key={row.source.image_url} src={row.source.image_url} className={styles.materialImage} portrait={row.kind==="person"} retry/>:<span className={styles.materialIcon} aria-hidden="true">{row.kind==="work"?<BookOpen size={28}/>:row.kind==="person"?<UserRound size={28}/>:<Lightbulb size={28}/>}</span>}<div><h3>{row.source.title}</h3>{row.source.edition_label?<small>{row.source.edition_label}</small>:null}</div></div>

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -28,7 +30,7 @@ const stateLabel = (row: Association) => row.confirmed ? "已确认" : ["archive
 export function ScholarLinks(props: Props) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <LinksWorkspace key={`${user.id}:${epoch}:${props.scholarId}:${props.kind}`} {...props} owner={String(user.id)} /> : <p role="status">正在核对编辑账户…</p>;
+  return user ? <LinksWorkspace key={`${user.id}:${epoch}:${props.scholarId}:${props.kind}`} {...props} owner={String(user.id)} /> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function LinksWorkspace({ scholarId, kind, blocked, onChanged, derived = [], owner }: Props & { owner: string }) {
@@ -53,7 +55,7 @@ function LinksWorkspace({ scholarId, kind, blocked, onChanged, derived = [], own
   return <>
     <header><h2>{kind === "node" ? "核心概念" : "相关主题"} <small>{data?.count ?? "…"}</small></h2><button type="button" disabled={blocked || !canCreate} onClick={() => open("")}>＋ 关联{label(kind)}</button></header>
     {blocked ? <p>请先保存学者草稿并核对未完成的操作，再编辑关联。</p> : null}
-    {error ? <p role="alert">{error}<button type="button" onClick={() => setAttempt(value => value + 1)}>重新读取</button>{page > 1 ? <button type="button" onClick={() => setPage(1)}>返回第一页</button> : null}</p> : !data ? <p role="status">正在读取全部关联状态…</p> : <>
+    {error ? <p role="alert">{error}<button type="button" onClick={() => setAttempt(value => value + 1)}>重新读取</button>{page > 1 ? <button type="button" onClick={() => setPage(1)}>返回第一页</button> : null}</p> : !data ? <LoadingState role="status">正在读取全部关联状态…</LoadingState> : <>
       <ul>{data.results.map(row => <li key={row.id}><div><strong>{row.target_name}</strong><small>{stateLabel(row)}{row.featured ? " · 主要关联" : ""}{!row.target_published ? " · 对象尚未公开" : ""}</small><p>{row.relation_label || "关系说明尚缺"}</p>{kind==="node"?<small>{row.node_is_source?row.target_name:row.person_name} {row.direction==="undirected"?"—":"→"} {row.node_is_source?row.person_name:row.target_name} · {row.relation_type_label}</small>:null}{row.source ? <details><summary>查看关系出处</summary><p>{row.source}</p></details> : row.source_anchor ? <small>已绑定馆内原文，请在详情核对准确版本。</small> : <small>出处尚缺，须补齐后再确认。</small>}</div><button type="button" disabled={blocked} onClick={() => open(row.id)}>{row.confirmed ? "编辑" : "核对"}</button></li>)}</ul>
       {!data.count ? <p>还没有直接关联。可以先保存待核对记录，补齐出处后明确确认。</p> : null}
       {data.count > 24 ? <nav className={styles.pagination} aria-label={`${label(kind)}关联分页`}><button type="button" disabled={!data.previous} onClick={() => setPage(data.previous || 1)}>上一页</button><span>第 {page} 页 · 共 {data.count} 项</span><button type="button" disabled={!data.next} onClick={() => setPage(data.next || page)}>下一页</button></nav> : null}
@@ -119,7 +121,7 @@ function LinkEditor({ owner, scholarId, kind, initialId, fixedTarget, personName
     try { const receipt = await command.lookup(cancel); if (!receipt || !mounted.current) return; if (receipt.state === "applied" && receipt.relation_id) { setId(receipt.relation_id); setLoading(true); setAttempt(value => value + 1); onSaved(); } setMessage(receipt.state === "cancelled" ? "未执行的原请求已停止，当前输入仍保留。" : "原请求已经完成，正在重新读取当前记录。若来自其他学者，请回原页面核对。"); } finally { finishAction("recover"); }
   }
   return <form className={styles.linkForm} onSubmit={event => { event.preventDefault(); void act("save"); }} onCompositionStartCapture={() => { composing.current = true; setIme(true); }} onCompositionEndCapture={() => { composing.current = false; setIme(false); }}>
-    {error || command.error ? <p role="alert">{error || command.error}</p> : null}{message ? <p role="status">{message}</p> : null}{loading ? <p role="status">正在读取原关联…</p> : null}
+    {error || command.error ? <p role="alert">{error || command.error}</p> : null}{message ? <p role="status">{message}</p> : null}{loading ? <LoadingState role="status">正在读取原关联…</LoadingState> : null}
     {command.recovery ? <section aria-label="查询未确认操作"><p>上次操作的结果尚未确认。查询或停止后才能修改输入。</p><button type="button" disabled={busy || ime} onClick={() => void recover()}>查询原请求</button><button type="button" disabled={busy || ime} onClick={() => void recover(true)}>停止未执行的请求</button>{command.canRetry ? <button type="button" disabled={busy || ime} onClick={() => void act("retry")}>重试同一请求</button> : null}</section> : null}
     <fieldset disabled={locked}>
       {id || fixedTarget ? <div><strong>{draft.target_name || "原关联对象"}</strong><p>{row ? stateLabel(row) : id ? "等待读取" : "新关联 · 尚未保存"}{row && !row.target_published ? " · 对象尚未公开，不能确认" : ""}</p>{row ? <Link href={row.target_href} target="_blank" rel="noopener">查看对象资料 ↗</Link> : null}</div> : <EntityPicker owner={owner} label={`选择已有${label(kind)}`} endpoint={kind === "node" ? "/catalog/admin/theory-system/nodes/" : "/catalog/admin/topics/"} queryParam={kind === "node" ? "q" : "search"} nameField={kind === "node" ? "canonical_name_zh" : "name"} values={draft.target_id ? [{ id: draft.target_id, name: draft.target_name }] : []} onChange={values => { const item = values.at(-1); setDraft(value => ({ ...value, target_id: item?.id || "", target_name: item?.name || "" })); }} />}

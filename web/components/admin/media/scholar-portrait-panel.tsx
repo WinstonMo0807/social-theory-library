@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ActionButton } from "@/components/action-feedback";
@@ -42,7 +44,7 @@ function PortraitPanel({ scholarId, refreshKey, onChanged }: PortraitPanelProps)
     finally { sending.current = false; if (active.current) { setBusy(false); setConfirmed(""); } }
   }
   return <section className={`admin-panel ${styles.portraitPanel}`} aria-label="学者肖像" data-scholar-portrait="true"><h3>学者肖像</h3>
-    {resource.error ? <p role="alert">{resource.error}<button type="button" disabled={busy} onClick={resource.retry}>重新读取肖像</button></p> : resource.loading ? <p role="status">正在读取肖像…</p> : resource.data ? <>
+    {resource.error ? <p role="alert">{resource.error}<button type="button" disabled={busy} onClick={resource.retry}>重新读取肖像</button></p> : resource.loading ? <LoadingState role="status">正在读取肖像…</LoadingState> : resource.data ? <>
       {resource.data.preview_url ? <picture><img className={styles.preview} src={normalizePublicResourceUrl(resource.data.preview_url)} alt={resource.data.media?.alt_text || `${resource.data.name}肖像预览`} /></picture> : <p>当前没有选择肖像。</p>}
       {canEdit?<Link className="button secondary scholar-portrait-change" prefetch={false} href={`/admin/media?scholar=${encodeURIComponent(scholarId)}`}>更换肖像</Link>:null}
       <details className="scholar-portrait-details"><summary>肖像来源与操作</summary><p>{resource.data.canonical_write_deferred?"当前显示已保存的肖像草稿，公开图片尚未更改。":"当前显示已保存的肖像。"}</p>{resource.data.media?<p>{[resource.data.media.source_label,resource.data.media.license,resource.data.media.credit].filter(Boolean).join(" · ")||"尚未填写来源与使用说明。"}</p>:null}{canEdit?<><ActionButton className="button secondary" disabled={busy||!resource.data.preview_url} onClick={()=>setConfirmed(confirmationKey)}>清除肖像选择</ActionButton><p>进入媒体库前请先保存正在编辑的其他资料。</p></>:null}<ActionButton className="button secondary" disabled={busy} onClick={resource.retry}>重新读取肖像</ActionButton></details>

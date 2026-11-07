@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { AlertCircle, ArrowRight, ExternalLink, RefreshCw, Archive } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -36,7 +38,7 @@ function PdfPreview({ path, title }: { path: string; title: string }) {
   if (!path) return <p>当前没有PDF预览。纯书目可继续核对书目信息；有文件的版本请在共同工作页查看校验与处理结果。</p>;
   const current = result?.path === path ? result : null;
   if (current?.error) return <p role="alert">PDF预览暂不可用：{current.error}。可重新选择本项或打开当前版本安全重试。</p>;
-  return current?.url ? <iframe className={styles.previewFrame} title={`PDF预览：${title}`} src={current.url} /> : <p role="status">正在读取当前版本PDF…</p>;
+  return current?.url ? <iframe className={styles.previewFrame} title={`PDF预览：${title}`} src={current.url} /> : <LoadingState role="status">正在读取当前版本PDF…</LoadingState>;
 }
 
 function PublicationDetails({ item, returnTo }: { item: WorkflowQueueItem; returnTo: string }) {
@@ -122,7 +124,7 @@ export function PublicationDesk() {
     </form>
     <p className={styles.count} role="status">{page ? `共 ${page.count} 项 · 第 ${page.page} 页` : result.error ? "发布记录数量未能读取。" : "正在读取全部来源的发布记录…"}</p>
     {result.error ? <div className={styles.error} role="alert"><AlertCircle size={16} />{result.error}<button type="button" onClick={result.retry}>重试发布列表</button></div> : null}
-    {result.loading ? <p role="status">正在读取当前页…</p> : null}
+    {result.loading ? <LoadingState role="status">正在读取当前页…</LoadingState> : null}
     <section className={styles.rows} aria-label="馆藏发布列表">{page?.results.map((item) => {
       const destination = queueWorkbenchHref(item);
       return <article className={styles.row} key={item.id} data-record-id={item.id}>

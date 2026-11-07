@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { PdfCanvas } from "@/components/pdf-canvas";
 import { subscribeToSessionChanges } from "@/lib/api";
@@ -60,6 +62,6 @@ export function CitationDocxPreview({ id, ownerId, kind, sourceGeneration, fallb
       {current && active ? <button type="button" disabled={preview.pending} onClick={() => void command("cancel")}>取消分页预览</button> : null}
       <button type="button" disabled={preview.pending} onClick={() => { preview.reload(); setAttempt(value => value + 1); }}>{preview.pollPaused ? "继续读取预览进度" : "重新读取预览"}</button>
     </div>
-    {url && data ? <><div className="stl4-audit-toolbar"><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>上一页</button><label>预览页码 <input type="number" min={1} max={pageCount || undefined} value={page} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 1 && value <= pageCount) setPage(value); }} /></label><span>/ {pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage(value => value + 1)}>下一页</button><label>缩放 <select value={zoom} onChange={event => setZoom(Number(event.target.value))}>{[75, 100, 125, 150].map(value => <option key={value} value={value}>{value}%</option>)}</select></label></div><div className="stl4-audit-manuscript-canvas"><PdfCanvas key={url} url={url} page={page} zoom={zoom} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={setLoadedPages} /></div></> : <>{current && data?.status === "completed" && !error ? <p role="status">正在加载 PDF 预览…</p> : null}<p className="stl4-audit-caption">分页预览暂未就绪，以下显示原稿中实际解析的文字。</p>{fallback}</>}
+    {url && data ? <><div className="stl4-audit-toolbar"><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>上一页</button><label>预览页码 <input type="number" min={1} max={pageCount || undefined} value={page} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 1 && value <= pageCount) setPage(value); }} /></label><span>/ {pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage(value => value + 1)}>下一页</button><label>缩放 <select value={zoom} onChange={event => setZoom(Number(event.target.value))}>{[75, 100, 125, 150].map(value => <option key={value} value={value}>{value}%</option>)}</select></label></div><div className="stl4-audit-manuscript-canvas"><PdfCanvas key={url} url={url} page={page} zoom={zoom} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={setLoadedPages} /></div></> : <>{current && data?.status === "completed" && !error ? <LoadingState role="status">正在加载 PDF 预览…</LoadingState> : null}<p className="stl4-audit-caption">分页预览暂未就绪，以下显示原稿中实际解析的文字。</p>{fallback}</>}
   </div>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { RecycleControl } from "@/components/admin/recycle-control";
 import Link from "next/link";
 import { ArrowRight, RefreshCw } from "lucide-react";
@@ -49,10 +51,10 @@ export function WorkLibrary({ initialQuery = "", initialView = "all" }: { initia
       <button type="submit" className="button">搜索</button><button type="button" className="button secondary" onClick={resource.retry}><RefreshCw size={14} />刷新馆藏</button>
     </form>
     {search.get("work_id") ? <p className={styles.scope}>当前仅显示所选作品的出版版本。<Link href={adminListHref(pathname, search.toString(), { work_id: null, page: 1 })}>查看全部作品的版本</Link></p> : null}
-    <p className={styles.count} role="status">{page ? `共 ${page.count} 项${view === "editions" ? "出版版本" : "作品"}，本页 ${page.results.length} 项。` : resource.error ? "馆藏数量读取失败。" : "正在读取馆藏数量…"}</p>
+    {page ? <p className={styles.count} role="status">{`共 ${page.count} 项${view === "editions" ? "出版版本" : "作品"}，本页 ${page.results.length} 项。`}</p> : null}
     {resource.error ? <div className={styles.error} role="alert">{resource.error}<button type="button" onClick={resource.retry}>重新读取馆藏</button></div> : null}
-    {resource.loading ? <p role="status">正在读取当前页…</p> : null}
-    <section className={`${styles.rows} work-library-results`} aria-label={view === "editions" ? "出版版本列表" : "馆藏作品列表"}>
+    {resource.loading ? <LoadingState role="status">正在读取当前页…</LoadingState> : null}
+    <section hidden={resource.loading && !page} className={`${styles.rows} work-library-results`} aria-label={view === "editions" ? "出版版本列表" : "馆藏作品列表"}>
       <header className="work-library-table-heading"><span>馆藏与责任者</span><span>出版版本</span><span>公开状态</span><span>处理状态与更新</span><span>操作</span></header>
       {page?.results.map((work) => {
         const publication = publicationPresentation(work.publication);

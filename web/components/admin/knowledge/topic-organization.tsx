@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { Dialog } from "@/components/ui/dialog";
 import { useCallback, useState } from "react";
@@ -19,7 +21,7 @@ export function TopicTreeBranch({ parent = "", owner, selected, ancestors = [], 
   const load = useCallback((path: string, signal: AbortSignal) => apiRequest<Page>(path,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),[owner]);
   const resource = usePersistentWorkspace<Page>(`/catalog/admin/topics/organization/?${new URLSearchParams({parent,page:String(page),q:query})}`,owner,undefined,load);
   if (resource.error) return <p role="alert">{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p>;
-  if (!resource.data) return <p role="status">正在读取主题…</p>;
+  if (!resource.data) return <LoadingState role="status">正在读取主题…</LoadingState>;
   return <><ul className={styles.tree}>{resource.data.results.map(row => <li key={row.id}><div data-selected={selected === row.id}>
     <button type="button" disabled={!row.children_count || Boolean(query)} aria-expanded={expanded.includes(row.id)} aria-label={`展开${row.name}的子主题`} onClick={() => setExpanded(values => values.includes(row.id) ? values.filter(id => id !== row.id) : [...values,row.id])}>{row.children_count && !query ? expanded.includes(row.id) ? "⌄" : "›" : "·"}</button>
     <>{onChoose ? <button type="button" className={styles.chooseParent} aria-pressed={selected === row.id} onClick={() => onChoose(row)}>{row.name}</button> : <Link href={`/admin/topics/${row.id}`} aria-current={selected === row.id ? "page" : undefined}>{row.name}</Link>}</><small title="直接子主题数量">{row.children_count || ""}</small>
@@ -47,7 +49,7 @@ export function TopicOrganizationChecks({ topicId, name, value }: { topicId: str
     <Dialog open={Boolean(query)} data-editor-transient className={styles.hierarchyDialog} onRequestClose={()=>setQuery("")} aria-label="已有主题名称提示">
       <header><h2>已有主题名称提示</h2><button type="button" onClick={()=>setQuery("")}>关闭</button></header>
       <p>按名称和别名查找“{query}”。查看已有主题后，再决定是否继续编辑当前档案。</p>
-      {similar.error?<p role="alert">{similar.error}<button type="button" onClick={similar.reload}>重新查找</button></p>:!similar.data?<p role="status">正在查找…</p>:<>
+      {similar.error?<p role="alert">{similar.error}<button type="button" onClick={similar.reload}>重新查找</button></p>:!similar.data?<LoadingState role="status">正在查找…</LoadingState>:<>
         <ul className={styles.similarTopics}>{similar.data.results.map(row=><li key={row.id}><div><strong>{row.name}</strong><small>{row.children_count} 个直接子主题</small></div><Link href={`/admin/topics/${row.id}`} target="_blank" rel="noopener noreferrer">查看<span className={styles.liveNotice}>，在新页面打开{row.name}</span></Link></li>)}</ul>
         <p>{similar.data.count?`共 ${similar.data.count} 个名称或别名匹配，本页 ${similar.data.results.length} 项。` : "目前没有匹配名称。"}</p>
         {similar.data.total_pages>1?<nav className={styles.pages} aria-label="已有主题匹配分页"><button type="button" disabled={similar.data.page<=1} onClick={()=>setSimilarPage(similar.data!.page-1)}>上一页</button><span>{similar.data.page} / {similar.data.total_pages}</span><button type="button" disabled={similar.data.page>=similar.data.total_pages} onClick={()=>setSimilarPage(similar.data!.page+1)}>下一页</button></nav>:null}

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bell, ChevronLeft, ChevronRight, History, RefreshCw, X } from "lucide-react";
@@ -32,7 +34,7 @@ function SourceUpdatesContent({ ownerId, commands }: { ownerId: string; commands
     <div className={styles.toolbar}><p>{data ? `共 ${data.count} 项来源记录` : "正在读取来源记录"}</p><button onClick={records.reload}><RefreshCw size={15} />刷新当前页</button></div>
     <p className={styles.notice}>{data?.notice || "订阅仅保存在本人账户中。不会自动发送邮件，也不会保存原文内容。"}</p>
     {records.error ? <p role="alert" className={styles.error}>{records.error}</p> : null}
-    {records.loading ? <p role="status" className={styles.empty}>正在读取本人来源订阅…</p> : null}
+    {records.loading ? <LoadingState role="status" className={styles.empty}>正在读取本人来源订阅…</LoadingState> : null}
     {data?.results.length === 0 ? <div className={styles.empty}><Bell size={30} /><h2>{data.count ? "本页没有来源记录" : "还没有订阅来源"}</h2><p>在来源说明中核对一份公开原文后，可以订阅它的更新。</p><Link href="/help/source">查看来源说明</Link></div> : null}
     <div className={styles.list}>{data?.results.map(row => <article key={row.id} className={styles.row} aria-label={row.source.title}>
       <div className={styles.rowHeading}><span>{row.active ? "正在订阅" : "已取消订阅"}{row.updates_paused ? " · 已暂停保存更新" : ""}</span>{row.unread_count ? <strong>{row.unread_count} 条未读更新</strong> : null}</div>
@@ -56,7 +58,7 @@ function SourceHistory({ id, ownerId, onClose }: { id: string; ownerId: string; 
   return <Dialog open onRequestClose={onClose} className={styles.dialog} aria-labelledby="source-history-title"><header><h2 id="source-history-title">来源状态历史</h2><button aria-label="关闭来源历史" onClick={onClose}><X size={20} /></button></header>
     <p>记录每次实际观察到的状态变化，不表示状态变化的精确发生时间。</p>
     {workspace.error ? <p role="alert">{workspace.error}<button onClick={workspace.reload}>重新读取</button></p> : null}
-    {workspace.loading ? <p role="status">正在读取历史…</p> : null}
+    {workspace.loading ? <LoadingState role="status">正在读取历史…</LoadingState> : null}
     {row ? <><h3>{row.source.title}</h3><ol>{row.history.results.map(event => <li key={event.id}><div><strong>{{ subscribe: "订阅来源更新", unsubscribe: "取消订阅", mark_read: "标记为已读", changed: "观察到来源变化", delete: "删除关注记录" }[event.action]}</strong><time dateTime={event.observed_at}>{sourceDate(event.observed_at)}</time></div>{event.action === "changed" ? <p>{event.before_status === event.after_status ? `公开资料或正式版本已更新，当前状态：${status(event.after_status)}` : `${status(event.before_status)} → ${status(event.after_status)}`}</p> : null}</li>)}</ol>
       {row.history.count > row.history.page_size ? <nav className={styles.pagination} aria-label="状态历史分页"><button disabled={page === 1} onClick={() => setPage(value => value - 1)}>上一页</button><span>第 {page} 页</span><button disabled={page * row.history.page_size >= row.history.count} onClick={() => setPage(value => value + 1)}>下一页</button></nav> : null}</> : null}
     <footer><button onClick={onClose}>关闭</button></footer>

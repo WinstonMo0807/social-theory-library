@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { Check, ChevronRight, MoreHorizontal } from "lucide-react";
@@ -90,7 +92,7 @@ function IssueEditorSession({ issueId, fullPreview }: { issueId: string; fullPre
   const loaded=Boolean(draft);
   useEffect(()=>{if(!loaded||!selectedBlock)return;const frame=requestAnimationFrame(()=>document.getElementById(`editor-block-${selectedBlock}`)?.scrollIntoView({block:"nearest"}));return()=>cancelAnimationFrame(frame);},[loaded,selectedBlock]);
   const canEdit=hasAdminCapability(user,"can_edit_metadata")&&!draft?.project_archived;
-  if(!assistantRecoveryReady)return <p role="status">正在核对原助手操作…</p>;
+  if(!assistantRecoveryReady)return <LoadingState role="status">正在核对原助手操作…</LoadingState>;
   if (!draft) return <section className="admin-panel" aria-busy={!initialError}><p role={initialError ? "alert" : "status"}>{initialError || "正在读取本期草稿…"}</p>{initialError ? <button type="button" className="button secondary" onClick={editor.retryLoad}>重试读取</button> : null}<p><Link href="/admin/recommendations">返回策划项目与文章</Link></p></section>;
   const previewDraft: RecommendationIssue = { ...draft, curator: { name: draft.public_byline, role: draft.public_byline ? draft.article_metadata?.curator_role || "" : "", affiliation: draft.public_byline ? draft.article_metadata?.curator_affiliation || "" : "", portrait_url: draft.public_byline ? draft.curator?.portrait_url || "" : "" } };
 

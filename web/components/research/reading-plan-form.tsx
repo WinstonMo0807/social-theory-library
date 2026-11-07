@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { BookOpen, NotebookPen, History, MessageCircle, Settings, Clock3 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
@@ -69,7 +71,7 @@ function PlanMemoryPicker({ ownerId, value, onChange }: { ownerId: string; value
   const [page, setPage] = useState(1);
   const memories = usePersistentWorkspace<Paginated<ResearchRecord<MemoryData>>>(`/reading/research-memories/?state=confirmed&page=${page}`, ownerId);
   const rows = memories.data?.results.filter(row => row.state === "confirmed") || [];
-  return <div className="stl4-plan-picker"><p>已选 {value.length} 条，最多 40 条</p>{memories.loading ? <p role="status">正在读取笔记…</p> : null}{memories.error ? <p role="alert">{memories.error}<button type="button" onClick={memories.reload}>重试</button></p> : rows.map(row => <label key={row.id}><input type="checkbox" checked={value.includes(row.id)} disabled={!value.includes(row.id) && value.length >= 40} onChange={event => onChange(event.target.checked ? [...value, row.id] : value.filter(id => id !== row.id))} /><span>{row.data.body}</span></label>)}{memories.data && !rows.length ? <p>本页没有已确认笔记。<Link href="/account/confirmed-notes" target="_blank" rel="noopener">查看并确认本人笔记 ↗</Link></p> : null}<button type="button" disabled={memories.loading} onClick={memories.reload}>刷新已确认笔记</button><PageButtons page={page} next={Boolean(memories.data?.next)} onChange={setPage} /><button type="button" disabled={!value.length} onClick={() => onChange([])}>清空所选笔记</button></div>;
+  return <div className="stl4-plan-picker"><p>已选 {value.length} 条，最多 40 条</p>{memories.loading ? <LoadingState role="status">正在读取笔记…</LoadingState> : null}{memories.error ? <p role="alert">{memories.error}<button type="button" onClick={memories.reload}>重试</button></p> : rows.map(row => <label key={row.id}><input type="checkbox" checked={value.includes(row.id)} disabled={!value.includes(row.id) && value.length >= 40} onChange={event => onChange(event.target.checked ? [...value, row.id] : value.filter(id => id !== row.id))} /><span>{row.data.body}</span></label>)}{memories.data && !rows.length ? <p>本页没有已确认笔记。<Link href="/account/confirmed-notes" target="_blank" rel="noopener">查看并确认本人笔记 ↗</Link></p> : null}<button type="button" disabled={memories.loading} onClick={memories.reload}>刷新已确认笔记</button><PageButtons page={page} next={Boolean(memories.data?.next)} onChange={setPage} /><button type="button" disabled={!value.length} onClick={() => onChange([])}>清空所选笔记</button></div>;
 }
 
 /** Select the same source references that have already been saved in a private research project. */
@@ -80,7 +82,7 @@ export function PlanMaterialPicker({ ownerId, selected, onChange, single = false
   const project = useResearchRecord<ProjectData>("research-projects", projectId || null, ownerId);
   const rows = project.data?.data.selections || [];
   return <section className="stl4-plan-material-picker"><h3>{single ? "选择替换材料" : "4. 选择材料"}</h3><p>从研究会话的选材中选择原文。{single ? "替换只作用于当前未完成项。" : "不选择时，将围绕问题从全馆可访问材料中检索。"}</p><label>研究会话<select value={projectId} onChange={event => setProjectId(event.target.value)}><option value="">选择研究会话</option>{projects.data?.results.map(row => <option key={row.id} value={row.id}>{row.data.title || row.data.question || "未命名研究"}</option>)}</select></label><PageButtons page={page} next={Boolean(projects.data?.next)} onChange={setPage} />
-    {projects.error || project.error ? <p role="alert">{projects.error || project.error}<button type="button" onClick={() => { projects.reload(); project.reload(); }}>重试</button></p> : null}{projects.loading || project.loading ? <p role="status">正在读取材料…</p> : null}
+    {projects.error || project.error ? <p role="alert">{projects.error || project.error}<button type="button" onClick={() => { projects.reload(); project.reload(); }}>重试</button></p> : null}{projects.loading || project.loading ? <LoadingState role="status">正在读取材料…</LoadingState> : null}
     {rows.map((row, index) => { const key = researchEvidenceKey(row); return <label className="stl4-plan-source-choice" key={key}><input type={single ? "radio" : "checkbox"} name="plan-source" disabled={row.source_status !== "available"} checked={selected.some(ref => researchEvidenceKey(ref) === key)} onChange={event => onChange(single ? [row] : event.target.checked ? [...selected, row] : selected.filter(ref => researchEvidenceKey(ref) !== key))} /><ResearchEvidenceCover reference={row} small/><span><strong>{row.title || `材料 ${index + 1}`}</strong><small>{row.source_status === "available" ? `PDF 第 ${row.pdf_page || "—"} 页 · ${row.quote || row.text || "原文选段"}` : "来源当前不可用"}</small></span></label>; })}
     {project.data && !rows.length ? <p>此会话尚未保存选材。</p> : null}<p>已选择 {selected.length} 条原文。<button type="button" disabled={!selected.length} onClick={() => onChange([])}>清空</button></p><Link href="/explore/opinions" target="_blank" rel="noopener">去检索并保存选材 ↗</Link>
   </section>;

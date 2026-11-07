@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { useAdminSession } from "@/lib/admin-session";
@@ -74,7 +76,7 @@ function SelectionRows({ field, ids, labels, notes, sorting = false, onOrder, on
           {sorting ? <button type="button" draggable onDragStart={event => {
             dragging.current = id; event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-stl-topic-association", id);
           }} onDragEnd={() => { dragging.current = null; }} aria-label={`拖动${name}排序；也可使用上下移和位置选择`} title="拖动排序">⠿</button> : null}
-          {sorting ? <details className={styles.sortMenu}><summary aria-label={name+"排序操作"}>···</summary><div><button type="button" disabled={index === 0} aria-label={`上移${name}`} onClick={() => move(id, index - 1)}>上移</button>
+          {sorting ? <details data-action-menu className={styles.sortMenu}><summary aria-label={name+"排序操作"}>···</summary><div data-menu-panel><button type="button" disabled={index === 0} aria-label={`上移${name}`} onClick={() => move(id, index - 1)}>上移</button>
           <button type="button" disabled={index === ids.length - 1} aria-label={`下移${name}`} onClick={() => move(id, index + 1)}>下移</button></div></details> : null}
           {sorting ? <select aria-label={`${name}的位置`} value={index} onChange={event => move(id, Number(event.target.value))}>
             {ids.map((_, position) => <option key={position} value={position}>第 {position + 1} 项</option>)}
@@ -111,7 +113,7 @@ export function TopicAssociations({ field, label, ids, labels, notes, onChange, 
         onKeyDown={event => { if (event.key === "Enter" && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); setQuery(search.trim()); setPage(1); } }} />
         <button type="button" onClick={() => { setQuery(search.trim()); setPage(1); }}>查找</button></div>
       <p role="status">已选 {ids.length} / {maximum} 项。选择仅更新当前草稿，保存和发布仍需分别操作。</p>
-      {options.error ? <p role="alert">{options.error}<button type="button" onClick={options.reload}>重新读取</button></p> : !options.data ? <p role="status">正在读取…</p> : <>
+      {options.error ? <p role="alert">{options.error}<button type="button" onClick={options.reload}>重新读取</button></p> : !options.data ? <LoadingState role="status">正在读取…</LoadingState> : <>
         <ul className={styles.associationRows}>{options.data.results.map(row => <li key={row.id}><Cover row={row} /><div className={styles.associationCopy}><strong>{row.name}</strong><small>{row.subtitle}</small></div>
           <button type="button" disabled={ids.includes(row.id) || ids.length >= maximum} onClick={() => onChange([...ids, row.id], { [row.id]: row.name })}>{ids.includes(row.id) ? "已选" : "选入"}</button></li>)}</ul>
         {!options.data.count ? <p>当前没有匹配的已有内容。</p> : null}<PageButtons page={options.data.page} total={options.data.total_pages} onChange={setPage} />

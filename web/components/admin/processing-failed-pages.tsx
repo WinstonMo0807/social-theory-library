@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useCallback, useId, useState } from "react";
 import { X } from "lucide-react";
@@ -39,7 +41,7 @@ export function ProcessingFailedPages({ job, owner, disabled, onRetry, onRefresh
   return <section className={styles.failedPages} aria-label="选择中断页重试">
     <p>以下页面在本任务中断时尚未确认保存。已完成页继续保留在原检查点。</p>
     {resource.error ? <p role="alert" className={styles.notice}>{resource.error}<button type="button" disabled={disabled} onClick={() => { resource.reload(); onRefresh(); }}>重新读取任务与中断页</button></p> : null}
-    {resource.loading ? <p role="status">正在读取中断页…</p> : null}
+    {resource.loading ? <LoadingState role="status">正在读取中断页…</LoadingState> : null}
     {notice ? <p role="status" className={styles.note}>{notice}</p> : null}
     {data ? <><div className={styles.failureTableScroll}><table className={styles.failureTable} aria-label="中断页列表">
       <thead><tr><th><input type="checkbox" aria-label="选择当前列出的全部中断页" disabled={locked} checked={Boolean(pages.length) && pages.every(value => selected.includes(value))} onChange={event => select(pages, event.target.checked)}/></th><th>所在位置</th><th>记录状态</th><th>操作</th></tr></thead>

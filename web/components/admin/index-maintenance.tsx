@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
@@ -34,7 +36,7 @@ const running=(data:Payload)=>data.jobs.some(row=>["pending","running"].includes
 function Status({value,label}:{value:string;label?:string}){return <span className={styles.status} data-state={value}>{label?`${label} · `:""}{states[value]||"待核实"}</span>;}
 function useOwned<T>(owner:string,path:string,poll?: (data:T)=>number|null){const load=useCallback((url:string,signal:AbortSignal)=>apiRequest<T>(url,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),[owner]);return usePersistentWorkspace<T>(path,owner,poll,load);}
 
-export function IndexMaintenance(){const user=useAdminSession(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<Maintenance key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<p role="status">正在核对索引维护账户…</p>;}
+export function IndexMaintenance(){const user=useAdminSession(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<Maintenance key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<LoadingState role="status">正在核对索引维护账户…</LoadingState>;}
 
 function Maintenance({owner}:{owner:string}){
   const params=useSearchParams(),router=useRouter(),pathname=usePathname();
@@ -60,7 +62,7 @@ function Maintenance({owner}:{owner:string}){
     <nav className={styles.tabs} aria-label="检索维护栏目">{primaryTabs.map(([key,label])=><button key={key} type="button" aria-current={activeGroup===key?"page":undefined} onClick={()=>{if(key!==activeGroup)change({tab:key});}}>{label}</button>)}</nav>{["terms","jobs"].includes(activeGroup)?<nav className={styles.ruleTabs} aria-label={activeGroup==="terms"?"检索词分类":"索引任务分类"}>{(activeGroup==="terms"?termTabs:jobTabs).map(([key,label])=><button key={key} type="button" aria-current={tab===key?"page":undefined} onClick={()=>change({tab:key})}>{label}</button>)}</nav>:null}
     {resource.error?<p role="alert" className={styles.notice}>{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p>:null}{command.error?<p role="alert" className={styles.notice}>{command.error}</p>:null}{message?<p role="status" className={styles.notice}>{message}</p>:null}
     {command.recovery?<aside className={styles.notice}><p>原操作尚未确认，请先查询结果或停止尚未执行的请求。</p><div className={styles.actions}><button type="button" disabled={command.busy} onClick={()=>void command.lookup().then(accept)}>查询原结果</button>{command.canRetry?<button type="button" disabled={command.busy} onClick={()=>void command.send().then(accept)}>重试原请求</button>:null}<button type="button" disabled={command.busy} onClick={()=>void command.lookup(true).then(accept)}>停止未执行请求</button></div></aside>:null}
-    {resource.loading?<p role="status">正在读取实际索引记录…</p>:null}
+    {resource.loading?<LoadingState role="status">正在读取实际索引记录…</LoadingState>:null}
     {data?<><div className={styles.metrics}>{[{key:"keyword_ready",label:"词法已索引",total:"eligible_editions",note:"份符合检索条件的文献",Icon:FileText},{key:"vector_ready",label:"语义已就绪",total:"eligible_editions",note:"份符合检索条件的文献",Icon:Network},{key:"projection_ready",label:"原文索引",total:"eligible_editions",note:"份符合检索条件的文献",Icon:Layers3}].map(({key,label,total,note,Icon})=><section key={key}><Icon size={24}/><div><h2>{label}</h2><strong>{data.summary[key]??0} / {data.summary[total]??0}</strong><p>{note}</p></div></section>)}</div>
     {data.warnings.map((warning,index)=><p key={index} className={styles.notice}>{warning.message}</p>)}
     {tab==="overview"||tab==="documents"?<div className={styles.columns}><section className={styles.materials}>{tab==="overview"?<IndexQueryPreview owner={owner} onSelect={id=>change({edition_id:id})}/>:<><h2>文献检索与状态</h2><form className={styles.search} onSubmit={searchMaterials}><Search size={17}/><input aria-label="按题名或出版社查找材料" placeholder="搜索材料题名、出版社…" value={query} onChange={event=>setQuery(event.target.value)}/><button type="submit" className={styles.primary}>检索</button></form><nav className={styles.filters} aria-label="资料状态筛选">{[["all","全部"],["failed","索引失败"],["text_missing","缺少正文"],["file_missing","原文不可用"]].map(([key,label])=><button type="button" key={key} aria-pressed={(params.get("scope")||"all")===key} onClick={()=>change({scope:key,page:1,edition_id:null})}>{label}</button>)}</nav><p className={styles.note}>找到 {data.count} 个出版版本。此处按馆藏名称查找，正文证据检索沿公开检索入口。</p>
@@ -112,7 +114,7 @@ function TermList({owner,canSync,onSync,scope="",editor,onEditorState}:{owner:st
       {!scope?<select aria-label="查询词来源类别" value={kind} onChange={event=>{setKind(event.target.value);setPage(1);}}><option value="">全部来源</option><option value="person">人名与异名</option><option value="knowledge_node">知识与中英术语</option><option value="topic">主题</option><option value="discipline">学科</option><option value="subdiscipline">子学科</option><option value="work">作品</option></select>:null}
       <select aria-label="使用状态" value={availability} onChange={event=>{setAvailability(event.target.value);setPage(1);}}><option value="">全部使用状态</option><option value="public">公开与后台</option><option value="admin">仅后台</option><option value="inactive">未启用</option></select>
     </form>
-    {notice?<p role="status" className={styles.notice}>{notice}</p>:null}{resource.error?<p role="alert" className={styles.notice}>{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p>:null}{resource.loading?<p role="status">正在读取查询词…</p>:null}
+    {notice?<p role="status" className={styles.notice}>{notice}</p>:null}{resource.error?<p role="alert" className={styles.notice}>{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p>:null}{resource.loading?<LoadingState role="status">正在读取查询词…</LoadingState>:null}
     {data?<><p className={styles.note}>匹配当前筛选 {data.count} 项。全库词条 {data.entries} 项，其中公开可用 {data.public_active_entries} 项；等待同步 {data.pending_events} 项，失败 {data.failed_events} 项。</p>
       <div className={styles.table}><table><thead><tr><th>检索词</th><th>来源对象</th><th>规则类别</th><th>使用状态</th><th>操作</th></tr></thead><tbody>{data.terms.map(term=><tr key={term.id}>
         <td><strong>{term.term}</strong><small>{term.language}</small></td><td>{term.entity_label}</td><td>{labels[term.term_type]||term.term_type}<small>{labels[term.trust_level]||term.trust_level}</small></td><td><span className={styles.termAvailability} data-active={term.public_active}>{term.public_active?"公开与后台":term.admin_resolvable?"仅后台":"未启用"}</span></td>

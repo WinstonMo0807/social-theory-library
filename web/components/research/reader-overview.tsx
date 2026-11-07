@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Bookmark, Box, CalendarDays, ChartPie, ChevronLeft, ChevronRight, FileText, RefreshCw, Search } from "lucide-react";
 import { useCallback, useState, type FormEvent } from "react";
@@ -61,7 +63,7 @@ export function ReaderOverview({ ownerId, archive=false }: { ownerId: string; ar
     <div className={styles.navigation}>{!archive?<nav className={styles.sections} aria-label="我的资料类型">{sections.map(([key, label, href]) => { const Icon=sectionIcons[key]; return <Link key={key} href={href} data-overview-current={key==="research"||undefined}><Icon size={19} /><span>{label}</span><small>{data ? data.counts[key] + (key === "notes" ? data.counts.bookmarks : 0) : "—"}</small></Link>; })}</nav>:null}<form className={styles.search} onSubmit={submit} key={search}><Search size={18} /><input aria-label="搜索我的资料" name="q" type="search" maxLength={180} defaultValue={search} placeholder="搜索我的资料…" /><button type="submit" aria-label="搜索我的资料">搜索</button></form></div>
     {archive?<nav className={styles.archiveTabs} aria-label="资料类别">{[["all","全部"],["research","研究"],["saved","选材"],["notes","笔记"],["lists","书单"],["plans","计划"],["audits","体检"],["confirmed","记忆"]].map(([value,label])=><button key={value} aria-pressed={kind===value} onClick={()=>filter({material:value})}>{label}</button>)}</nav>:null}
     {!archive||data?.results.length?<details className={styles.localTransfer}><summary>本机记录</summary><div><p>本机研究记录只有在你选择并确认后才会转存。</p><LocalResearchTransfer ownerId={ownerId} onChanged={workspace.reload} /></div></details>:null}
-    {workspace.error ? <section className={styles.state} role="alert"><h2>私人资料暂时无法读取</h2><p>{workspace.error}</p><div><button onClick={workspace.reload}><RefreshCw size={15} />重新读取</button>{page > 1 ? <button onClick={() => filter({ page: "1" })}>返回第一页</button> : null}{search || kind !== "all" || visibility !== "all" ? <button onClick={() => filter({ q: "", material: "all", visibility: "all" })}>清除筛选</button> : null}</div></section> : workspace.loading || !data ? <section className={styles.state} role="status"><p>正在读取你的资料…</p></section> : <>
+    {workspace.error ? <section className={styles.state} role="alert"><h2>私人资料暂时无法读取</h2><p>{workspace.error}</p><div><button onClick={workspace.reload}><RefreshCw size={15} />重新读取</button>{page > 1 ? <button onClick={() => filter({ page: "1" })}>返回第一页</button> : null}{search || kind !== "all" || visibility !== "all" ? <button onClick={() => filter({ q: "", material: "all", visibility: "all" })}>清除筛选</button> : null}</div></section> : workspace.loading || !data ? <section className={styles.state} role="status"><LoadingState>正在读取你的资料…</LoadingState></section> : <>
       {!archive?<><section className={styles.section}><header><div><h2>继续阅读</h2></div><Link href="/account?section=history">查看全部 <ArrowRight size={14} /></Link></header>
         {data.recent_reading.length ? <div className={styles.reading}>{data.recent_reading.map(row => {
           if (!row.work) return <article key={row.id}><div><h3>来源当前不可用</h3><p>阅读位置仍保留，作品公开后可继续阅读。</p></div></article>;

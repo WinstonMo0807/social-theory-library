@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
@@ -17,7 +19,7 @@ export function MaterialRelationCandidates({owner,centerKind,centerId}:{owner:st
   const resource=usePersistentWorkspace<Page>(`/catalog/admin/theory-system/review-tasks/?${query}`,owner,undefined,load);
   return <section aria-label="原材料审核候选">
     <header><h4>材料中的待核对线索 <small>{resource.data?.count??"…"}</small></h4><p>{centerKind==="scholar"?"来自该学者已确认参与的具体版本。作者、译者或其他参与身份不等于本人持有材料中的观点。":"来自该条目在原材料识别与审核流程中的候选。"} 这些线索尚未建立人物或概念之间的关系。</p></header>
-    {resource.error?<p role="alert">{resource.error}<button type="button" onClick={()=>{setPage(1);resource.reload();}}>从第一页重新读取</button></p>:!resource.data?<p role="status">正在读取原材料审核任务…</p>:<>
+    {resource.error?<p role="alert">{resource.error}<button type="button" onClick={()=>{setPage(1);resource.reload();}}>从第一页重新读取</button></p>:!resource.data?<LoadingState role="status">正在读取原材料审核任务…</LoadingState>:<>
       <ul className={styles.candidateRows}>{resource.data.results.map(row=><li key={row.id}>
         <div><strong>{row.work_title||"原文献当前不可读"} → {row.node_name||row.suggested_node_name||"待核对条目"}</strong><p>{labels[row.status||""]||row.status||"状态待核对"}</p>
           {row.evidence_text?<details><summary>识别时保留的摘录</summary><p>{row.evidence_text}</p><small>此摘录不是已确认的原文位置，须核对原文件及当前准确版本。它不代表关系已成立。</small></details>:<small>原任务没有保留摘录，请先补齐材料证据。</small>}

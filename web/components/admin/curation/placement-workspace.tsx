@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -34,7 +36,7 @@ const sameSource = (a:Item,b:Item)=>a.source?.work_id&&b.source?.work_id?a.sourc
 export function PlacementWorkspace({pageType,pageId}:{pageType:PlacementPage;pageId:string}) {
   const user = useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  if(!user)return <p>正在核对编辑账户…</p>;
+  if(!user)return <LoadingState>正在核对编辑账户…</LoadingState>;
   const allowed=hasAdminCapability(user,pageType==="issue"?"can_edit_metadata":"can_edit_draft_authority");
   if(!allowed)return <p>当前账户没有此页面的编辑权限。</p>;
   return <WorkspaceBody key={`${user.id}:${epoch}:${pageType}:${pageId}`} owner={String(user.id)} pageType={pageType} pageId={pageId}/>;
@@ -67,9 +69,9 @@ function WorkspaceBody({owner,pageType,pageId}:{owner:string;pageType:PlacementP
   async function retry(){const result=await command.send();if(result){setEditing(null);resource.reload();setNotice("原请求已确认，请核对最新草稿。");}}
   const feedback=<>{command.error?<p role="alert">{command.error}</p>:null}{command.recovery?<section className={styles.notice} role="status"><p>原请求结果尚未确认，输入已保留。先查询记录再继续修改。</p><div className={styles.actions}><button disabled={command.busy} onClick={()=>void recover()}>查询原请求</button>{command.canRetry?<button disabled={command.busy} onClick={()=>void retry()}>重发原请求</button>:null}<button disabled={command.busy} onClick={()=>void recover(true)}>停止尚未执行的请求</button></div></section>:null}{notice?<p role="status" className={styles.notice}>{notice}</p>:null}</>;
   if(resource.error)return <main className={styles.page}><h1>内容编排</h1><p role="alert">{resource.error}</p>{feedback}<button onClick={resource.reload}>重新读取编排</button><Link href="/admin/content">返回页面目录，选书清单保留</Link></main>;
-  if(!data||!draft)return <main className={styles.page}><p role="status">正在读取当前页面的内容编排…</p></main>;
+  if(!data||!draft)return <main className={styles.page}><LoadingState role="status">正在读取当前页面的内容编排…</LoadingState></main>;
   const version=editing?.version||data.expected_revision||"0";
-  if(picker)return <main className={styles.page}><PlacementCatalogPicker targetPicker={<><button type="button" disabled={composing||locked||dirty} onClick={()=>setTargetOpen(true)}>更换目标页面</button>{dirty?<p>先返回编辑页保存当前修改，再更换页面；选书清单保留。</p>:null}{switching?<p role="status">正在打开目标页面，已选版本和文案保留…</p>:null}</>} value={pickerDraft} onChange={setPickerDraft} owner={owner} title={data.title||"当前页面"} groups={draft.groups} existing={draft.items} blocked={locked} onCancel={()=>setPicker(false)} onFinish={(items,group)=>{if(locked)return;setPickerDraft({selected:[],group:0});change({items:[...draft.items,...items],groups:placementGroups([...draft.items,...items],draft.groups.length?draft.groups:[group])});setPicker(false);if(items[0]){setActive(items[0].id);setMobile("edit");}}}/><Dialog open={targetOpen} className={`${styles.dialog} ${styles.targetDialog}`} onRequestClose={()=>setTargetOpen(false)} aria-label="选择编排目标页面"><button type="button" disabled={switching} onClick={()=>setTargetOpen(false)}>返回选书清单</button>{targetOpen?<PlacementTargetDirectory onSelect={target=>{if(locked||dirty)return;if(target.id===pageId&&target.type===pageType){setTargetOpen(false);return;}setPickerDraft(current=>({...current,group:0}));setTargetOpen(false);startSwitch(()=>router.push(`/admin/content/${target.type}/${target.id}`));}}/>:null}</Dialog></main>;
+  if(picker)return <main className={styles.page}><PlacementCatalogPicker targetPicker={<><button type="button" disabled={composing||locked||dirty} onClick={()=>setTargetOpen(true)}>更换目标页面</button>{dirty?<p>先返回编辑页保存当前修改，再更换页面；选书清单保留。</p>:null}{switching?<LoadingState role="status">正在打开目标页面，已选版本和文案保留…</LoadingState>:null}</>} value={pickerDraft} onChange={setPickerDraft} owner={owner} title={data.title||"当前页面"} groups={draft.groups} existing={draft.items} blocked={locked} onCancel={()=>setPicker(false)} onFinish={(items,group)=>{if(locked)return;setPickerDraft({selected:[],group:0});change({items:[...draft.items,...items],groups:placementGroups([...draft.items,...items],draft.groups.length?draft.groups:[group])});setPicker(false);if(items[0]){setActive(items[0].id);setMobile("edit");}}}/><Dialog open={targetOpen} className={`${styles.dialog} ${styles.targetDialog}`} onRequestClose={()=>setTargetOpen(false)} aria-label="选择编排目标页面"><button type="button" disabled={switching} onClick={()=>setTargetOpen(false)}>返回选书清单</button>{targetOpen?<PlacementTargetDirectory onSelect={target=>{if(locked||dirty)return;if(target.id===pageId&&target.type===pageType){setTargetOpen(false);return;}setPickerDraft(current=>({...current,group:0}));setTargetOpen(false);startSwitch(()=>router.push(`/admin/content/${target.type}/${target.id}`));}}/>:null}</Dialog></main>;
   const changedIds=editing?draft.items.filter(row=>JSON.stringify(payload({items:[row],groups:[]}))!==JSON.stringify(payload({items:editing.base.items.filter(old=>old.id===row.id),groups:[]}))).map(row=>row.id):[];
   const itemStatus=(row:Item)=>changedIds.includes(row.id)?"unsaved":data.item_states?.[row.id]==="published"?"published":"saved_unpublished";
   const statusLabel=(row:Item)=>({unsaved:"未保存",published:"当前公开",saved_unpublished:"已保存未发布"})[itemStatus(row)];

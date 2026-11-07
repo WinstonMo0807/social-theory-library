@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { useAdminSession } from "@/lib/admin-session";
@@ -33,7 +35,7 @@ function newDraft(atlasId:string,path:string,viewport:Viewport):Draft{return{rev
 export function VisualReviewWorkspace(){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<Workspace key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<p role="status">正在核对预览账户…</p>;
+  return user?<Workspace key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<LoadingState role="status">正在核对预览账户…</LoadingState>;
 }
 
 function Workspace({owner}:{owner:string}){
@@ -82,6 +84,6 @@ function Workspace({owner}:{owner:string}){
       {command.recovery?<div className={styles.notice}><p>上次保存的操作结果尚未确认，请先查询原结果，避免重复记录。</p><div className={styles.toolbar}><button disabled={command.busy} onClick={()=>void command.lookup().then(accept)}>查询保存结果</button>{command.canRetry?<button disabled={command.busy} onClick={()=>void command.send().then(accept)}>重试原请求</button>:null}<button disabled={command.busy} onClick={()=>void command.lookup(true).then(accept)}>停止未执行保存</button></div></div>:null}
       <section className={styles.history}><h2>已保存批注 <span>{data.count}</span></h2>{data.results.length?<ol>{data.results.map(row=><li key={row.review_id}><div><strong>{row.atlas_id} · {row.status==="open"?"待修正":"已修正，待最终确认"}</strong><p>{row.note||`${row.strokes.length} 笔绘图标记`}</p><small>{row.path} · {row.viewport.width} × {row.viewport.height} · {new Date(row.saved_at).toLocaleString("zh-CN")}</small></div><button disabled={dirty||locked} onClick={()=>openSaved(row)}>打开批注</button></li>)}</ol>:<p>尚无保存记录。批注只属于当前账户，不进入公共页面或读者反馈。</p>}<div className={styles.toolbar}><button disabled={page<=1} onClick={()=>setPage(n=>n-1)}>上一页</button><span>第 {page} / {Math.max(1,Math.ceil(data.count/data.page_size))} 页</span><button disabled={page*data.page_size>=data.count} onClick={()=>setPage(n=>n+1)}>下一页</button></div></section>
       <Dialog open={referenceOpen} onRequestClose={()=>setReferenceOpen(false)} aria-labelledby="visual-reference-title" className={styles.referenceDialog}><header><h2 id="visual-reference-title">终稿第 {entry.page} 页 · {entry.title}</h2><button onClick={()=>setReferenceOpen(false)}>关闭原图</button></header>{referenceOpen?<PrivateMediaImage owner={owner} path={`${BASE}references/${entry.page}/`} alt={`最终PDF第${entry.page}页原图`}/>:null}</Dialog>
-    </>:!resource.error?<p role="status">正在读取终稿视图与批注记录…</p>:null}
+    </>:!resource.error?<LoadingState role="status">正在读取终稿视图与批注记录…</LoadingState>:null}
   </main>;
 }

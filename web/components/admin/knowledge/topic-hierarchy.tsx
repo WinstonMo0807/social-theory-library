@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { useAdminSession } from "@/lib/admin-session";
@@ -56,7 +58,7 @@ function HierarchyProposal({ topicId, name, value, onApply, onClose }: {
     </details>
     {changed ? <p role="alert">原表单的上级已变化，请取消后重新打开，避免覆盖更新。</p> : null}
     {topicId ? result?.error ? <p role="alert">{result.error}<button type="button" onClick={() => setAttempt(value => value + 1)}>重新核对</button></p>
-      : !result?.data ? <p role="status">正在核对本次调整的影响…</p> : <section className={styles.hierarchyImpact} aria-live="polite">
+      : !result?.data ? <LoadingState role="status">正在核对本次调整的影响…</LoadingState> : <section className={styles.hierarchyImpact} aria-live="polite">
         {result.data.problems.map((problem, index) => <p role="alert" key={index}>{String(problem.detail || "层级需要核对。")}</p>)}
         {result.data.cycle_path.length ? <p className={styles.cyclePath}>形成循环：{result.data.cycle_path.map(row => row.id === topicId ? name || row.name : row.name).join(" → ")}</p>
           : <p>上级链：{result.data.parent_path.map(row => row.id === topicId ? name || row.name : row.name).join(" → ")}</p>}

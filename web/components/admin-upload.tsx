@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -1086,7 +1088,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
         ) : null}
       </div>}
     preview={<aside className="upload-v307-preview admin-panel" aria-label="当前上传预览"><header><h2>上传预览</h2></header>{previewFile ? <><div className="upload-v307-file-preview">{previewUrl ? <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} title={`${previewFile.file.name} 本地 PDF 预览`} /> : <FileText size={48} />}</div><strong>{previewFile.file.name}</strong><dl><div><dt>文件类型</dt><dd>PDF</dd></div><div><dt>文件大小</dt><dd>{formatUploadBytes(previewFile.file.size)}</dd></div><div><dt>上传状态</dt><dd>{previewFile.message || "等待上传"}</dd></div></dl><p>文件上传并校验后，进入馆藏工作页完善书目、关联作者和发布。</p></> : <p className="admin-list-state">选择 PDF 后，可以在这里核对本地文件。</p>}</aside>}
-    feedback={<>{preparing?<p role="status">正在核对文件内容，准备当前账户的恢复记录…</p>:null}{error?<p className="form-message error" role="alert">{error}</p>:null}{workspace.error?<p role="alert">{workspace.error}<button onClick={workspace.reload}>重新读取上传能力</button></p>:null}{reservation.error?<p role="alert">{reservation.error}</p>:null}{reservation.recovery?<section role="status"><p>批次请求尚未确认，当前选择保留，请查询原结果。</p><button disabled={reservation.busy} onClick={()=>void recoverReservation()}>查询批次</button><button disabled={reservation.busy} onClick={()=>void recoverReservation(true)}>停止未执行请求</button></section>:null}{ingestionError?<p role="alert">{ingestionError}</p>:null}{stagingError?<p role="alert">{stagingError}</p>:null}</>}
+    feedback={<>{preparing?<LoadingState role="status">正在核对文件内容，准备当前账户的恢复记录…</LoadingState>:null}{error?<p className="form-message error" role="alert">{error}</p>:null}{workspace.error?<p role="alert">{workspace.error}<button onClick={workspace.reload}>重新读取上传能力</button></p>:null}{reservation.error?<p role="alert">{reservation.error}</p>:null}{reservation.recovery?<section role="status"><p>批次请求尚未确认，当前选择保留，请查询原结果。</p><button disabled={reservation.busy} onClick={()=>void recoverReservation()}>查询批次</button><button disabled={reservation.busy} onClick={()=>void recoverReservation(true)}>停止未执行请求</button></section>:null}{ingestionError?<p role="alert">{ingestionError}</p>:null}{stagingError?<p role="alert">{stagingError}</p>:null}</>}
     metadata={<><p>可附同名 RIS、BibTeX、JSON、YAML 元数据，导入后仅生成待审候选。</p>{metadataFiles.map(file=><p key={metadataIdentity(file)}>{file.name}{pairedMetadataIdentities.has(metadataIdentity(file))?" · 已匹配":" · 暂未匹配PDF"}</p>)}{Object.entries(metadataImportStates).map(([id,state])=><p key={id}>{state.filename} · {state.message}</p>)}</>}
     details={<><p>实际服务端预检、OCR安排和书目候选如下。上传完成不等于已发布。</p><div>            {ingestionItems.filter(item=>item.id===detailItemId).map((item) => {
               const metadata = item.review_data ?? item.recognized_metadata;

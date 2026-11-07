@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PdfCanvas } from "@/components/pdf-canvas";
 import { subscribeToSessionChanges } from "@/lib/api";
@@ -68,7 +70,7 @@ function CitationDocumentPreview({ ownerId, identity, filetype, revision, expect
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); off(); };
   }, [identity, filetype, ownerId, attempt, readOriginal]);
   const parsedText = <>
-    {text.error ? <p role="alert">{text.error}<button type="button" onClick={text.reload}>重新读取解析文字</button></p> : text.loading ? <p role="status">正在读取本人稿件的解析文字…</p> : staleSourceText ? <p role="alert">来源正在重新解析或解析版本已变化，旧批次文字暂不显示。请关闭来源并刷新列表后重新打开。</p> : text.data ? <>
+    {text.error ? <p role="alert">{text.error}<button type="button" onClick={text.reload}>重新读取解析文字</button></p> : text.loading ? <LoadingState role="status">正在读取本人稿件的解析文字…</LoadingState> : staleSourceText ? <p role="alert">来源正在重新解析或解析版本已变化，旧批次文字暂不显示。请关闭来源并刷新列表后重新打开。</p> : text.data ? <>
       <div className="stl4-audit-toolbar"><span>已解析 {text.data.count} 个文本位置</span><div><button type="button" disabled={text.data.page <= 1} onClick={() => setTextNavigation({ key: focusKey, page: text.data!.page - 1 })}>前一组段落</button><span>第 {text.data.page} 组</span><button type="button" disabled={!text.data.next_page} onClick={() => setTextNavigation({ key: focusKey, page: text.data!.next_page! })}>后一组段落</button></div></div>
       <div className="stl4-audit-parsed-paper">{text.data.units.map(unit => <article key={unit.id} ref={unit.id === selectedUnit?.id ? selected : undefined} data-selected={unit.id === selectedUnit?.id || undefined}><h3>{auditLocation(unit.location)}</h3>{unit.coverage_status === "unread_content" ? <small>此位置包含尚未核对的扫描或图像内容，不能把未解析部分视为空白。</small> : null}<p>{unit.id === selectedUnit?.id ? markSelection(unit, focus) : unit.text || "此位置未解析到可用文字。"}</p></article>)}{!text.data.units.length ? <p>当前尚无可读取的解析文字。原稿仍保留；处理结束后可重试或回到原稿核对。</p> : null}</div>
       {text.data.notice ? <p className="stl4-audit-caption">{text.data.notice}</p> : null}
@@ -77,7 +79,7 @@ function CitationDocumentPreview({ ownerId, identity, filetype, revision, expect
   return <section className="stl4-audit-manuscript-preview" aria-label="稿件解析预览">
     <nav className="stl4-audit-preview-mode" aria-label="稿件预览方式"><button type="button" aria-pressed={mode === "page"} onClick={() => setMode("page")}>{filetype === "pdf" ? "原稿页面" : "分页预览"}</button><button type="button" aria-pressed={mode === "text"} onClick={() => setMode("text")}>解析文字</button></nav>
     {filetype === "docx" ? <p className="stl4-audit-caption">段落、脚注和尾注以原稿实际解析位置为准；分页预览单独生成，不改变原稿。定位引文时显示对应解析文字。</p> : null}
-    {mode === "text" ? parsedText : filetype === "docx" ? <CitationDocxPreview key={`${previewId}:${sourceGeneration}`} id={previewId} kind={previewKind} ownerId={ownerId} sourceGeneration={sourceGeneration} fallback={parsedText} /> : error ? <p role="alert">{error}<button type="button" onClick={() => setAttempt(value => value + 1)}>重试读取原稿</button></p> : !url ? <p role="status">正在安全读取本人的 PDF 原稿…</p> : <>
+    {mode === "text" ? parsedText : filetype === "docx" ? <CitationDocxPreview key={`${previewId}:${sourceGeneration}`} id={previewId} kind={previewKind} ownerId={ownerId} sourceGeneration={sourceGeneration} fallback={parsedText} /> : error ? <p role="alert">{error}<button type="button" onClick={() => setAttempt(value => value + 1)}>重试读取原稿</button></p> : !url ? <LoadingState role="status">正在安全读取本人的 PDF 原稿…</LoadingState> : <>
       <div className="stl4-audit-toolbar"><button type="button" disabled={page <= 1} onClick={() => setNavigation({ key: focusKey, page: page - 1 })}>上一页</button><label>稿件 PDF 页码 <input type="number" min={1} max={pages || undefined} value={page} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 1 && (!pages || value <= pages)) setNavigation({ key: focusKey, page: value }); }} /></label><span>/ {pages || "—"}</span><button type="button" disabled={!pages || page >= pages} onClick={() => setNavigation({ key: focusKey, page: page + 1 })}>下一页</button><label>缩放 <select value={zoom} onChange={event => setZoom(Number(event.target.value))}><option value={75}>75%</option><option value={100}>100%</option><option value={125}>125%</option><option value={150}>150%</option></select></label></div>
       {pages > 0 && page > pages ? <p role="alert">当前记录的页码超出实际原稿范围，请核对解析位置。</p> : <div className="stl4-audit-manuscript-canvas"><PdfCanvas key={url} url={url} page={page} zoom={zoom} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={setPages} /></div>}
       {focus?.text ? <div className="stl4-audit-preview-selection"><strong>{auditLocation(focus.location)}</strong><p>{focus.text}</p><small>仅跳转到记录的物理页；未取得页面坐标时不绘制推测高亮。</small></div> : null}

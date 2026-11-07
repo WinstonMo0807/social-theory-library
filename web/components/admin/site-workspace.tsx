@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, ChevronDown, ChevronRight, ExternalLink, GripVertical, Plus, X } from "lucide-react";
@@ -59,7 +61,7 @@ function Workspace({home,stats,owner,fullPreview=false,initialPanel="",welcomePa
     update(destination.area,destination.replace?old.map(row=>row.id===id?slot:row):[...old,slot]);setCache(current=>({...current,[id]:{...choice.source,id}}));setCovers(current=>{const next={...current};delete next[id];return next;});select(destination.area,id);setPicker(null);
   }
   if(editor.blocked||(!editor.resource.data&&editor.resource.error))return <section className="admin-panel"><h1>首页编排、关于与公共说明</h1><p role="alert">{editor.message||editor.resource.error||"请重新核对当前账户。"}</p><button onClick={()=>window.location.reload()}>重新读取页面</button></section>;
-  if(!draft)return <p role="status">正在读取网站内容…</p>;
+  if(!draft)return <LoadingState role="status">正在读取网站内容…</LoadingState>;
   const layout=Object.fromEntries(areas.map(area=>[area,draft.home_layout[area]?.map(row=>{
     const original=saved?.home_layout[area]?.find(slot=>slot.id===row.id);
     const unsavedSource=!original||original.target.type!==row.target.type||original.target.id!==row.target.id;

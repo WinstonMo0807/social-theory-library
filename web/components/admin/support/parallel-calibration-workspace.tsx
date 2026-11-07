@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, Check, GitCompareArrows, RefreshCw } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -22,7 +24,7 @@ const actionLabels = { review: "确认审核", publish: "发布公共校准", re
 export function ParallelCalibrationWorkspace() {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <p role="status">正在核对管理会话…</p>;
+  if (!user) return <LoadingState role="status">正在核对管理会话…</LoadingState>;
   if (!hasAdminCapability(user, "can_review_candidate")) return <p role="alert">当前账户没有公共校准审核权限。</p>;
   return <Workspace key={`${user.id}:${epoch}`} ownerId={String(user.id)} canPublish={hasAdminCapability(user, "can_publish_authority")} />;
 }

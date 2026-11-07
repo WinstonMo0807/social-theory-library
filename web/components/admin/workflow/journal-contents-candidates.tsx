@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { useAdminSession } from "@/lib/admin-session";
@@ -27,7 +29,7 @@ export function JournalContentsCandidates(props: Props) {
     {opened ? <div className={styles.body}>
       <p>先核对目录中的文章，再追加到下方草稿。已有条目保留；作者、终止页及馆内关联由你填写。</p>
       {props.disabled ? <p>当前书目不可编辑。</p> : null}
-      {source.loading ? <p role="status">正在读取本期目录…</p> : null}
+      {source.loading ? <LoadingState role="status">正在读取本期目录…</LoadingState> : null}
       {source.error ? <p role="alert">{source.error}</p> : null}
       {data?.files.length ? <label>阅读文件<select value={fileId || data.asset_id || ""} onChange={event => { setFileId(event.target.value); setPage(1); }}>
         <option value="">请选择文件</option>{data.files.map(file => <option value={file.id} key={file.id}>{file.name} · {file.page_count} 页</option>)}

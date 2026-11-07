@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Maximize2, Minus, Plus } from "lucide-react";
 import { apiBlob, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -53,7 +55,7 @@ export function OutlinePdfPreview({ asset, ownerId, page, setPage, navigationTar
       {layout!=="ocr"?<button type="button" aria-label="全屏预览" onClick={()=>{setDisplayError("");if(!previewRef.current?.requestFullscreen){setDisplayError("当前浏览器不支持全屏，可使用上方缩放查看页面。");return;}void (document.fullscreenElement?document.exitFullscreen():previewRef.current.requestFullscreen()).catch(()=>setDisplayError("当前浏览器无法打开全屏，可使用上方缩放查看页面。"));}}><Maximize2 size={14}/></button>:null}
     </div>
     {displayError?<p className={styles.caption} role="status">{displayError}</p>:null}
-    {error ? <div className={styles.notice} role="alert"><p>{error}</p><button type="button" onClick={() => { setError(""); setAttempt(value => value + 1); }}>重新读取 PDF</button></div> : !url ? <p role="status" className={styles.notice}>正在读取当前文件……</p> :
+    {error ? <div className={styles.notice} role="alert"><p>{error}</p><button type="button" onClick={() => { setError(""); setAttempt(value => value + 1); }}>重新读取 PDF</button></div> : !url ? <LoadingState role="status" className={styles.notice}>正在读取当前文件……</LoadingState> :
       page > total && total > 0 ? <p role="alert" className={styles.notice}>所选页超出实际 PDF 页数，请校准节点。</p> :
         <div className={styles.canvas} data-pdf-canvas data-navigation={Boolean(navigationTarget)}><PdfCanvas key={url} url={url} page={page} zoom={zoom} sourceWidth={0} sourceHeight={0} canonicalBlocks={[]} highlights={[]} onDocumentLoad={onLoad} navigationTarget={navigationTarget} /></div>}
     {navigationTarget?<p className={styles.caption}>左侧金色标记对应跳转高度。</p>:null}

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -17,7 +19,7 @@ export function ScholarConceptUsages({scholarId,owner}:{scholarId:string;owner:s
   const resource=usePersistentWorkspace<Page>(`/catalog/admin/scholars/${scholarId}/concept-usages/?page=${page}`,owner,undefined,load);
   return <section className={styles.workspace} aria-label="学者的概念用法">
     <header className={styles.heading}><div><h2>概念用法</h2><p>按已填写的作者归属汇集用法。编辑后在所属概念中确认；用法记录与公开版本分别核对。</p></div><button type="button" onClick={resource.reload}>重新读取</button></header>
-    {resource.error?<p role="alert">{resource.error}<button type="button" onClick={()=>{setPage(1);resource.reload();}}>返回第一页重读</button></p>:!resource.data?<p role="status">正在读取用法与准确材料…</p>:<>
+    {resource.error?<p role="alert">{resource.error}<button type="button" onClick={()=>{setPage(1);resource.reload();}}>返回第一页重读</button></p>:!resource.data?<LoadingState role="status">正在读取用法与准确材料…</LoadingState>:<>
       <p>共 {resource.data.count} 个知识条目含有当前归属记录 · 第 {page} 页</p>
       {resource.data.results.map(group=><section className={styles.panel} key={group.node_id}>
         <header><h3>{group.node_name}</h3><p>{group.revision_status==="draft"?"当前已保存草稿，尚未公开":group.revision_status==="published"?"已发布编排，来源仍须核对":"历史编排"}</p><Link href={group.edit_url}>编辑用法与来源 →</Link></header>

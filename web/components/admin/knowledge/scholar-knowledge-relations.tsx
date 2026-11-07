@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
@@ -20,7 +22,7 @@ const clearGuard:NodeRelationGuard={dirty:false,pending:false,composing:false};
 export function ScholarKnowledgeRelations({ scholarId }: { scholarId: string }) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <Workspace key={`${user.id}:${epoch}:${scholarId}`} scholarId={scholarId} owner={String(user.id)}/> : <p role="status">正在核对编辑账户…</p>;
+  return user ? <Workspace key={`${user.id}:${epoch}:${scholarId}`} scholarId={scholarId} owner={String(user.id)}/> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function Workspace({ scholarId, owner }: { scholarId: string; owner: string }) {
@@ -45,7 +47,7 @@ function Workspace({ scholarId, owner }: { scholarId: string; owner: string }) {
   return <div className={`admin-page ${styles.workspace}`}>
     <header className="admin-page-title"><h1>理论、概念与关系编辑</h1></header>
     {notice ? <p role="status">{notice}</p> : null}
-    {profile.error ? <p role="alert">{profile.error}<button type="button" onClick={profile.reload}>重新读取学者</button></p> : !data ? <p role="status">正在读取原学者资料…</p> : <>
+    {profile.error ? <p role="alert">{profile.error}<button type="button" onClick={profile.reload}>重新读取学者</button></p> : !data ? <LoadingState role="status">正在读取原学者资料…</LoadingState> : <>
       <section className={`${styles.nodeHero} ${relationStyles.scholarHero}`} aria-label="当前学者">
         {data.portrait ? <img className={relationStyles.scholarPortrait} src={normalizePublicResourceUrl(data.portrait)} alt={`${data.preferred_name}肖像`}/> : null}
         <div><h2>{data.preferred_name}</h2>{data.original_name ? <p>{data.original_name}</p> : null}{data.birth_year != null || data.death_year != null ? <p>{data.birth_year ?? "生年待考"} — {data.death_year ?? ""}</p> : null}<span>学者</span></div>

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,7 +70,7 @@ export function BooklistPlanForm({ owner, row, selected, onBusy, onClose }: { ow
   }
   return <div>
     <p>{selected.length ? `使用所选 ${selected.length} 部作品` : "使用这份书单的全部作品"}，保留书单顺序与当前公开版本。生成的私人计划独立保存，之后移除书单作品不会删除计划。</p>
-    {source.error ? <p role="alert">{source.error}<button onClick={source.reload}>重新核对材料</button></p> : !data ? <p role="status">正在核对作品及可读版本…</p> : <details open={!data.ready}><summary>{data.items.length} 部作品 · {data.ready ? "可生成计划" : "存在不可读的来源"}</summary><ul>{data.items.map(item => <li key={item.item_id}>{item.reader_url ? <Link href={item.reader_url} target="_blank" rel="noopener">{item.title}</Link> : item.title} · {item.source_status === "available" ? "可读" : "当前不可读，请返回书单调整选择"}</li>)}</ul></details>}
+    {source.error ? <p role="alert">{source.error}<button onClick={source.reload}>重新核对材料</button></p> : !data ? <LoadingState role="status">正在核对作品及可读版本…</LoadingState> : <details open={!data.ready}><summary>{data.items.length} 部作品 · {data.ready ? "可生成计划" : "存在不可读的来源"}</summary><ul>{data.items.map(item => <li key={item.item_id}>{item.reader_url ? <Link href={item.reader_url} target="_blank" rel="noopener">{item.title}</Link> : item.title} · {item.source_status === "available" ? "可读" : "当前不可读，请返回书单调整选择"}</li>)}</ul></details>}
     {message ? <p role="status">{message}</p> : null}
     {requestId || broken ? <div><p>先核对原操作，再生成新的计划。</p>{requestId ? <button disabled={busy || broken} onClick={() => void submit(undefined, true)}>核对原计划结果</button> : null}{canRetry ? <button disabled={busy || broken} onClick={() => void submit()}>用原请求重试</button> : null}<Link href="/account/plans" target="_blank" rel="noopener">查看我的阅读计划</Link><button disabled={busy} onClick={() => { if (window.confirm("已核对服务端计划？清除本机请求记录不会撤销已经生成的计划。")) clear(); }}>核对后清除本机记录</button></div> : null}
     <PlanSettingsForm preserveSourceOrder ownerId={owner} defaultGoal={row.goal} busy={busy || Boolean(requestId) || broken || !data?.ready} onSave={settings => void submit(settings)} onCancel={onClose} />

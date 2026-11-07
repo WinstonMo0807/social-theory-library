@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -79,7 +81,7 @@ function SourceForm({ owner, editionId, workId, seed, refresh, disabled, onRevie
   }
   return <section className={styles.taskConfiguration}><header><h3>文件与处理设置</h3><button type="button" disabled={disabled} onClick={resource.reload}>读取最新文件</button></header>
     {resource.error || error ? <p role="alert" className={styles.notice}>{resource.error || error}</p> : null}
-    {!data ? <p role="status">正在读取这个出版版本的当前文件…</p> : <>
+    {!data ? <LoadingState role="status">正在读取这个出版版本的当前文件…</LoadingState> : <>
       <fieldset disabled={disabled}><legend className={styles.srOnly}>本次任务配置</legend><label>处理文件<select value={file?.id || fileId} onChange={event => { setFileId(event.target.value); setError(""); }}><option value="">选择当前 PDF</option>{data.files.map(row => <option key={row.id} value={row.id} disabled={!row.can_run}>{row.filename} · 版本 {row.version} · {row.page_count} 页{row.reason ? ` · ${row.reason}` : ""}</option>)}</select></label>
       {!data.files.length ? <p className={styles.notice}>尚无可处理的当前 PDF。请从<Link href={`/admin/library/works/${workId}/files?edition=${editionId}`}>文件管理</Link>补充文件并完成校验。</p> : null}
       {fileId && !file ? <p className={styles.notice}>原任务文件已不在当前可用列表，请明确选择现用文件。旧文件与任务记录保留。</p> : null}

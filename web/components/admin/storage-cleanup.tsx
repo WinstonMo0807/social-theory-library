@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ShieldCheck, X } from "lucide-react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -28,7 +30,7 @@ export function StorageCleanup({owner,id,revision,disabled,canOperate,onCommand,
   return <section className={`${styles.panel} ${styles.cleanupPanel}`} aria-label="清理衍生缓存"><header><h2>清理衍生缓存</h2><button type="button" disabled={disabled||!canOperate} onClick={()=>onCommand({operation:"scan_cleanup"})}>扫描可清理项</button></header>
     <p className={styles.hint}>只扫描已完成上传的专用临时目录。原件、阅读文件、OCR 成果、媒体历史、读者资料、模型与活动索引继续保护。</p>
     {!canOperate?<p className={styles.hint}>只有具有清理维护权限的账户可以查看和执行清单。</p>:!id?<div className={styles.protection}><ShieldCheck size={18}/><span>尚未扫描，不预估可释放容量。</span></div>:null}
-    {resource.loading?<p role="status">正在读取清理清单…</p>:null}
+    {resource.loading?<LoadingState role="status">正在读取清理清单…</LoadingState>:null}
     {resource.error?<div className={styles.alert} role="alert"><p>{resource.error}</p><button type="button" onClick={reload}>重新读取</button></div>:null}
     {plan?<><div className={styles.cleanupSummary}><strong>{plan.candidate_count} 项候选 · {size(plan.candidate_bytes)}</strong><span>{plan.status_label}</span></div><p className={styles.hint}>{plan.notice} 本次查看 {plan.examined_count} 个目录项，{plan.protected_count} 项未纳入。文件至少闲置 {plan.retention_days} 天。</p>
       {plan.limited?<p className={styles.notice}>本次达到扫描范围上限，不能据此判断其他文件是否可清理。清理后可另行扫描。</p>:null}

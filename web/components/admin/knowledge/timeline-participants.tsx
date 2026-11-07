@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -18,7 +20,7 @@ function EditionResponsibility({ owner, editionId }: { owner: string; editionId:
     { signal, cache: "no-store", headers: { "X-Editor-Owner": owner } }, getServerSessionCredential(), false), [owner]);
   const result = usePersistentWorkspace<EditionPeople>(`/catalog/admin/theory-timeline/editions/${editionId}/participants/?page=${page}`, owner, undefined, load);
   return <section className={styles.editionPeople} aria-label="所选版本的责任者"><h3>所选版本的责任者</h3>
-    {result.error ? <p role="alert">{result.error}<button type="button" onClick={result.reload}>重新读取</button></p> : !result.data ? <p role="status">正在读取版本资料…</p> : result.data.edition_id !== editionId ? <p role="alert">版本身份不一致，请重新选择。</p> : <>
+    {result.error ? <p role="alert">{result.error}<button type="button" onClick={result.reload}>重新读取</button></p> : !result.data ? <LoadingState role="status">正在读取版本资料…</LoadingState> : result.data.edition_id !== editionId ? <p role="alert">版本身份不一致，请重新选择。</p> : <>
       <p>{result.data.work_title}{result.data.version_label ? ` · ${result.data.version_label}` : ""}</p>
       <ul className={styles.participantChips}>{result.data.results.map(person => <li key={person.key}><span>{person.role_label}</span><strong>{person.name}</strong></li>)}{result.data.publisher ? <li><span>出版方</span><strong>{result.data.publisher}</strong></li> : null}</ul>
       {!result.data.count && !result.data.publisher ? <p>尚无已确认的整版责任资料。</p> : null}

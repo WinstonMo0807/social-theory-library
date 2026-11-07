@@ -1,3 +1,4 @@
+import { ActionMenuBehavior } from "@/components/ui/action-menu-behavior";
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
@@ -23,6 +24,8 @@ import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
 import { AuthSessionDialog } from "@/components/auth-session-dialog";
 import { EvidenceLanguageProvider } from "@/components/evidence-language";
+
+import "../styles/features/workspace-polish.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { config } = await loadSiteChromeConfig();
@@ -68,6 +71,7 @@ export default async function RootLayout({
       </head>
       <body>
         <PublicSessionProvider>
+        <ActionMenuBehavior />
         <AppearanceProvider>
         <EvidenceLanguageProvider>
           <a className="skip-link" href="#main-content">

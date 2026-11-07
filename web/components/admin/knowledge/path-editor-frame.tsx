@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { cloneElement, useId, useState, type ReactElement, type ReactNode, type FormHTMLAttributes } from "react";
 import { normalizePublicResourceUrl } from "@/lib/api";
@@ -38,7 +40,7 @@ export function PathEditorFrame({ form,groups,active,changeSection,dirty,disable
         <h2>条目详情</h2>{previewStatus?.error ? <p role="alert">{previewStatus.error}<button type="button" onClick={previewStatus.retry}>重新核对材料</button></p> : null}{data?<><div className={styles.materials}>{(selected?[selected]:[]).map(item=><button key={item.id} type="button" aria-current={selected?.id===item.id?"true":undefined} onClick={()=>{setSelectedId(item.id);onSelect?.({stageId:item.stage_id,itemId:item.id});}}>{item.cover_url?<img src={normalizePublicResourceUrl(item.cover_url)} alt=""/>:<span className={styles.placeholder}>暂无封面</span>}<span><strong>{item.title}</strong><small>{[item.authors.join("、"),item.publication_year,item.version_label].filter(Boolean).join(" · ")}</small><small>{item.is_required?"必读":"选读"}</small></span></button>)}</div>{selected?.href?<Link className={styles.catalogueLink} href={selected.href} target="_blank" rel="noopener noreferrer">查看馆藏信息 →</Link>:null}{selected?<>
           <nav className={styles.detailTabs} aria-label="材料详情">{[{id:"reason",label:"推荐理由"},{id:"learning",label:"阅读目标"},{id:"dependency",label:"先修依赖"},{id:"edition",label:"版本信息"}].map(tab=><button key={tab.id} type="button" aria-current={detailTab===tab.id?"true":undefined} onClick={()=>setDetailTab(tab.id)}>{tab.label}</button>)}</nav>
           {detailTab==="reason"?<><h3>在本路径中的作用 <button type="button" disabled={disabled||locked} onClick={editSelected}>编辑</button></h3><p>{selected.reason||"尚未填写推荐理由。"}</p></>:detailTab==="learning"?<><h3>阅读目标 <button type="button" disabled={disabled||locked} onClick={editSelected}>编辑</button></h3><p>{selected.learning_goal||"尚未填写阅读目标。"}</p><h3>阅读范围</h3><p>{selected.chapter_title||"整部材料"}{selected.page_start?` · PDF ${selected.page_start}${selected.page_end?`–${selected.page_end}`:""} 页`:""}</p></>:detailTab==="dependency"?<><p>{selected.prerequisite||"尚未填写文字先修说明。"}</p><ul>{selected.dependencies?.map(relation=><li key={`${relation.item_id}:${relation.kind}`}>{relation.kind==="learning_order"?"学习顺序":"理论相关"} · {data.items.find(item=>item.id===relation.item_id)?.title||"原材料"}<p>{relation.reason}</p></li>)}</ul>{!selected.dependencies?.length?<p>无已记录的先修依赖。</p>:null}</>:<><p>{selected.version_label||"版本尚未明确"}</p><p>{selected.source_notice}</p>{selected.href?<Link href={selected.href} target="_blank" rel="noopener noreferrer">查看馆藏信息 →</Link>:<p>材料当前不可公开访问，请检查原馆藏或知识条目的发布状态。</p>}</>}
-        </>:<p>从馆藏选择材料后，才能查看条目详情。</p>}</>:<p>正在核对当前选择；未选材料与无公开来源会保留空态。</p>}</aside>
+        </>:<p>从馆藏选择材料后，才能查看条目详情。</p>}</>:<LoadingState>正在核对当前选择；未选材料与无公开来源会保留空态。</LoadingState>}</aside>
     </div>
     <div className={styles.candidateSection} hidden={!["identity","paths","candidates"].includes(active)} inert={locked}>{candidates}</div>
     <footer className={styles.mobile}><span>{status}</span><button type="button" onClick={()=>changeSection("preview")}>预览</button><button type="submit" form={formId} disabled={disabled||locked}>保存</button></footer>

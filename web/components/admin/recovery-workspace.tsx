@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -195,7 +197,7 @@ function RelatedRecords({owner,target,category,disabled,onSelect}:{owner:string;
   return <section className={styles.related} aria-label={category==="history"?"完整变更记录":category==="names"?"同名对象比较":"关联对象分页"}>
     <div className={styles.relatedTools}>{category==="dependencies"&&data?.groups.length?<label>关联类型<select value={relation||data.relation} onChange={event=>{setRelation(event.target.value);setPage(1);setAsOf("");}}>{data.groups.map(group=><option key={group.id} value={group.id}>{group.label}（{group.count}）</option>)}</select></label>:null}<button onClick={refresh}><RefreshCw size={13}/>读取最新</button></div>
     {resource.error?<div className={styles.error} role="alert">{resource.error}<button onClick={refresh}>返回第一页重新读取</button></div>:null}
-    {resource.loading?<p className={styles.hint} role="status">正在读取记录…</p>:null}
+    {resource.loading?<LoadingState className={styles.hint} role="status">正在读取记录…</LoadingState>:null}
     {data?<><p className={styles.hint}>{data.notice}</p>{category==="history"?<Changes rows={data.history}/>:<div className={styles.dependencies}>{(category==="names"?data.names:data.dependencies).map((row,index)=><div key={`${row.kind}:${row.object_id}:${index}`}><BookOpen size={16}/><div><strong>{row.name}</strong><small>{row.label} · {row.detail}</small><LinkedObjects row={row} disabled={disabled} onSelect={onSelect}/><small>标识 {row.object_id.slice(0,8)}</small></div><span className={styles.state} data-state={row.state}>{row.blocking?"需先恢复":labels[row.state]}</span>{row.state==="deleted"||row.state==="archived"?<button disabled={disabled} onClick={()=>onSelect(row)}>查看</button>:<Link href={row.destination} target="_blank" rel="noopener noreferrer" aria-label={`新窗口查看${row.name}`}>查看 <ChevronRight size={12}/></Link>}</div>)}</div>}
     {!data.count&&category!=="history"?<div className={styles.empty}>此范围没有可展示的对象。</div>:null}
     <div className={styles.pagination}><span>共 {data.count} 条 · 每页 20 条</span><button disabled={data.page<=1} onClick={()=>move(data.page-1)}>上一页</button><span>{data.page} / {data.total_pages}</span><button disabled={data.page>=data.total_pages} onClick={()=>move(data.page+1)}>下一页</button></div>

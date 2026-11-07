@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Image as ImageIcon, Search, Upload } from "lucide-react";
@@ -33,7 +35,7 @@ const dateLabel = (value: string) => new Date(value).toLocaleString("zh-CN");
 export function MediaLibraryCatalog({ initialMediaId }: { initialMediaId: string }) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <Catalog key={`${user.id}:${epoch}:${initialMediaId}`} owner={String(user.id)} initialMediaId={initialMediaId} canEdit={hasAdminCapability(user, "can_edit_metadata")} /> : <p role="status">正在核对当前管理账户…</p>;
+  return user ? <Catalog key={`${user.id}:${epoch}:${initialMediaId}`} owner={String(user.id)} initialMediaId={initialMediaId} canEdit={hasAdminCapability(user, "can_edit_metadata")} /> : <LoadingState role="status">正在核对当前管理账户…</LoadingState>;
 }
 
 function Catalog({ owner, initialMediaId, canEdit }: { owner: string; initialMediaId: string; canEdit: boolean }) {
@@ -69,7 +71,7 @@ function Catalog({ owner, initialMediaId, canEdit }: { owner: string; initialMed
       <section className={frame.sources} aria-label="图片列表"><h2>{tab === "upload" ? "上传图片" : "选择图片"}</h2>
         {tab === "upload" ? <form className={styles.form} onSubmit={upload}><label>图片文件<input name="image" type="file" accept="image/jpeg,image/png,image/webp" required disabled={!canEdit || locked || dirty} /></label><label>替代文字<input name="alt_text" maxLength={1000} disabled={!canEdit || locked || dirty} /></label><small>JPEG、PNG 或 WebP，最大 20 MB。相同原件复用已有素材。</small>{dirty ? <p>请先保存当前资料，再上传并选择其他图片。</p> : null}<button type="submit" disabled={!canEdit || locked || dirty}><Upload size={14} />{uploading ? "正在上传…" : "上传图片"}</button></form> : null}
         <form className={styles.search} onSubmit={event => { event.preventDefault(); setSubmitted(query.trim()); setPage(1); }}><label htmlFor="media-library-query">查找已有图片</label><div><input id="media-library-query" value={query} onChange={event => setQuery(event.target.value)} maxLength={200} placeholder="图片说明、来源或署名" /><button type="submit" aria-label="搜索图片"><Search size={16} /></button></div></form>
-        {collection.error ? <p role="alert">{collection.error}<button onClick={() => { setPage(1); collection.retry(); }}>从第一页重新读取</button></p> : !collection.data ? <p role="status">正在读取媒体…</p> : <>
+        {collection.error ? <p role="alert">{collection.error}<button onClick={() => { setPage(1); collection.retry(); }}>从第一页重新读取</button></p> : !collection.data ? <LoadingState role="status">正在读取媒体…</LoadingState> : <>
           <div className={styles.gallery}>{collection.data.results.map(row => <button type="button" key={row.id} aria-pressed={mediaId === row.id} disabled={locked} onClick={() => { if (row.id !== mediaId) { if (dirty) setSwitchTo(row.id); else select(row.id); } }}>
             <PrivateMediaImage owner={owner} path={row.renditions?.[0]?.url || `/catalog/admin/media/${row.id}/source/`} alt={row.alt_text || "图片"} /><span>{row.alt_text || row.source_label || "未填写说明"}</span><small>{row.width} × {row.height}</small></button>)}</div>
           {!collection.data.count ? <p className={frame.note}>{submitted ? "没有匹配的图片。可缩短关键词，或清空搜索查看全部素材。" : "图片库尚无素材。上传后再填写来源，已有馆藏图片仍可从对应对象进入。"}</p> : null}
@@ -85,7 +87,7 @@ function Catalog({ owner, initialMediaId, canEdit }: { owner: string; initialMed
 type EditorProps = { owner: string; mediaId: string; canEdit: boolean; onDirtyChange: (value: boolean) => void; onBlockChange: (value: boolean) => void };
 function EditorLoader(props: EditorProps) {
   const resource = useOwnedRead<State>(props.owner, `/catalog/admin/media/${props.mediaId}/workspace/`);
-  return resource.data ? <LibraryEditor {...props} initial={resource.data} /> : <section className={styles.empty}>{resource.error ? <p role="alert">{resource.error}<button onClick={resource.retry}>重新读取当前图片</button></p> : <p role="status">正在核对图片与历史…</p>}</section>;
+  return resource.data ? <LibraryEditor {...props} initial={resource.data} /> : <section className={styles.empty}>{resource.error ? <p role="alert">{resource.error}<button onClick={resource.retry}>重新读取当前图片</button></p> : <LoadingState role="status">正在核对图片与历史…</LoadingState>}</section>;
 }
 
 function LibraryEditor({ owner, mediaId, canEdit, initial, onDirtyChange, onBlockChange }: EditorProps & { initial: State }) {

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
@@ -11,7 +13,7 @@ import type { AdminTimelineEvent, TimelineEditorGuard } from "@/components/theor
 import { Dialog } from "@/components/ui/dialog";
 import styles from "./scholar-editor.module.css";
 
-const EventEditor=dynamic(()=>import("@/components/theory-system-admin").then(module=>module.ScholarTimelineEditor),{ssr:false,loading:()=> <p role="status">正在打开原事件编辑器…</p>});
+const EventEditor=dynamic(()=>import("@/components/theory-system-admin").then(module=>module.ScholarTimelineEditor),{ssr:false,loading:()=> <LoadingState role="status">正在打开原事件编辑器…</LoadingState>});
 
 export function ScholarTimeline({scholarId,blocked,onChanged}:{scholarId:string;blocked:boolean;onChanged:()=>void}) {
   const user=useAdminSession(),owner=String(user?.id||"");
@@ -35,7 +37,7 @@ export function ScholarTimeline({scholarId,blocked,onChanged}:{scholarId:string;
   return <>
     <header><h2>生平时间线 <small>{data?.count??"…"}</small></h2><button type="button" disabled={blocked} onClick={()=>open("")}>＋ 添加事件</button></header>
     {blocked?<p>请先保存学者草稿，并核对未完成的操作，再编辑生平事件。</p>:null}
-    {error?<p role="alert">{error}<button type="button" onClick={()=>setAttempt(value=>value+1)}>重新读取事件</button>{page>1?<button type="button" onClick={()=>setPage(1)}>返回第一页</button>:null}</p>:!data?<p role="status">正在读取原事件与当前编辑草稿…</p>:<>
+    {error?<p role="alert">{error}<button type="button" onClick={()=>setAttempt(value=>value+1)}>重新读取事件</button>{page>1?<button type="button" onClick={()=>setPage(1)}>返回第一页</button>:null}</p>:!data?<LoadingState role="status">正在读取原事件与当前编辑草稿…</LoadingState>:<>
       <ol className={styles.eventList}>{data.results.map(row=>{
         const stillRelated=row.scholar===scholarId||row.relations.some(relation=>relation.scholar===scholarId);
         const complete=Boolean(row.description.trim()&&row.source.trim()&&row.editorial_details?.confirmed);

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect, useState } from "react";
 import { RecommendationIssueView } from "@/components/public/recommendation-issue-view";
 import { SiteHeader } from "@/components/site-header";
@@ -12,7 +14,7 @@ import type { IssuePublicationReviewData } from "./issue-publication-review";
 export function IssuePreviewFrame({issueId,version,config}:{issueId:string;version:string;config:SiteConfig}) {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<OwnedIssuePreview key={`${user.id}:${epoch}:${issueId}:${version}`} owner={String(user.id)} issueId={issueId} version={version} config={config}/>:<p role="status">正在核对预览账户…</p>;
+  return user?<OwnedIssuePreview key={`${user.id}:${epoch}:${issueId}:${version}`} owner={String(user.id)} issueId={issueId} version={version} config={config}/>:<LoadingState role="status">正在核对预览账户…</LoadingState>;
 }
 
 function OwnedIssuePreview({owner,issueId,version,config}:{owner:string;issueId:string;version:string;config:SiteConfig}) {

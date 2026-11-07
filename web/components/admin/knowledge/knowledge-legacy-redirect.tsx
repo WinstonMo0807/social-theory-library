@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 /** Preserve object selection, filters, paging, return address and hash on retired entrances. */
@@ -19,5 +21,5 @@ export function KnowledgeLegacyRedirect({destination,taxonomy=false}:{destinatio
   if(destination==="/admin/theories" && query.get("node")) next=`/admin/theories/${encodeURIComponent(query.get("node")!)}`;
   router.replace(`${next}${query.size?`?${query.toString()}`:""}${window.location.hash}`);
  },[destination,taxonomy,router,search]);
- return <p role="status">正在打开对应的内容编辑位置…</p>;
+ return <LoadingState role="status">正在打开对应的内容编辑位置…</LoadingState>;
 }

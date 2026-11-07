@@ -1,11 +1,12 @@
 "use client";
 
-import { CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
+import { CircleAlert, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { LoadingState } from "@/components/ui/loading-state";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
 type StatusValue = Record<string, unknown>;
-type StatusPayload = {
+export type StatusPayload = {
   database: StatusValue;
   redis: StatusValue;
   celery: StatusValue;
@@ -22,25 +23,29 @@ function statusLabel(value: unknown) {
   if (value === true) return "可用";
   if (value === false) return "不可用";
   const text = String(value ?? "unknown");
-  return ({ healthy: "健康", current: "当前", configured: "已配置", not_configured: "未配置", disabled: "未配置", not_tested: "尚未测试", available: "可用", insufficient_corpus: "证据不足", unavailable: "不可用", down: "服务不可用", not_available: "暂无", missing: "缺失", local_cache: "本地缓存", unknown: "尚未探测", true: "是", false: "否" } as Record<string, string>)[text] ?? text;
+  return ({ healthy: "正常", current: "当前", configured: "已配置", not_configured: "未配置", disabled: "未启用", not_tested: "尚未测试", available: "可用", insufficient_corpus: "证据不足", unavailable: "不可用", down: "服务不可用", not_available: "暂无", missing: "缺失", local_cache: "本地缓存", unknown: "尚未探测", true: "是", false: "否" } as Record<string, string>)[text] ?? text;
 }
 
 const keyLabels: Record<string, string> = {
-  status: "状态", version: "版本", migration_heads: "迁移 head", vendor: "数据库引擎",
-  configured: "已配置", reachable: "连接状态", broker: "Celery 消息代理",
-  default_worker: "默认 Worker", ingestion_worker: "入库 Worker", beat: "Beat 调度器",
-  control: "Worker 控制通道", heartbeat_at: "最近心跳", active_version: "活动版本",
-  uid: "活动 UID", db_ready_chunks: "数据库 ready 分块", meilisearch_document_count: "Meilisearch 文档",
-  expected_document_count: "预期文档", model: "模型", model_revision: "模型 revision",
-  local_path: "本地路径", offline_mode: "离线模式", revision: "词典 revision",
-  generation: "活动 generation", entries: "当前词条", public_active_entries: "公开词条",
+  status: "状态", version: "版本", migration_heads: "数据库结构版本", vendor: "数据库引擎",
+  configured: "已配置", reachable: "连接状态", broker: "任务消息服务",
+  default_worker: "常规任务进程", ingestion_worker: "入库任务进程", beat: "定时任务",
+  control: "任务控制连接", heartbeat_at: "最近心跳", active_version: "活动版本",
+  uid: "活动 UID", db_ready_chunks: "已就绪原文片段", meilisearch_document_count: "Meilisearch 文档",
+  expected_document_count: "预期文档", model: "模型", model_revision: "模型版本",
+  local_path: "本地路径", offline_mode: "离线模式", revision: "词典版本",
+  generation: "当前索引批次", entries: "当前词条", public_active_entries: "公开词条",
   admin_resolvable_entries: "后台词条", pending_events: "待处理事件", failed_events: "失败事件",
-  provider: "服务商", capability: "能力", profile: "配置档", health: "健康检查",
+  provider: "服务商", capability: "能力", profile: "服务配置", health: "正常检查",
   last_success: "最近成功", last_successful_check: "最近成功检查", error_category: "错误类别",
   credential_configured: "凭据已配置", endpoint_configured: "服务地址已配置", restart_may_be_required: "可能需要重启",
-  document_count: "文档数量", schema: "索引结构", model_health: "模型健康状态", reason: "原因",
+  document_count: "文档数量", schema: "索引结构", model_health: "模型正常状态", reason: "原因",
   id: "编号", completed_at: "完成时间", checksum: "校验值", size: "大小", source: "来源",
 };
+
+function serviceState(value: StatusValue) {
+  return value.status ?? (value.configured === true ? "configured" : value.configured === false ? "not_configured" : "unknown");
+}
 
 function keyLabel(key: string) {
   return keyLabels[key] ?? key.replaceAll("_", " ");
@@ -70,6 +75,7 @@ export function SystemStatusCenter() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -86,25 +92,48 @@ export function SystemStatusCenter() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const cards = payload ? [
-    ["数据库", payload.database],
-    ["Redis", payload.redis],
-    ["Celery 任务", payload.celery],
-    ["NAS 存储", payload.storage],
-    ["QueryLexicon 词典", payload.query_lexicon],
-    ["语义索引", payload.semantic],
-    ["Embedding 模型", payload.embedding],
-    ["AI 服务", payload.ai],
-    ["联网补全来源", payload.web_enrichment],
-    ["备份", payload.backup],
-  ] as Array<[string, Record<string, unknown>]> : [];
+  return <div className="admin-page system-status-page">
+    <header className="admin-page-title"><div><h1>运行维护</h1></div><button className="button secondary" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={16} className={loading ? "spin" : ""} />{loading ? "刷新中" : "刷新状态"}</button></header>
+    {message ? <p className="form-message" role="alert"><CircleAlert size={16} />{message}</p> : null}
+    {loading && !payload ? <LoadingState>正在读取服务状态…</LoadingState> : null}
+    {payload ? <SystemStatusView payload={payload} /> : null}
+  </div>;
+}
 
-  return (
-    <div className="admin-page">
-      <header className="admin-page-title"><div><p>运营</p><h1>系统状态中心</h1><span>把“为什么不可用”显示出来，不展示密码、Token 或其他 secret。</span></div><div className="admin-title-actions"><button className="button secondary" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} />刷新</button></div></header>
-      {message ? <p className="form-message" role="alert"><CircleAlert size={15} />{message}</p> : null}
-      {loading && !payload ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取系统状态……</p> : null}
-      <section className="health-component-grid">{cards.map(([title, value]) => <article className="admin-panel health-component" key={title}><header><h2>{title}</h2><strong>{scalarLabel(value.status ?? value.configured)}</strong></header><dl>{Object.entries(value).filter(([key]) => !["profiles", "structured"].includes(key)).slice(0, 12).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl>{value.profiles ? <details><summary>模型配置档</summary><StatusDetails value={value.profiles} /></details> : null}{value.structured ? <details><summary>结构化来源</summary><StatusDetails value={value.structured} /></details> : null}</article>)}</section>
+/** Shared by the live maintenance page and the explicitly labelled LAN proposals. */
+export function SystemStatusView({ payload }: { payload: StatusPayload }) {
+  const [selectedKey, setSelectedKey] = useState("database");
+  const cards = [
+    ["database", "数据库", payload.database],
+    ["redis", "Redis", payload.redis],
+    ["celery", "后台任务", payload.celery],
+    ["storage", "NAS 存储", payload.storage],
+    ["query_lexicon", "检索词典", payload.query_lexicon],
+    ["semantic", "语义索引", payload.semantic],
+    ["embedding", "语义模型", payload.embedding],
+    ["ai", "AI 服务", payload.ai],
+    ["web_enrichment", "联网资料来源", payload.web_enrichment],
+    ["backup", "备份", payload.backup],
+  ] as Array<[string, string, Record<string, unknown>]>;
+
+  const selected = cards.find(([key]) => key === selectedKey) ?? cards[0];
+
+  return <section className="system-status-v2" aria-label="服务运行状况">
+    <div className="system-status-v2-list">
+      <header><h2>服务</h2><span>{cards.length} 项</span></header>
+      <div className="system-status-options" aria-label="选择服务">
+        {cards.map(([key, title, value]) => <button type="button" aria-pressed={selected?.[0] === key} aria-controls="service-detail" className={selected?.[0] === key ? "selected" : ""} key={key} onClick={() => setSelectedKey(key)}>
+          <span className="system-status-v2-dot" data-status={String(serviceState(value))} aria-hidden="true" /><strong>{title}</strong><span>{scalarLabel(serviceState(value))}</span>
+        </button>)}
+      </div>
     </div>
-  );
+    <section id="service-detail" className="system-status-v2-detail" aria-live="polite">
+      {selected ? <><header><h2>{selected[1]}</h2><span className="system-status-v2-state" data-status={String(serviceState(selected[2]))}>{scalarLabel(serviceState(selected[2]))}</span></header>
+        {selected[2].reason ? <p className="system-status-reason">{String(selected[2].reason)}</p> : null}
+        <dl>{Object.entries(selected[2]).filter(([key]) => !["profiles", "structured", "reason"].includes(key)).slice(0, 24).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl>
+        {selected[2].profiles ? <details><summary>模型配置</summary><StatusDetails value={selected[2].profiles} /></details> : null}
+        {selected[2].structured ? <details><summary>资料来源</summary><StatusDetails value={selected[2].structured} /></details> : null}
+      </> : null}
+    </section>
+  </section>;
 }

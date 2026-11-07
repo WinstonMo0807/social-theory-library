@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { AIRuntimeEditor } from "./admin/ai-runtime-editor";
 import { OcrRuntimeEditor } from "./admin/ocr-runtime-editor";
 
@@ -278,7 +280,7 @@ const emptyTaxonomy: TaxonomyDraft = {
 export function TaxonomyAdmin(props: {mode?: "combined" | "theory" | "topic";entityId?:string}) {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  if(!user)return <p role="status">正在核对编辑账户…</p>;
+  if(!user)return <LoadingState role="status">正在核对编辑账户…</LoadingState>;
   return <TaxonomyWorkspace key={`${user.id}:${epoch}:${props.entityId||"list"}:${props.mode||"combined"}`} {...props} owner={String(user.id)}/>;
 }
 
@@ -900,7 +902,7 @@ const emptyScholar: ScholarDraft = {
 export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   const user = useAdminSession(), params = useSearchParams(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <p role="status">正在核对编辑账户…</p>;
+  if (!user) return <LoadingState role="status">正在核对编辑账户…</LoadingState>;
   if (scholarId === "new" && params.get("person")) return <ExistingScholarStart key={`${user.id}:${epoch}:${params.get("person")}`} owner={String(user.id)} personId={params.get("person")!} />;
   return <ScholarWorkspace key={`${user.id}:${epoch}:${scholarId || "list"}`} scholarId={scholarId} owner={String(user.id)} />;
 }

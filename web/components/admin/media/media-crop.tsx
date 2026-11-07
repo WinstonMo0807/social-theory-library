@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { apiEndpoint } from "@/lib/runtime-api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
@@ -50,7 +52,7 @@ export function MediaCrop({owner,mediaId,value,onChange,onReady,disabled,labels=
   function setRatioStateFree(){setRatioValue("free");}
   function zoom(factor:number){const fit=Math.min(1/value.width,1/value.height,Math.max(.02/Math.min(value.width,value.height),factor));const w=value.width*fit,h=value.height*fit;onChange({...value,x:Math.max(0,Math.min(1-w,value.x+(value.width-w)/2)),y:Math.max(0,Math.min(1-h,value.y+(value.height-h)/2)),width:w,height:h});}
   return <section className={styles.crop}><h2>裁切与适配预览</h2>{error?<p role="alert">{error}<button type="button" disabled={disabled} onClick={()=>setAttempt(n=>n+1)}>重新加载</button></p>:null}
-    {!image&&!error?<p role="status">正在读取原图…</p>:null}
+    {!image&&!error?<LoadingState role="status">正在读取原图…</LoadingState>:null}
     <div className={styles.cropColumns}><div className={styles.stageFrame}><div className={styles.stage} ref={stage} style={{aspectRatio:`${width}/${height}`}}>
       <canvas ref={source} role="img" aria-label="原图与裁切范围"/>
       {image?<div className={styles.selection} style={{left:`${value.x*100}%`,top:`${value.y*100}%`,width:`${value.width*100}%`,height:`${value.height*100}%`}} onPointerDown={begin} onPointerMove={move} onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}} aria-hidden="true">{["nw","ne","sw","se"].map(corner=><span key={corner} data-corner={corner}/>)}</div>:null}

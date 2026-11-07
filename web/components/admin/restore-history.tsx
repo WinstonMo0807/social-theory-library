@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useState } from "react";
 import { History } from "lucide-react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -18,7 +20,7 @@ export function RestoreHistory({owner,backupId,onExport}:{owner:string;backupId?
   return <section className={styles.panel} aria-label={backupId?"此归档的恢复演练历史":"恢复演练历史"}>
     <header><h2>恢复演练记录</h2><div className={styles.actions}><button type="button" onClick={latest}>读取最新目录</button>{data?<button type="button" onClick={()=>onExport({scope:`第 ${cursors.length} 页签名文件窗口`,backup_id:backupId||null,...data},"stl-restore-history-page.json")}>导出本页</button>:null}</div></header>
     {resource.error?<p role="alert">{resource.error}<button type="button" onClick={resource.reload}>重新读取此页</button><button type="button" onClick={latest}>返回最新记录</button></p>:null}
-    {resource.loading?<p role="status">正在核对本页签名记录…</p>:null}
+    {resource.loading?<LoadingState role="status">正在核对本页签名记录…</LoadingState>:null}
     {data?<>
       <p className={styles.hint}>{data.notice}</p>
       {data.source_status==="unavailable"?<p role="alert" className={styles.alert}>记录目录不可读。请核对备份卷挂载和权限后重试；未将此状态视为空历史。</p>:null}

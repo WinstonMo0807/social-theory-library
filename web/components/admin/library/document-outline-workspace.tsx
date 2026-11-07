@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../../lib/request-key";
 import Link from "next/link";
 import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plus, RefreshCw, Search, Trash2, GripVertical } from "lucide-react";
@@ -26,7 +28,7 @@ const date = (value: string) => new Date(value).toLocaleString("zh-CN", { timeZo
 
 export function DocumentOutlineWorkspace({ assetId }: { assetId: string }) {
   const user = useAdminSession();
-  if (!user) return <p role="status">正在核对管理会话……</p>;
+  if (!user) return <LoadingState role="status">正在核对管理会话……</LoadingState>;
   return <OutlineWorkspace key={`${user.id}:${assetId}`} assetId={assetId} ownerId={String(user.id)} canEdit={hasAdminCapability(user, "can_edit_metadata")} canRebuild={hasAdminCapability(user, "can_retry_jobs")} canDownload={hasAdminCapability(user, "can_view_evidence")} />;
 }
 
@@ -151,7 +153,7 @@ function OutlineWorkspace({ assetId, ownerId, canEdit: editAllowed, canRebuild: 
       return;
     }
   }
-  if (!data) return <div className={styles.workspace}><h1>目录校准</h1>{resource.error ? <div role="alert"><p>{resource.error}</p><button type="button" onClick={resource.reload}>重新读取</button></div> : <p role="status">正在读取目录与文件信息……</p>}</div>;
+  if (!data) return <div className={styles.workspace}><h1>目录校准</h1>{resource.error ? <div role="alert"><p>{resource.error}</p><button type="button" onClick={resource.reload}>重新读取</button></div> : <LoadingState role="status">正在读取目录与文件信息……</LoadingState>}</div>;
   const asset = data.asset;
   const pendingJobs = data.jobs.some(job => isTaskRunning(job.status));
   const currentIndex=nodes.findIndex(node=>node.id===currentId);

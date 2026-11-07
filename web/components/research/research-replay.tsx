@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
@@ -29,7 +31,7 @@ export function ResearchReplay({ id, initialTurn = "" }: { id: string; initialTu
   const { state, retry } = useSessionBootstrap();
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(`/account/research/${id}/history${initialTurn ? `?turn=${initialTurn}` : ""}`)}`); }, [id, initialTurn, state.status]);
   if (state.status === "temporary_error" || state.status === "forbidden") return <main className={styles.page}><h1>研究回放暂时无法读取</h1><p>{state.message}</p><button onClick={retry}>重新核对登录</button></main>;
-  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><p role="status">正在核对登录状态…</p></main>;
+  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState role="status">正在核对登录状态…</LoadingState></main>;
   return <Replay key={`${state.user.id}:${id}:${initialTurn}`} id={id} owner={String(state.user.id)} initialTurn={initialTurn} />;
 }
 
@@ -52,7 +54,7 @@ function Replay({ id, owner, initialTurn }: { id: string; owner: string; initial
   return <main className={styles.page}>
     <nav className={styles.crumb} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/account/research">我的研究</Link><span>›</span><span>研究过程回放</span></nav>
     <header className={styles.heading}><div><h1>研究过程回放</h1></div><div><button className={styles.primary} disabled={!data || !(data.materials.length + data.evidence.length)} onClick={() => setFork(data)}><GitBranch size={16} />从此分支另开研究</button><Link href={`/account/sharing/new?kind=research&source=${id}`}>分享所选内容</Link><small><LockKeyhole size={12} />仅本人可见 · 明确选择材料</small></div></header>
-    {history.error ? <Failure message={history.error} onRetry={history.reload} /> : !timeline ? <p role="status">正在读取研究路径…</p> : <>
+    {history.error ? <Failure message={history.error} onRetry={history.reload} /> : !timeline ? <LoadingState role="status">正在读取研究路径…</LoadingState> : <>
       <div className={styles.topnav}><button aria-pressed={tab === "materials"} onClick={() => setTab("materials")}>研究路径</button><button aria-pressed={tab === "notes"} onClick={() => setTab("notes")}>材料与笔记</button><button aria-pressed={tab === "compare"} onClick={() => setTab("compare")}>对比视图</button><button aria-pressed={tab === "snapshots"} onClick={() => setTab("snapshots")}>历史记录</button></div>
       <div className={styles.layout}>
         <aside className={styles.timeline}><h2>研究轮次 <small>{timeline.count} 轮</small></h2><div className={styles.pathTools}><button aria-pressed={pathView === "time"} onClick={() => setPathView("time")}>按时间</button><button aria-pressed={pathView === "tree"} onClick={() => setPathView("tree")}>按分支</button></div>

@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
@@ -33,7 +35,7 @@ export function ResearchSessionDetail({ id, initialTurn = "" }: { id: string; in
   if (workspace.error || ["forbidden", "temporary_error"].includes(workspace.session.status)) {
     return <Frame><div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={24} /><h2>研究会话暂时不可用</h2><p>{workspace.error || workspace.session.message}</p><button onClick={workspace.refresh}><RefreshCw size={15} />重新读取</button></div></Frame>;
   }
-  if (!workspace.record) return <Frame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><p>正在读取研究会话……</p></div></Frame>;
+  if (!workspace.record) return <Frame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><LoadingState>正在读取研究会话……</LoadingState></div></Frame>;
   return <Workspace key={`${workspace.session.user?.id}:${id}:${initialTurn}`} workspace={workspace} initialTurn={initialTurn} />;
 }
 

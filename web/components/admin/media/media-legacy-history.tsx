@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useState } from "react";
 import { PrivateMediaImage } from "./media-crop";
 import { useOwnedRead } from "./media-requests";
@@ -17,7 +19,7 @@ export function LegacyMediaHistory({ owner, objectType, objectId, slot, disabled
   return <section className={styles.history} aria-label="旧文件图片记录">
     <h3>旧文件图片 {history.data ? <small>{history.data.count} 条记录</small> : null}</h3>
     <p className={styles.note}>来自当前对象、编辑和发布记录。选择后先准备为候选，裁切并保存才会形成新修订。同一原图可能被多条记录保留；没有记录的旧文件不会被推测补入。</p>
-    {history.error ? <p role="alert">{history.error}<button onClick={history.retry}>重新读取</button></p> : !history.data ? <p role="status">正在读取旧图片记录…</p> : <>
+    {history.error ? <p role="alert">{history.error}<button onClick={history.retry}>重新读取</button></p> : !history.data ? <LoadingState role="status">正在读取旧图片记录…</LoadingState> : <>
       <div className={styles.historyStrip}>{history.data.results.map(row => <button key={`${row.source}:${row.record_id}`} disabled={disabled} onClick={() => onSelect({ legacy_source: row.source, legacy_record_id: row.record_id, legacy_fingerprint: row.fingerprint })}>
         <PrivateMediaImage owner={owner} path={row.url} alt={row.label} /><span>{row.label}</span><small>{new Date(row.created_at).toLocaleDateString("zh-CN")}</small><span>准备此图</span>
       </button>)}</div>

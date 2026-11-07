@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -136,7 +138,7 @@ function EditionOcrControlState({ editionId, workId, owner }: { editionId: strin
   return <section className="catalog-ocr-control" aria-label="馆藏 PDF 文字识别">
     <h3>重新识别 PDF 文字</h3>
     <p>对当前出版版本的 PDF 重新进行全文 OCR。书目信息和人工确认内容不变，原文件、旧页标识及读者笔记保留。</p>
-    {!current && !error && !resource.error ? <p role="status">正在读取这个版本的文件和任务…</p> : null}
+    {!current && !error && !resource.error ? <LoadingState role="status">正在读取这个版本的文件和任务…</LoadingState> : null}
     {error || resource.error ? <div role="alert"><p>{error || resource.error}</p><button type="button" onClick={resource.reload}>重新读取进度</button></div> : null}
     {unresolved ? <p role="status">上次识别请求尚未确认，请沿原编号重新取得结果；这可能执行尚未送达的原请求。<button type="button" disabled={!current || pending || !ready} onClick={() => void action("start_ocr")}>重新确认原请求</button></p> : null}
     {current ? <>

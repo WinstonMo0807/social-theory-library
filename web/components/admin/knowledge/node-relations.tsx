@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -13,7 +15,7 @@ import { MaterialRelationCandidates } from "./material-relation-candidates";
 import shared from "./scholar-editor.module.css";
 import styles from "./node-relations.module.css";
 
-const Editor = dynamic(() => import("@/components/theory-system-admin").then(module => module.NodeRelationEditor), { loading: () => <p role="status">正在打开原关系编辑器…</p> });
+const Editor = dynamic(() => import("@/components/theory-system-admin").then(module => module.NodeRelationEditor), { loading: () => <LoadingState role="status">正在打开原关系编辑器…</LoadingState> });
 type Page = components["schemas"]["NodeRelationPage"];
 type Row = Page["results"][number];
 export type NodeRelationGuard = { dirty: boolean; pending: boolean; composing: boolean };
@@ -25,7 +27,7 @@ const clearGuard: NodeRelationGuard = { dirty: false, pending: false, composing:
 export function NodeRelations(props: Props) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <RelationList key={`${user.id}:${epoch}:${props.nodeId}:${props.centerKind || "node"}`} {...props} owner={String(user.id)} /> : <p role="status">正在核对编辑账户…</p>;
+  return user ? <RelationList key={`${user.id}:${epoch}:${props.nodeId}:${props.centerKind || "node"}`} {...props} owner={String(user.id)} /> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, owner, centerKind = "node", initialRelationId, initialRelationKind }: Props & { owner: string }) {
@@ -92,7 +94,7 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
           <label><span className="sr-only">关系对象类别</span><select value={filters.kind} onChange={event => filter("kind", event.target.value)}><option value="">全部对象</option>{centerKind === "scholar" ? <><option value="person">概念与理论</option><option value="scholar">人物</option></> : <><option value="person">人物与当前条目</option><option value="node">概念与理论</option></>}</select></label>
           <label className={styles.search}><span className="sr-only">搜索关系对象与出处</span><input type="search" value={query} maxLength={300} onChange={event => setQuery(event.target.value)} placeholder="搜索关系对象、说明或出处…" /></label><button type="submit">搜索</button>
         </form>
-        {error ? <p role="alert">{error}<button type="button" onClick={() => setAttempt(value => value + 1)}>重新读取</button>{page > 1 ? <button type="button" onClick={() => setPage(1)}>返回第一页</button> : null}</p> : !data ? <p role="status">正在读取原关系及草稿…</p> : <>
+        {error ? <p role="alert">{error}<button type="button" onClick={() => setAttempt(value => value + 1)}>重新读取</button>{page > 1 ? <button type="button" onClick={() => setPage(1)}>返回第一页</button> : null}</p> : !data ? <LoadingState role="status">正在读取原关系及草稿…</LoadingState> : <>
           <ul className={styles.rows}>{data.results.map(row => <li key={`${row.kind}:${row.id}`} data-selected={selection?.id === row.id && selection.kind === row.kind}>
             <button type="button" disabled={blocked || row.kind === "person" && !row.scholar_id} onClick={() => selectRow(row)} aria-pressed={selection?.id === row.id && selection.kind === row.kind}>
               <span><strong>{row.source_name}</strong><small>{row.source_kind}</small></span><span className={styles.arrow} aria-label={row.direction === "undirected" ? "无方向关联" : row.direction === "bidirectional" ? "双向关联" : "指向"}>{row.direction === "undirected" ? "—" : row.direction === "bidirectional" ? "↔" : "→"}</span><span><strong>{row.target_name}</strong><small>{row.target_kind}</small></span><span><strong>{row.relation_label}</strong><small>{statuses[row.status] || row.status}{row.has_unpublished_changes ? " · 有未发布修改" : ""}</small></span>
@@ -135,7 +137,7 @@ function RelationCandidates({owner,path,attempt,blocked,selected,onSelect,center
   return <section className={styles.candidates} aria-label="候选关系">
     <header><h3>候选关系 {source==="records"?<small>{data?.count??"…"}</small>:null}</h3><p>核对材料证据、关系含义与准确对象后，再明确公开。</p></header>
     <nav className={styles.candidateSources} aria-label="候选来源"><button type="button" aria-pressed={source==="materials"} onClick={()=>setSource("materials")}>材料线索</button><button type="button" aria-pressed={source==="records"} onClick={()=>setSource("records")}>已保存待确认关系</button></nav>
-    {source==="materials"?<MaterialRelationCandidates key={attempt} owner={owner} centerKind={centerKind} centerId={centerId}/>:error?<p role="alert">{error}<button type="button" onClick={()=>{setPage(1);setRetry(value=>value+1);}}>从第一页重新读取</button></p>:!data?<p role="status">正在读取待核对关系…</p>:<>
+    {source==="materials"?<MaterialRelationCandidates key={attempt} owner={owner} centerKind={centerKind} centerId={centerId}/>:error?<p role="alert">{error}<button type="button" onClick={()=>{setPage(1);setRetry(value=>value+1);}}>从第一页重新读取</button></p>:!data?<LoadingState role="status">正在读取待核对关系…</LoadingState>:<>
       <ul className={styles.candidateRows}>{data.results.map(row=><li key={`${row.kind}:${row.id}`} data-selected={selected?.kind===row.kind&&selected.id===row.id}>
         <div><strong>{row.source_name} {row.direction==="undirected"?"—":row.direction==="bidirectional"?"↔":"→"} {row.target_name}</strong><p>{row.relation_label} · {statuses[row.status]||"待核对"}</p>
           <small>{row.evidence_source|| (row.has_source_anchor?"已有馆内原文，请核对准确版本。":"出处尚缺，请补齐后再公开。")}</small>

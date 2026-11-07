@@ -1,3 +1,7 @@
+## 2026-11-07 管理与读者工作区内网方案
+
+两套交互方案部署在 NAS 18088，正式 Web/API/任务未变。共用加载 201 处、动作/筛选菜单 30 处及截图对应的缺样式/空态已修改源码。实际代表性 UI 检查完成；选型与全站真实路由验收 B 保留。示例站不读写正式数据。完整证据和文案对照见 `docs/stl4/WORKSPACE_UI_PROPOSALS_20261107.md`，覆盖见同目录 `WORKSPACE_UI_COVERAGE_20261107.csv`。
+
 ## 2026-11-06 头像编辑交互
 
 AVATAR-UX-01 D：更换头像改为可点头像/明确按钮、原位预览、一次保存和取消；低频操作收进更多，隐私/校验/请求恢复继续沿用。Web132（129ee46b02d8）已更新，API64不变。TypeScript/最终构建通过；实际核对选图、取消、更多及390px排版，未保存或删除用户头像。NAS avatar-editor-web-r132-recovery可回前Web131。截图output/avatar-editor-20261106/，细节见CURRENT_PROGRESS顶部。

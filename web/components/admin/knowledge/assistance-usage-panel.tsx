@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
@@ -38,7 +40,7 @@ export function AssistanceUsagePanel({ usage }: { usage: AssistanceUsage }) {
     <details><summary>追溯候选与人工复核记录</summary>{usage.candidate_records.map((row) => <article key={row.id}><strong>{row.field} · {statusLabels[row.status] || row.status}</strong><p>来源：{row.source}；复核时间：{row.reviewed_at ? new Date(row.reviewed_at).toLocaleString("zh-CN") : "尚未复核"}</p>{row.reason ? <p>理由：{row.reason}</p> : null}<small>候选编号 {row.id}</small><button className="button secondary" type="button" disabled={busy} onClick={() => void inspect(row.id, row.record_url)}>读取原始候选</button></article>)}
       <p>相关操作事件 {usage.event_count} 条，下列最多 {usage.event_limit} 条，计数来自完整查询。</p>
       {usage.events.map((row) => <p key={row.id}>{{accept_field_enrichment_candidate: "采用", reject_field_enrichment_candidate: "未采用", field_prefill_modified_adoption: "修改后采用", field_prefill_removed: "填入后不再使用", field_prefill_removed_or_edited: "填写有调整，未判定是否采用"}[row.action] || "建议处理"} · {new Date(row.created_at).toLocaleString("zh-CN")} · 事件 {row.id} · 候选 {row.candidate_id}</p>)}
-      {opened ? <div aria-live="polite"><h4>原始候选 {opened}</h4>{busy ? <p>读取中…</p> : null}{error ? <p role="alert">{error}</p> : null}{record ? <dl>{["field_name", "proposed_value", "source_class", "status", "review_reason", "evidence"].filter((key) => record[key] !== undefined).map((key) => <div key={key}><dt>{key}</dt><dd style={{ overflowWrap: "anywhere" }}>{typeof record[key] === "object" ? JSON.stringify(record[key]) : String(record[key])}</dd></div>)}</dl> : null}</div> : null}
+      {opened ? <div aria-live="polite"><h4>原始候选 {opened}</h4>{busy ? <LoadingState>读取中…</LoadingState> : null}{error ? <p role="alert">{error}</p> : null}{record ? <dl>{["field_name", "proposed_value", "source_class", "status", "review_reason", "evidence"].filter((key) => record[key] !== undefined).map((key) => <div key={key}><dt>{key}</dt><dd style={{ overflowWrap: "anywhere" }}>{typeof record[key] === "object" ? JSON.stringify(record[key]) : String(record[key])}</dd></div>)}</dl> : null}</div> : null}
     </details>
   </details>;
 }

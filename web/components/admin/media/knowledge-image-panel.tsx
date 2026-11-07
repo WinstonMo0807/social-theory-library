@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ActionButton } from "@/components/action-feedback";
@@ -38,7 +40,7 @@ function ImageControls({ objectType, objectId, refreshKey = "", onChanged }: Pro
     finally { sending.current = false; if (active.current) { setBusy(false); setConfirmation(""); } }
   }
   return <section className={`admin-panel ${styles.portraitPanel}`} aria-label="页面图片"><h3>页面图片</h3>
-    {resource.error ? <p role="alert">{resource.error}</p> : resource.loading ? <p role="status">正在读取图片…</p> : resource.data ? <>
+    {resource.error ? <p role="alert">{resource.error}</p> : resource.loading ? <LoadingState role="status">正在读取图片…</LoadingState> : resource.data ? <>
       {resource.data.preview_url ? <picture><img className={styles.preview} src={normalizePublicResourceUrl(resource.data.preview_url)} alt={resource.data.media?.alt_text || `${resource.data.name}图片预览`} /></picture> : <p>当前没有选择图片。</p>}
       <p>{resource.data.canonical_write_deferred ? "当前显示图片草稿，公开页面尚未改变。" : "当前显示已保存图片。"}</p>
       {canEdit ? <><Link className="button secondary" prefetch={false} href={`/admin/media?object_type=${objectType}&object_id=${encodeURIComponent(objectId)}`}>从媒体库选择页面图片</Link><ActionButton className="button secondary" disabled={busy || !resource.data.preview_url} onClick={() => setConfirmation(resource.data!.fingerprint)}>清除页面图片</ActionButton><p>进入媒体库前请保存其他未保存的内容。</p></> : null}

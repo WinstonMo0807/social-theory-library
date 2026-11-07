@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Check, Clock3, Inbox, MessageSquare, RefreshCw, Search } from "lucide-react";
@@ -25,7 +27,7 @@ function Pager({ page, count, size, label, change }: { page: number; count: numb
 export function FeedbackWorkspace() {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <p role="status">正在核对管理会话…</p>;
+  if (!user) return <LoadingState role="status">正在核对管理会话…</LoadingState>;
   if (!hasAdminCapability(user, "can_manage_users")) return <p role="alert">反馈中可能包含联系方式，仅管理员可查看和处理。</p>;
   return <Workspace key={`${user.id}:${epoch}`} ownerId={String(user.id)} />;
 }
@@ -130,5 +132,5 @@ function History({ row, ownerId }: { row: AdminFeedbackDetail; ownerId: string }
   const history = page === 1 ? row.history : resource.data?.id === row.id ? resource.data.history : null;
   return <section className={styles.history}><header><h3>处理历史</h3><span>原始反馈始终保留</span></header>{resource.error ? <p role="alert" className={styles.error}>{resource.error}<button onClick={resource.reload}>重试读取</button></p> : null}{history ? <>
     <ol>{history.results.map(event => <li key={event.id}><span className={styles.historyDot} /><div><p><strong>{event.actor}</strong><span>{feedbackStatuses[event.before.status]} → {feedbackStatuses[event.after.status]}</span></p><p className={styles.body}>{event.after.note || "未填写处理说明"}</p>{event.after.follow_up ? <small>标记待人工回复</small> : null}<time dateTime={event.created_at}>{feedbackDate(event.created_at)} · 修订 {event.after.revision}</time></div></li>)}</ol>{!history.count ? <p className={styles.muted}>暂未处理；原始反馈已保存。</p> : null}<Pager page={history.page} count={history.count} size={history.page_size} label="处理历史分页" change={setPage} />
-  </> : <p role="status">正在读取历史…</p>}</section>;
+  </> : <LoadingState role="status">正在读取历史…</LoadingState>}</section>;
 }

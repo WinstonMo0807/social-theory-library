@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { FileSearch, BookOpen } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
@@ -54,7 +56,7 @@ export function IssueDiscoveryMaterials({issueId,owner,selection,disabled,reques
     <button type="button" className={styles.primary} disabled={disabled||busy||!selection.query.trim()} onClick={()=>void start()}>按当前范围查找原文</button>
     <p className={styles.queryNote}>按当前主题与馆藏范围查找原文，可逐项查看上下文。</p>
     {error||resource.error?<p role="alert" className={styles.warning}>{error||resource.error}{session?<button type="button" disabled={busy} onClick={resource.reload}>读取当前结果</button>:null}</p>:null}
-    {resource.loading?<p role="status">正在读取检索结果…</p>:null}
+    {resource.loading?<LoadingState role="status">正在读取检索结果…</LoadingState>:null}
     {result?<><p role="status">{result.status_message || ({queued:"已排队",running:"正在检索",partial:"任务部分完成",failed:"检索未完成",completed:"本次检索完成",canceled:"检索已取消"}[result.status])} · {result.query}</p>
       {taskPollDelay(result)?<><progress max={result.task_progress.total||1} value={result.task_progress.completed}/><button type="button" disabled={busy} onClick={()=>void taskAction("cancel")}>取消当前检索</button></>:null}
       {result.can_retry?<button type="button" disabled={busy} onClick={()=>void taskAction("retry")}>继续未完成的检索</button>:null}
@@ -63,6 +65,6 @@ export function IssueDiscoveryMaterials({issueId,owner,selection,disabled,reques
       {!result.passages.length&&!taskPollDelay(result)?<div className={styles.empty}><FileSearch size={42} strokeWidth={1}/><h3>未找到与“{result.query}”直接相关的原文候选</h3><p>可调整检索范围或使用相关概念继续查找。已选的 {selection.references.length} 项材料仍然保留。</p><div><button type="button" className={styles.primary} onClick={onAdjustScope}>调整检索范围</button><button type="button" onClick={onRelated}>查看相关概念</button></div></div>:null}
       {result.next_cursor&&limit<48?<button type="button" onClick={()=>setLimit(n=>n+6)}>读取更多候选</button>:null}
     </>:!resource.loading?<p className={styles.empty}>确定关键词与馆藏范围后查找原文。</p>:null}
-    <Dialog open={contextOpen} onRequestClose={()=>{contextVersion.current+=1;setContextOpen(false);setContext(null);}} className={styles.context} aria-label="原文上下文"><header><h2>原文上下文</h2><button type="button" onClick={()=>{contextVersion.current+=1;setContextOpen(false);setContext(null);}}>关闭</button></header>{context?<><p>{context.before}</p><blockquote>{context.excerpt}</blockquote><p>{context.after}</p><small>{context.notice}</small>{context.reader_url.startsWith("/reader/")?<a href={context.reader_url} target="_blank" rel="noopener">打开原文阅读位置 ↗</a>:null}</>:error?<p role="alert">{error}</p>:<p role="status">正在核对来源…</p>}</Dialog>
+    <Dialog open={contextOpen} onRequestClose={()=>{contextVersion.current+=1;setContextOpen(false);setContext(null);}} className={styles.context} aria-label="原文上下文"><header><h2>原文上下文</h2><button type="button" onClick={()=>{contextVersion.current+=1;setContextOpen(false);setContext(null);}}>关闭</button></header>{context?<><p>{context.before}</p><blockquote>{context.excerpt}</blockquote><p>{context.after}</p><small>{context.notice}</small>{context.reader_url.startsWith("/reader/")?<a href={context.reader_url} target="_blank" rel="noopener">打开原文阅读位置 ↗</a>:null}</>:error?<p role="alert">{error}</p>:<LoadingState role="status">正在核对来源…</LoadingState>}</Dialog>
   </section>;
 }

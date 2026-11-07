@@ -41,7 +41,7 @@ export function CatalogResultCard({ row }: { row: CatalogSearchWork }) {
         <div className="stl4-catalog-result-actions">
         {editions.length < 2 && edition?.readable_asset ? <><Link className="stl4-catalog-read" href={`/reader/${edition.readable_asset.id}`}>在线阅读</Link><AssetDownloadButton assetId={edition.readable_asset.id} /></> : null}
         <SaveWorkButton workId={row.id} />
-        <details className="stl4-catalog-more"><summary aria-label="更多文献操作"><MoreHorizontal size={20} /></summary><div><AddWorkToListButton workId={row.id} title={row.title} />{edition ? <SharedCitationButton editionId={edition.id}>引用</SharedCitationButton> : null}</div></details>
+        <details data-action-menu className="stl4-catalog-more"><summary aria-label="更多文献操作"><MoreHorizontal size={20} /></summary><div data-menu-panel><AddWorkToListButton workId={row.id} title={row.title} />{edition ? <SharedCitationButton editionId={edition.id}>引用</SharedCitationButton> : null}</div></details>
         </div>
       </aside>
     </div>

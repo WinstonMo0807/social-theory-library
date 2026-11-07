@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useCallback } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -17,7 +19,7 @@ export function KnowledgeImpactSummary({objectType,objectId,owner}:{objectType:s
   const data=usePersistentWorkspace<Impact>(`/catalog/admin/knowledge-publications/${objectType}/${objectId}/history/`,owner,undefined,load);
   return <section className={styles.panel} aria-label="已存馆藏关联">
     <header className={styles.heading}><h2>已存关联与影响核对</h2><button type="button" onClick={data.reload}>重新读取</button></header>
-    {data.error?<p role="alert">{data.error}</p>:!data.data?<p role="status">正在读取当前对象的馆藏关联…</p>:<>
+    {data.error?<p role="alert">{data.error}</p>:!data.data?<LoadingState role="status">正在读取当前对象的馆藏关联…</LoadingState>:<>
       <p>{data.data.scope}</p>
       <dl className={styles.impactCounts}>{data.data.dependencies.map((row,index)=><div key={`${row.key}:${row.accessor||index}`}><dt>{row.label}</dt><dd>{row.count} 条关联</dd></div>)}</dl>
       {!data.data.dependencies.length?<p>当前结构记录中未发现馆藏关联。其他页面的编排引用仍须分别核对。</p>:null}

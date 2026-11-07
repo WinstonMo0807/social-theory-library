@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import {
   BookOpen,
   ExternalLink,
@@ -456,7 +458,7 @@ export function KnowledgeObjectContextPanel({
     return (
       <aside className="admin-panel knowledge-object-context-panel is-empty" aria-label="编辑参考">
         <Sparkles size={18} />
-        <div><strong>预览与发布</strong><p>先保存，再查看读者页面、补充建议和发布结果。</p></div>
+        <div><strong>预览与发布</strong><p>保存草稿后，可预览读者页面并查看发布状态。</p></div>
       </aside>
     );
   }
@@ -486,7 +488,7 @@ export function KnowledgeObjectContextPanel({
       </header>
 
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
-      {loading && !selection ? <p className="knowledge-object-context-state">正在读取页面和修改记录…</p> : null}
+      {loading && !selection ? <LoadingState className="knowledge-object-context-state">正在读取页面和修改记录…</LoadingState> : null}
 
       {selection ? <>
         {publicControl ? <PublicPageTree control={publicControl} /> : null}

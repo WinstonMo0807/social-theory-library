@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { ChevronLeft, ChevronRight, ExternalLink, Minus, Plus } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import { apiRequest } from "@/lib/api";
@@ -114,7 +116,7 @@ function SourceDocument({ reference, assetId, revisionId, initialPage }: {
     </div>
     <div id={`${panelId}-panel`} role="tabpanel" aria-labelledby={`${panelId}-${tab}`} className="stl4-citation-source-panel">
       {failure ? <div className="stl4-citation-source-notice" role="alert"><strong>暂时无法核对原文</strong><p>{failure}</p><button type="button" onClick={retry}>重新读取</button></div> :
-        !access || !payload ? <p className="stl4-citation-source-notice" role="status">正在读取并核对原文版本……</p> : <>
+        !access || !payload ? <LoadingState className="stl4-citation-source-notice" role="status">正在读取并核对原文版本……</LoadingState> : <>
           {tab === "original" && overlay ? <div className="stl4-citation-source-canvas">
             <PdfCanvas key={`${access.served_asset_id}:${access.sha256}`} url={access.url} page={page} zoom={zoom}
               sourceWidth={overlay.sourceWidth} sourceHeight={overlay.sourceHeight} canonicalBlocks={overlay.canonicalBlocks}
@@ -128,7 +130,7 @@ function SourceDocument({ reference, assetId, revisionId, initialPage }: {
                 <h4>PDF 第 {index} 页{row?.printed_label ? ` · 书内页码 ${row.printed_label}` : ""}{index === page ? " · 当前页" : ""}</h4>
                 {row?.chapter_title ? <p className="stl4-citation-source-caption">{row.chapter_title}</p> : null}
                 {error ? <p role="alert">{error} <button type="button" onClick={() => retryPagePayload(index)}>重试</button></p> :
-                  row ? <p className="stl4-citation-source-prose">{row.text || "这一页尚无可提取的文字，请查看 PDF 原文。"}</p> : <p role="status">正在读取这一页的上下文……</p>}
+                  row ? <p className="stl4-citation-source-prose">{row.text || "这一页尚无可提取的文字，请查看 PDF 原文。"}</p> : <LoadingState role="status">正在读取这一页的上下文……</LoadingState>}
               </section>;
             })}
           </div> : null}

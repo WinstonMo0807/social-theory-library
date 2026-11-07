@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { RecycleControl } from "@/components/admin/recycle-control";
 import { ProcessingError } from "@/components/admin/processing-error";
 import Link from "next/link";
@@ -52,7 +54,7 @@ export function UploadSourceContext({ itemId }: { itemId: string }) {
   return <section className="admin-panel" aria-label="选定上传来源" style={{ marginBottom: 24, padding: 20 }}>
     <header><h2>选定上传来源</h2><Link href={returnTo}>返回原待办</Link></header>
     {message ? <p role={failed ? "alert" : "status"}>{message}</p> : null}
-    {result.error ? <p role="alert">来源读取失败：{result.error}<button type="button" onClick={result.retry}>重试来源读取</button></p> : result.loading ? <p role="status">正在读取指定来源…</p> : !item ? <p role="alert">未取得与指定上传编号一致的记录，不会显示其他文件。</p> : <>
+    {result.error ? <p role="alert">来源读取失败：{result.error}<button type="button" onClick={result.retry}>重试来源读取</button></p> : result.loading ? <LoadingState role="status">正在读取指定来源…</LoadingState> : !item ? <p role="alert">未取得与指定上传编号一致的记录，不会显示其他文件。</p> : <>
       <h3>{item.source_filename}</h3><RecycleControl kind="upload" id={item.id} name={item.source_filename} onDeleted={() => window.location.assign(returnTo)} /><p>{item.edition ? "书目已经建立，可以继续核对资料。" : "这个文件还没有生成书目。请先处理下面的问题。"}</p>
       <dl className="workflow-publication-summary"><div><dt>文件处理</dt><dd>{fileProcessingStatusLabel(item.status)}</dd></div><div><dt>后台任务</dt><dd>{fileProcessingStatusLabel(item.dispatch_status)}</dd></div><div><dt>重试记录</dt><dd>{item.retry_count ?? "待核实"}</dd></div></dl>
       {item.error_message || item.dispatch_error ? <ProcessingError code={item.error_code} message={item.error_message || item.dispatch_error || ""} /> : null}

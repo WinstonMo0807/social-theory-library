@@ -1,5 +1,7 @@
 "use client";
 
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
 import { FilePlus2, LockKeyhole } from "lucide-react";
@@ -79,7 +81,7 @@ export function CitationPrivateSourcePicker({ ownerId, selectedIds, onChange, di
   }
   return <section className="stl4-audit-private-sources" aria-label="本人来源文件"><div className="stl4-audit-private-source-heading"><strong><LockKeyhole size={12} />本人来源文件</strong><span>已选择 {selectedIds.length} / 4</span><button type="button" disabled={blocked || sources.loading} onClick={sources.reload}>刷新</button></div>
     <p className="stl4-audit-caption">只使用你明确勾选的文件。上传和匹配均不会进入公共馆藏。</p>
-    {sources.error ? <p role="alert">{sources.error}</p> : sources.loading ? <p role="status">正在读取本人的来源文件…</p> : sources.data?.results.length ? <div className="stl4-audit-private-source-list">{sources.data.results.map(row => {
+    {sources.error ? <p role="alert">{sources.error}</p> : sources.loading ? <LoadingState role="status">正在读取本人的来源文件…</LoadingState> : sources.data?.results.length ? <div className="stl4-audit-private-source-list">{sources.data.results.map(row => {
       const parsed = row.data.parsed === true && ["completed", "partial"].includes(row.status || "");
       const ready = parsed && (row.data.matchable_segment_count ?? 0) > 0;
       return <article key={row.id}><label><input type="checkbox" checked={selectedIds.includes(row.id)} disabled={blocked || (!selectedIds.includes(row.id) && (!ready || selectedIds.length >= 4))} onChange={event => onChange(event.target.checked ? [...selectedIds, row.id] : selectedIds.filter(id => id !== row.id))} /><span><strong>{row.data.title || row.data.filename}</strong><small>{row.data.filename}</small><small>{auditStatuses[row.status || ""] || "已保存"}{typeof row.data.segment_count === "number" ? ` · ${row.data.segment_count} 个文本位置` : ""}</small></span></label>{row.data.citation ? <p>{row.data.citation}</p> : null}<div><button type="button" disabled={blocked || !parsed} onClick={() => setPreview(row)}>查看来源</button><button type="button" disabled={blocked} onClick={() => void command(row, "download")}>下载原件</button>{isTaskRunning(row.status) ? <button type="button" disabled={blocked} onClick={() => void command(row, "cancel")}>取消解析</button> : ["failed", "canceled", "cancelled", "partial"].includes(row.status || "") ? <button type="button" disabled={blocked} onClick={() => void command(row, "retry")}>重试解析</button> : null}<button type="button" disabled={blocked || isTaskRunning(row.status)} onClick={() => setRemove(row)}>删除来源</button></div>{parsed && !ready ? <p>尚无可连续核对的文字。可查看已解析内容或下载原件，待补全识别后再选入。</p> : null}{row.error_code ? <p>来源解析尚未完成，原件仍保留，可重试。</p> : null}</article>;
