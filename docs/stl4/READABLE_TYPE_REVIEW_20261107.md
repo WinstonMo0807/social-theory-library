@@ -46,8 +46,18 @@ workbench-elicit-r4 已正式发布，Web 容器 3b640d4ba551，镜像 8ad4d29bd
 
 ## 状态与发布
 
-字体 r4 隔离构建退出 0，候选归档 45,951,917 字节，SHA256 `3e06436f7e897e854d64656337d83e04eb81a838cbecd124adeebdbe1794a413`。内网候选容器 `3b49f379a7ba`、镜像 `2b9b3d6ef66a72c36e19191c6bdae98eb2681a1b7afb331506bb290666dd1146`。r3/r4 已实际回读编辑标题、图书标签、检索按钮、手机管理导航和学者夜间色彩，正在执行已授权的正式 Web 发布。
+字体 r4 隔离构建退出 0，候选归档 45,951,917 字节，SHA256 `3e06436f7e897e854d64656337d83e04eb81a838cbecd124adeebdbe1794a413`。内网候选容器 `3b49f379a7ba`、镜像 `2b9b3d6ef66a72c36e19191c6bdae98eb2681a1b7afb331506bb290666dd1146`。r3/r4 已实际回读编辑标题、图书标签、检索按钮、手机管理导航和学者夜间色彩，已完成用户授权的正式 Web 发布。
 
 D：字体资源审计、共享字号与色彩尺度、上述具体源码修正。B：全部动态状态的完整视觉验收及长期使用反馈。没有证据的假设未新建为开发阻塞。
 
 共享文件 `workspace-v307.css` 原有未提交新规则予以保留；其中 10 条字号修改附着于这些旧未提交规则，继续留在工作区，不把他人整块修改纳入本轮提交。候选构建保存当前完整样式；其余自有 CSS 与共享文件原有规则的 52 条字号调整单独入检查点。
+
+## 正式发布结果
+
+- 生产与内网已统一到 `social-theory-library-web:4.0.0-20261107-readable-r4`，正式 Web `016743aff243`，镜像 SHA256 `2b9b3d6ef66a72c36e19191c6bdae98eb2681a1b7afb331506bb290666dd1146`。源码检查点 `15c98df9`。
+- 原 Elicit/STC 工作区改动先以 r4 发布，再叠加本轮字体。API `75e63e4c2fc6`、edge `18838436dc86` 与其余正式服务未重启；发布脚本对其他 15 个正式容器的身份和启动时间逐项断言。没有改数据库、权限、馆藏、任务或检索模型。
+- 1840 个运行文件（排除按环境生成的 runtime-config.js）与本地构建摘要一致：`238151ff03b3be11a949767958efad1ffdd6e4d5fe32790e3a37bd660fbf4d41`。首个核验脚本误将换行写成反斜杠 n，已保留失败日志并修正，本地重新计算后与容器一致；不是运行文件漂移。
+- 18084 上以 LAN 和公网 Host 请求 `/admin` 均 200，保留 elicit 工作区标记；公网 HTTPS 真实浏览器读回李怀印页 18px 正文、33.3px 行高、15px 来源、26.25px 行高及对应色彩。首次导航等待超时后，实际页面已完整出现；未把初次超时当作验收成功。
+- 公网截图 `tmp/stl4-public-ui-20261107/public-readable-scholar-1440.png`；最终夜间截图 `readable-scholar-dark-final.png`、手机管理导航 `readable-status-390-final.png`、编辑页 `readable-editor-390-final.png`、图书字段 `readable-work-390-final.png`。
+- 恢复目录 `/volume2/library/stl-releases/20261107-readable-r4/web-recovery` 保留发布前 17 层 Compose、环境、镜像身份、edge 模板与渲染配置。只回退 Web 与对应路由，不恢复数据库。活动镜像 override 仍在历史路径 `20261107-reader-refresh-r2/web-media-connection.compose.json`，该文件现指向 readable-r4，不应按目录名误认运行版本。
+- 证据 `promote-readable-r4.log`、`verify-readable-runtime-r4.log`、`web-type-build-r4.log` 均在本轮 tmp 目录。全站动态状态、每个权限分支及长期阅读体验仍留给真实使用与批注，未宣称 206 个视图或全站像素验收通过。

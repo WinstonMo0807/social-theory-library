@@ -1,3 +1,7 @@
+## 2026-11-07 readable-r4 Web 恢复点
+
+当前正式 Web 为 social-theory-library-web:4.0.0-20261107-readable-r4，容器016743aff243，公网/18084已统一。恢复材料 `/volume2/library/stl-releases/20261107-readable-r4/web-recovery` 含发布前17层Compose、.env、Web inspect、edge模板及渲染配置；原镜像保留。按其中 compose-command.json 仅回退Web及对应edge路由，勿回滚同期策展数据库。活动镜像override为历史`/volume2/library/stl-releases/20261107-reader-refresh-r2/web-media-connection.compose.json`，不能按目录名推定当前版本。详情与证据见 READABLE_TYPE_REVIEW_20261107.md。
+
 ## 2026-11-07 正式前端 r2 回退点
 
 当前Web4.0.0-20261107-r2（dea2f146adce），API/worker/beat r1未改。恢复点/volume2/library/stl-releases/20261107-r1/login-web-r2-recovery包含前Web r1配置与运行摘要。回退仅恢复该点.env到同级public/.env，保留0600，使用public/compose-command.json的完整组合执行up -d --no-build --pull never --no-deps web；就绪后对social-science-library-edge-1执行nginx -s reload。不启动旧预览，不重建其他服务，不动业务卷。详情LOGIN_INVITATION_20261107.md。

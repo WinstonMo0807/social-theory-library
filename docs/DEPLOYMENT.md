@@ -1,3 +1,7 @@
+## 2026-11-07 readable-r4 Web 恢复点
+
+当前正式 Web 为 social-theory-library-web:4.0.0-20261107-readable-r4，容器016743aff243，公网/18084已统一。恢复材料 `/volume2/library/stl-releases/20261107-readable-r4/web-recovery` 含发布前17层Compose、.env、Web inspect、edge模板及渲染配置；原镜像保留。按其中 compose-command.json 仅回退Web及对应edge路由，勿回滚同期策展数据库。活动镜像override为历史`/volume2/library/stl-releases/20261107-reader-refresh-r2/web-media-connection.compose.json`，不能按目录名推定当前版本。详情与证据见 READABLE_TYPE_REVIEW_20261107.md。
+
 ## 2026-11-07 账号头像与策展署名同步已上线
 
 用户确认读者显示自己的头像，公开策展显示策展人头像，评论暂不新增。已接通账号头像与新建策展的明确关联；首页、策展目录及详情读取同一份最新头像修订，无需逐篇重新发布。管理后台右上角、读者菜单与账号设置共用头像组件，更新通过同页/同源标签页通知。策展编辑页可保留原策展人、使用本人头像或单独设置图片，不能输入其他读者编号公开其头像。公开端不返回账号编号、邮箱或私人资料。
