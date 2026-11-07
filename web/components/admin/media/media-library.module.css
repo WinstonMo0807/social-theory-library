@@ -17,7 +17,7 @@
 .gallery button { min-width: 0; text-align: left; padding: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: flex; flex-direction: column; gap: 6px; }
 .gallery button[aria-pressed=true] { outline: 1px solid var(--annotation); border-color: var(--annotation); }
 .gallery img { width: 100%; height: 125px; object-fit: contain; background: var(--paper); }
-.gallery span { font-size: max(12px, var(--stl-readable-meta)); line-height: 1.5; overflow-wrap: anywhere; }
+.gallery span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: max(12px, var(--stl-readable-meta)); line-height: 1.5; overflow-wrap: anywhere; }
 .gallery small { font-size: max(10px, var(--stl-readable-meta)); color: var(--muted); }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; font-size: max(11px, var(--stl-readable-meta)); }
 .previewArea { min-width: 0; }

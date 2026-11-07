@@ -78,3 +78,9 @@ html[data-typeset="A"] #main-content :is(.brand-identity, .brand-reference-locku
   --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
   --sans: "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
 }
+
+/* Native small elements otherwise shrink an already compact form font to 12px. */
+html[data-typeset="A"] #main-content :is(.admin-content, [data-type-mode="productive"]) small {
+  font-size: max(.875em, var(--stl-readable-meta));
+  line-height: 1.6;
+}

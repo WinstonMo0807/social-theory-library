@@ -85,9 +85,9 @@
 .statusFact strong { font: 600 max(12px, var(--stl-readable-meta))/1.5 var(--serif); }
 .statusFact span { color: var(--night-gold, #a3814c); font-size: max(11px, var(--stl-readable-meta)); }
 .statusFact small { margin-top: 4px; color: var(--night-muted, #968a74); font-size: max(10px, var(--stl-readable-meta)); }
-.recentHeading { display: flex; justify-content: space-between; gap: 5px; align-items: center; padding-top: 8px; border-top: 1px solid var(--night-wash, #ece6da); }
+.recentHeading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; align-items: center; padding-top: 8px; border-top: 1px solid var(--night-wash, #ece6da); }
 .recentHeading h3 { margin: 0; font: 600 max(12px, var(--stl-readable-meta)) var(--serif); }
-.recentHeading button { border: 0; padding: 0; min-height: 24px; font-size: max(10px, var(--stl-readable-ui)); }
+.recentHeading button { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; border: 0; padding: 0; min-height: 24px; font-size: max(10px, var(--stl-readable-ui)); }
 .recent { margin: 6px 0 0; padding-left: 13px; }
 .recent li { padding-bottom: 12px; }
 .recent button { border: 0; padding: 0; min-height: 20px; text-align: left; justify-content: start; font-size: max(10px, var(--stl-readable-ui)); }

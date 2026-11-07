@@ -59,7 +59,7 @@
 .stl4-reader-tabs a small { margin-left: 5px; color: var(--stl-readable-muted); font: max(10px, var(--stl-readable-meta)) var(--sans); }
 .stl4-reader-tabs a:hover { color: #292723; }
 .stl4-reader-tabs a.is-active { position: relative; color: #292723; }
-.stl4-reader-tabs a.is-active::after { position: absolute; right: 18px; bottom: -1px; left: 18px; height: 2px; background: #b3894b; content: ""; }
+.stl4-reader-tabs a.is-active::after { position: absolute; right: 18px; bottom: 0; left: 18px; height: 2px; background: #b3894b; content: ""; }
 .stl4-research-panel { padding: 0 22px 28px; }
 .stl4-plan-create { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; align-items: end; padding: 18px 0; border-bottom: 1px solid #e5e1d9; }
 .stl4-plan-create label { display: grid; gap: 6px; color: #6f6a61; font: max(11px, var(--stl-readable-meta)) var(--sans); }
