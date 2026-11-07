@@ -27,7 +27,7 @@ export function ActionMenuBehavior() {
       const panel = menu.querySelector<HTMLElement>(":scope > [data-menu-panel]");
       if (!panel) return;
       const anchor = menu.getBoundingClientRect();
-      const width = Math.min(224, window.innerWidth - 32);
+      const width = Math.min(Number(menu.dataset.menuWidth) || 224, window.innerWidth - 32);
       panel.style.width = `${width}px`;
       panel.style.left = `${Math.max(16, Math.min(anchor.right - width, window.innerWidth - width - 16))}px`;
       panel.style.top = `${Math.max(16, anchor.bottom + panel.offsetHeight + 12 > window.innerHeight ? anchor.top - panel.offsetHeight - 8 : anchor.bottom + 8)}px`;
@@ -43,7 +43,7 @@ export function ActionMenuBehavior() {
     const activate = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target.closest("button,a[href]") : null;
       const menu = target?.closest<HTMLDetailsElement>('details[data-action-menu][open]');
-      if (menu && !target?.closest("form")) close(menu);
+      if (menu && !target?.closest("form,[data-menu-stay-open]")) close(menu);
     };
     const reposition = () => openMenus().forEach(position);
     document.addEventListener("pointerdown", outside, true);

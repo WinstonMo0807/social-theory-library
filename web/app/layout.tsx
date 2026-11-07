@@ -26,6 +26,7 @@ import { AuthSessionDialog } from "@/components/auth-session-dialog";
 import { EvidenceLanguageProvider } from "@/components/evidence-language";
 
 import "../styles/features/workspace-polish.css";
+import "../styles/features/workbench-editorial.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { config } = await loadSiteChromeConfig();

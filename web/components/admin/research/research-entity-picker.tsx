@@ -58,7 +58,7 @@ const GROUP_ORDER: DiscoveryGroup[] = ["local", "local_draft", "authority", "ext
 const GROUP_LABELS: Record<DiscoveryGroup, string> = {
   local: "馆内已有",
   local_draft: "馆内草稿 / 待审核",
-  authority: "权威来源候选",
+  authority: "资料来源建议",
   external_web: "一般网络候选",
   unresolved: "保留未解析",
 };
@@ -532,7 +532,7 @@ export function ResearchEntityPicker({
           id={inputId}
           value={query}
           disabled={disabled || Boolean(acting)}
-          placeholder={placeholder ?? "搜索馆内实体、权威来源和外部线索"}
+          placeholder={placeholder ?? "搜索馆内条目和外部资料"}
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={open}
@@ -597,7 +597,7 @@ export function ResearchEntityPicker({
           </article>;
         })}</section>)}
         {!loading && !visibleCandidates.length ? <p>{query.trim().length < 2 ? "输入至少 2 个字符开始发现。" : "没有找到候选。可以保留当前文本，稍后继续核对。"}</p> : null}
-        {!workspace?.itemId ? <p className="workflow-universal-entity-maintenance-note">维护模式可以关联馆内实体并核对外部候选。需要 UploadItem 的创建、保留和拒绝决定在这里不可记录。</p> : null}
+        {!workspace?.itemId ? <p className="workflow-universal-entity-maintenance-note">这里可选择馆内条目并核对外部建议。收件的处理决定请在收件与编目中完成。</p> : null}
       </div> : null}
     </div>
   );

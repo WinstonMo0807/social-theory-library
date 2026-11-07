@@ -27,7 +27,7 @@ export function ResearchEvidenceCard({ reference, index, href, selected, status,
 }) {
   const available = reference.source_status === "available";
   const title = available ? reference.title || `原文证据 ${index + 1}` : "来源待重新核对";
-  const metadata = available ? [reference.authors?.join("、") || "作者待核对", reference.publication_year, reference.language].filter(Boolean).join(" · ") : "旧引用身份保留";
+  const metadata = available ? [reference.authors?.join("、") || "作者待核对", reference.publication_year, reference.language].filter(Boolean).join(" · ") : "原引用记录保留";
   return <article className="stl4-research-evidence has-bibliography" data-selected={selected || undefined}>
     <label className="stl4-evidence-number"><input type="checkbox" checked={selected} disabled={disabled} onChange={onToggle} aria-label={`${selected ? "移除" : "选入"}${title}`}/><span>{index + 1}</span></label>
     <ResearchEvidenceCover reference={reference}/>

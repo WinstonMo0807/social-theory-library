@@ -119,7 +119,7 @@ function Workspace({owner}:{owner:string}){
       {dialog==="attach"&&project?<AttachArticles owner={owner} disabled={locked} onAttach={(id,version)=>{const next=action("attach_article",{article_id:id,article_version:version});if(next)setConfirmation(next);}}/>:null}
       {dialog==="preview"&&project?<ProjectPreview key={project.id} owner={owner} project={project} selectedIds={checked}/>:null}
     </Dialog>
-    <Dialog open={Boolean(confirmation)} onRequestClose={()=>{if(!command.busy)setConfirmation(null);}} className={styles.dialog} aria-labelledby="project-confirm-title"><h2 id="project-confirm-title">{confirmation?.action==="duplicate"?"复制为新的策划项目":confirmation?.action==="archive"?"归档当前项目":confirmation?.action==="restore"?"恢复当前项目":"将原文章加入项目"}</h2><p>{confirmation?.action==="duplicate"?"复制项目问题、简介、图片与最多50篇文章的当前草稿。副本仅自己可见，可另加协作者；文章不会自动发布。":confirmation?.action==="archive"?"归档后项目停止编辑，保留文章、来源和历史。已经公开的文章继续展示，可在原发布流程单独处理。":confirmation?.action==="restore"?"恢复项目编辑，文章身份和版本保留，不自动发布或重启处理。":`原文章及历史将遵循本项目的${project?.visibility==="team"?"团队私密":"馆内编辑"}范围；已公开版本保持公开。原身份、来源与修订保留。`}</p><div className={styles.actions}><button type="button" disabled={command.busy} onClick={()=>setConfirmation(null)}>取消</button><button type="button" className={styles.primary} disabled={locked||!confirmation} onClick={()=>{if(confirmation)void command.send(confirmation).then(accept);}}>{command.busy?"正在保存…":"确认"}</button></div>{command.error?<p role="alert" className={styles.notice}>{command.error}</p>:null}</Dialog>
+    <Dialog open={Boolean(confirmation)} onRequestClose={()=>{if(!command.busy)setConfirmation(null);}} className={styles.dialog} aria-labelledby="project-confirm-title"><h2 id="project-confirm-title">{confirmation?.action==="duplicate"?"复制为新的策划项目":confirmation?.action==="archive"?"归档当前项目":confirmation?.action==="restore"?"恢复当前项目":"将原文章加入项目"}</h2><p>{confirmation?.action==="duplicate"?"复制项目问题、简介、图片与最多50篇文章的当前草稿。副本仅自己可见，可另加协作者；文章不会自动发布。":confirmation?.action==="archive"?"归档后项目停止编辑，保留文章、来源和历史。已经公开的文章继续展示，可在原发布流程单独处理。":confirmation?.action==="restore"?"恢复后可继续编辑。文章版本保留，不会自动发布或重启任务。":`原文章及历史将遵循本项目的${project?.visibility==="team"?"团队私密":"馆内编辑"}范围；已公开版本保持公开。原身份、来源与修订保留。`}</p><div className={styles.actions}><button type="button" disabled={command.busy} onClick={()=>setConfirmation(null)}>取消</button><button type="button" className={styles.primary} disabled={locked||!confirmation} onClick={()=>{if(confirmation)void command.send(confirmation).then(accept);}}>{command.busy?"正在保存…":"确认"}</button></div>{command.error?<p role="alert" className={styles.notice}>{command.error}</p>:null}</Dialog>
   </main>;
 }
 
@@ -168,7 +168,7 @@ function PeoplePicker({owner,selected,onChange}:{owner:string;selected:Person[];
 
 function AttachArticles({owner,disabled,onAttach}:{owner:string;disabled:boolean;onAttach:(id:string,version:string)=>void}){
   const [page,setPage]=useState(1),resource=useOwned<Articles>(owner,`/catalog/admin/recommendation-issues/?unassigned=1&mine=1&page=${page}`),data=resource.data;
-  return <section><p>选择自己创建、尚未归组的文章。加入后保留原身份、版本与公开状态。</p>{resource.error?<p role="alert">{resource.error}</p>:null}{resource.loading?<LoadingState role="status">正在读取文章…</LoadingState>:null}{data?.results.map(row=><article key={row.id} className={styles.attachRow}><div><h3>{row.title}</h3><p>{row.introduction}</p></div><button type="button" disabled={disabled||!row.id||!row.edit_version} onClick={()=>onAttach(row.id!,row.edit_version!)}>加入项目</button></article>)}{data&&!data.results.length?<p className={styles.empty}>没有可加入的未归组文章。</p>:null}{data?<Pagination page={data.page} pages={Math.max(1,Math.ceil(data.count/data.page_size))} onPage={setPage}/>:null}</section>;
+  return <section><p>选择自己创建、尚未加入项目的文章。文章版本和发布状态保持不变。</p>{resource.error?<p role="alert">{resource.error}</p>:null}{resource.loading?<LoadingState role="status">正在读取文章…</LoadingState>:null}{data?.results.map(row=><article key={row.id} className={styles.attachRow}><div><h3>{row.title}</h3><p>{row.introduction}</p></div><button type="button" disabled={disabled||!row.id||!row.edit_version} onClick={()=>onAttach(row.id!,row.edit_version!)}>加入项目</button></article>)}{data&&!data.results.length?<p className={styles.empty}>没有可加入的未归组文章。</p>:null}{data?<Pagination page={data.page} pages={Math.max(1,Math.ceil(data.count/data.page_size))} onPage={setPage}/>:null}</section>;
 }
 
 
@@ -187,7 +187,7 @@ function ProjectAppendix({owner,project,missing}:{owner:string;project:Project;m
     {resource.loading?<p role="status">正在汇总整个项目的已保存材料…</p>:null}
     {data?<><p className={styles.muted}>{data.article_count} 篇文章 · {data.totals.all} 项附录引用 · {data.totals.missing} 项待补原文或来源。当前匹配 {data.count} 项。</p><p className={styles.muted}>{data.scope_notice}</p>
       {data.results.map((item,index)=><article key={`${item.article_id}:${item.id||index}`}><BookOpen size={19}/><div><h3>{item.title||"题名待补"}</h3><p>{item.authors||"作者待补"} {item.version_note}</p><small>来自 {item.article_title} · {states[item.status||""]||"状态待核对"}</small>{item.note?<p>{item.note}</p>:null}<div className={styles.actions}>{item.reader_url?<Link href={item.reader_url}>打开原文</Link>:null}{item.workbench_url?<Link href={safeAdminHref(item.workbench_url)}>补充馆藏资料</Link>:null}</div></div><Link href={`/admin/recommendations/issues/${item.article_id}`}>核对文章材料</Link></article>)}
-      {!data.results.length?<p className={styles.empty}>{q?"没有匹配的材料。":missing?"项目附录材料当前没有待补原文或不可用来源。请同时核对正文与选材来源。":"项目尚未保存附录材料。请进入文章加入真实来源。"}</p>:null}
+      {!data.results.length?<p className={styles.empty}>{q?"没有匹配的材料。":missing?"项目附录材料当前没有待补原文或不可用来源。请同时核对正文与选材来源。":"暂无附录材料。请在文章中添加来源。"}</p>:null}
       <Pagination page={data.page} pages={data.pages} onPage={setPage}/>
     </>:null}
 
@@ -218,7 +218,7 @@ function ProjectPreview({owner,project,selectedIds=[]}:{owner:string;project:Pro
   const src=current?(mode==="public"?current.public_url:`/admin/recommendations/issues/${current.id}/preview?frame=1&version=${encodeURIComponent(current.edit_version)}`):"";
   return <div className={styles.previewContent}>
     <p className={styles.eyebrow}>策划项目 · {project.visibility==="team"?"仅项目团队":"馆内编辑"}</p><h2>{project.title}</h2><p>{project.introduction}</p><blockquote>{project.question||"研究问题待补"}</blockquote>
-    <p className={styles.muted}>项目介绍与问题仅用于内部策划。下面按项目顺序查看各篇文章；公开版本由各文章的明确发布决定。</p>
+    <p className={styles.muted}>项目介绍和问题仅供内部使用。文章需分别发布。</p>
     <nav className={styles.filters} aria-label="预览版本">{[["saved","当前已保存稿"],["public","目前公开版本"]].map(([value,label])=><button type="button" key={value} aria-pressed={mode===value} onClick={()=>setMode(value)}>{label}</button>)}</nav>
     {resource.error?<p role="alert" className={styles.notice}>{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p>:null}
     {resource.loading?<LoadingState role="status">正在读取项目文章目录…</LoadingState>:null}

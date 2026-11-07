@@ -48,7 +48,7 @@ export function RecoveryBatch({owner,targets,initial,onPersist,onClose,onChanged
         try{
           const data=await withPrivateOwner(owner,()=>apiRequest<Detail>(`${base}${target.kind}/${target.object_id}/${state.current?"":"?check_files=true"}`,{signal:currentSignal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential()),currentSignal);
           if(!live())return;
-          if(data.kind!==target.kind||data.object_id!==target.object_id)throw Error("预览身份与所选对象不一致。");
+          if(data.kind!==target.kind||data.object_id!==target.object_id)throw Error("预览记录与所选内容不一致，请重新读取。");
           rows.push({target,data,error:!data.can_restore?data.blockers.join(" ")||"当前状态或权限不允许恢复。":data.names.count?"存在同名对象，请回到单项详情比较并处理。":""});
         }catch(reason){if(!live())return;if(reason instanceof PrivateOwnerVerificationError||reason instanceof ApiRequestError&&[401,403,404,410].includes(reason.status)){setPreviews([]);setMessage("账户或对象可见性已变化，已清除本次预览。请重新核对访问权限。");return;}rows.push({target,data:null,error:reason instanceof Error?reason.message:"影响预览尚未完成。"});}
         setPreviews([...rows]);

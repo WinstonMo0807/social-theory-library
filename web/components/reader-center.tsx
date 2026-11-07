@@ -465,7 +465,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
     return (
       <div className="account-loading">
-        {session.status === "unauthenticated" ? "登录已过期，正在转到登录页面……" : "正在验证登录状态……"}
+        <LoadingState>{session.status === "unauthenticated" ? "登录已过期，正在转到登录页…" : "正在核对登录状态…"}</LoadingState>
       </div>
     );
   }
@@ -485,13 +485,13 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
       <div className="account-loading" data-error-category={session.errorCategory}>
         <strong>认证服务暂时不可用</strong>
         <p>{session.message}</p>
-        <button type="button" onClick={retrySession}><RefreshCw size={15} />保留会话并重试</button>
+        <button type="button" onClick={retrySession}><RefreshCw size={15} />重试登录状态</button>
       </div>
     );
   }
 
   if (!profile || (active !== "概览" && dataOwnerId !== session.user?.id)) {
-    return <div className="account-loading">正在读取账户资料……</div>;
+    return <div className="account-loading"><LoadingState>正在读取账户资料…</LoadingState></div>;
   }
 
   const user = profile;
@@ -503,17 +503,17 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
         <header className="reader-center-heading">
           <div><h1>{archiveView?"我的资料与研究档案":"读者中心"} {!archiveView?<small className="reader-center-private"><LockKeyhole size={15} />仅本人可见</small>:null}</h1><p>{archiveView?"快速回到自己的研究、笔记、计划、稿件和未完成问题。":"继续阅读，整理笔记与研究。"}</p></div>
           {!archiveView?<div className="reader-center-heading-actions">
-            <details data-action-menu className="reader-center-mobile-create"><summary><Plus size={17}/>新建研究 <ChevronRight size={15}/></summary><div data-menu-panel><Link href="/explore/opinions">新建研究</Link><Link href="/explore/original">新建笔记</Link><Link href="/account/plans">创建计划</Link></div></details>
+            <details data-action-menu className="reader-center-mobile-create"><summary><Plus size={17}/>新建研究 <ChevronRight size={15}/></summary><div data-menu-panel><Link href="/explore/opinions">新建研究</Link><Link href="/explore/original">新建笔记</Link><Link href="/account/plans">新建计划</Link></div></details>
             <div className="reader-center-create-links" aria-label="创建资料">
               <Link href="/explore/opinions"><Plus size={18} />新建研究</Link>
               <Link href="/explore/original"><FileText size={18} />新建笔记</Link>
-              <Link href="/account/plans"><CalendarDays size={18} />创建计划</Link>
+              <Link href="/account/plans"><CalendarDays size={18} />新建计划</Link>
             </div>
           </div>:null}
         </header>
         {active !== "概览" ? <ResearchCenterNav active={active === "书单" ? "lists" : undefined} counts={{ notes: resourceErrors.noteGroups ? undefined : noteGroups.length, plans: resourceErrors.plans ? undefined : readerData.plans.length, lists: resourceErrors.lists ? undefined : readerData.lists.length }} /> : null}
         <details className="reader-legacy-nav"><summary>更多资料与账户操作</summary><nav aria-label="更多读者资料">{tabs.map(([Icon, label]) => <button className={active === label ? "active" : ""} type="button" key={label} onClick={() => setActive(label)}><Icon size={15} />{label}</button>)}</nav><div className="reader-center-user"><span>{user.display_name}</span><small>{user.email}</small><ActionButton type="button" state={pendingAction === "logout" ? "pending" : "idle"} pendingLabel="正在退出" disabled={Boolean(pendingAction) && pendingAction !== "logout"} onClick={() => void logout()}><LogOut size={14} /> 退出</ActionButton></div></details>
-        {Array.from(topicCommands.memory.current.entries()).filter(([id, operation]) => operation.owner === String(session.user?.id) && (active !== "收藏" || !readerData.savedTopics.some(row => row.topic === id))).map(([id]) => <section key={id} className="form-message"><p>有一项主题收藏操作尚待核对，原请求与期望版本仍保留。</p><SaveTopicButton topicId={id} commands={topicCommands} onChange={() => setResourceAttempt(value => value + 1)} /></section>)}
+        {Array.from(topicCommands.memory.current.entries()).filter(([id, operation]) => operation.owner === String(session.user?.id) && (active !== "收藏" || !readerData.savedTopics.some(row => row.topic === id))).map(([id]) => <section key={id} className="form-message"><p>上次收藏尚未确认，请查看处理结果。</p><SaveTopicButton topicId={id} commands={topicCommands} onChange={() => setResourceAttempt(value => value + 1)} /></section>)}
 
         {active !== "概览" && resourcesLoading ? <LoadingState className="form-message" role="status">正在读取个人阅读资料……</LoadingState> : null}
         {active !== "概览" && Object.keys(resourceErrors).length ? (

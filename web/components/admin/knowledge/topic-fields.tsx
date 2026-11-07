@@ -64,10 +64,10 @@ export function TopicFieldsEditor({ topicId, name, section, value, onChange }: {
         onNote={(id, text) => onChange({ associationNotes: { ...value.associationNotes, [key]: { ...value.associationNotes[key], [id]: text } } })} />;
       return field==="foundationalEditionIds"||field==="disputedEditionIds"?<details key={field} className="topic-additional-readings"><summary>{label}</summary>{editor}</details>:editor;
     })}
-    {section === "questions" ? <p>问题与争论关联规范条目；导读中的文字问题不会自动创建条目或生成讨论数量。</p> : null}
+    {section === "questions" ? <p>请选择已有的问题和争论。导读文字不会新增条目。</p> : null}
     {section === "works" ? <p>每项固定到准确出版版本。没有全文只显示书目；待购状态来自已发布策划中的明确计划记录。</p> : null}
-    {section === "paths" ? <><p>复用已有阅读路径及其真实阶段、材料和来源。草稿或撤下的路径不会公开显示。</p><Link href="/admin/reading-paths">管理阅读路径</Link></> : null}
-    {section === "articles" ? <p>只显示已发布的策划文章及其明确编排的计划材料；不会把私人研究内容公开。</p> : null}
+    {section === "paths" ? <><p>只有已发布的阅读路径会向读者展示。</p><Link href="/admin/reading-paths">管理阅读路径</Link></> : null}
+    {section === "articles" ? <p>只展示已发布的策划文章和计划材料，不含私人研究。</p> : null}
     {section === "sources" ? <TopicQuoteField topicId={topicId} value={value.featuredSourceId} onChange={featuredSourceId => onChange({ featuredSourceId })} /> : null}
   </section>;
 }
@@ -79,6 +79,6 @@ function TopicQuoteField({ topicId, value, onChange }: { topicId: string | null;
     <option value="">不展示引语</option>{value && !sources.some(row => row.id === value) ? <option value={value}>原选择当前不可公开，需核对</option> : null}
     {sources.map(row => <option key={row.id} value={row.id}>{row.source.work_title} · {row.source.printed_label || `PDF ${row.source.page_start}`} · {row.source.text.slice(0, 65)}</option>)}
   </select></label>{evidence.error ? <p role="alert">原文读取失败。<button type="button" onClick={evidence.retry}>重新读取引语来源</button></p> : null}
-  <p>引语只取自本主题正式发布且仍可阅读的准确原文。保存选择不等于发布。</p>
+  <p>可选引语来自本主题已发布、仍可阅读的原文。保存后仍需发布。</p>
   {topicId ? <Link href={`/admin/topics/${topicId}?section=passages`}>管理本主题原文策展</Link> : <p>先保存主题草稿，再编排原文。</p>}</>;
 }

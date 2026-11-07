@@ -26,7 +26,7 @@ export function ScholarConceptUsages({scholarId,owner}:{scholarId:string;owner:s
         <ol>{group.items.map(item=><li key={item.id}>
           <strong>{String(item.concept_usage?.term||"术语待补")}</strong><small> · {states[String(item.concept_usage?.review_status)]||"待核对"}</small>
           {item.concept_usage?.interpretation?<p>{String(item.concept_usage.interpretation)}</p>:null}
-          {item.source?<><p>{item.source.title}{item.source.page_start?` · PDF 第 ${item.source.page_start} 页`:""}</p>{item.source.text?<blockquote className={styles.quote}>{item.source.text}</blockquote>:null}{item.source.reader_url?<Link href={item.source.reader_url} target="_blank" rel="noopener">核对准确原文 ↗</Link>:<p>准确来源尚不能公开，需继续核对。</p>}</>:<p>原材料当前不可用，引用身份仍保留。</p>}
+          {item.source?<><p>{item.source.title}{item.source.page_start?` · PDF 第 ${item.source.page_start} 页`:""}</p>{item.source.text?<blockquote className={styles.quote}>{item.source.text}</blockquote>:null}{item.source.reader_url?<Link href={item.source.reader_url} target="_blank" rel="noopener">核对准确原文 ↗</Link>:<p>准确来源尚不能公开，需继续核对。</p>}</>:<p>原材料暂不可用，引用记录仍保留。</p>}
         </li>)}</ol>
       </section>)}
       {!resource.data.count?<p>还没有明确归属到此学者的概念用法。选择知识条目，在原文中核对作者和归属依据后保存。</p>:null}

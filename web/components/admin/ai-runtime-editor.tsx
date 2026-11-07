@@ -71,7 +71,7 @@ function RuntimeEditor({owner,profileKey,onSaved,onBusyChange}:Props&{owner:stri
     try{sessionStorage.setItem(keyFor(owner),version);setPendingVersion(version);
       const result=await resource.mutate(`${version}:${profile.key}:save`,()=>apiRequest<Snapshot>(path,{method:"PUT",signal:controller.signal,headers:{"X-Editor-Owner":owner},body:JSON.stringify(body)},getServerSessionCredential()));
       if(!result||controller.signal.aborted)return;
-      clearPending();setDraft(null);setMessage("模型配置与本次凭据操作已保存，后续任务读取新配置；已在途任务不由此中断。保存未执行模型调用。");onSaved?.();
+      clearPending();setDraft(null);setMessage("配置已保存，下次任务生效。正在运行的任务不受影响。");onSaved?.();
     }catch(error){if(!controller.signal.aborted){if(error instanceof ApiRequestError&&[400,403,409].includes(error.status))clearPending();setMessage(`${error instanceof Error?error.message:"未收到保存结果。"} 密钥输入已清除，其余输入保留。结果未知时请先确认服务器配置。`);}}
     finally{busy.current=false;if(!controller.signal.aborted)setOperation("");}
   }
@@ -97,7 +97,7 @@ function RuntimeEditor({owner,profileKey,onSaved,onBusyChange}:Props&{owner:stri
         {input.document.configuration_version!==data.configuration_version?<p role="alert" className={styles.notice}>服务器配置已变化，输入仍保留。请重新读取后核对，旧版本不能覆盖新值。</p>:null}
         <fieldset disabled={locked}>
           <legend>{labels[profile.capability]||profile.capability}</legend>
-          <label className={styles.consent}><input type="checkbox" checked={profile.enabled} disabled={input.credential==="delete"} onChange={event=>change({enabled:event.target.checked})}/><span>启用（保存不会自动发起分析）</span></label>
+          <label className={styles.consent}><input type="checkbox" checked={profile.enabled} disabled={input.credential==="delete"} onChange={event=>change({enabled:event.target.checked})}/><span>启用此配置</span></label>
           <label><span>服务类型</span><select value={profile.provider} onChange={event=>change({provider:event.target.value as Profile["provider"]})}><option value="none">未配置</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai_compatible">DeepSeek / OpenAI 兼容 API</option></select></label>
           <label><span>模型名称</span><input maxLength={300} required={profile.enabled} value={profile.model} onChange={event=>change({model:event.target.value})} autoComplete="off" spellCheck={false}/></label>
           {profile.capability==="private_research"?<p>用于追问、原文比较、引文关系和阅读计划。仅发送当前读者在该研究中授权的材料；结果保存在本人账号。</p>:null}
@@ -108,7 +108,6 @@ function RuntimeEditor({owner,profileKey,onSaved,onBusyChange}:Props&{owner:stri
           <label><span>最大输出 Token</span><input type="number" min={128} max={8192} step={1} required value={profile.max_output_tokens} onChange={event=>change({max_output_tokens:Number(event.target.value)})}/></label>
           <label><span>超时秒数</span><input type="number" min={3} max={600} step={1} required value={profile.timeout_seconds} onChange={event=>change({timeout_seconds:Number(event.target.value)})}/></label>
           <label><span>生成温度</span><input type="number" min={0} max={2} step="any" required value={profile.temperature} onChange={event=>change({temperature:Number(event.target.value)})}/></label>
-          {profile.capability==="library_qa"?<p>保留当前已保存的馆藏检索方案。此处修改模型配置不切换检索路线，也不发起质量评测。</p>:null}
           {data.permissions.can_edit_sensitive_aliases?<>
             {profile.provider==="openai_compatible"?<label><span>API Base URL</span><input type="url" maxLength={2000} value={input.endpoint} onChange={event=>changeDraft({endpoint:event.target.value})} placeholder={source?.environment.endpoint_configured?"已配置；留空保留原地址":"https://你的中转站/v1"} autoComplete="off" spellCheck={false}/><small>支持以 /v1 结尾的地址。保存后不回显地址，不自动调用模型。</small></label>:null}
             <label><span>服务器地址别名</span><input required maxLength={64} pattern="[a-z][a-z0-9_-]{0,63}" value={profile.endpoint_alias} onChange={event=>change({endpoint_alias:event.target.value})} autoComplete="off" spellCheck={false}/><small>填写 Base URL 后自动绑定；留空时沿用此别名，地址不回显。</small></label>

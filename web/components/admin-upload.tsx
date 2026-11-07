@@ -722,7 +722,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
           updateFile(item.token, { chunkSize });
         }
         if (saved.max_chunk_size && chunkSize > saved.max_chunk_size) {
-          throw new Error("服务器允许的上传分段小于当前恢复记录，请保留页面并联系管理员升级 API。");
+          throw new Error("当前上传记录与服务器限制不兼容。请保留页面并联系管理员。");
         }
         if (
           (saved.source_filename && saved.source_filename !== item.file.name)

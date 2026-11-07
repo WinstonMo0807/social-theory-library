@@ -20,7 +20,7 @@ const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 // Fixed interface copy from final PDF 208; availability still comes from the API.
 const CHECK_COPY: Record<string, { label: string; description: string }> = {
   citation_identification: { label: "引文识别", description: "识别文中引文与参考文献条目" },
-  bibliography_identity: { label: "书目身份", description: "匹配馆藏与版本来源，确认书目信息" },
+  bibliography_identity: { label: "书目核对", description: "匹配馆藏与版本来源，确认书目信息" },
   version_page: { label: "版本页码", description: "核对版本与页码准确性" },
   scan_ocr: { label: "扫描文字识别", description: "提取全文图文内容" },
   deep_analysis: { label: "深入分析", description: "分析引文的准确性与完整性" },

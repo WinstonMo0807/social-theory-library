@@ -1504,7 +1504,7 @@ export function DistributionAdmin() {
         },
         token,
       );
-      setMessage("本月用量快照已记录，并已经检查预算告警阈值。");
+      setMessage("本月用量已记录，预算提醒已检查。");
       resource.refresh();
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "用量保存失败。");
@@ -1854,7 +1854,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           <label><span>嵌入器名称</span><input value={semanticRuntime.embedder_name} onChange={(event) => setSemanticDraft({ ...semanticRuntime, embedder_name: event.target.value })} disabled={semanticRuntime.engine !== "meilisearch_hybrid"} /></label>
           <label><span>模型标识</span><input value={semanticRuntime.model_repo_id} onChange={(event) => setSemanticDraft({ ...semanticRuntime, model: event.target.value, model_repo_id: event.target.value })} disabled={semanticRuntime.engine !== "meilisearch_hybrid"} /></label>
           <label><span>NAS 模型缓存目录</span><input value={semanticRuntime.model_local_path} onChange={(event) => setSemanticDraft({ ...semanticRuntime, model_local_path: event.target.value })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"} /></label>
-          <label><span>模型 revision</span><input value={semanticRuntime.model_revision} onChange={(event) => setSemanticDraft({ ...semanticRuntime, model_revision: event.target.value })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"} /></label>
+          <label><span>模型版本</span><input value={semanticRuntime.model_revision} onChange={(event) => setSemanticDraft({ ...semanticRuntime, model_revision: event.target.value })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"} /></label>
           <label><span>向量维度</span><input type="number" min="1" value={semanticRuntime.dimensions ?? ""} onChange={(event) => setSemanticDraft({ ...semanticRuntime, dimensions: event.target.value ? Number(event.target.value) : null })} placeholder="由模型决定" disabled={semanticRuntime.engine !== "meilisearch_hybrid"} /></label>
           <label><span>池化方式</span><select value={semanticRuntime.pooling} onChange={(event) => setSemanticDraft({ ...semanticRuntime, pooling: event.target.value as SemanticRuntime["pooling"] })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"}><option value="useModel">使用模型默认</option><option value="forceMean">平均池化</option><option value="forceCls">CLS 池化</option></select></label>
           <label className="switch-row"><input type="checkbox" checked={semanticRuntime.offline_mode} onChange={(event) => setSemanticDraft({ ...semanticRuntime, offline_mode: event.target.checked })} disabled={semanticRuntime.provider !== "huggingFace"} /><span>本地模型严格离线运行</span><small>启用后缺少模型文件会直接降级关键词检索，不尝试访问 Hugging Face 公网。</small></label>
@@ -1869,7 +1869,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
             <select value={semanticRuntime.reranker} onChange={(event) => setSemanticDraft({ ...semanticRuntime, reranker: event.target.value })}>
               <option value="rules">内置规则重排</option>
             </select>
-            <small>当前运行代码只接入这一方式。外部模型重排需要先定义和验证服务协议，不能只保存一个模型名称。</small>
+            <small>目前只支持所列重排方式。外部重排服务暂不可用。</small>
           </label>
           <label><span>每本文献默认上限</span><input type="number" min="0" max="20" value={semanticRuntime.max_results_per_work} onChange={(event) => setSemanticDraft({ ...semanticRuntime, max_results_per_work: Number(event.target.value) })} /></label>
           <label className="switch-row"><input type="checkbox" checked={semanticRuntime.query_rewrite_enabled} onChange={(event) => setSemanticDraft({ ...semanticRuntime, query_rewrite_enabled: event.target.checked })} /><span>展示并使用查询改写候选</span></label>

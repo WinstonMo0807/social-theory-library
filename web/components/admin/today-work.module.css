@@ -145,3 +145,32 @@
  .actions{grid-column:2;grid-row:3;align-self:start;gap:10px}.actions>a{min-width:112px;font-size:11px;min-height:30px;padding:5px 12px}
  .empty{min-height:330px;padding:40px 8px}.emptyIllustration{width:84px}.empty h2{font-size:22px}.empty p{font-size:13px}
 }
+
+/* Reading order: title, current state, next action. */
+:global([data-workbench="elicit"]) .heading { padding:4px 0 28px; align-items:center; }
+:global([data-workbench="elicit"]) .heading h1 { margin:0; }
+:global([data-workbench="elicit"]) .list { border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden; }
+:global([data-workbench="elicit"]) .row { grid-template-columns:64px minmax(0,1fr) 120px auto; gap:20px; padding:20px 24px; border-color:var(--line); }
+:global([data-workbench="elicit"]) .row:last-child { border-bottom:0; }
+:global([data-workbench="elicit"]) .thumbnail { width:64px; height:76px; border-radius:5px; background:var(--wash); }
+:global([data-workbench="elicit"]) .copy h2 { font:600 17px/1.5 var(--sans); color:var(--ink); }
+:global([data-workbench="elicit"]) .copy p { font:13px/1.7 var(--sans); color:var(--muted); }
+:global([data-workbench="elicit"]) .identity { flex-wrap:wrap; gap:8px; font-size:12px; }
+:global([data-workbench="elicit"]) .identity span { background:var(--wash); border-radius:4px; }
+:global([data-workbench="elicit"]) .state time { font:12px/1.6 var(--sans); }
+:global([data-workbench="elicit"]) .actions a { border-radius:6px; font:13px/1.5 var(--sans); }
+:global([data-workbench="elicit"]) .filters { padding:20px 0; gap:10px; }
+:global([data-workbench="elicit"]) .tabs a { font-family:var(--sans); }
+@media(max-width:1000px) {
+ :global([data-workbench="elicit"]) .row { grid-template-columns:52px minmax(0,1fr) auto; gap:16px; }
+ :global([data-workbench="elicit"]) .thumbnail { width:52px; height:66px; }
+ :global([data-workbench="elicit"]) .state { grid-column:2; grid-row:2; }
+ :global([data-workbench="elicit"]) .actions { grid-column:3; grid-row:1/3; }
+}
+@media(max-width:640px) {
+ :global([data-workbench="elicit"]) .row { grid-template-columns:44px minmax(0,1fr); padding:18px 16px; gap:6px 12px; }
+ :global([data-workbench="elicit"]) .thumbnail { width:44px; height:60px; grid-row:1/3; }
+ :global([data-workbench="elicit"]) .copy h2 { font-size:16px; }
+ :global([data-workbench="elicit"]) .actions { grid-column:2; grid-row:3; padding-top:8px; }
+ :global([data-workbench="elicit"]) .identity>span,:global([data-workbench="elicit"]) .rowStatus { font-size:12px; }
+}

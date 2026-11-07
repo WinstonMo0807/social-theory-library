@@ -116,7 +116,7 @@ function Detail({ actor, user, blocked, onEdit }: { actor: string; user: Managed
 function Roles({ actor }: { actor: string }) {
   const load = useCallback((path: string, signal: AbortSignal) => accountRequest<AccountRoles>(actor, path, { signal }), [actor]);
   const resource = usePersistentWorkspace<AccountRoles>("roles/", actor, undefined, load);
-  return resource.error ? <p className={styles.error} role="alert">{resource.error}<button onClick={resource.reload}>重新读取</button></p> : !resource.data ? <LoadingState role="status">正在读取实际能力定义…</LoadingState> : <><p className={styles.notice}>权限由服务器按当前账户核对。馆长来自既有身份配置，不能通过分配普通角色取得。旧审核角色沿现有兼容规则显示为内容编辑。</p><div className={styles.roleGrid}>{resource.data.roles.map(role => <article key={role.id}><h2>{role.label}</h2><p>{role.public_access}</p><p>{role.private_access}</p><ul>{role.capabilities.map(cap => <li key={cap.id}>{cap.label}</li>)}</ul>{!role.capabilities.length ? <p className={styles.muted}>没有后台管理能力。</p> : null}</article>)}</div></>;
+  return resource.error ? <p className={styles.error} role="alert">{resource.error}<button onClick={resource.reload}>重新读取</button></p> : !resource.data ? <LoadingState role="status">正在读取实际能力定义…</LoadingState> : <><p className={styles.notice}>馆长权限由服务器配置，此处不能授予馆长权限。</p><div className={styles.roleGrid}>{resource.data.roles.map(role => <article key={role.id}><h2>{role.label}</h2><p>{role.public_access}</p><p>{role.private_access}</p><ul>{role.capabilities.map(cap => <li key={cap.id}>{cap.label}</li>)}</ul>{!role.capabilities.length ? <p className={styles.muted}>没有后台管理能力。</p> : null}</article>)}</div></>;
 }
 
 function History({ actor, userId, compact=false }: { actor: string; userId?: number; compact?:boolean }) {

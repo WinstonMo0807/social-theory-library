@@ -62,7 +62,7 @@ function HierarchyProposal({ topicId, name, value, onApply, onClose }: {
         {result.data.problems.map((problem, index) => <p role="alert" key={index}>{String(problem.detail || "层级需要核对。")}</p>)}
         {result.data.cycle_path.length ? <p className={styles.cyclePath}>形成循环：{result.data.cycle_path.map(row => row.id === topicId ? name || row.name : row.name).join(" → ")}</p>
           : <p>上级链：{result.data.parent_path.map(row => row.id === topicId ? name || row.name : row.name).join(" → ")}</p>}
-        <h3>影响范围</h3><p>涉及 {result.data.descendant_count} 个后代主题，其中 {result.data.public_descendant_count} 个已公开。原主题身份和材料关联保留。</p>
+        <h3>影响范围</h3><p>涉及 {result.data.descendant_count} 个后代主题，其中 {result.data.public_descendant_count} 个已公开。原主题和关联材料保留。</p>
         <p>当前关联 {result.data.content_counts.works} 部公开作品、{result.data.content_counts.scholars} 位学者、{result.data.content_counts.knowledge} 个知识条目、{result.data.content_counts.articles} 篇策划。</p>
         {!result.data.can_publish && !result.data.problems.length ? <p>关联内容尚未满足发布要求；可先保存层级草稿。</p> : null}
       </section> : <p>新主题尚未保存，没有后代主题。保存时会核对所选上级是否仍可用。</p>}

@@ -15,6 +15,6 @@ export function CurationDiscoveryPreview({ sourceTitle, subjectTitle, reason }: 
       <p>{reason}</p>
       <small>来源：{sourceTitle || "尚未选择阅读路径"}</small>
       <small>这里预览当前输入，尚不能据此确认已经发布或进入索引。</small>
-    </article> : <p className={styles.help}>填写公开推荐理由后，这里会按当前文字预览。空白不会自动生成替代文案。</p>}
+    </article> : <p className={styles.help}>填写推荐理由后即可预览。</p>}
   </details>;
 }

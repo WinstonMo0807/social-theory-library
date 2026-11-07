@@ -46,7 +46,7 @@ export function ResearchComparisonSearch({ workspace, target, onClose }: { works
   return <>
     <Dialog open onRequestClose={close} className="stl4-research-dialog" aria-labelledby="comparison-search-title">
       <form onSubmit={event => void submit(event)}>
-        <h2 id="comparison-search-title">扩展寻找新证据</h2>
+        <h2 id="comparison-search-title">补充检索</h2>
         {target.dimension ? <p>比较维度：{target.dimension}{target.title ? ` · ${target.title}` : ""}</p> : null}
         <label htmlFor="comparison-search-question">需要补充什么材料？</label>
         <textarea onKeyDown={submitSearchOnEnter} enterKeyHint="search" title="回车检索，Shift + 回车换行" id="comparison-search-question" value={question} onChange={event => setQuestion(event.target.value)} minLength={2} maxLength={1200} rows={4} required disabled={pending}/>
@@ -54,9 +54,9 @@ export function ResearchComparisonSearch({ workspace, target, onClose }: { works
           <label><input type="radio" name="comparison-search-scope" checked={scope === "library"} disabled={pending} onChange={() => setScope("library")}/>全馆可访问文献</label>
           <label><input type="radio" name="comparison-search-scope" checked={scope === "works"} disabled={pending || !works.length} onChange={() => setScope("works")}/>已选作品的可访问版本（{works.length}部）</label>
         </fieldset>
-        <p>检索会新增研究轮次，保留旧结果。选定作品范围包含其可访问版本，结果不会自动填入比较格，也不会改写你的判断。</p>
+        <p>结果保存为新的研究轮次，旧结果保留。选中原文后，可加入比较。</p>
         {actionError ? <p role="alert">{actionError} 输入仍保留。<button type="button" disabled={pending} onClick={workspace.refresh}>刷新状态后重试</button></p> : null}
-        <footer><button type="button" disabled={pending} onClick={close}>返回</button><button type="submit" disabled={pending || !valid}>{pending ? "正在提交……" : "开始寻找"}</button></footer>
+        <footer><button type="button" disabled={pending} onClick={close}>返回</button><button type="submit" disabled={pending || !valid}>{pending ? "正在提交……" : "开始检索"}</button></footer>
       </form>
     </Dialog>
     <ConfirmDialog open={discard} title="放弃尚未提交的问题？" description="已保存的研究、选材和比较记录仍会保留。" confirmLabel="放弃本次填写" cancelLabel="继续填写" onCancel={() => setDiscard(false)} onConfirm={onClose}/>
@@ -89,7 +89,7 @@ export function ResearchComparisonActivity({ workspace }: { workspace: Workspace
     {rows.length > 1 ? <label>补充检索轮次<select value={current.id} onChange={event => setSelectedTurn(event.target.value)}>{rows.map((turn, index) => <option key={turn.id} value={turn.id}>{index + 1} · {turn.data.question}</option>)}</select></label> : null}
     <details><summary><Search size={13}/>本轮材料（{references.length}）· 核对后加入选材</summary>
       {references.map(ref => { const key = researchEvidenceKey(ref), added = selected.has(key), href = researchReaderHref(ref); return <article key={key}>
-        <h3>{ref.title || "原文证据"}</h3><p>{ref.source_status === "available" ? ref.quote || ref.text || "请打开原文核对。" : "来源暂不可用，保留原引用身份。"}</p>
+        <h3>{ref.title || "原文证据"}</h3><p>{ref.source_status === "available" ? ref.quote || ref.text || "请打开原文核对。" : "来源暂不可用，原引用记录保留。"}</p>
         <div className="stl4-comparison-inline-actions">{href ? <Link href={href} target="_blank" rel="noreferrer">查看原文</Link> : null}
           <button type="button" disabled={pending || added || ref.source_status !== "available"} onClick={() => void run(() => changeResearchSelection(record.id, { expected_revision: record.revision, expected_owner_id: workspace.session.user?.id,
             request_id: requestId(`comparison-selection:${record.id}:${key}`), action: "add", references: [researchEvidenceReference(ref)] }), "已加入当前选材。请在对应比较格中明确选入依据，已有判断继续保留。")}>{added ? "已加入选材" : "加入选材"}</button>

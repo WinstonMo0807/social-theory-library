@@ -103,7 +103,7 @@ function disciplinePage(data: Discipline): TheoryDisciplinePage {
 function previewProblem(payload:KnowledgePreviewPayload):string {
   const data=payload.perspective.data as Record<string,unknown>|null;
   if(!data||typeof data!=="object"||Array.isArray(data))return "当前对象没有可渲染的草稿或公开内容。";
-  if(payload.object_type==="scholar"&&(!data.person||typeof data.person!=="object"))return "学者预览缺少身份，已保留草稿。";
+  if(payload.object_type==="scholar"&&(!data.person||typeof data.person!=="object"))return "未取得学者记录，草稿已保留。";
   if(payload.object_type==="topic"&&(!data.id||!data.slug||!data.name))return "缺少主题编号，无法预览。草稿已保留。";
   if(["theory","concept","debate","research_problem"].includes(payload.object_type)&&(!data.id||!data.slug||!data.canonical_name_zh))return "缺少理论编号，无法预览。草稿已保留。";
   if(!["discipline","subdiscipline","scholar","topic","reading_path","theory","concept","debate","research_problem"].includes(payload.object_type))return "该对象请使用专用预览。";
@@ -161,10 +161,10 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
         },
       } as KnowledgeNodeDetail;
       if (payload.object_type === "theory" && pageId === "graph") {
-        return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><h1>{node.canonical_name_zh}的理论图谱</h1><p>使用当前草稿身份和已经发布的条目关系生成。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
+        return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><h1>{node.canonical_name_zh}的理论图谱</h1><p>预览使用当前草稿和已发布的关系。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
       }
       if (payload.object_type === "theory" && pageId === "timeline") {
-        return <main className="page-shell theory-system-page theory-timeline-page"><section className="theory-timeline-hero"><div><h1>{node.canonical_name_zh}的发展脉络</h1><p>这里只显示已经审核并关联到该理论的真实时间轴事件。</p></div></section><div className="theory-timeline-layout"><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;
+        return <main className="page-shell theory-system-page theory-timeline-page"><section className="theory-timeline-hero"><div><h1>{node.canonical_name_zh}的发展脉络</h1><p>显示已审核并关联到本理论的事件。</p></div></section><div className="theory-timeline-layout"><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;
       }
       if (payload.object_type === "theory" && pageId === "reading-path") {
         const path = payload.secondary_preview?.reading_paths?.[0];
@@ -259,7 +259,7 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
         target.scrollIntoView({ behavior: "smooth", block: "center" });
         target.setAttribute("data-preview-target", "true");
       } else {
-        setAnchorMessage("该模块在当前草稿中没有可渲染内容。页面契约仍保留编辑入口，发布前不会伪造占位数据。");
+        setAnchorMessage("此栏目尚无内容。请返回编辑页补充。");
       }
     }, 80);
     return () => window.clearTimeout(timer);

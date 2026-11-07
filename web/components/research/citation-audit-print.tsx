@@ -5,7 +5,7 @@ import type { AuditData, AuditEntry, AuditFinding, AuditOccurrence, PrivateCitat
 import { researchEvidenceKey, researchReaderHref } from "@/lib/api/research-evidence";
 import { AuditEvidenceNotice, auditCategories, auditCategory, auditDecisions, auditFindingNames, auditLocation, auditStatuses } from "./citation-audit-shared";
 
-const checkNames: Record<string, string> = { citation_identification: "识别引文", bibliography_identity: "书目身份匹配", version_page: "版本与页码核对", scan_ocr: "扫描文字识别" };
+const checkNames: Record<string, string> = { citation_identification: "识别引文", bibliography_identity: "书目匹配", version_page: "版本与页码核对", scan_ocr: "扫描文字识别" };
 const relationNames: Record<string, string> = { support: "支持", different_conclusion: "不同结论", qualification: "限定条件", reframe: "转换解释", insufficient_evidence: "证据不足" };
 const timestamp = (value: string) => new Date(value).toLocaleString("zh-CN");
 const sourceAvailable = (reference: ResolvedEvidence) => reference.source_status === "available" && (!reference.anchors?.length || reference.anchors.every(anchor => anchor.source_status === "available"));
@@ -43,7 +43,7 @@ function Bibliography({ entries }: { entries: AuditEntry[] }) {
     const selected = entry.selected_source_status === "available" ? entry.candidates.find(candidate => candidate.edition_id === entry.selected_edition_id && candidate.source_status === "available") : undefined;
     const privateSource = entry.selected_private_source_status === "available" ? entry.private_candidates?.find(candidate => candidate.source_id === entry.selected_private_source_id && candidate.source_status === "available") : undefined;
     return <section key={entry.id} className="stl4-audit-print-entry"><h3>{index + 1}. 稿件书目</h3><p>{entry.raw}</p>
-      <p>{entry.identity_status === "private_confirmed" ? "本人已确认私人来源" : entry.identity_status === "user_confirmed" ? "本人已确认版本" : entry.identity_status === "identifier_matched" ? "标识匹配，仍需核对" : "版本身份待核对"}</p>
+      <p>{entry.identity_status === "private_confirmed" ? "本人已确认私人来源" : entry.identity_status === "user_confirmed" ? "本人已确认版本" : entry.identity_status === "identifier_matched" ? "标识匹配，仍需核对" : "出版版本待核对"}</p>
       {selected ? <p>对应馆藏：{selected.citation || [selected.title, selected.authors?.join("、"), selected.year, selected.version_label].filter(Boolean).join(" · ")}</p> : <p>{entry.selected_edition_id ? "已选馆藏版本当前不可用，请重新核对。" : "尚未选定馆藏版本。"}</p>}
       {entry.selected_private_source_id ? <p>{privateSource ? `本人已确认的私人来源：${privateSource.citation || privateSource.title || privateSource.filename}` : "已选私人来源当前不可用，请重新核对。"}</p> : null}
     </section>;
@@ -73,7 +73,7 @@ export function CitationAuditPrint({ record }: { record: ResearchRecord<AuditDat
   return createPortal(<article className="stl4-audit-print" aria-label="完整引文体检打印报告">
     <header><p>SOCIAL THEORY LIBRARY · 仅本人可见</p><h1>引文体检报告</h1><h2>{data.filename}</h2>
       <p>稿件版本 {data.manuscript_revision || 1} · 报告修订 {record.revision} · {auditStatuses[record.status || ""] || "已保存"}</p>
-      <p>最后保存：{timestamp(record.updated_at)} · 本快照包含全部 {data.occurrences.length} 处引文和 {data.bibliography.length} 条参考文献。</p></header>
+      <p>最后保存：{timestamp(record.updated_at)} · 本报告包含全部 {data.occurrences.length} 处引文和 {data.bibliography.length} 条参考文献。</p></header>
     <section><h2>检查范围与使用限制</h2><p>已选择：{data.checks?.map(check => checkNames[check] || check).join("、") || "检查项尚未记录"}</p>
       <p>{data.report_notice || "未找到原文的引文需要人工核对。"}</p>
       {data.location_notice ? <p>{data.location_notice}</p> : null}

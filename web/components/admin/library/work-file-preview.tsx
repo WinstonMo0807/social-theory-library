@@ -41,7 +41,7 @@ export function WorkFilePreview({ file, ownerId, onClose, initialPage=1, returnL
     if (file.preview_url) void withPrivateOwner(ownerId, () => readWorkFileHead(file.preview_url, controller.signal), controller.signal).then(head => {
       if (!alive) return;
       if (!head.contentType.includes("application/pdf")) throw new Error("此文件不是可直接预览的 PDF，请下载保留的原件。");
-      if (head.sha256 !== file.sha256) throw new Error("文件身份与当前记录不一致，请刷新文件列表后再预览。");
+      if (head.sha256 !== file.sha256) throw new Error("文件与当前记录不一致，请刷新文件列表后再预览。");
       setVerified({ key: identity, url: head.url }); setError("");
     }).catch(reason => { if (alive) setError(reason instanceof Error ? reason.message : "预览未能读取。"); });
     return () => { clear(); unsubscribe(); };

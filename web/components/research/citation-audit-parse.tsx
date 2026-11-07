@@ -13,7 +13,7 @@ import { CandidateCard, identityNames } from "./citation-audit-issue";
 import { CitationManuscriptPreview } from "./citation-manuscript-preview";
 import { CitationAuditSources, CitationPrivateMatches } from "./citation-private-sources";
 
-const checkNames: Record<string, string> = { citation_identification: "文本与书目识别", bibliography_identity: "书目身份匹配", version_page: "版本与页码核对", scan_ocr: "扫描文字识别" };
+const checkNames: Record<string, string> = { citation_identification: "文本与书目识别", bibliography_identity: "书目匹配", version_page: "版本与页码核对", scan_ocr: "扫描文字识别" };
 const steps = ["上传与设置", "解析与识别", "来源匹配", "结果核对", "生成报告"];
 
 export function CitationAuditParse({ id, initialSelection = "" }: { id: string; initialSelection?: string }) {

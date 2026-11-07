@@ -58,7 +58,7 @@ export function ContributorCreate({ editionId, name, role, disabled, onSelect }:
         setMatches([]);
         window.dispatchEvent(new Event("stl-people-updated"));
       }
-    } catch (error) { if (mounted.current) setMessage(decisions ? (error instanceof Error ? error.message : "尚未确认成功，请查询材料助手的原决定。") : controller.signal.aborted ? "响应超时，人物可能已建立。再次点击会查询同一次创建，不重复建人。" : error instanceof Error ? error.message : "尚未确认成功，请重试。"); }
+    } catch (error) { if (mounted.current) setMessage(decisions ? (error instanceof Error ? error.message : "保存结果尚未确认，请查看材料助手的处理结果。") : controller.signal.aborted ? "响应超时，人物可能已建立。再次点击会查询同一次创建，不重复建人。" : error instanceof Error ? error.message : "尚未确认成功，请重试。"); }
     finally { clearTimeout(timeout); active.current = false; if (mounted.current) setBusy(false); }
   }
   return <div className="contributor-create">

@@ -49,7 +49,7 @@ function SelectedEntry({ selection, filters, parentName, backHref, onRetry, pend
     <h2>{entry.name}</h2>
     <p className={styles.entryKind}>{parentName || theoryDirectoryLabels[entry.kind]}</p>
     {entry.foreign_name ? <p className={styles.foreignName}>{entry.foreign_name}</p> : null}
-    <p className={styles.summary}>{entry.summary || "这项条目的简介尚未发布，可继续查看已公开的关联资料。"}</p>
+    {entry.summary ? <p className={styles.summary}>{entry.summary}</p> : null}
     {entry.period_label ? <p className={styles.period}>{entry.period_label}</p> : null}
     <section className={styles.scholars} aria-label="相关学者">
       <h3>相关学者</h3>

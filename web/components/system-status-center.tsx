@@ -127,7 +127,7 @@ export function SystemStatusView({ payload }: { payload: StatusPayload }) {
         </button>)}
       </div>
     </div>
-    <section id="service-detail" className="system-status-v2-detail" aria-live="polite">
+    <section id="service-detail" key={selected?.[0]} className="system-status-v2-detail system-status-v2-detail-body" aria-live="polite">
       {selected ? <><header><h2>{selected[1]}</h2><span className="system-status-v2-state" data-status={String(serviceState(selected[2]))}>{scalarLabel(serviceState(selected[2]))}</span></header>
         {selected[2].reason ? <p className="system-status-reason">{String(selected[2].reason)}</p> : null}
         <dl>{Object.entries(selected[2]).filter(([key]) => !["profiles", "structured", "reason"].includes(key)).slice(0, 24).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl>

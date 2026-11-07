@@ -25,7 +25,7 @@ function PhotoCard({ href, title, description, photo, compact = false, label }: 
 }) {
   return <Link className={`${styles.card}${compact ? ` ${styles.compact}` : ""}`} href={href}>
     <span className={styles.cardPhoto} aria-hidden="true" style={{ backgroundImage: `url("${photos}/${photo}.webp")` }} />
-    <span className={styles.cardCopy}>{label ? <small className={styles.nodeLabel}>{label}</small> : null}<strong>{title}</strong>{description ? <span>{description}</span> : <span className={styles.missingSummary}>简介尚未发布</span>}</span>
+    <span className={styles.cardCopy}>{label ? <small className={styles.nodeLabel}>{label}</small> : null}<strong>{title}</strong>{description ? <span>{description}</span> : null}</span>
     <ArrowRight size={17} strokeWidth={1.6} className={styles.arrow} aria-hidden="true" />
   </Link>;
 }
@@ -87,9 +87,9 @@ export async function TheoryOverviewPage({ searchParams, actionPath = "/theory-s
           </div> : <div className={styles.state} role="status"><p>{query
             ? "没有找到符合条件的公开理论条目。可调整名称、概念或学者关键词后再次搜索。"
             : discipline ? "当前学科暂无关联公开馆藏的理论流派。可清除学科筛选后继续浏览。"
-            : "暂无关联公开馆藏的理论流派。已审核条目与馆藏建立公开关联后，会显示在这里。"}</p>
+            : "还没有与馆藏关联的理论流派。"}</p>
             <Link href="/theories/directory?type=theory_tradition">浏览全部公开理论传统<ArrowRight size={14} aria-hidden="true" /></Link>
-          </div> : <div className={styles.state} role="alert"><p>馆藏理论暂时无法读取。请稍后重试，当前状态不能判断馆藏是否为空。</p><a href={retryHref}>重新载入馆藏理论</a></div>}
+          </div> : <div className={styles.state} role="alert"><p>暂时无法读取理论流派，请重试。</p><a href={retryHref}>重新载入馆藏理论</a></div>}
           {nodePage ? <div className={styles.pagination}><ScopedSearchPagination path={actionPath} context="theories" page={page}
             totalPages={nodePage.totalPages} params={{ q: query, discipline }} /></div> : null}
         </section>

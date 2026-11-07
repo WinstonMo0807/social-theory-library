@@ -2,6 +2,7 @@
 
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
+import { LoadingState } from "@/components/ui/loading-state";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LockKeyhole, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -25,7 +26,7 @@ export function PlanSessionGate({ children, next }: { children: (ownerId: string
   const { state, retry } = useSessionBootstrap();
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(next)}`); }, [state.status, next]);
   if (state.status === "forbidden" || state.status === "temporary_error") return <PlanFrame><div className="stl4-research-state" role="alert"><h2>暂时无法读取阅读计划</h2><p>{state.message}</p><button onClick={retry}>重新验证登录</button></div></PlanFrame>;
-  if (state.status !== "authenticated" || !state.user) return <PlanFrame><div className="stl4-research-state" role="status">正在核对登录状态…</div></PlanFrame>;
+  if (state.status !== "authenticated" || !state.user) return <PlanFrame><LoadingState className="stl4-research-state">正在核对登录状态…</LoadingState></PlanFrame>;
   return <div key={state.user.id}>{children(String(state.user.id), retry)}</div>;
 }
 

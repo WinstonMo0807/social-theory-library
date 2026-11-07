@@ -42,7 +42,7 @@ export function ProcessingTaskComposer({ owner, seed = {}, onCreated }: { owner:
   function accept(result: Receipt | null) {
     if (!result) return;
     setConfirmation(null); setRefresh(value => value + 1);
-    if (result.state === "cancelled") setNotice("原待定请求已停止，已经创建的任务仍按真实操作结果处理。");
+    if (result.state === "cancelled") setNotice("尚未执行的请求已取消。已经创建的任务保留。");
     else onCreated(result, result.result && typeof result.result === "object" && "message" in result.result && typeof result.result.message === "string" ? result.result.message : "任务已登记，请查看实际进度。");
   }
   async function submit(body?: Creation) {

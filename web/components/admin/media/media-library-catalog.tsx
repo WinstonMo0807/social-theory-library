@@ -78,7 +78,7 @@ function Catalog({ owner, initialMediaId, canEdit }: { owner: string; initialMed
           <nav className={styles.pagination} aria-label="媒体分页"><button disabled={page <= 1} onClick={() => setPage(value => value - 1)}>上一页</button><span>{collection.data.page} / {collection.data.pages}</span><button disabled={page >= collection.data.pages} onClick={() => setPage(value => value + 1)}>下一页</button></nav>
         </>}
       </section>
-      {mediaId ? <EditorLoader key={mediaId} owner={owner} mediaId={mediaId} canEdit={canEdit && !uploading} onDirtyChange={setDirty} onBlockChange={setBlocked} /> : <section className={styles.empty}><ImageIcon size={40} strokeWidth={1} /><h2>选择一张图片</h2><p>查看原图、来源资料及真实使用位置。</p></section>}
+      {mediaId ? <EditorLoader key={mediaId} owner={owner} mediaId={mediaId} canEdit={canEdit && !uploading} onDirtyChange={setDirty} onBlockChange={setBlocked} /> : <section className={styles.empty}><ImageIcon size={40} strokeWidth={1} /><h2>选择一张图片</h2><p>查看原图、出处和使用位置。</p></section>}
     </div>
     <ConfirmDialog open={Boolean(switchTo)} title="切换图片前尚有未保存资料" description="已保存的来源和原件会保留，本次尚未保存的填写将放弃。" confirmLabel="放弃填写并切换" onCancel={() => setSwitchTo("")} onConfirm={() => select(switchTo)} />
   </div>;
@@ -121,7 +121,7 @@ function LibraryEditor({ owner, mediaId, canEdit, initial, onDirtyChange, onBloc
       const next = await refresh(1); if (lifetime.current?.signal.aborted) return;
       if (next.media.updated_at === result.updated_at) {
         const metadata = metadataOf(next.media); setDraft(metadata); setSaved(metadata); setBase(next.media.updated_at);
-        setMessage("图片来源资料已保存。已选用图片的裁切、出处快照和公开页面保持原修订；请到具体使用对象核对后更新。");
+        setMessage("图片出处已保存。已使用的图片仍保留原裁切和出处，请到使用页面核对并更新。");
       } else setMessage("原请求已完成，但这张图片后来又有修改。你的填写保留，请核对最新资料后继续。");
     } catch (reason) { if (!lifetime.current?.signal.aborted) setError(`已查询保存结果，但最新资料未读回。${reason instanceof Error ? reason.message : "请重新读取。"}`); }
     finally { if (!lifetime.current?.signal.aborted) setBusy(false); }

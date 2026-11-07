@@ -183,8 +183,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
     return (
       <div className="admin-auth-loading">
-        <strong>{session.status === "unauthenticated" ? "登录已过期" : "正在验证管理权限……"}</strong>
-        {session.status === "unauthenticated" ? <LoadingState>正在转到登录页面。</LoadingState> : null}
+        <LoadingState>{session.status === "unauthenticated" ? "登录已过期，正在转到登录页…" : "正在核对管理权限…"}</LoadingState>
       </div>
     );
   }

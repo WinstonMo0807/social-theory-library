@@ -571,7 +571,7 @@ export function FunctionalHealthPanel({
 
           {surface === "faults" ? <section className="functional-health-incidents" id="processing-faults-recovery" aria-labelledby="functional-health-incidents-title">
             <header>
-              <div><h3 id="functional-health-incidents-title">待处理事件</h3><p>保留故障发生次数、可能原因和受影响功能。恢复动作来自后端允许清单。</p></div>
+              <div><h3 id="functional-health-incidents-title">待处理事件</h3></div>
               <strong>{payload.incidents.length}</strong>
             </header>
             {payload.incidents.length ? (

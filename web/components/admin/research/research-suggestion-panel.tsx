@@ -54,10 +54,10 @@ const SLOW_POLL_ATTEMPTS = 24;
 const MAX_CONSECUTIVE_POLL_FAILURES = 3;
 
 const tierLabels: Record<string, string> = {
-  in_library: "本馆实体",
-  query_lexicon: "QueryLexicon 匹配",
+  in_library: "馆内条目",
+  query_lexicon: "检索词匹配",
   pdf_evidence: "当前 PDF / OCR",
-  structured_source: "权威与结构化来源",
+  structured_source: "书目与资料来源",
   web_evidence: "已打开的联网证据",
   research_lead: "联网发现线索",
 };
@@ -121,7 +121,7 @@ const producerChannelLabels: Record<string, string> = {
   ocr: "选择性 OCR",
   local_catalog: "本馆目录",
   authority: "Authority",
-  structured_provider: "结构化来源",
+  structured_provider: "书目与资料来源",
   verified_web: "已核实网页",
   ai_synthesis: "馆藏综合",
 };
@@ -247,7 +247,7 @@ export function ResearchSuggestionPanel({
         ...result,
         error: {
           code: "research_poll_budget_exhausted",
-          message: "研究仍在后台队列或 Worker 中。已停止自动轮询，请稍后使用刷新状态，不要重复创建任务。",
+          message: "研究仍在处理中，页面已停止自动刷新。请稍后刷新状态，不要重复新建任务。",
         },
       };
       applyPayload(result);
@@ -400,7 +400,7 @@ export function ResearchSuggestionPanel({
       };
       const decided = await workspace?.onCandidateDecision?.(decisionCandidate, action);
       if (decided === false) throw new Error("候选决定没有完成。");
-      setToast(key, "success", action === "reject" ? "已记录不采用。" : action === "defer" ? "已标记稍后处理。" : "候选已采用并记录审计。");
+      setToast(key, "success", action === "reject" ? "已记录不采用。" : action === "defer" ? "已标记稍后处理。" : "建议已采用。");
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "候选操作失败。";
       setToast(key, "error", message);
@@ -489,7 +489,7 @@ export function ResearchSuggestionPanel({
   const statusMessage = pollingStopped
     ? "自动读取已经停止。任务仍在后台时，请使用刷新状态继续读取，不要重复创建任务。"
     : status === "queued"
-    ? "仍在研究队列中等待，页面会继续读取结果。"
+    ? "研究仍在排队，页面会自动更新进度。"
     : status === "running"
       ? "研究 Worker 正在处理，页面会继续读取结果。"
       : loading || running

@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronsUpDown, Lock, Plus, Search, Trash2 } from "lucide-react";
-import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { Input, Select, Textarea } from "@/components/ui/controls";
@@ -182,6 +182,7 @@ export function EntityPicker({
   placeholder?: string;
   allowUnresolved?: boolean;
 }) {
+  const pickerRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
   const listboxId = useId();
   const liveId = useId();
@@ -192,6 +193,15 @@ export function EntityPicker({
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent | FocusEvent) => {
+      if (event.target instanceof Node && !pickerRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("focusin", dismiss);
+    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("focusin", dismiss); };
+  }, [open]);
 
   useEffect(() => {
     const refresh = () => setRetry(value => value + 1);
@@ -277,7 +287,7 @@ export function EntityPicker({
   };
   const statusLabel = (value?: string) => ({ published: "已发布", draft: "草稿", pending: "待审核", verified: "已核验", needs_review: "待审核", suggested: "建议" } as Record<string, string>)[String(value ?? "")] ?? value ?? "馆内条目";
   return (
-    <div className="workflow-entity-picker">
+    <div className="workflow-entity-picker" ref={pickerRef}>
       <label htmlFor={inputId}>{label}</label>
       <div className="workflow-entity-values">{values.map((value, index) => (
         <button type="button" aria-label={`移除${value.name}`} key={`${value.id ?? value.name}-${index}`} onClick={() => onChange(values.filter((_entry, entryIndex) => entryIndex !== index))}>
@@ -290,7 +300,7 @@ export function EntityPicker({
         <button type="button" aria-label="显示候选" aria-haspopup="listbox" aria-expanded={open} aria-controls={listboxId} onClick={() => setOpen((value) => !value)}><ChevronsUpDown size={14} aria-hidden="true" /></button>
         <span className="sr-only" id={liveId} role="status" aria-live="polite">{loading ? "正在搜索" : `${keyboardOptions.length} 个候选`}</span>
         {open ? <div className="workflow-entity-options" id={listboxId} role="listbox" aria-label={`${label}候选`}>
-          {loading ? <small>正在搜索……</small> : null}
+          {loading ? <span className="workspace-inline-loading" role="status">正在搜索…</span> : null}
           {!loading ? visibleOptions.map((option, index) => { const selected = values.some((value) => value.id === option.id); return <button id={`${listboxId}-option-${index}`} type="button" role="option" aria-selected={selected} tabIndex={index === activeIndex ? 0 : -1} key={option.id} onMouseEnter={() => setActiveIndex(index)} onClick={() => select(option)}><span><strong>{option.name}</strong><small>{String(option.hint || "")} {statusLabel(option.status)}</small></span>{selected ? <Check size={13} /> : null}</button>; }) : null}
           {!loading && unresolvedOption ? <button id={`${listboxId}-option-${visibleOptions.length}`} type="button" role="option" aria-selected={false} tabIndex={visibleOptions.length === activeIndex ? 0 : -1} onMouseEnter={() => setActiveIndex(visibleOptions.length)} onClick={() => select(unresolvedOption)}><span><strong>保留“{query.trim()}”</strong><small>保持未解析，后续仍需确认</small></span><Plus size={13} /></button> : null}
           {!loading && error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setRetry((value) => value + 1)}>重试馆内搜索</button></div> : null}

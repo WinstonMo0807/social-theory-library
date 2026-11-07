@@ -127,7 +127,7 @@ function PrivacyContent({ ownerId, exportOnly }: { ownerId: string; exportOnly: 
               {data.operations.filter(row => row.kind === "erase" && privacyActive(row.status)).map(row => <OperationStrip key={row.id} operation={row} onOpen={() => setFocused(row.id)} />)}
             </Section>
           </div>
-          <section className={styles.notices} id="privacy-notices"><h2>注意事项</h2><div><p><Database size={18} /><span><strong>保留来源信息</strong>下载时重新核对来源资格；失效来源保留身份信息，不提供旧原文。</span></p><p><ShieldCheck size={18} /><span><strong>不删除公开馆藏</strong>只处理本人选择的记录。笔记与独立认识的关系会在预览中说明。</span></p><p><Clock3 size={18} /><span><strong>历史记录参考</strong>删除结果保留对象标识与操作状态，不复制已删除正文。备份按既有保留期清理。</span></p></div></section>
+          <section className={styles.notices} id="privacy-notices"><h2>注意事项</h2><div><p><Database size={18} /><span><strong>保留来源信息</strong>下载时核对来源权限。失效来源只保留出处，不提供旧原文。</span></p><p><ShieldCheck size={18} /><span><strong>不删除公开馆藏</strong>只处理本人选择的记录。笔记与独立认识的关系会在预览中说明。</span></p><p><Clock3 size={18} /><span><strong>历史记录参考</strong>删除结果保留对象标识与操作状态，不复制已删除正文。备份按既有保留期清理。</span></p></div></section>
         </>}
       </div>
       <aside className={styles.statusSidebar}>{data ? <>

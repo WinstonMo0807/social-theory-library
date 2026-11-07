@@ -21,7 +21,7 @@ export function ContributionScopeEditor({ editionId, value, disabled, onChange }
   const canAdd = Boolean(node?.id && start && end && end >= start && end <= (source.data?.asset?.page_count || 0) && outline?.id && documentId
     && outline.document_revision_id === documentId && source.data?.asset?.source_current !== false && !chapters.some(row => row.outline_revision_id === outline.id && row.outline_node_id === node.id));
   return <fieldset disabled={disabled} aria-label="此人的版本责任范围"><label><span>责任范围</span><select value={chapterMode ? "chapter" : "edition"} onChange={event => onChange(event.target.value === "chapter" ? { kind: "chapter", chapters: [] } : { kind: "edition" })}><option value="edition">整部出版版本</option><option value="chapter">明确章节（不作为整部著作作者）</option></select></label>
-    {chapterMode ? <><p>从本版真实目录选择该人承担的章节，并核对结束页；同一人可选择多个章节。更换原文后须重新确认。</p>
+    {chapterMode ? <><p>从本版目录选择该人物参与的章节，并核对结束页。可选择多章，更换原文后须重新确认。</p>
       <ul>{chapters.map((row, index) => <li key={`${row.outline_revision_id}:${row.outline_node_id}`}><strong>{row.title}</strong> · PDF 第 {row.page_start}–{row.page_end} 页 <button type="button" onClick={() => onChange({ kind: "chapter", chapters: chapters.filter((_, i) => i !== index) })}>移除此章节</button></li>)}</ul>
       {editions.error || source.error ? <p role="alert">{editions.error || source.error}<button type="button" onClick={() => { editions.retry(); source.retry(); }}>重新读取章节来源</button></p> : null}
       <label><span>本版原文文件</span><select value={fileId} onChange={event => { setFileId(event.target.value); setNodeId(""); setLastPage(""); }}><option value="">选择原文文件</option>{files.map(row => <option key={row.id} value={row.id}>{row.original_filename || "阅读文件"} · {row.page_count} 页</option>)}</select></label>

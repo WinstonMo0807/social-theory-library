@@ -39,7 +39,7 @@ function PersonField({owner,row,onChange,disabled}:{owner:string;row:PersonRow;o
   const searching=name!==query||people.loading;
   return <div className={styles.person}>
     <div><input aria-label="责任者姓名" maxLength={240} disabled={disabled} value={row.name} onChange={event=>{onChange({...row,name:event.target.value,person_id:null,create_new:false});setPage(1);setOpened(true);}} placeholder="输入姓名，核对馆内人物"/><select aria-label="责任角色" disabled={disabled} value={row.role} onChange={event=>onChange({...row,role:event.target.value})}>{Object.entries(roles).map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></div>
-    {row.person_id?<small>已选择馆内人物<button disabled={disabled} onClick={()=>{setPage(1);setOpened(true);}}>重新选择</button></small>:row.create_new?<small>保存时新建人物草稿，身份仍待核对</small>:null}
+    {row.person_id?<small>已选择馆内人物<button disabled={disabled} onClick={()=>{setPage(1);setOpened(true);}}>重新选择</button></small>:row.create_new?<small>保存时新建人物草稿，人物信息仍待核对</small>:null}
     {opened&&name?<section className={styles.personResults} aria-label="人物候选">
       {searching?<LoadingState role="status">正在查找馆内人物…</LoadingState>:null}{people.error?<p role="alert">{people.error}<button disabled={disabled} onClick={people.reload}>重新读取人物</button></p>:null}
       {people.data?.people.map(person=><button key={person.id} disabled={disabled||searching||Boolean(people.error)} onClick={()=>{onChange({...row,person_id:person.id,name:person.name,create_new:false});setOpened(false);}}><strong>{person.name}</strong><small>{person.original_name} {person.context}</small></button>)}

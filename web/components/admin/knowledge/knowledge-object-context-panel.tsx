@@ -203,7 +203,7 @@ function displayValue(value: unknown): string {
   if (typeof value === "boolean") return value ? "是" : "否";
   if (Array.isArray(value)) {
     const values = value.map(displayValue).filter((item) => item !== "尚未填写");
-    return values.join("、") || "结构化建议";
+    return values.join("、") || "建议详情";
   }
   if (typeof value === "object") {
     const row = value as Record<string, unknown>;
@@ -215,9 +215,9 @@ function displayValue(value: unknown): string {
       .map((entry) => String(entry).trim())
       .filter(Boolean)
       .slice(0, 3);
-    return readable.join("、") || "结构化建议";
+    return readable.join("、") || "建议详情";
   }
-  return "结构化建议";
+  return "建议详情";
 }
 
 function evidenceRows(value: unknown | unknown[] | undefined) {
@@ -248,7 +248,7 @@ const fieldLabels: Record<string, string> = {
   original_name: "外文名",
   name_variant: "别名",
   affiliation: "机构",
-  external_identifier: "身份标识",
+  external_identifier: "外部编号",
   foreign_name: "外文名称",
   alias: "译名或别名",
   discipline: "学科",
@@ -279,7 +279,7 @@ function sourceCategory(source: string) {
   if (normalized.includes("pdf") || normalized.includes("ocr") || normalized.includes("document")) return "来自馆藏文件";
   if (normalized.includes("catalog") || normalized.includes("local")) return "馆内已有记录";
   if (normalized.includes("publisher")) return "出版社资料";
-  if (normalized.includes("authority") || normalized.includes("library") || normalized.includes("registry")) return "权威资料";
+  if (normalized.includes("authority") || normalized.includes("library") || normalized.includes("registry")) return "参考资料";
   return "其他参考资料";
 }
 
@@ -393,12 +393,12 @@ export function KnowledgeObjectContextPanel({
       return;
     }
     if (!descriptor.url) {
-      setMessage(descriptor.disabledReason || "后端没有为此候选提供安全操作入口。");
+      setMessage(descriptor.disabledReason || "这条建议暂时无法处理，请刷新后重试。");
       setMessageState("error");
       return;
     }
     if (hasUnsavedChanges && descriptor.action !== "reject") {
-      setMessage("本页还有未保存的填写。请先保存，再单独处理此建议；不会自动替你保存整页。");
+      setMessage("请先保存本页修改，再处理这条建议。");
       setMessageState("error");
       return;
     }
@@ -495,8 +495,8 @@ export function KnowledgeObjectContextPanel({
         {selection.assistance_usage ? <AssistanceUsagePanel key={`${objectType}:${objectId}`} usage={selection.assistance_usage} /> : null}
 
         {!publicControl ? <section className="knowledge-object-completeness" aria-label="前台内容完整度">
-          <header><strong>前台内容完整度</strong><span>{completeness ? `${completeness.complete_module_count}/${completeness.module_count}` : "未接通"}</span></header>
-          {completeness ? <div>{completeness.modules.map((module) => <article className={module.complete ? "is-complete" : module.available ? "is-partial" : "is-empty"} key={module.label}><span>{module.label}</span><b>{module.complete ? "完整" : module.available ? "待补" : "缺失"}</b>{module.missing_fields.length ? <small>缺少 {module.missing_fields.join("、")}</small> : null}</article>)}</div> : <p className="knowledge-object-context-state">API 尚未返回基于公开 serializer 的完整度。</p>}
+          <header><strong>前台内容完整度</strong><span>{completeness ? `${completeness.complete_module_count}/${completeness.module_count}` : "暂无数据"}</span></header>
+          {completeness ? <div>{completeness.modules.map((module) => <article className={module.complete ? "is-complete" : module.available ? "is-partial" : "is-empty"} key={module.label}><span>{module.label}</span><b>{module.complete ? "完整" : module.available ? "待补" : "缺失"}</b>{module.missing_fields.length ? <small>缺少 {module.missing_fields.join("、")}</small> : null}</article>)}</div> : <p className="knowledge-object-context-state">暂未取得内容完整度。请刷新后重试。</p>}
         </section> : null}
 
         <details open={candidates.length > 0} className="knowledge-object-context-section">
@@ -506,17 +506,17 @@ export function KnowledgeObjectContextPanel({
             const rows = evidenceRows(candidate.evidence);
             const busyPrefix = `${candidate.id}:`;
             return <article className="knowledge-object-candidate" key={`${candidate.candidate_type}:${candidate.id}`}><header><strong>{candidateFieldLabel(candidate)}</strong><span>{candidateStatus(candidate)}</span></header><p>{displayValue(candidate.proposed_value)}</p><small>{sourceCategory(candidate.source)} · {statusLabels[candidate.status] || candidate.status}</small><CandidateDecisionBar candidate={candidate} busyAction={busyCandidate.startsWith(busyPrefix) ? busyCandidate.slice(busyPrefix.length) : ""} disabled={Boolean(busyCandidate) || Boolean(publication?.locked)} onInspect={() => setOpenCandidate((current) => current === candidate.id ? "" : candidate.id)} onAction={(descriptor, editedValue) => void decideCandidate(candidate, descriptor, editedValue)} />{openCandidate === candidate.id ? <div className="knowledge-object-candidate-evidence">{rows.map((row, index) => <EvidenceEnvelopeCard compact evidence={row} key={`${candidate.id}:evidence:${index}`} />)}{!rows.length ? <p>当前建议还没有可展示的依据。</p> : null}</div> : null}</article>;
-          })}{!candidates.length ? <p className="knowledge-object-context-state">当前没有需要人工处理的高价值候选。</p> : null}</div>
+          })}{!candidates.length ? <p className="knowledge-object-context-state">暂无待处理建议。</p> : null}</div>
         </details>
 
         <details open={knowledgeUpdates.length > 0} className="knowledge-object-context-section">
           <summary><Sparkles size={14} /><span>关联建议</span><b>{knowledgeUpdates.length}</b></summary>
-          <p className="knowledge-object-context-state">新资料和研究建议经过整理后显示在这里，不会自动修改正式知识。</p>
+          <p className="knowledge-object-context-state">建议不会自动修改已发布内容。</p>
           <div className="knowledge-object-context-list">{knowledgeUpdates.map((candidate) => {
             const rows = evidenceRows(candidate.evidence);
             const busyPrefix = `${candidate.id}:`;
             return <article className="knowledge-object-candidate" key={candidate.knowledge_update_id || `${candidate.candidate_type}:${candidate.id}`}><header><strong>{candidateFieldLabel(candidate)}</strong><span>{candidateStatus(candidate)}</span></header><p>{displayValue(candidate.proposed_value)}</p>{candidate.why_now ? <small>{candidate.why_now}</small> : null}<CandidateDecisionBar candidate={candidate} busyAction={busyCandidate.startsWith(busyPrefix) ? busyCandidate.slice(busyPrefix.length) : ""} disabled={Boolean(busyCandidate) || Boolean(publication?.locked)} onInspect={() => setOpenCandidate((current) => current === candidate.knowledge_update_id ? "" : candidate.knowledge_update_id || candidate.id)} onAction={(descriptor, editedValue) => void decideCandidate(candidate, descriptor, editedValue)} />{openCandidate === (candidate.knowledge_update_id || candidate.id) ? <div className="knowledge-object-candidate-evidence">{rows.map((row, index) => <EvidenceEnvelopeCard compact evidence={row} key={`${candidate.id}:growth-evidence:${index}`} />)}{!rows.length ? <p>当前建议还没有独立依据，请核对相关对象。</p> : null}</div> : null}</article>;
-          })}{!knowledgeUpdates.length ? <p className="knowledge-object-context-state">当前没有需要主动呈现的知识更新。</p> : null}</div>
+          })}{!knowledgeUpdates.length ? <p className="knowledge-object-context-state">暂无关联建议。</p> : null}</div>
         </details>
 
         <details className="knowledge-object-context-section">
@@ -536,9 +536,9 @@ export function KnowledgeObjectContextPanel({
 
         <details open={revisions.some((revision) => revision.status === "draft")} className="knowledge-object-context-section">
           <summary><FileClock size={14} /><span>已保存修改与预览</span><b>{revisions.length}</b></summary>
-          {knowledgePublicationTargets[objectType]?<button type="button" className="button secondary" disabled={hasUnsavedChanges||Boolean(publication?.locked)||Boolean(publishingRevision)} onClick={()=>router.push(`/admin/publication/knowledge/${objectType}/${objectId}?${new URLSearchParams({return_to:window.location.pathname+window.location.search})}`)}>完整版本历史、撤回与恢复</button>:null}
-          <div className="knowledge-object-preview-status"><p><strong>读者当前看到的内容</strong><span>{previewLabel(publishedPreview, "对象尚未公开")}</span></p><p><strong>保存后尚未发布的内容</strong><span>{previewLabel(draftPreview, "当前没有待发布修改")}</span></p>{draftPreview?.unsupported_preview_fields?.length ? <small>部分特殊关系暂时只能预览主要内容。</small> : null}</div>
-          {hasUnsavedChanges ? <p className="knowledge-object-context-state">本页还有未保存的填写，不会出现在此处预览中。请先保存，再预览或发布。</p> : null}
+          {knowledgePublicationTargets[objectType]?<button type="button" className="button secondary" disabled={hasUnsavedChanges||Boolean(publication?.locked)||Boolean(publishingRevision)} onClick={()=>router.push(`/admin/publication/knowledge/${objectType}/${objectId}?${new URLSearchParams({return_to:window.location.pathname+window.location.search})}`)}>查看版本记录</button>:null}
+          <div className="knowledge-object-preview-status"><p><strong>读者当前看到的内容</strong><span>{previewLabel(publishedPreview, "对象尚未公开")}</span></p><p><strong>保存后尚未发布的内容</strong><span>{previewLabel(draftPreview, "当前没有待发布修改")}</span></p>{draftPreview?.unsupported_preview_fields?.length ? <small>预览尚未包含全部关系。请在关系编辑页核对。</small> : null}</div>
+          {hasUnsavedChanges ? <p className="knowledge-object-context-state">请先保存本页修改，再预览或发布。</p> : null}
           <div className="knowledge-object-context-list">{revisions.map((revision) => <article key={revision.id}><header><strong>第 {revision.revision} 版</strong><span>{revision.has_conflict ? "与正式版本冲突" : statusLabels[revision.status] || revision.status}</span></header><p>{Array.from(new Set(revision.changed_fields.map(changedFieldLabel))).join("、") || "内容更新"}</p><small>{revision.change_note || "无编辑说明"}</small>{revision.publish_url ? <ActionButton state={publishingRevision === revision.id ? "pending" : "idle"} pendingLabel="发布中" disabled={Boolean(publishingRevision) || revision.has_conflict || hasUnsavedChanges || Boolean(publication?.locked)} onClick={() => void publishRevision(revision)}>{publication || knowledgePublicationTargets[objectType] ? "进入发布前检查" : "确认并发布"}</ActionButton> : null}</article>)}</div>
         </details>
 

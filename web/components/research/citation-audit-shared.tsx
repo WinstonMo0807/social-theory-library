@@ -9,7 +9,7 @@ import type { AuditData, AuditLocation, AuditOccurrence, ResearchRecord } from "
 
 export const auditStatuses: Record<string, string> = { queued: "排队中", running: "处理中", completed: "检查已完成", partial: "部分结果待核对", failed: "处理未完成", canceled: "已取消", cancelled: "已取消" };
 export const auditDecisions = { accepted: "已核对", ignored: "暂时忽略", corrected: "已记录修正", needs_review: "仍待核对" };
-export const auditFindingNames: Record<string, string> = { identity: "书目身份", fulltext: "原文可用性", support: "论断关系", direct_quote: "引文文字", private_quote: "本人来源文字", page: "页码" };
+export const auditFindingNames: Record<string, string> = { identity: "书目核对", fulltext: "原文可用性", support: "论断关系", direct_quote: "引文文字", private_quote: "本人来源文字", page: "页码" };
 export const auditRelationNames: Record<string,string> = { support:"支持", different_conclusion:"不同结论", qualification:"限定条件", reframe:"转换解释", insufficient_evidence:"证据不足" };
 export const auditRelations = (row:AuditOccurrence) => [...new Set((row.support_analysis?.suggestions||[]).map(item=>item.relation).filter((value): value is string=>Boolean(value)))];
 

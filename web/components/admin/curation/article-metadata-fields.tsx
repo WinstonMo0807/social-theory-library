@@ -18,7 +18,7 @@ export function ArticleMetadataFields({ value, owner, onChange, onPortrait }: { 
       ["reading_path_ids", "相关阅读路径", "/catalog/admin/theory-system/reading-paths/", "q", "title"] ] as const).map(([key,label,endpoint,queryParam,nameField]) => <EntityPicker key={key} label={label} endpoint={endpoint} queryParam={queryParam} nameField={nameField}
       values={(data[key] || []).map(id => ({id,name:labels[id] || `${label} · ${id.slice(0,8)}`}))}
       onChange={rows => { update({ [key]: rows.flatMap(row => row.id ? [row.id] : []) }); setLabels(previous => ({ ...previous, ...Object.fromEntries(rows.flatMap(row => row.id ? [[row.id,row.name]] : [])) })); }} />)}
-    <label>公开策划者身份<input maxLength={240} value={data.curator_role} onChange={event => update({ curator_role: event.target.value })} /></label>
+    <label>策划者署名<input maxLength={240} value={data.curator_role} onChange={event => update({ curator_role: event.target.value })} /></label>
     <label>公开策划者机构<input maxLength={240} value={data.curator_affiliation} onChange={event => update({ curator_affiliation: event.target.value })} /></label>
     <label>策展人头像<select value={data.curator_account_id ? String(data.curator_account_id) : "separate"} onChange={event => update({ curator_account_id: event.target.value === "separate" ? null : owner, curator_portrait_id: null })}>
       {data.curator_account_id && data.curator_account_id !== owner ? <option value={data.curator_account_id}>保留原策展人的账号头像</option> : null}

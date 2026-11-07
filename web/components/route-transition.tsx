@@ -90,6 +90,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
     <div
       className={`route-content-transition ${readerRoute ? "reader-route" : ""}`}
       data-ui-scope={atlasRoute || readerRoute ? "stl4" : exploreRoute ? "explore-frozen" : "editorial-v2"}
+      data-workbench={pathname.startsWith("/admin") || pathname.startsWith("/account") ? "elicit" : undefined}
       data-type-mode={typeMode}
       data-type-section={pathname.split("/")[1] || "welcome"}
       ref={containerRef}

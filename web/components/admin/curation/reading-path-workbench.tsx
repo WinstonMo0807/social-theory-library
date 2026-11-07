@@ -514,7 +514,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
 
   return (
     <div className={`admin-page reading-path-v280-page ${pathStyles.workspace}`}>
-      <PageHeader eyebrow="内容 › 页面编排 › 公共阅读路径编排" title="公共阅读路径编排"  actions={<details className={pathStyles.pageTools}><summary aria-label="更多路径操作">⋮</summary><button type="button" onClick={()=>start()}><Plus size={14}/>新建路径</button></details>} />
+      <PageHeader eyebrow="内容 › 页面编排 › 公共阅读路径编排" title="公共阅读路径编排"  actions={<details className={pathStyles.pageTools} data-action-menu><summary aria-label="更多路径操作">⋮</summary><div data-menu-panel><button type="button" onClick={()=>start()}><Plus size={14}/>新建路径</button></div></details>} />
       {message ? <AsyncStatus state={messageState} message={message} /> : null}
       <div className="reading-path-v280-layout">
         <details className={pathStyles.directory}><summary>查找与切换阅读路径</summary><aside className="admin-panel reading-path-v280-list">
@@ -538,7 +538,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
           <details data-editor-section="identity" className={pathStyles.extraFields}><summary>路径主题、学习问题与策划说明</summary>
             <EntityPicker label="路径主题" endpoint="/catalog/admin/topics/" queryParam="q" nameField="name" values={draft.topics.map(id => ({ id, name: "已选择的主题" }))} onChange={rows => setDraft(current => ({ ...current, topics: rows.flatMap(row => row.id ? [row.id] : []) }))} />
             <div className="inline-fields"><label><span>明确建议周数（可空）</span><input type="number" min={1} max={520} value={draft.estimated_weeks ?? ""} onChange={event => setDraft({ ...draft, estimated_weeks: event.target.value ? Number(event.target.value) : null })} /></label></div>
-            <section data-editor-section="learning"><PathLearningEditor label="路径" value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /><p>新增争论名称在保存草稿后从真实关联核对。</p></section>
+            <section data-editor-section="learning"><PathLearningEditor label="路径" value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /><p>保存草稿后，可查看关联的争论。</p></section>
             <section data-editor-section="curation"><label><span>公开策划说明</span><textarea rows={4} value={draft.curator_note} onChange={event => setDraft({ ...draft, curator_note: event.target.value })} /></label>
             <RepeatableField label="公开策划署名" values={draft.credits} create={() => ({ name: "", role: "" })} onChange={credits => setDraft(current => ({ ...current, credits }))} render={(credit, index, update) => <div className="inline-fields"><label><span>署名 {index + 1}</span><input value={credit.name} maxLength={160} onChange={event => update({ ...credit, name: event.target.value })} /></label><label><span>承担工作</span><input value={credit.role} maxLength={100} onChange={event => update({ ...credit, role: event.target.value })} /></label></div>} />
             <p>署名由策划者明确填写，不从编辑账号自动公开个人资料。周数与阅读量属于建议，不代表系统预测。</p></section><section data-editor-section="versions"><p>历史版本来自正式发布记录。保存草稿不会新增公开版本；请在下方发布与记录中核对。</p></section>

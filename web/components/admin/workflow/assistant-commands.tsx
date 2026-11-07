@@ -26,10 +26,10 @@ export function AssistantCommandsProvider({owner,editionId,version,onGuard,onRec
     expected.current=null;
     setStopping(false);invalidateAssistantCache(editionId);
     const entity=value.result.entity as {name?:string;edit_url?:string}|undefined;
-    setMessage(value.state==="cancelled"?"尚未执行的原决定已停止。":value.action==="create"?`原请求已创建${entity?.name||"馆内对象"}。可重新查找并选择该对象；不会自动填入已改变的表单。`:"已查询原决定，原操作没有重复执行。请重新读取建议核对当前状态。");
+    setMessage(value.state==="cancelled"?"尚未执行的操作已取消。":value.action==="create"?`原请求已创建${entity?.name||"馆内对象"}。可重新查找并选择该对象；不会自动填入已改变的表单。`:"已取得处理结果。请刷新建议，核对当前状态。");
     await onRecovered();
   }
-  const notice=<>{request.error?<p role="alert">{request.error}</p>:null}{message?<p role="status">{message}</p>:null}{request.recovery?<div className="field-assistant-message"><p>材料助手有一项尚待核对的决定，请先查询结果。</p><button type="button" disabled={request.busy} onClick={()=>void recovered()}>查询原决定</button>{request.canRetry?<button type="button" disabled={request.busy} onClick={()=>void recovered(false,true)}>重试原决定</button>:null}<button type="button" disabled={request.busy} onClick={()=>setStopping(true)}>停止尚未执行的请求</button></div>:null}</>;
+  const notice=<>{request.error?<p role="alert">{request.error}</p>:null}{message?<p role="status">{message}</p>:null}{request.recovery?<div className="field-assistant-message"><p>材料助手有一项尚待核对的决定，请先查询结果。</p><button type="button" disabled={request.busy} onClick={()=>void recovered()}>查看处理结果</button>{request.canRetry?<button type="button" disabled={request.busy} onClick={()=>void recovered(false,true)}>重试该操作</button>:null}<button type="button" disabled={request.busy} onClick={()=>setStopping(true)}>停止尚未执行的请求</button></div>:null}</>;
   async function send(action:Action,field_name:string,payload:Record<string,unknown>){
     if(blocked)throw Error("请先核对材料助手的原请求。");
     expected.current={action,field:field_name};
@@ -39,5 +39,5 @@ export function AssistantCommandsProvider({owner,editionId,version,onGuard,onRec
     expected.current=null;
     return value.result;
   }
-  return <Commands value={{send,blocked,notice}}>{children}<div>{notice}</div><ConfirmDialog open={stopping} title="核对并停止材料助手的原决定？" description="已有结果返回原操作结果，未执行请求会被停止；不会撤销已经建立的人物或已有字段决定。" confirmLabel="核对并停止" pending={request.busy} onCancel={()=>setStopping(false)} onConfirm={()=>recovered(true)}/></Commands>;
+  return <Commands value={{send,blocked,notice}}>{children}<div>{notice}</div><ConfirmDialog open={stopping} title="取消尚未执行的操作？" description="已有结果返回原操作结果，未执行请求会被停止；不会撤销已经建立的人物或已有字段决定。" confirmLabel="核对并停止" pending={request.busy} onCancel={()=>setStopping(false)} onConfirm={()=>recovered(true)}/></Commands>;
 }

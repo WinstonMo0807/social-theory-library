@@ -233,7 +233,7 @@ export function CurationFieldAssistant({
       if(!result)return;
       saved=result.state==="applied";
       if(scope!==objectRef.current)return;
-      if(!saved){setOutcome("尚未执行的原决定已停止，请重新读取候选。");return;}
+      if(!saved){setOutcome("尚未执行的操作已取消，请刷新建议。");return;}
       reviewField.mark(action==="reject"?"已记录忽略":"已保存采用决定");
       setReview(null);setEditingClaim(null);
       setOutcome(action==="reject"?`已记录不采用：${reason}。原有资料未改变。`:`已保存${label}建议。尚未正式发布，请在本页核对草稿与公开预览。`);
@@ -255,11 +255,11 @@ export function CurationFieldAssistant({
     const result=retry?await command.send():await command.lookup(cancel);
     if(!result||scope!==objectRef.current)return;
     expected.current=null;setStopping(false);setReview(null);setResults([]);
-    setOutcome(result.state==="cancelled"?"尚未执行的原决定已停止。已保存内容保持不变。":"已查询原决定，没有重复保存。请核对当前资料，候选不会自动填入后来修改的表单。");
+    setOutcome(result.state==="cancelled"?"已取消尚未执行的操作。已保存内容保留。":"已查看处理结果，没有重复保存。请核对当前资料，候选不会自动填入后来修改的表单。");
     if(result.state==="applied"&&result.action!=="reject")setRefreshFailed(true);
     await lookup(false);
   }
-  const recoveryNotice=<>{command.error?<p role="alert">{command.error}</p>:null}{command.recovery?<section className="field-assistant-message"><p>{label}有一项尚待核对的决定。请查询原请求，或停止尚未执行的请求后继续。</p><button type="button" disabled={command.busy} onClick={()=>void recover()}>查询原决定</button>{command.canRetry?<button type="button" disabled={command.busy} onClick={()=>void recover(false,true)}>重试原决定</button>:null}<button type="button" disabled={command.busy} onClick={()=>setStopping(true)}>停止尚未执行的请求</button></section>:null}</>;
+  const recoveryNotice=<>{command.error?<p role="alert">{command.error}</p>:null}{command.recovery?<section className="field-assistant-message"><p>{label}有一项尚待核对的决定。请查询原请求，或停止尚未执行的请求后继续。</p><button type="button" disabled={command.busy} onClick={()=>void recover()}>查看处理结果</button>{command.canRetry?<button type="button" disabled={command.busy} onClick={()=>void recover(false,true)}>重试该操作</button>:null}<button type="button" disabled={command.busy} onClick={()=>setStopping(true)}>停止尚未执行的请求</button></section>:null}</>;
 
   const visible = showMore ? results : results.slice(0, 3);
   const moreCount = Math.max(0, results.length - 3);
@@ -319,6 +319,6 @@ export function CurationFieldAssistant({
       <button type="button" disabled={blocked} onClick={() => { setOpen(false); setOutcome("本次暂不处理建议，填写和保存记录均未改变。"); }}>暂不处理，继续填写</button>
       </>}
     </MaterialAssistantDialog> : null}
-    <ConfirmDialog open={stopping} title="核对并停止这项原决定？" description="已执行的请求会返回原结果；尚未执行的请求将被停止。不会撤销已经保存的内容，也不会重新采用候选。" confirmLabel="核对并停止" pending={command.busy} onCancel={()=>setStopping(false)} onConfirm={()=>recover(true)}/>
+    <ConfirmDialog open={stopping} title="取消尚未执行的操作？" description="已执行的请求会返回原结果；尚未执行的请求将被停止。不会撤销已经保存的内容，也不会重新采用候选。" confirmLabel="核对并停止" pending={command.busy} onCancel={()=>setStopping(false)} onConfirm={()=>recover(true)}/>
   </div>;
 }

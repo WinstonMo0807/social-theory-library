@@ -33,7 +33,7 @@ export function ResearchProjectNotes({ workspace }: { workspace: ReturnType<type
     const ok = await run(async () => {
       try {
         source = await readResearchSelectionNoteSource(record.id, id, owner);
-        if (source.reference_id !== id) throw new Error("备注原来源身份未能核对，文字仍保留。");
+        if (source.reference_id !== id) throw new Error("暂时无法核对备注的原文来源。备注文字仍保留。");
       } catch (reason) {
         setSourceError(reason instanceof Error ? reason.message : "原备注来源暂时无法读取。");
         if (reason instanceof ApiRequestError && reason.status === 404) throw new Error("原备注定位已不存在或未记录，备注文字仍保留。");
@@ -57,7 +57,7 @@ export function ResearchProjectNotes({ workspace }: { workspace: ReturnType<type
   const recovery = <ResearchTabRecovery storage={storage} label="未保存笔记" description="仅暂存本次笔记文字、编辑前的笔记与版本标识，不自动上传。恢复后核对最新研究，点击保存才同步。" pending={pending} onRestore={setDraft} preview={value => <p className="stl4-research-notes-copy">{value.text || "本次修改将笔记清空"}</p>}/>;
   return <>
     <header><h2>我的研究笔记</h2><button type="button" className="stl4-research-secondary" disabled={pending || !storage.scanned || Boolean(storage.recovery) || Boolean(storage.error)} onClick={() => setDraft({ text: record.data.notes || "", initial: record.data.notes || "", revision: record.revision })}>编辑笔记</button></header>
-    <p>这份笔记与证据比较共用，仅本人可见。原文依据仍保留各自的引用身份。</p>
+    <p>笔记与比较页同步，仅本人可见。</p>
     <div className="stl4-research-notes-copy">{record.data.notes || "尚未填写研究笔记。可以记录判断、疑问和下一步需要核对的材料。"}</div>
     {materialNotes.length ? <details className="stl4-research-material-notes"><summary>选材备注（{materialNotes.length}）</summary><p>移除选材后，已写备注仍保留。旧来源变化时不会自动关联到新版本。</p><ul>{materialNotes.slice(0, noteLimit).map(([id, body]) => {
       const source = record.data.selection_note_sources?.[id], href = source ? researchReaderHref(source) : "";

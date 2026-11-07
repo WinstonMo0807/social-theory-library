@@ -56,6 +56,6 @@ export function TopicOrganizationChecks({ topicId, name, value }: { topicId: str
       </>}
       <footer><p>查看其他主题会保留当前表单。此处不创建或合并主题。</p><div><button type="button" onClick={()=>setQuery("")}>继续编辑当前主题</button></div></footer>
     </Dialog>
-    {error?<p role="alert">{error}</p>:null}{result?<section aria-live="polite"><h3>本次调整的影响</h3>{result.parent_changed?<p>上级变化涉及 {result.descendant_count} 个后代主题，其中 {result.public_descendant_count} 个已公开；原身份和关联材料保留。</p>:<p>上级主题未变化。</p>}<p>当前可公开关联：{result.content_counts.works} 部作品 · {result.content_counts.scholars} 位学者 · {result.content_counts.knowledge} 个知识条目 · {result.content_counts.articles} 篇策划。</p>{result.problems.map((problem,index)=><p role="alert" key={index}>{problem.detail}</p>)}{!result.can_publish?<p>层级或关联内容仍需补充，发布时会再次核对。</p>:<p>此预览不保存内容。保存与发布仍需分别确认。</p>}</section>:null}
+    {error?<p role="alert">{error}</p>:null}{result?<section aria-live="polite"><h3>本次调整的影响</h3>{result.parent_changed?<p>上级变化涉及 {result.descendant_count} 个后代主题，其中 {result.public_descendant_count} 个已公开；原主题和关联材料保留。</p>:<p>上级主题未变化。</p>}<p>当前可公开关联：{result.content_counts.works} 部作品 · {result.content_counts.scholars} 位学者 · {result.content_counts.knowledge} 个知识条目 · {result.content_counts.articles} 篇策划。</p>{result.problems.map((problem,index)=><p role="alert" key={index}>{problem.detail}</p>)}{!result.can_publish?<p>层级或关联内容仍需补充，发布时会再次核对。</p>:<p>此预览不保存内容。保存与发布仍需分别确认。</p>}</section>:null}
   </section>;
 }

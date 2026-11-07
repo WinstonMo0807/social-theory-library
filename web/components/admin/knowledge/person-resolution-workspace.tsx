@@ -149,7 +149,7 @@ function PreviewFacts({ preview }: { preview: PersonPreview }) {
     {preview.business_impact ? <BusinessImpact impact={preview.business_impact} /> : null}
     <details><summary>查看作品与版本</summary><ul className={styles.rows}>{preview.affected_works.map((value, i) => <li key={i}><strong>{textValue(asRecord(value).title)}</strong><small>{textValue(asRecord(value).id)}</small></li>)}</ul>{preview.affected_editions.map((value, i) => <details key={i}><summary>版本 {textValue(asRecord(value).id)}</summary><Details value={value} /></details>)}</details>
     <details><summary>查看历史公开修订</summary>{preview.publication_revisions.map((value, i) => <Details key={i} value={value} />)}</details>
-    <section aria-label="关联影响"><h3>关联影响</h3><p>下方为双方现有引用。学者档案的下游引用保持原编号，只随同一份档案保留。</p>
+    <section aria-label="关联影响"><h3>关联影响</h3><p>下方列出两个人物的引用。已有学者页面及其引用记录保留。</p>
       {preview.references.map((value, i) => { const row = asRecord(value); return <details key={i} className={styles.reference}><summary>{textValue(row.label)} · 来源 {textValue(row.source_count)} 项 · 保留人物 {textValue(row.target_count)} 项{Array.isArray(row.collisions) && row.collisions.length ? " · 存在重复关系" : ""}{row.truncated ? " · 未完整显示" : ""}</summary>
         <div className={styles.comparison}>{["source_rows", "target_rows"].map((key) => <section key={key}><h4>{key === "source_rows" ? "来源人物" : "保留人物"}</h4>{Array.isArray(row[key]) && row[key].length ? row[key].map((item: unknown, index: number) => <Details key={index} value={item} />) : <p>无相关记录</p>}</section>)}</div>
       </details>; })}

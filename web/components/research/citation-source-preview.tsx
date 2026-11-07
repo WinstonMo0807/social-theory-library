@@ -55,7 +55,7 @@ function SourceDocument({ reference, assetId, revisionId, initialPage }: {
       validateReaderPage(payload, assetId, revisionId, page);
       if (!request.signal.aborted) setVerified({ access, page, payload });
     }).catch((reason: unknown) => {
-      if (!request.signal.aborted) setVerified({ access, page, error: reason instanceof Error ? reason.message : "原文身份核对失败，请重试。" });
+      if (!request.signal.aborted) setVerified({ access, page, error: reason instanceof Error ? reason.message : "原文记录核对失败，请重试。" });
     });
     return () => request.abort();
   }, [access, assetId, revisionId, page, attempt]);

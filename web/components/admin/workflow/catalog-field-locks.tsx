@@ -63,12 +63,12 @@ export function CatalogFieldLocksProvider({ owner, workId, editionId, version, f
       }, active.signal);
       if (active.signal.aborted) return;
       sessionStorage.removeItem(storageKey); setPending(null); setOriginal(null); setEditor(null); setReason("");
-      setMessage(result.state === "applied" ? "人工锁决定已保存，字段内容和公开状态没有改变。" : "尚未执行的原决定已停止，已完成操作不会撤销。");
+      setMessage(result.state === "applied" ? "人工锁决定已保存，字段内容和公开状态没有改变。" : "尚未执行的操作已取消，已完成操作保留。");
       await onChanged();
     } catch (error) { if (!active.signal.aborted) setMessage(error instanceof Error ? error.message : "结果尚未确认，请查询原请求。"); }
     finally { sending.current = false; if (!active.signal.aborted) { setBusy(false); setStopping(false); } }
   }
-  const feedback = <>{message ? <p role="status">{message}</p> : null}{pending ? <div className={styles.actions}><p>上次人工锁决定尚未核对，请先查询原请求。</p><button type="button" disabled={busy} onClick={() => void dispatch("read")}>查询原决定</button>{original ? <button type="button" disabled={busy || disabled} onClick={() => void dispatch("submit")}>重试原决定</button> : null}<button type="button" disabled={busy} onClick={() => setStopping(true)}>停止尚未执行的请求</button></div> : null}</>;
+  const feedback = <>{message ? <p role="status">{message}</p> : null}{pending ? <div className={styles.actions}><p>上次人工锁决定尚未核对，请先查询原请求。</p><button type="button" disabled={busy} onClick={() => void dispatch("read")}>查看处理结果</button>{original ? <button type="button" disabled={busy || disabled} onClick={() => void dispatch("submit")}>重试该操作</button> : null}<button type="button" disabled={busy} onClick={() => setStopping(true)}>停止尚未执行的请求</button></div> : null}</>;
   return <LockContext value={{ fields, disabled: disabled || blocked, open }}>{children}
     {message || pending ? <aside className={styles.notice}>{feedback}</aside> : null}
     {editor ? <Dialog open className={styles.dialog} aria-label="字段人工锁" onRequestClose={close}><header><h2>字段人工锁</h2><button type="button" disabled={busy} aria-label="关闭人工锁" onClick={close}><X size={18} /></button></header>
@@ -82,7 +82,7 @@ export function CatalogFieldLocksProvider({ owner, workId, editionId, version, f
         <footer><button type="button" disabled={busy} onClick={close}>返回编辑</button><button type="button" disabled={disabled || blocked || !field.can_edit || !reason.trim() || editor.version !== version} onClick={() => void dispatch("submit", { request_id: createRequestKey(), edition_id: editionId, edit_version: editor.version, sections: {}, field_locks: [{ field: field.name, action: field.locks.length ? "unlock" : "lock", reason: reason.trim() }] })}>{busy ? "正在保存…" : field.locks.length ? "确认解除保护" : "锁定当前保存值"}</button></footer>
       </> : <p>此字段暂不可管理，请重新读取书目。</p>}
     </Dialog> : null}
-    <ConfirmDialog open={stopping} title="核对并停止原决定？" description="已保存决定返回原操作结果；尚未执行的请求会被停止，迟到提交不能再更改人工锁。" confirmLabel="核对并停止" pending={busy} onCancel={() => setStopping(false)} onConfirm={() => dispatch("stop")} />
+    <ConfirmDialog open={stopping} title="取消尚未执行的操作？" description="已保存决定返回原操作结果；尚未执行的请求会被停止，迟到提交不能再更改人工锁。" confirmLabel="核对并停止" pending={busy} onCancel={() => setStopping(false)} onConfirm={() => dispatch("stop")} />
   </LockContext>;
 }
 

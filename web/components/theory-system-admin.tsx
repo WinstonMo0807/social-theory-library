@@ -492,7 +492,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       if (!active) return;
       setEditing(mapped);
       setDraft(nodeToDraft(mapped));
-      setMessage("已通过旧版映射打开理论或概念资料。后续只需在本页维护。");
+      setMessage("已打开对应的理论或概念，可在本页继续编辑。");
       setVersions(null);
       setLegacyOpened(true);
     });
@@ -750,7 +750,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       eyebrow="学者与知识　›　理论、概念与关系编辑"
       title="理论、概念与关系编辑"
 
-      actions={<details className="node-page-tools"><summary aria-label="更多页面操作">···</summary><div><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></div></details>}
+      actions={<details className="node-page-tools" data-action-menu><summary aria-label="更多页面操作">···</summary><div data-menu-panel><Link className="admin-outline-button" href="/admin/theories/timeline">查看全部理论事件</Link><button className="admin-outline-button" type="button" onClick={() => { nodes.refresh(); allNodes.refresh(); }}><RefreshCw size={15} />刷新</button></div></details>}
     >
       {command.recovery || knownSavedId || command.error ? <section className="admin-panel" aria-label="核对理论与概念保存">
         <h2>核对原保存</h2><p>{knownSavedId ? "原保存已完成，但原记录尚未重新读取。请先核对原对象，不要再次创建。" : "保存结果尚未确认。输入与原请求编号已保留，请查询结果后继续。"}</p>
@@ -1076,7 +1076,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   }
   async function review(action:"confirm"|"modify_confirm"|"create_node"|"alias_existing"|"reject"|"defer"|"insufficient"|"needs_changes"|"delete") {
     if(!selected||composing.current||!canReview||!reviewCommand.ready||reviewCommand.recovery||knownReviewId||reviewConflict)return;
-    if(!window.confirm(action==="delete"?"删除这条错误候选？已生成的条目和关系保留，本次删除会留下审计与请求结果。":"提交这项审核决定？系统将核对原任务版本，已公开内容仍须按原发布流程处理。"))return;
+    if(!window.confirm(action==="delete"?"删除这条错误建议？已生成的条目、关系和操作记录保留。":"提交这项审核决定？系统将核对原任务版本，已公开内容仍须按原发布流程处理。"))return;
     const actionKey=`review-task:${selected.id}:${action}`;
     if(!startAction(actionKey))return;
     setMessage("正在提交审核决定…");setMessageState("pending");

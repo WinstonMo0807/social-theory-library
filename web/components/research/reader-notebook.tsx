@@ -287,7 +287,7 @@ function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRec
     queueMicrotask(() => {
       if (!active) return;
       try { const raw = sessionStorage.getItem(storageKey); if (!raw) return; const value = JSON.parse(raw) as { project_id: string; request_id: string };
-        if (!/^[\da-f-]{36}$/i.test(value?.project_id) || !/^[\da-f-]{36}$/i.test(value?.request_id)) throw Error("原请求身份无法读取，请到我的研究核对。");
+        if (!/^[\da-f-]{36}$/i.test(value?.project_id) || !/^[\da-f-]{36}$/i.test(value?.request_id)) throw Error("暂时无法读取处理记录，请到我的研究核对。");
         setRecovery(value); setUncertain(true); setMessage("上次操作结果未确认，请先核对原操作结果。");
       } catch (reason) { setBroken(true); setMessage(reason instanceof Error ? reason.message : "原请求无法读取。"); }
     }); return () => { active = false; };
