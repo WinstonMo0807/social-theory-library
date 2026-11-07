@@ -2,7 +2,7 @@
 
 - 检查点474345af后独立Edge窗口读回r8账户表、390/320任务详情、存储图例、素材标题、读者标签。证据已更新WORKSPACE_TYPE_REVIEW/COVERAGE_20261107。
 - 最后大号/夜间/320发现分享主体750px被裁切，sharing.module.css已限制容器宽度并让标签内部滑动；r9隔离构建成功，其他任务修改保留。
-- r9包tmp/stl4-public-ui-20261107/readable-web-r9.tar.gz，SHA256 e4132222851819505f81995800702faf8a60b3765c882c188d226f92e2081ed2。尚未上传/部署，公网readable-r4。r8停止与LAN恢复脚本仍运行，日志tmp/stl4-workspace-type-20261107/stop-candidate-r8.log；未取得完成结果不能声称已停止，后续先读回，不重复启动。
+- r9包tmp/stl4-public-ui-20261107/readable-web-r9.tar.gz，SHA256 e4132222851819505f81995800702faf8a60b3765c882c188d226f92e2081ed2。尚未上传/部署，公网readable-r4。r8停止与LAN恢复已完成，正式Web身份保持。日志tmp/stl4-workspace-type-20261107/stop-candidate-r8.log；r9未启动，无需重复停止旧候选。
 - 浏览器工具无法可靠确认Windows当前URL，安全停止本轮电脑操作，不是未登录，未绕过限制。字号与主题已恢复舒适/白昼。仍须r9手机分享/导语计数实看、受控Web发布、摘要与公网回看；不能称本轮已上线。
 
 ## 2026-11-07 工作区字体续查（最终候选 r8，尚未发布）
