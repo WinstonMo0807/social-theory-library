@@ -6,6 +6,7 @@
 - TypeScript、内网方案构建、diff whitespace、STC 新文案检查通过；不进行检索测评、全站 E2E 或实际评论/账户写入。
 - 独立 NAS 容器 `stl-workspace-proposals-20261107`（`138a915e1abb`），仅 `192.168.5.6:18088`；受限静态配置、无 API 代理，CSP 禁止连接。正式 26 个既有容器在创建时 ID 不变。目录 `/volume2/library/stl-previews/workspace-proposals-20261107`，r3；前版 index 与本地截图/日志保留。
 - D：本轮方案交付及共用修复源码。B：用户选型后并入正式 Web、真实路由与权限状态验收；维护服务实际可用性不以演示数据作证明。没有新增后端功能、改变账号或改动馆藏。
+- 源码检查点 `dd6d08ae`。最终 18088 HTTP 200、文件 hash 一致、API 路径 404；并行策展工作另将正式 API/Web 更新至 media-connection-r1，其进度明确不包含本轮设计方案，本轮未动其服务。
 - 详情与文案对照 `docs/stl4/WORKSPACE_UI_PROPOSALS_20261107.md`，逐文件覆盖 `docs/stl4/WORKSPACE_UI_COVERAGE_20261107.csv`。原有未提交修改继续保留。
 
 ---

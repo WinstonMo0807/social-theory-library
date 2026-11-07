@@ -75,7 +75,7 @@ STC 使用已有本地 STC-Simplified-Technical-Chinese 参考，遵循 for-web-
 - 仅绑定 192.168.5.6:18088。不接正式网络、数据库或 API，不携带账户凭据，CSP connect-src 'none'，无代理，无新增公网或隧道配置。
 - NAS /volume2/library/stl-previews/workspace-proposals-20261107；r1/r2 的 index 备份保留。运行 r3 构建。只替换该独立站点的静态文件，不重启正式服务。
 - 首次访问 403 由新增目录权限为 000 导致，已将该静态站点内部目录设为 755，资源为 644；未放宽正式资料目录。原错误证据保留 tmp。
-- 创建方案容器时核对原有 26 个容器 ID 均保持。原 API curation-preview-r1、Web avatar-r2、workers/beat upload-r5 不变。
+- 创建方案容器时核对原有 26 个容器 ID 均保持。创建时正式 API 为 curation-preview-r1、Web 为 avatar-r2、workers/beat 为 upload-r5。
 - 本地运行/截图/日志位于 tmp/stl4-workspace-proposals-20261107，未提交 Git。
 
 ## A/B/C/D
@@ -84,3 +84,7 @@ STC 使用已有本地 STC-Simplified-Technical-Chinese 参考，遵循 for-web-
 - B：用户选择方案；选定后将相应样式并入正式管理台和读者中心，再按真实路由与用户批注验收。这不是 120 个页面重新开发清单。
 - B：真实维护服务状态与所有权限/数据分支的运行验收。本轮示例不充当验证证据。
 - C：未登记新便利性功能或无证据的理论风险任务。没有新增评论业务、模型、后端接口或数据库结构。
+
+### 收尾时的并行发布说明
+
+最终 HTTP 读回 18088 为 200，HTML 与 NAS 静态文件 hash 一致，/api/catalog/ 为 404，CSP 禁止 API 连接，方案容器只读且持续运行。此时发现正式 API/Web 已由另一个策展修复工作更新为 `4.0.0-20261107-media-connection-r1`，分别于 09:42:12/09:43:33 UTC 创建，容器 `71a20ee2a5e3` / `846fd7199d95`。CURRENT_PROGRESS 的并行记录明确该修复不包含管理设计改造。其余原有容器身份保持。本轮没有调用正式部署命令，也没有将本轮 A/B 设计发布公网；不能将“创建时 26 个 ID 不变”误写为整个协作期间没有其他会话发布。
