@@ -24,6 +24,7 @@ from django.utils import timezone
 from catalog.models import (
     Asset,
     CatalogPublicationRevision,
+    Contribution,
     DocumentRevision,
     Edition,
     IntelligenceStatus,
@@ -551,14 +552,22 @@ def _publish_bundle_entities(
             if entity.authority_status != Person.AuthorityStatus.VERIFIED:
                 entity.authority_status = Person.AuthorityStatus.VERIFIED
                 entity.save(update_fields=["authority_status", "updated_at"])
-            profile = ScholarProfile.objects.select_for_update().filter(person=entity).first()
-            if profile is None:
-                raise ValueError(f"新增学者“{entity.preferred_name}”缺少学者资料。")
-            if profile.editorial_status not in {"draft", "pending", "published"}:
-                raise ValueError(f"新增学者“{entity.preferred_name}”的资料已下线，不能自动恢复。")
-            if profile.editorial_status != "published":
-                profile.editorial_status = "published"
-                profile.save(update_fields=["editorial_status", "updated_at"])
+            # Contributor authority and a public scholar page are separate.
+            # A translation credit must not publish an otherwise empty profile.
+            authorship = bundle.edition.contributions.filter(
+                person=entity, approved=True,
+                pk__in=confirmed_links[("person", str(entity.pk))],
+                role__in=[Contribution.Role.AUTHOR, Contribution.Role.CHIEF_EDITOR, Contribution.Role.EDITOR],
+            ).exists()
+            if authorship:
+                profile = ScholarProfile.objects.select_for_update().filter(person=entity).first()
+                if profile is None:
+                    raise ValueError(f"新增学者“{entity.preferred_name}”缺少学者资料。")
+                if profile.editorial_status not in {"draft", "pending", "published"}:
+                    raise ValueError(f"新增学者“{entity.preferred_name}”的资料已下线，不能自动恢复。")
+                if profile.editorial_status != "published":
+                    profile.editorial_status = "published"
+                    profile.save(update_fields=["editorial_status", "updated_at"])
         elif object_type == "topic":
             entity = Topic.objects.select_for_update().filter(pk=item.object_id).first()
             if entity is None or not entity.name.strip():

@@ -14,7 +14,7 @@ import type { KnowledgePreviewPayload } from "@/components/admin/preview/knowled
 import styles from "../curation/issue-publication.module.css";
 
 type Saved = {id?:string;edit_version?:string;editorial_revision?:{id:string;status:string;target_type?:string;target_id?:string};[key:string]:unknown};
-type Pending = {format:1;owner:string;objectType:string;objectId:string;phase:"prepare"|"publish";version:string;revisionId:string|null};
+type Pending = {format:1;owner:string;objectType:string;objectId:string;phase:"prepare-public"|"prepare"|"publish";version:string;revisionId:string|null};
 export const knowledgePublicationTargets:Record<string,{endpoint:string;type:string;field:string}>={
   scholar:{endpoint:"scholars",type:"scholar_profile",field:"editorial_status"},topic:{endpoint:"topics",type:"topic",field:"editorial_status"},
   discipline:{endpoint:"disciplines",type:"discipline",field:"editorial_status"},subdiscipline:{endpoint:"subdisciplines",type:"subdiscipline",field:"editorial_status"},
@@ -28,7 +28,7 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function validCommand(value:unknown,owner:string,objectType:string,objectId:string):value is Pending {
   if(!value||typeof value!=="object"||Array.isArray(value))return false;
   const command=value as Partial<Pending>;
-  return command.format===1&&command.owner===owner&&command.objectType===objectType&&command.objectId===objectId&&uuid.test(objectId)&&typeof command.version==="string"&&/^[a-f0-9]{64}$/.test(command.version)&&(command.phase==="prepare"?command.revisionId===null:command.phase==="publish"&&typeof command.revisionId==="string"&&uuid.test(command.revisionId));
+  return command.format===1&&command.owner===owner&&command.objectType===objectType&&command.objectId===objectId&&uuid.test(objectId)&&typeof command.version==="string"&&/^[a-f0-9]{64}$/.test(command.version)&&(["prepare","prepare-public"].includes(command.phase||"")?command.revisionId===null:command.phase==="publish"&&typeof command.revisionId==="string"&&uuid.test(command.revisionId));
 }
 type Props={objectType:string;objectId:string;savedRecord:object;dirty:boolean;onPublished?:()=>void;onLockChange:(locked:boolean)=>void;blockedReason?:string;reviewHref?:string;embedded?:boolean};
 export const KnowledgePublicationContext=createContext<{locked:boolean;requestReview:()=>void;requestHistory?:()=>void}|null>(null);
@@ -46,6 +46,7 @@ function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLoc
   const router=useRouter();
   const key=`stl:knowledge-publish:v1:${owner}:${objectType}:${objectId}`,endpoint=target?`/catalog/admin/${target.endpoint}/${objectId}/`:"";
   const savedVersion=(savedRecord as Saved).edit_version||"",canPublish=hasAdminCapability(user,"can_publish_authority");
+  const needsPublicDraft=Boolean(target&&(savedRecord as Saved).editorial_revision?.status==="draft"&&(savedRecord as Saved)[target.field]==="draft");
   const lifetime=useRef<AbortController|null>(null),acting=useRef(false);
   const [review,setReview]=useState<{version:string;payload:KnowledgePreviewPayload;withdrawing:boolean}|null>(null),[open,setOpen]=useState(false),[confirmed,setConfirmed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState(""),[pending,setPending]=useState<Pending|null>(null),[settledVersion,setSettledVersion]=useState("");
   const [hydrated,setHydrated]=useState(false),[recordProblem,setRecordProblem]=useState(false);
@@ -84,11 +85,20 @@ function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLoc
   async function send(command:Pending){
     if(acting.current||!target||!canPublish||lifetime.current?.signal.aborted)return;
     if(!validCommand(command,owner,objectType,objectId)){setRecordProblem(true);setError("暂存请求与当前对象不符，已停止发送，请核对历史后清除记录。");return;}
-    if(!pending&&(dirty||blockedReason||!confirmed||!review||review.version!==savedVersion||command.version!==review.version))return;
+    if(!pending&&(command.phase==="prepare-public"
+      ?dirty||!hydrated||recordProblem||!needsPublicDraft||command.version!==savedVersion
+      :dirty||blockedReason||!confirmed||!review||review.version!==savedVersion||command.version!==review.version))return;
     acting.current=true;setBusy(true);setError("");setMessage("");setOpen(false);
     let phase=command,stage:"storage"|"request"="storage";
     try{
       persist(phase);stage="request";
+      if(phase.phase==="prepare-public"){
+        const current=await request<Saved>(endpoint);
+        if(current.id!==objectId||current.edit_version!==phase.version||current.editorial_revision?.status!=="draft"||current[target.field]!=="draft")throw Error("保存内容或状态已变化，请核对版本历史后重新读取。");
+        const saved=await request<Saved>(endpoint,{method:"PATCH",headers:{"If-Match":phase.version},body:JSON.stringify({[target.field]:"published"})});
+        if(saved.id!==objectId||saved[target.field]!=="published"||saved.editorial_revision?.status!=="draft"||saved.editorial_revision.target_id!==objectId||saved.editorial_revision.target_type!==target.type)throw Error("公开稿的保存结果尚未确认，请核对版本历史。");
+        stage="storage";clear();setReview(null);setConfirmed(false);setMessage("公开稿已保存。请重新核对页面预览和发布检查，再确认发布。");refresh();return;
+      }
       if(phase.phase==="prepare"){
         const current=await request<Saved>(endpoint);
         if(current.id!==objectId||current.edit_version!==phase.version)throw Error("已保存版本发生变化，请核对原版本历史后重新检查。");
@@ -125,6 +135,7 @@ function PublishControl({objectType,objectId,savedRecord,dirty,onPublished,onLoc
   if(review)previewLink.searchParams.set("edit_version",review.version);
   return <section className={embedded?undefined:`${styles.review} ${styles.panel}`} aria-label="知识对象发布">
     <header>{embedded?null:<h2>发布已保存内容</h2>}<button type="button" className={embedded?styles.primary:undefined} disabled={dirty||busy||!canPublish||!hydrated||recordProblem||Boolean(pending)||settledVersion===savedVersion||!target||Boolean(blockedReason)} onClick={()=>void inspect()}>{reviewHref?"进入完整发布检查":"发布前检查"}</button></header>
+    {needsPublicDraft?<p>当前保存稿仍是草稿状态。<button type="button" disabled={dirty||busy||!canPublish||!hydrated||recordProblem||Boolean(pending)||!savedVersion} onClick={()=>void send({format:1,owner,objectType,objectId,phase:"prepare-public",version:savedVersion,revisionId:null})}>将保存稿设为公开稿</button>保存后重新预览，确认发布时才公开。</p>:null}
     {blockedReason?<p role="status">{blockedReason}</p>:null}
     <p>{dirty?"当前输入尚未保存，请先保存草稿。":!canPublish?"当前账户没有正式发布权限。":"先核对已保存版本、公开内容与授权，再确认发布。"}</p>
     {message?<p role="status">{message}</p>:null}{error?<p className={styles.warning} role="alert">{error}</p>:null}
