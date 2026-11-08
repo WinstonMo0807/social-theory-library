@@ -26,3 +26,11 @@
 最终候选镜像social-theory-library-web:4.0.0-20261109-curation-layout-r4，ID 16be145c4084fbd441c26666af9fcc67e3a36d15f7e3076f0f540030ef28ffba。候选86ce87ff2080，限384MiB，旧r1/r2候选已停止。LAN18084临时路由至候选，正式仍menu-cover-r3。正式切换仅更新Web，执行前保存准确Compose、环境、镜像、edge及服务身份记录，完成后核对1847运行文件。
 
 证据、检查日志和发布脚本均保存在tmp/stl4-curation-layout-20261109，不提交运行产物或凭据。正式发布结果将在成功回读后补记。
+
+## 正式发布结果
+
+2026-11-09 02:43:57+0800已切换公网和LAN，正式Web b724de510649，curation-layout-r4镜像16be145c4084；源码检查点6bc39719。两个Host的/home、/admin、/theories均200，API就绪200，1847个运行文件哈希全部匹配。16个其他服务的容器身份及启动时间保持。候选86ce87ff2080已停止，未发生候选OOM。
+
+公网HTTPS理论页实看：导航为书库检索，1453像素内容视口与页面scrollWidth相同，主体1452.8像素，h1为58.72像素。浏览器临时视口已恢复，最终截图tmp/stl4-curation-layout-20261109/public-theories-r4.png。
+
+恢复目录/volume2/library/stl-releases/20261109-curation-layout-r4/web-recovery，带版本守卫的rollback-web-only.py已保存但未执行回退演练。只回退Web，不回滚策展数据库。API、OCR、原件、账号、DNS及隧道未修改。已有两份暂存差异逐字节保持。
