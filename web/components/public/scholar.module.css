@@ -109,6 +109,10 @@
 @media(min-width:701px) and (max-width:1000px) {
   .profilePortrait .portrait { height: auto; aspect-ratio: .94; }
 }
+@media(min-width:1001px) {
+  .profileHero { grid-template-columns: clamp(230px, 18vw, 320px) minmax(0, 1fr) clamp(240px, 22vw, 360px); }
+  .profilePortrait .portrait { height: auto; max-height: none; aspect-ratio: .94; }
+}
 .profileSources a, .sources a { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: .2em; }
 .workCard p { line-height: 1.75; }
 .workCard .relationSource { font-size: var(--stl-readable-body); color: var(--stl-readable-ink); clear: both; padding-top: 10px; }
