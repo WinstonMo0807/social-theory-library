@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import Link from "next/link";
 import {
   AlertCircle,
@@ -652,7 +654,7 @@ function LegacyProcessingCenter() {
       setFeedback({ state: "error", message: "请先填写本次处理理由。", actionKey });
       return;
     }
-    if (decision === "cancel" && !window.confirm(`取消《${item.title}》这一次文字识别？已保存文字、PDF 和阅读记录都会保留。`)) return;
+    if (decision === "cancel" && !(await confirmAction(`取消《${item.title}》这一次文字识别？已保存文字、PDF 和阅读记录都会保留。`))) return;
     if (!beginOperation(actionKey, "正在记录 OCR 任务决定。")) return;
     try {
       await apiRequest("/ingestion/processing-center/", {

@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { AIRuntimeEditor } from "./admin/ai-runtime-editor";
@@ -443,7 +445,7 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
     const submittedVersion = editVersion.current;
     setEditConflict(false);
     const base = draft.kind === "theory" ? "/catalog/admin/theory-schools" : "/catalog/admin/topics";
-    if (!draftOnly && draft.status === "published" && detail.data?.editorial_status !== "published" && !window.confirm(`保存并公开这份${draft.kind === "topic" ? "主题" : "理论"}资料？读者将看到本页内容。`)) { finishAction("save-taxonomy"); return false; }
+    if (!draftOnly && draft.status === "published" && detail.data?.editorial_status !== "published" && !(await confirmAction(`保存并公开这份${draft.kind === "topic" ? "主题" : "理论"}资料？读者将看到本页内容。`))) { finishAction("save-taxonomy"); return false; }
     const terms = splitValues(draft.terms);
     const curation = draft.kind === "theory"
       ? {
@@ -572,7 +574,7 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
           ? "整理读者进入社会理论的内容方向和层次。"
           : "自动识别提出候选，人工确认后写入作品关系。流派和主题保持为不同对象。"}
     >
-      {draft.kind === "topic" && command.recovery ? <aside role="status" className="form-message"><p>上次主题保存需要核对，刷新后只读取原操作结果，不重新建档。</p><button type="button" disabled={Boolean(pendingAction)} onClick={()=>void command.lookup().then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但主题后来已删除；未重新创建。");})}>读取原保存结果</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)} onClick={()=>void save(undefined,true)}>按原请求重试</button>:null}<button type="button" disabled={Boolean(pendingAction)} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原主题后来已删除，未重复创建。");});}}>停止未确认保存</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
+      {draft.kind === "topic" && command.recovery ? <aside role="status" className="form-message"><p>上次主题保存需要核对，刷新后只读取原操作结果，不重新建档。</p><button type="button" disabled={Boolean(pendingAction)} onClick={()=>void command.lookup().then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但主题后来已删除；未重新创建。");})}>读取原保存结果</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)} onClick={()=>void save(undefined,true)}>按原请求重试</button>:null}<button type="button" disabled={Boolean(pendingAction)} onClick={async ()=>{if((await confirmAction("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。")))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/topics/${receipt.topic_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原主题后来已删除，未重复创建。");});}}>停止未确认保存</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
       <div className={`taxonomy-layout ${editorOnly ? "editor-only" : ""}`}>
         {!editorOnly ? <section>
           {showTheories ? (
@@ -1058,7 +1060,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
       frequently_read_scholar_ids: draft.frequentScholarIds,
       related_theory_ids: draft.relatedTheoryIds,
     };
-    if (!draftOnly && draft.status === "published" && detail.data?.editorial_status !== "published" && !window.confirm("保存并公开这位学者的资料？读者将看到本页内容。")) { savingRef.current = false; setSaving(false); return false; }
+    if (!draftOnly && draft.status === "published" && detail.data?.editorial_status !== "published" && !(await confirmAction("保存并公开这位学者的资料？读者将看到本页内容。"))) { savingRef.current = false; setSaving(false); return false; }
     try {
       const saved = await command.save<AdminScholar & { save_replayed?: boolean }>(
         `/catalog/admin/scholars/${draft.id ? `${draft.id}/` : ""}`,
@@ -1155,7 +1157,7 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
           {!visible.length ? <p className="empty-state">未找到匹配的学者。</p> : null}
           <AdminListPages data={resource.data} paging={paging} loading={resource.loading} filters={{ q: submittedQuery }} />
         </section> : null}
-        {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取操作结果，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存结果</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}<button type="button" disabled={saving} onClick={()=>{if(window.confirm("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。"))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/scholars/${receipt.scholar_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原学者后来已删除，未重复创建。");});}}>停止未确认保存</button></aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
+        {command.recovery ? <aside className="form-message" role="status"><p>有一次保存需要核对。表单正文只在当前页面内存中，刷新后只读取操作结果，不重复创建。</p><button type="button" disabled={saving} onClick={() => void command.lookup().then(receipt => { if (receipt?.exists) { unsaved.current = false; setHasUnsaved(false); detail.refresh(); router.replace(`/admin/scholars/${receipt.scholar_id}`); } else if (receipt) setMessage(receipt.state === "cancelled" ? "原保存请求已停止，可以继续编辑。" : "原保存已完成，但学者后来已删除；未重复创建。"); })}>读取原保存结果</button>{command.canRetry ? <button type="button" disabled={saving} onClick={() => void save(undefined, true)}>按原请求重试保存</button> : null}<button type="button" disabled={saving} onClick={async ()=>{if((await confirmAction("停止原保存请求？已经完成的保存会返回原结果，尚未执行的请求将被阻止。")))void command.lookup(true).then(receipt=>{if(receipt?.exists){unsaved.current=false;setHasUnsaved(false);detail.refresh();router.replace(`/admin/scholars/${receipt.scholar_id}`);}else if(receipt)setMessage(receipt.state === "cancelled" ? "原保存请求已停止，当前输入保留。" : "原学者后来已删除，未重复创建。");});}}>停止未确认保存</button></aside> : null}{command.error ? <p role="alert">{command.error}</p> : null}
 
         {editorOnly ? <KnowledgeVisualEditor portrait={draft.id ? <ScholarPortraitPanel key={draft.id} scholarId={draft.id} refreshKey={`${message}:${detail.data?.updated_at ?? ""}`} onChanged={() => { setPortraitRevision(value => value + 1); detail.refresh(); }} /> : null} objectType="scholar" objectId={draft.id} savedRecord={detail.data} onPublished={detail.refresh} draft={draft} dirty={hasUnsaved} refreshKey={`${message}:${portraitRevision}`}><form className="admin-panel admin-side-editor scholar-editor dedicated-editor" onCompositionStartCapture={()=>{composing.current=true;}} onCompositionEndCapture={()=>{composing.current=false;}} onSubmit={(event) => void save(event, true)} onChangeCapture={() => { unsaved.current = true; setHasUnsaved(true); editVersion.current += 1; }} aria-busy={saving}>
 

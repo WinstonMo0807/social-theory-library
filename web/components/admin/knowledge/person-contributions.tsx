@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -72,6 +74,6 @@ function RoleEditor({ row, owner, personId, onClose, onSaved }: { row: Edition; 
       {mine.length ? mine.map(({item,index})=><label key={index}>{asString(item.display_name)}<select disabled={blocked} value={changes[index]||asString(item.role)} onChange={event=>{const role=event.target.value;setChanges(current=>{const next={...current};if(role===item.role)delete next[index];else next[index]=role;return next;});}}>{contributorRoleOptions.map(({value,label})=><option key={value} value={value} disabled={items.some((other,at)=>at!==index&&other.person_id===personId&&(changes[at]||other.role)===value)}>{label}</option>)}</select></label>) : <p>当前草稿已没有此人物关联，请从原书目核对，不能覆盖其他编辑。</p>}
     </> : null}
     {resource.error ? <p role="alert">{resource.error}{resource.conflict ? " 请关闭后重新读取并核对。" : uncertain ? " 输入已保留，可重试同一次保存或在原书目核对。" : ""}</p> : null}
-    <div className={styles.actions}><button type="button" disabled={resource.pending} onClick={()=>{if(changed&&!uncertain&&!window.confirm("放弃尚未保存的职责修改吗？"))return;onClose();}}>{uncertain?"关闭并保留原请求":"取消编辑"}</button><button type="button" className={styles.primary} disabled={!changed||!payload?.permissions.can_edit||resource.pending||priorRequest||resource.conflict} onClick={()=>void save()}>{resource.pending?"正在保存…":uncertain?"重试同一次保存":"保存职责草稿"}</button></div>
+    <div className={styles.actions}><button type="button" disabled={resource.pending} onClick={async ()=>{if(changed&&!uncertain&&!(await confirmAction("放弃尚未保存的职责修改吗？")))return;onClose();}}>{uncertain?"关闭并保留原请求":"取消编辑"}</button><button type="button" className={styles.primary} disabled={!changed||!payload?.permissions.can_edit||resource.pending||priorRequest||resource.conflict} onClick={()=>void save()}>{resource.pending?"正在保存…":uncertain?"重试同一次保存":"保存职责草稿"}</button></div>
   </div>;
 }

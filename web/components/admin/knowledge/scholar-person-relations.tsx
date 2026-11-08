@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect, useRef, useState } from "react";
@@ -26,10 +28,10 @@ export function ScholarPersonRelations({scholarId,blocked,onChanged}:{scholarId:
     return()=>controller.abort();
   },[scholarId,owner,page,attempt]);
   function open(id:string){if(blocked)return;guard.current={dirty:false,pending:false,composing:false};setNotice("");setSelected(id);}
-  function close(){
+  async function close(){
     if(ime.current||guard.current.composing)return;
     if(guard.current.pending){setNotice("请先核对原请求的结果，或使用停止未执行请求，再关闭编辑。");return;}
-    if(guard.current.dirty&&!window.confirm("关系有未保存输入，放弃这些输入并返回学者页吗？"))return;
+    if(guard.current.dirty&&!(await confirmAction("关系有未保存输入，放弃这些输入并返回学者页吗？")))return;
     setSelected(null);setNotice("");setAttempt(value=>value+1);onChanged();
   }
   return <>

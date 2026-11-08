@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LockKeyhole, LockKeyholeOpen, X } from "lucide-react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -44,7 +46,7 @@ export function CatalogFieldLocksProvider({ owner, workId, editionId, version, f
   useUnsavedForm(Boolean(reason) || Boolean(pending), false);
   const field = fields.find(row => row.name === editor?.name);
   function open(name?: string) { if (disabled || blocked) return; setReason(""); setMessage(""); setEditor({ name: name || fields[0]?.name || "", version }); }
-  function close() { if (busy || reason && !pending && !window.confirm("人工锁说明尚未提交，确定放弃吗？")) return; setEditor(null); setReason(""); }
+  async function close() { if (busy || reason && !pending && !(await confirmAction("人工锁说明尚未提交，确定放弃吗？"))) return; setEditor(null); setReason(""); }
   async function dispatch(mode: "submit" | "read" | "stop", value?: Command) {
     const active = controller.current, command = value || original, id = mode === "submit" ? command?.request_id : pending;
     if (!active || active.signal.aborted || sending.current || !id || !ready || broken) return;

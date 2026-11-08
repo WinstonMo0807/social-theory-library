@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../../lib/request-key";
@@ -373,9 +375,9 @@ function ReadingPathEditor({owner}:{owner:string}) {
     };
   }, [requestedPath, apiRequest]);
 
-  function start(path?: ReadingPathRow, saved = false) {
+  async function start(path?: ReadingPathRow, saved = false) {
     if (!saved && (command.recovery || pendingAction || routeBusy)) return;
-    if (!saved && dirty && !window.confirm("阅读路径还有未保存的安排。放弃填写并切换吗？")) return;
+    if (!saved && dirty && !(await confirmAction("阅读路径还有未保存的安排。放弃填写并切换吗？"))) return;
     prefills.clear();
     setEditing(path ?? null);
     setActiveStage(0); setActiveItem(0); dragRef.current = null;
@@ -407,11 +409,11 @@ function ReadingPathEditor({owner}:{owner:string}) {
     setActiveItem(Math.max(0, next[stageIndex]?.items.findIndex(item => item.key === selectedItem?.key) ?? 0));
   }
   function moveItem(itemKey: string, stageKey: string, beforeKey?: string) { arrange(movePathMaterial(stages, itemKey, stageKey, beforeKey)); }
-  function removeItems(itemKeys: string[], stageKey?: string) {
+  async function removeItems(itemKeys: string[], stageKey?: string) {
     const removed = stages.flatMap(stage => stage.items).filter(item => itemKeys.includes(item.key));
     const ids = new Set(removed.map(item => item.id));
     const affected = stages.flatMap(stage => stage.items).filter(item => !ids.has(item.id)).reduce((count, item) => count + item.dependencies.filter(relation => ids.has(relation.item_id)).length, 0);
-    if (!window.confirm(`${stageKey ? "移除这个阶段及其中" : "移除"}${removed.length} 项材料？${affected ? `同时从当前草稿中移除指向它们的 ${affected} 条关系。` : ""}原馆藏、读者进度与笔记不会删除；保存发布前不影响公开路线。`)) return;
+    if (!(await confirmAction(`${stageKey ? "移除这个阶段及其中" : "移除"}${removed.length} 项材料？${affected ? `同时从当前草稿中移除指向它们的 ${affected} 条关系。` : ""}原馆藏、读者进度与笔记不会删除；保存发布前不影响公开路线。`))) return;
     arrange(stages.filter(stage => stage.key !== stageKey).map(stage => ({ ...stage, items: stage.items.filter(item => !itemKeys.includes(item.key)).map(item => ({ ...item, dependencies: item.dependencies.filter(relation => !ids.has(relation.item_id)) })) })));
   }
 
@@ -422,7 +424,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
     if ((event?.nativeEvent as Event & { isComposing?: boolean })?.isComposing || composing.current) return false;
     const token = getServerSessionCredential();
     if (!token || !canEdit || routeBusy || (!editing && !canCreate)) return false;
-    if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !window.confirm("保存并公开这条阅读路径？确认后读者就能看到它。")) return false;
+    if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !(await confirmAction("保存并公开这条阅读路径？确认后读者就能看到它。"))) return false;
     const actionKey = "save-reading-path";
     if (!startAction(actionKey)) return false;
     setEditConflict(false);
@@ -470,7 +472,7 @@ function ReadingPathEditor({owner}:{owner:string}) {
 
   async function removePath() {
     if(command.recovery||routeBusy||!canEdit)return;
-    if (!editing || !window.confirm(`删除阅读路径“${editing.title}”吗？`)) return;
+    if (!editing || !(await confirmAction(`删除阅读路径“${editing.title}”吗？`))) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-reading-path:${editing.id}`;

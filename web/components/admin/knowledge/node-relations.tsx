@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import dynamic from "next/dynamic";
@@ -50,13 +52,13 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
       .then(value => { if (!controller.signal.aborted) { setData(value); setRelationTypes(value.relation_types); } }).catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "关系读取失败。"); });
     return () => controller.abort();
   }, [owner, directoryPath, page, filters, attempt]);
-  function canLeave() {
+  async function canLeave() {
     if (ime.current || guard.current.composing) return false;
     if (guard.current.pending) { setNotice("请先查询原请求，或停止未执行的请求，再切换关系。"); return false; }
-    return !guard.current.dirty || window.confirm("关系还有未保存输入，放弃这些输入并切换吗？");
+    return !guard.current.dirty || (await confirmAction("关系还有未保存输入，放弃这些输入并切换吗？"));
   }
-  function open(value: Selection) {
-    if (blocked || !canLeave()) return;
+  async function open(value: Selection) {
+    if (blocked || !(await canLeave())) return;
     updateGuard(clearGuard); setNotice(""); setSelection(value);
     requestAnimationFrame(() => detail.current?.focus());
   }
@@ -76,8 +78,8 @@ function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, own
     if (selection?.kind === row.kind && selection.id === row.id) { detail.current?.focus(); return; }
     open({ kind: row.kind, id: row.id, scholarId: row.scholar_id || undefined, personName: row.source_kind === "人物" ? row.source_name : row.target_name });
   }
-  function close() {
-    if (!canLeave()) return;
+  async function close() {
+    if (!(await canLeave())) return;
     updateGuard(clearGuard); setSelection(null); setNotice(""); setAttempt(value => value + 1); onChanged?.(); createButton.current?.focus();
   }
   function filter(field: keyof typeof filters, value: string) { setFilters(current => ({ ...current, [field]: value })); setPage(1); }

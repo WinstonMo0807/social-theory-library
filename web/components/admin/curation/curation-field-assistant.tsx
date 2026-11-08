@@ -89,7 +89,7 @@ type Props = {
   formContext?: Record<string, unknown>;
   lookupLabel?: string;
   onApply?: (value: unknown, authority?: CurationAuthoritySuggestion) => boolean | void;
-  onFillSuggestion?: (id: string, value: unknown, label: string) => boolean;
+  onFillSuggestion?: (id: string, value: unknown, label: string) => boolean | Promise<boolean>;
   onAccepted?: () => void | Promise<void>;
   beforeAction?: () => Promise<boolean>;
   hasUnsavedChanges?: boolean;
@@ -192,11 +192,11 @@ export function CurationFieldAssistant({
     }
   }
 
-  function choose(candidate: AssistantCandidate, confirmed = false) {
+  async function choose(candidate: AssistantCandidate, confirmed = false) {
     if(blocked)return;
     if (candidate.enrichment && onFillSuggestion && !candidate.claim) {
       if (candidate.conflicts.length && !confirmed) { setReview(candidate); return; }
-      const filled = onFillSuggestion(candidate.enrichment.id, candidate.enrichment.proposed_value, candidate.label);
+      const filled = await onFillSuggestion(candidate.enrichment.id, candidate.enrichment.proposed_value, candidate.label);
       setReview(null);
       setOutcome(filled ? `已填入${label}，尚未保存。请核对后点击本页保存；可在表单中修改或撤销。` : "表单没有变化。已有内容不会重复添加；取消替换时也会保留当前填写。");
       reviewField.mark("已填入，待保存");

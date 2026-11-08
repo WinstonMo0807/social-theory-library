@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { LoadingState } from "@/components/ui/loading-state";
 import { MediaPlacement } from "@/components/media-placement";
 
@@ -194,8 +196,8 @@ function NoteEditor({ owner, original, addNote = false, onSaved, onCancel }: { o
   const dirty = useUnsavedForm({ body, tags }, { body: addNote ? "" : labelOnly ? original.label : original.body, tags: original.tags.join("，") });
   const locked = busy || !ready || Boolean(recovery) || broken;
   return <form className={styles.editor} onSubmit={event => void save(event)}><fieldset disabled={locked}><label>{labelOnly ? "名称" : "我的笔记"}<textarea value={body} maxLength={limit} rows={7} onChange={event => setBody(event.target.value)} /></label><small>{body.length} / {limit}</small>{!labelOnly ? <label>标签（逗号分隔，最多12个）<input value={tags} onChange={event => setTags(event.target.value)} /></label> : null}</fieldset>{message ? <p role="alert">{message}</p> : null}
-    {recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>查询原笔记</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的笔记核对原操作。确认结束本次恢复？已保存内容不会删除。")) clear(); }}>已核对，结束恢复</button> : null}
-    <footer><button type="button" disabled={busy} onClick={() => { if (!dirty || window.confirm("当前笔记尚未保存，确定放弃修改吗？")) onCancel(); }}>取消</button><button className={styles.primary} disabled={busy || !ready || broken || Boolean(recovery && !canRetry)}>{busy ? "正在保存…" : recovery ? "重试原请求" : "保存"}</button></footer></form>;
+    {recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>查询原笔记</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={async () => { if ((await confirmAction("请先在我的笔记核对原操作。确认结束本次恢复？已保存内容不会删除。"))) clear(); }}>已核对，结束恢复</button> : null}
+    <footer><button type="button" disabled={busy} onClick={async () => { if (!dirty || (await confirmAction("当前笔记尚未保存，确定放弃修改吗？"))) onCancel(); }}>取消</button><button className={styles.primary} disabled={busy || !ready || broken || Boolean(recovery && !canRetry)}>{busy ? "正在保存…" : recovery ? "重试原请求" : "保存"}</button></footer></form>;
 }
 
 function DetailActions({ owner, row, onPreview }: { owner: string; row: NotebookRecord; onPreview: () => void }) {
@@ -320,7 +322,7 @@ function ProjectForm({ owner, rows, onDone }: { owner: string; rows: NotebookRec
       setMessage(reason instanceof Error ? reason.message : "结果未确认，请使用原请求重试。");
     } finally { sending.current = false; if (!request.signal.aborted) setBusy(false); }
   }
-  return <form className={styles.editor} onSubmit={event => void submit(event)}><p>将明确选择的 {rows.length} 条记录对应的原文加入研究，并关联这些记录。私人笔记正文不会自动复制或授权给模型。</p><fieldset disabled={busy || uncertain || broken}><ChoicePicker owner={owner} kind="projects" label="选择我的研究" value={project?.id || ""} onChange={(_, row) => setProject(row || null)} /><label>新增选材备注（已有材料备注保留）<textarea maxLength={200} value={note} onChange={event => setNote(event.target.value)} /></label></fieldset>{message ? <p role="alert">{message}</p> : null}<button className={styles.primary} disabled={busy || broken || !project?.revision}>{busy ? "正在保存…" : uncertain ? "重试原请求" : "加入研究"}</button>{recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>核对原操作结果</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={() => { if (window.confirm("请先在我的研究核对原操作。确认结束此请求的恢复？已保存内容不会删除。")) { clear(); setBroken(false); } }}>已核对，结束恢复</button> : null}<Link href="/account/research">管理我的研究</Link></form>;
+  return <form className={styles.editor} onSubmit={event => void submit(event)}><p>将明确选择的 {rows.length} 条记录对应的原文加入研究，并关联这些记录。私人笔记正文不会自动复制或授权给模型。</p><fieldset disabled={busy || uncertain || broken}><ChoicePicker owner={owner} kind="projects" label="选择我的研究" value={project?.id || ""} onChange={(_, row) => setProject(row || null)} /><label>新增选材备注（已有材料备注保留）<textarea maxLength={200} value={note} onChange={event => setNote(event.target.value)} /></label></fieldset>{message ? <p role="alert">{message}</p> : null}<button className={styles.primary} disabled={busy || broken || !project?.revision}>{busy ? "正在保存…" : uncertain ? "重试原请求" : "加入研究"}</button>{recovery ? <button type="button" disabled={busy} onClick={() => void lookup()}>核对原操作结果</button> : null}{recovery || broken ? <button type="button" disabled={busy} onClick={async () => { if ((await confirmAction("请先在我的研究核对原操作。确认结束此请求的恢复？已保存内容不会删除。"))) { clear(); setBroken(false); } }}>已核对，结束恢复</button> : null}<Link href="/account/research">管理我的研究</Link></form>;
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) { return <Dialog open onRequestClose={onClose} className={styles.modal} aria-label={title}><header><h2>{title}</h2><button type="button" aria-label="关闭" onClick={onClose}><X size={18} /></button></header>{children}</Dialog>; }

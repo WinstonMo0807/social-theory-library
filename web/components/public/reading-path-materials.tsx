@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { MediaPlacement } from "@/components/media-placement";
@@ -40,6 +42,6 @@ export function ReadingPathMaterials({ items, personal, writable, preview, retur
 function PathNote({ item, personal, onClose }: { item: PathMaterial; personal: PathPersonal; onClose: () => void }) {
   const saved = personal.record?.progress[item.id]?.note || "", [note, setNote] = useState(saved);
   const dirty = useUnsavedForm(note, saved), busy = personal.busy || !!personal.pending;
-  const close = () => { if (!personal.busy && (!dirty || window.confirm("本人笔记尚未保存，确定放弃本次输入吗？"))) onClose(); };
+  const close = async () => { if (!personal.busy && (!dirty || (await confirmAction("本人笔记尚未保存，确定放弃本次输入吗？")))) onClose(); };
   return <Dialog open className={styles.dialog} aria-labelledby="path-note-heading" onRequestClose={close}><header><h2 id="path-note-heading">本人阅读笔记</h2><button type="button" aria-label="关闭路径笔记" disabled={personal.busy} onClick={close}><X size={19} /></button></header><p>{item.title}</p><p>仅保存到当前账户的跟读记录，不会写入公共路径。</p><form onSubmit={event => { event.preventDefault(); void (async () => { if (!personal.record) return; const result = await personal.mutate({ action: "note", request_id: createRequestKey(), id: personal.record.id, expected_revision: personal.record.revision, item_id: item.id, note }); if (result?.record) onClose(); })(); }}><label>笔记内容<textarea value={note} onChange={event => setNote(event.target.value)} maxLength={4000} rows={8} disabled={busy} /></label><button type="submit" className={styles.primaryButton} disabled={busy || !dirty}>保存本人笔记</button></form>{personal.error ? <p role="alert">{personal.error}</p> : null}{personal.pending && !personal.busy ? <button type="button" onClick={() => { if (personal.pending) void personal.mutate(personal.pending.command, true); }}>核对原操作</button> : null}</Dialog>;
 }

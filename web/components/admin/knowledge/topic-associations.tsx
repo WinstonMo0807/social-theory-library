@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useRef, useState } from "react";
@@ -80,8 +82,8 @@ function SelectionRows({ field, ids, labels, notes, sorting = false, onOrder, on
           <button type="button" disabled={index === ids.length - 1} aria-label={`下移${name}`} onClick={() => move(id, index + 1)}>下移</button></div></details> : null}
           {sorting ? <select aria-label={`${name}的位置`} value={index} onChange={event => move(id, Number(event.target.value))}>
             {ids.map((_, position) => <option key={position} value={position}>第 {position + 1} 项</option>)}
-          </select> : <button type="button" onClick={() => {
-            if (!notes[id] || window.confirm(`移除“${name}”的关联及本主题中的说明？原条目不会删除。`)) onRemove?.(id);
+          </select> : <button type="button" onClick={async () => {
+            if (!notes[id] || (await confirmAction(`移除“${name}”的关联及本主题中的说明？原条目不会删除。`))) onRemove?.(id);
           }}>移除</button>}
         </div>
       </li>;
@@ -99,7 +101,7 @@ export function TopicAssociations({ field, label, ids, labels, notes, onChange, 
   const options = useChoices(field, new URLSearchParams({ q: query, page: String(page) }), picker);
   const changed = Boolean(sort && sort.base !== JSON.stringify(ids)), maximum = field === "issue_ids" ? 50 : 200;
   useUnsavedForm(Boolean(sort && sort.base !== JSON.stringify(sort.ids)), false);
-  function closeSort() { if (!sort || JSON.stringify(sort.ids) === sort.base || window.confirm("放弃此次尚未应用的排序？")) setSort(null); }
+  async function closeSort() { if (!sort || JSON.stringify(sort.ids) === sort.base || (await confirmAction("放弃此次尚未应用的排序？"))) setSort(null); }
   return <section className={styles.associations} data-association-field={field}>
     <header><h3>{label} <small>{ids.length}</small></h3><div>
       <button type="button" onClick={() => setPicker(true)}>＋ 关联已有内容</button>

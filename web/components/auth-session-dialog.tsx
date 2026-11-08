@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import Link from "next/link";
 import { ArrowRight, BookOpen, X } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -105,9 +107,9 @@ export function AuthSessionDialog() {
     <button className={styles.noticeContinue} onClick={() => setNoticeRoute(null)}>知道了，开始浏览 <ArrowRight size={18} /></button>
   </Dialog>;
   if (!prompt || prompt.route !== pathname) return null;
-  const mayLeave = () => !(formGuard || appealGuard) || window.confirm("当前有输入或尚未确认的提交结果。关闭会放弃本页输入，已提交操作可能仍在继续。确定离开吗？");
-  const close = () => { if (mayLeave()) { setPrompt(null); setFormGuard(false); setAppealGuard(false); showNotice(); } };
-  const changeMode = (value: AuthMode) => { if (mayLeave()) { setMode(value); setFormGuard(false); setAppealGuard(false); } };
+  const mayLeave = async () => !(formGuard || appealGuard) || (await confirmAction("当前有输入或尚未确认的提交结果。关闭会放弃本页输入，已提交操作可能仍在继续。确定离开吗？"));
+  const close = async () => { if ((await mayLeave())) { setPrompt(null); setFormGuard(false); setAppealGuard(false); showNotice(); } };
+  const changeMode = async (value: AuthMode) => { if ((await mayLeave())) { setMode(value); setFormGuard(false); setAppealGuard(false); } };
   return <GuestTransferProvider><Dialog open onRequestClose={close} className={`auth-session-dialog ${styles.dialog}`} aria-labelledby="auth-session-title" initialFocusRef={heading}>
     <header className={styles.heading}><div><h2 id="auth-session-title" ref={heading} tabIndex={-1}>从阅读，走向自己的研究</h2><p>{prompt.expired ? "登录状态已失效，重新登录后即可继续。" : "登录或免费注册，开始阅读与检索。"}</p></div><button className={styles.close} onClick={close} aria-label="暂不登录，关闭邀请"><X size={20} /></button></header>
     <div className={styles.columns}><div className={`auth-panel ${styles.form}`}>

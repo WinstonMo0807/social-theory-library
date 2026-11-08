@@ -2,7 +2,7 @@
 .reader.stl4-reader {
   --reader-left: clamp(220px, 20vw, 286px);
   --reader-right: clamp(280px, 27vw, 390px);
-  --paper: #fcfbf8; --surface: #fffefa; --ink: #0b2847; --muted: #7d8290;
+  --paper: #f7f4ee; --surface: #fffefa; --ink: #2b2b28; --muted: #5c6267;
   --line: #e8e6e2; --reader-accent: #b58c46; --reader-tint: #f6efdf;
   background: var(--paper); color: var(--ink);
   grid-template: "site site site" auto "heading heading heading" auto
@@ -389,3 +389,40 @@
 .reader-quick-jump h2 { grid-column:1/-1; font:600 16px var(--serif); margin:0; }
 .reader-quick-jump input { width:100%; min-width:0; border:1px solid var(--line); border-radius:3px; padding:10px; background:var(--surface); color:var(--ink); font-size:max(13px, var(--stl-readable-ui)); }
 .reader-quick-jump button { padding:8px 18px; background:var(--reader-tint); border:1px solid var(--line); font-size:max(13px, var(--stl-readable-ui)); }
+
+/* Reading keeps the document in view; book identity remains a compact return bar. */
+@media (min-width:761px) {
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded):not([data-reader-fullscreen="true"]) {
+  grid-template:"heading heading heading" auto "left toolbar right" 54px "left document right" minmax(0,1fr) / var(--reader-left) minmax(0,1fr) var(--reader-right);
+ }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) > :is(.reader-site-header,.reader-bottom) { display:none; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-heading { padding:10px 16px; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-breadcrumb { display:none; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-book-heading { display:flex; gap:20px; min-height:0; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-book-heading > :is(.book-cover,.reader-no-cover) { display:none; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-title { flex:1; gap:10px 20px; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-title h1 { font:600 var(--stl-readable-body)/1.5 var(--content-text,var(--sans)); margin:0; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-version-label { margin:0; min-width:0; max-width:100%; }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-version-label select { max-width:min(360px,100%); padding:5px 8px; font-size:var(--stl-readable-meta); }
+ .reader.stl4-reader[data-reader-view="reading"]:not(.reader-embedded) .reader-heading-actions .reader-return-book { display:inline-flex; white-space:nowrap; }
+}
+
+/* The same layout serves native fullscreen and its in-window fallback. */
+.reader.stl4-reader[data-reader-fullscreen="true"]:not(.reader-embedded),
+.reader.stl4-reader[data-reader-fullscreen="true"].reader-embedded {
+ position:fixed; inset:0; z-index:150; width:100%; height:100dvh; max-height:none; padding:0;
+ grid-template:"left toolbar right" 54px "left document right" minmax(0,1fr) / var(--reader-left) minmax(0,1fr) var(--reader-right);
+}
+.reader.stl4-reader[data-reader-fullscreen="true"] > :is(.reader-site-header,.reader-heading,.reader-bottom) { display:none; }
+.reader.stl4-reader[data-reader-fullscreen="true"] .reader-fullscreen { display:inline-flex; }
+.reader.stl4-reader[data-reader-view="reading"] .reader-title h1 { max-height:none; }
+@media (max-width:760px) {
+ .reader.stl4-reader[data-reader-fullscreen="true"]:not(.reader-embedded),
+ .reader.stl4-reader[data-reader-fullscreen="true"].reader-embedded {
+  grid-template:"toolbar" 54px "document" minmax(0,1fr) "bottom" calc(54px + env(safe-area-inset-bottom)) / minmax(0,1fr);
+ }
+ .reader.stl4-reader[data-reader-fullscreen="true"][data-reader-view="search"]:not(.reader-embedded) {
+  grid-template:"left" minmax(130px,32dvh) "toolbar" 54px "document" minmax(0,1fr) "bottom" calc(54px + env(safe-area-inset-bottom)) / minmax(0,1fr);
+ }
+ .reader.stl4-reader[data-reader-fullscreen="true"] > .reader-bottom { display:flex; }
+}

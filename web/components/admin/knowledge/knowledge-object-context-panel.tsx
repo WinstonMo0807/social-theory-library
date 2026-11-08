@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import {
@@ -433,7 +435,7 @@ export function KnowledgeObjectContextPanel({
       router.push(`/admin/preview/knowledge/${objectType}/${objectId}?${new URLSearchParams({review:"1",return_to:window.location.pathname+window.location.search})}`);
       return;
     }
-    if (!window.confirm(`发布第 ${revision.revision} 版已保存内容？读者页面将按这份保存内容更新。`)) return;
+    if (!(await confirmAction(`发布第 ${revision.revision} 版已保存内容？读者页面将按这份保存内容更新。`))) return;
     setPublishingRevision(revision.id);
     setMessageState("pending");
     try {

@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -417,7 +419,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
     const token = getServerSessionCredential();
     const owner = session.user?.id;
     if (!token || owner === undefined) return;
-    if (!window.confirm("确定删除这条个人阅读记录吗？")) return;
+    if (!(await confirmAction("确定删除这条个人阅读记录吗？"))) return;
     const actionKey = `delete-record:${kind}:${id}`;
     if (!beginReaderAction(actionKey, "正在删除个人阅读记录……")) return;
     try {

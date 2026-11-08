@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -102,7 +104,7 @@ function EditionOcrControlState({ editionId, workId, owner }: { editionId: strin
   const active = current?.active_job_id || jobs.find((job) => ["pending", "running", "paused"].includes(job.status))?.id;
   async function action(actionName: string, job?: OcrProgress) {
     if (!ready || inFlight.current || !current || (!job && !file && !request.current)) return;
-    if (actionName === "cancel_catalog_ocr" && !window.confirm(`取消《${current.title}》这次文字识别？原 PDF、已保存文字和读者记录都会保留。`)) return;
+    if (actionName === "cancel_catalog_ocr" && !(await confirmAction(`取消《${current.title}》这次文字识别？原 PDF、已保存文字和读者记录都会保留。`))) return;
     inFlight.current = true; setPending(true); setError("");
     const controller = new AbortController();
     mutation.current = controller;

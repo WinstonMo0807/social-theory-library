@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import Link from "next/link";
 import { CollectionLink } from "@/components/collection-link";
 import { ArrowLeft, ArrowRight, BookOpen, RefreshCw, StickyNote, Trash2 } from "lucide-react";
@@ -103,7 +105,7 @@ function BookNotesWorkspace({ assetId, bootstrap }: { assetId: string; bootstrap
   }, [assetId, loadAttempt, session.status, session.user]);
 
   async function deleteNote(id: string) {
-    if (!window.confirm("确定删除这条笔记吗？")) return;
+    if (!(await confirmAction("确定删除这条笔记吗？"))) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-note:${id}`;

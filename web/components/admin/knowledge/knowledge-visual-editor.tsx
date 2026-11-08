@@ -1,5 +1,7 @@
 "use client";
 
+import { showNotice, confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { Children, Fragment, cloneElement, isValidElement, useEffect, useMemo, useState, useRef, type ReactElement, type ReactNode } from "react";
@@ -134,14 +136,14 @@ export function KnowledgeVisualEditor({objectType, objectId, draft, dirty, refre
   const live = useMemo(() => {const projected=project(objectType,payload?.perspective.data,draft as Record<string,unknown>);return localImage ? {...projected,hero_image:localImage,cover_url:localImage,cover_media:null,...(objectType === "scholar" ? {person:{...(projected.person as Row),portrait:localImage,portrait_media:null}} : {})}:projected;},[objectType,payload,draft,localImage]);
   const previewPayload = {...payload, object_type:objectType, object_id:objectId || "new", active_perspective:"draft", perspective:{source:"browser_input", available:true, serializer:payload?.perspective.serializer || "", data:live}} as KnowledgePreviewPayload;
   const page = objectType === "reading_path" ? selected : objectType === "scholar" && ["timeline","concepts","concept-map","network","biography","works","sources","paths"].includes(selected) ? selected : objectType === "topic" && ["questions","history","dimensions","methods","passages","timeline","concepts","works","paths","scholars","articles"].includes(selected) ? (selected === "paths" ? "reading-paths" : selected) : ["theory","concept","debate","research_problem"].includes(objectType) && selected === "content" ? "propositions" : "overview";
-  function changeSection(id: string) {
+  async function changeSection(id: string) {
     if (composing.current || id === selected || (publicationLocked && id !== "publication")) return;
     if (selected === "relations" && isNode) {
       if (relationGuard.composing) return;
-      if (relationGuard.pending) { window.alert("请先在关系详情查询原请求，或停止未执行的请求，再切换栏目。"); return; }
-      if (relationGuard.dirty && !window.confirm("关系还有未保存输入，放弃这些输入并切换栏目吗？")) return;
+      if (relationGuard.pending) { (await showNotice("请先在关系详情查询原请求，或停止未执行的请求，再切换栏目。")); return; }
+      if (relationGuard.dirty && !(await confirmAction("关系还有未保存输入，放弃这些输入并切换栏目吗？"))) return;
     }
-    if (selected === "passages" && evidenceDirty && !window.confirm("原文策展尚未保存，确定切换并放弃这些输入吗？")) return;
+    if (selected === "passages" && evidenceDirty && !(await confirmAction("原文策展尚未保存，确定切换并放弃这些输入吗？"))) return;
     setEvidenceDirty(false); setActive(id);
     const url = new URL(window.location.href); url.searchParams.set("section",id); window.history.replaceState(null,"",url.pathname+url.search);
   }

@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -1113,7 +1115,7 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
     const data = asRecord(payload.data.file);
     const targetEdition = asString(payload.context.edition_id);
     const isUpload = action === "replace" || action === "supplement";
-    if (isUpload && (!file || !targetEdition || !window.confirm(`确认${action === "replace" ? "替换阅读文件" : "补充首份 PDF"}到《${asString(payload.context.title)}》的当前出版版本？不会另建作品。原文件、历史页标识和私人记录保留；以实际处理和公开结果为准。`))) return;
+    if (isUpload && (!file || !targetEdition || !(await confirmAction(`确认${action === "replace" ? "替换阅读文件" : "补充首份 PDF"}到《${asString(payload.context.title)}》的当前出版版本？不会另建作品。原文件、历史页标识和私人记录保留；以实际处理和公开结果为准。`)))) return;
     const operationKey = `file-${action}`;
     if (!beginOperation(operationKey)) return;
     try {
@@ -1235,7 +1237,7 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
   }, [applyRemote, beginOperation, finishOperation, goToStep, itemId, maintenanceEditionId, maintenanceQuery, mode, payload, publicationPreview, routeParams, runPublicationPreflight, token, workId, ownerRequest]);
 
   const performWithdraw = useCallback(async () => {
-    if (!payload || !token || !window.confirm("确认下架当前版本吗？文件、审核记录和历史版本会继续保留。")) return;
+    if (!payload || !token || !(await confirmAction("确认下架当前版本吗？文件、审核记录和历史版本会继续保留。"))) return;
     const operationKey = "publish";
     if (!beginOperation(operationKey)) return;
     try {

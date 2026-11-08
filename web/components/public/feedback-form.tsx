@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -52,13 +54,13 @@ export function FeedbackForm({ initialCategory = "content", initialPath = "" }: 
       setMessage(unknown ? "暂未确认提交结果，填写内容已保留。请重试本次提交。" : error instanceof Error ? error.message : "反馈未能提交，输入仍保留。");
     } finally { if (operation.current === request) operation.current = null; }
   }
-  function cancel() {
+  async function cancel() {
     if (pending) return;
-    if ((dirty || uncertain) && !window.confirm(uncertain ? "本次反馈可能已被接收。离开将放弃本页草稿和重试入口，确定离开吗？" : "当前反馈尚未提交，确定放弃输入并返回帮助首页吗？")) return;
+    if ((dirty || uncertain) && !(await confirmAction(uncertain ? "本次反馈可能已被接收。离开将放弃本页草稿和重试入口，确定离开吗？" : "当前反馈尚未提交，确定放弃输入并返回帮助首页吗？"))) return;
     operation.current?.abort(); setBody(""); setContact(""); setConsent(false); router.push("/help");
   }
-  function closePath() {
-    if (pathDraft !== path && !window.confirm("尚未保存关联页面，确定放弃本次修改吗？")) return;
+  async function closePath() {
+    if (pathDraft !== path && !(await confirmAction("尚未保存关联页面，确定放弃本次修改吗？"))) return;
     setEditingPath(false);
   }
   function savePath() {

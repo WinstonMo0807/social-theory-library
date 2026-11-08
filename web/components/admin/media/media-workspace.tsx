@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -81,12 +83,12 @@ function WorkspaceEditor({owner,initial,path,canEdit}:{owner:string;initial:Work
     if(restore&&!clear)body.rendition_id=restore;else if(!clear){if(!selected||!imageReady)return;if(!metadata.alt_text.trim()||!metadata.source_label.trim()){setError("请填写替代文字和图片来源后保存媒体修订。");return;}body.media_id=selected.id;body.transform=transform;body.metadata=metadata;body.display_uses=uses;}
     await accept(await command.send(body));
   }
-  async function prepareLegacy(){if(locked||conflict||!isObject)return;if(dirty&&!window.confirm("用保留的旧图替换尚未保存的裁切与来源填写吗？"))return;await accept(await command.send({action:"legacy",slot:initial.slot,expected_version:baseVersion}));}
-  async function prepareHistory(choice:LegacyImageChoice){if(locked||conflict)return;if(dirty&&!window.confirm("用历史原图替换尚未保存的裁切与来源填写吗？原文件和公开图片不会改变。"))return;await accept(await command.send({action:"legacy_history",slot:initial.slot,expected_version:baseVersion,...choice}));}
-  async function preparePdf(number:number){if(locked||conflict)return;if(dirty&&!window.confirm("用这页图片替换尚未保存的裁切与来源填写吗？"))return;await accept(await command.send({action:"pdf_page",slot:initial.slot,expected_version:baseVersion,page:number}));}
-  async function upload(event:FormEvent<HTMLFormElement>){event.preventDefault();if(locked)return;const form=new FormData(event.currentTarget),file=form.get("image");if(!(file instanceof File)||!file.size)return;if(file.size>20*1024*1024){setError("图片不能超过 20 MB。");return;}if(dirty&&!window.confirm("选择上传图片并替换当前尚未保存的裁切吗？"))return;
+  async function prepareLegacy(){if(locked||conflict||!isObject)return;if(dirty&&!(await confirmAction("用保留的旧图替换尚未保存的裁切与来源填写吗？")))return;await accept(await command.send({action:"legacy",slot:initial.slot,expected_version:baseVersion}));}
+  async function prepareHistory(choice:LegacyImageChoice){if(locked||conflict)return;if(dirty&&!(await confirmAction("用历史原图替换尚未保存的裁切与来源填写吗？原文件和公开图片不会改变。")))return;await accept(await command.send({action:"legacy_history",slot:initial.slot,expected_version:baseVersion,...choice}));}
+  async function preparePdf(number:number){if(locked||conflict)return;if(dirty&&!(await confirmAction("用这页图片替换尚未保存的裁切与来源填写吗？")))return;await accept(await command.send({action:"pdf_page",slot:initial.slot,expected_version:baseVersion,page:number}));}
+  async function upload(event:FormEvent<HTMLFormElement>){event.preventDefault();if(locked)return;const form=new FormData(event.currentTarget),file=form.get("image");if(!(file instanceof File)||!file.size)return;if(file.size>20*1024*1024){setError("图片不能超过 20 MB。");return;}if(dirty&&!(await confirmAction("选择上传图片并替换当前尚未保存的裁切吗？")))return;
     setBusy(true);setError("");try{const media=await ownedRequest<Media>(owner,"/catalog/admin/media/",{method:"POST",body:form,signal:lifetime.current?.signal});if(!lifetime.current?.signal.aborted){choose(media);setMessage("原图已进入媒体库。请补充来源和裁切，再保存媒体修订。");collection.retry();}}catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"上传结果未知；可到复用媒体检查，同一文件再次上传会按内容去重。");}finally{if(!lifetime.current?.signal.aborted)setBusy(false);}}
-  function pick(media:Media,revision?:Revision){if(locked)return;if(dirty&&!window.confirm("替换当前尚未保存的图片、裁切和来源填写吗？"))return;choose(media,revision);}
+  async function pick(media:Media,revision?:Revision){if(locked)return;if(dirty&&!(await confirmAction("替换当前尚未保存的图片、裁切和来源填写吗？")))return;choose(media,revision);}
   function openPreview(){const source=workspaceRoot.current?.querySelector<HTMLCanvasElement>(`.${styles.samples} canvas`),target=previewCanvas.current;if(target){target.width=source?.width||1;target.height=source?.height||1;if(source)target.getContext("2d")?.drawImage(source,0,0);}setPreviewOpen(true);preview.current?.showModal();}
   const saveDisabled=locked||!dirty||conflict||(!clear&&!restore&&(!selected||!imageReady));
   return <div className={styles.workspace} ref={workspaceRoot} data-has-image={Boolean(selected&&!clear)} data-media-tab={tab}>

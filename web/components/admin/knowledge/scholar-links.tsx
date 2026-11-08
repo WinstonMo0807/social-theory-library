@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -46,10 +48,10 @@ function LinksWorkspace({ scholarId, kind, blocked, onChanged, derived = [], own
     return () => controller.abort();
   }, [owner, scholarId, kind, page, attempt]);
   function open(id: string) { if (blocked) return; guard.current = { dirty: false, pending: false, composing: false }; setNotice(""); setSelection(id); }
-  function close() {
+  async function close() {
     if (ime.current || guard.current.composing) return;
     if (guard.current.pending) { setNotice("请先查询原请求结果，或停止未执行的请求，再关闭编辑。"); return; }
-    if (guard.current.dirty && !window.confirm("有未保存的关联输入，放弃这些输入并返回学者页吗？")) return;
+    if (guard.current.dirty && !(await confirmAction("有未保存的关联输入，放弃这些输入并返回学者页吗？"))) return;
     setSelection(null); setNotice(""); setAttempt(value => value + 1); onChanged();
   }
   return <>
@@ -105,8 +107,8 @@ function LinkEditor({ owner, scholarId, kind, initialId, fixedTarget, personName
   async function act(action: "save" | "confirm" | "withdraw" | "retry") {
     if (composing.current || !canEdit || !command.ready || !ready || command.recovery && action !== "retry") return;
     if (action === "save" && (!valid || row?.confirmed || !id && !canCreate)) return;
-    if (action === "confirm" && (!id || !canPublish || !valid || !validDirection || !(draft.source.trim() || draft.source_anchor) || !draft.relation_label.trim() || !window.confirm("确认这条关联及其出处？相关公开页面将同步使用本次说明；原记录和操作历史保留。"))) return;
-    if (action === "withdraw" && (!id || !canPublish || dirty || !window.confirm("撤回这条关联？公开页面将不再使用此关系，记录与出处仍保留，可重新核对。"))) return;
+    if (action === "confirm" && (!id || !canPublish || !valid || !validDirection || !(draft.source.trim() || draft.source_anchor) || !draft.relation_label.trim() || !(await confirmAction("确认这条关联及其出处？相关公开页面将同步使用本次说明；原记录和操作历史保留。", { title: "确认关联与出处", confirmLabel: "确认关联" })))) return;
+    if (action === "withdraw" && (!id || !canPublish || dirty || !(await confirmAction("撤回这条关联？公开页面将不再使用此关系，记录与出处仍保留，可重新核对。", { title: "撤回公开关联", confirmLabel: "确认撤回" })))) return;
     if (!startAction(action)) return;
     setError(""); setMessage("");
     try {
@@ -135,6 +137,6 @@ function LinkEditor({ owner, scholarId, kind, initialId, fixedTarget, personName
     {!validDirection ? <p role="status">确认前须明确关系方向；提出、定义、发展、解释与运用以人物为来源。</p> : null}
     {row?.confirmed ? <p>这条关联已公开确认。输入修改尚未保存，只有明确确认更新后才会改变公开关系。</p> : <p>待核对关联不会公开。确认需要学者、关联对象均已发布，且关系说明和出处完整。</p>}
     <footer><button type="submit" disabled={locked || ime || !valid || Boolean(row?.confirmed) || !id && !canCreate}>保存待核对</button><button type="button" disabled={locked || ime || !id || !canPublish || !valid || !validDirection || !(draft.source.trim() || draft.source_anchor) || !draft.relation_label.trim() || !row?.target_published} onClick={() => void act("confirm")}>{row?.confirmed ? "确认更新公开关联" : "确认关联"}</button>{id ? <button type="button" disabled={locked || ime || !canPublish || dirty || ["archived", "rejected"].includes(row?.status || "")} onClick={() => void act("withdraw")}>撤回关联</button> : null}</footer>
-    {id ? <button type="button" disabled={busy || ime || Boolean(command.recovery)} onClick={() => { if (dirty && !window.confirm("放弃当前输入并重新读取已保存记录吗？")) return; setLoading(true); setAttempt(value => value + 1); }}>重新读取原记录</button> : null}
+    {id ? <button type="button" disabled={busy || ime || Boolean(command.recovery)} onClick={async () => { if (dirty && !(await confirmAction("放弃当前输入并重新读取已保存记录吗？"))) return; setLoading(true); setAttempt(value => value + 1); }}>重新读取原记录</button> : null}
   </form>;
 }

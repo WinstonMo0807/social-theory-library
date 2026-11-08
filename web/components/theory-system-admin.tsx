@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { useScholarSave } from "./admin/knowledge/use-scholar-save";
 import { RelationSourcePicker, type RelationSourceRequest } from "./admin/knowledge/relation-source-picker";
 import type { components } from "@/lib/api/generated/schema";
@@ -520,11 +522,11 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     };
   }, [requestedNode.data, requestedNodeId, requestedNodeOpened]);
 
-  function start(node?: KnowledgeNode) {
+  async function start(node?: KnowledgeNode) {
     if (composing.current || command.recovery || pendingAction || knownSavedId) return;
     if (relationGuard.current.pending || relationGuard.current.composing) { setMessage("请先在关系详情核对原请求，再切换主体。"); setMessageState("error"); return; }
-    if (relationGuard.current.dirty && !window.confirm("关系还有未保存输入，放弃这些输入并切换主体吗？")) return;
-    if (nodeDirty && !window.confirm("当前理论或概念还有未保存的填写。放弃填写并切换吗？")) return;
+    if (relationGuard.current.dirty && !(await confirmAction("关系还有未保存输入，放弃这些输入并切换主体吗？"))) return;
+    if (nodeDirty && !(await confirmAction("当前理论或概念还有未保存的填写。放弃填写并切换吗？"))) return;
     prefills.clear();
     setEditing(node ?? null);
     setDraft(node ? nodeToDraft(node) : { ...emptyNodeDraft, node_type: nodeType, primary_discipline: disciplines.data?.results[0]?.id ?? "" });
@@ -543,7 +545,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     const token = getServerSessionCredential();
     if (!token) return false;
     const actionKey = "save-theory-node";
-    if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !window.confirm("保存并公开这份理论或概念资料？读者将看到本页内容。")) return false;
+    if (!draftOnly && draft.status === "published" && editing?.status !== "published" && !(await confirmAction("保存并公开这份理论或概念资料？读者将看到本页内容。"))) return false;
     if (!startAction(actionKey)) return false;
     setEditConflict(false);
     setMessage("");
@@ -691,7 +693,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
     try {
       if (pendingRevision.has_conflict) throw new Error("正式内容已经变化，请刷新后重新建立草稿。");
       if (nodeDirty) { setMessage("还有未保存的填写，请先保存本页，再发布已保存的修改。"); setMessageState("error"); return; }
-      if (!window.confirm("发布已保存的修改？相关理论、学科页面将更新，尚未保存的输入不会发布。")) {
+      if (!(await confirmAction("发布已保存的修改？相关理论、学科页面将更新，尚未保存的输入不会发布。"))) {
         setMessageState("idle");
         return;
       }
@@ -761,7 +763,7 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
       <div className="theory-node-admin-grid knowledge-object-host-layout" inert={Boolean(command.recovery) || Boolean(pendingAction) || Boolean(knownSavedId)} onCompositionStartCapture={() => { composing.current = true; }} onCompositionEndCapture={() => { composing.current = false; }}>
         <details className="admin-panel theory-node-table-panel"><summary>选择已有条目或新建理论、概念</summary>
           <nav className="theory-node-tabs">
-            {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={() => { if(start()){ theoryLocation.update({ page: 1, node_type: value }); setNodeType(value); setDraft(current=>({...current,node_type:value})); } }}>{label}</button>)}
+            {editableNodeTypeEntries.map(([value, label]) => <button className={nodeType === value ? "active" : ""} type="button" key={value} onClick={async () => { if((await start())){ theoryLocation.update({ page: 1, node_type: value }); setNodeType(value); setDraft(current=>({...current,node_type:value})); } }}>{label}</button>)}
           </nav>
           <div className="theory-admin-filters">
             <ResearchEntityPicker label="所属学科筛选" endpoint="/catalog/admin/disciplines/" entityType="discipline" step="maintenance_theory_nodes" field="filter_discipline" values={onePickerValue(disciplineFilter, disciplineName(disciplineFilter))} onChange={(next) => { const selected = next.at(-1); setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDisciplineFilter(selected?.id ?? ""); theoryLocation.update({ page: 1, discipline: selected?.id ?? "" }); }} />
@@ -837,11 +839,11 @@ function TheoryNodesEditor({ initialNodeId, initialLegacyId }: { initialNodeId: 
             <ResearchEntityPicker label="子学科" endpoint="/catalog/admin/subdisciplines/" entityType="subdiscipline" step="maintenance_theory_nodes" field="subdiscipline_links" multiple values={manyPickerValues(draft.subdisciplines, subdisciplineName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, subdisciplines: next.flatMap((value) => value.id ? [value.id] : []) }); }} />
             <ResearchEntityPicker label="主题" endpoint="/catalog/admin/topics/" entityType="topic" step="maintenance_theory_nodes" field="topic_links" multiple values={manyPickerValues(draft.topics, topicName)} onChange={(next) => { setEntityLabels((current) => ({ ...current, ...pickerLabels(next) })); setDraft({ ...draft, topics: next.flatMap((value) => value.id ? [value.id] : []) }); }} />
           </div>
-          <div className="workflow-field-assistant-row"><strong>学科分类</strong><CurationFieldAssistant label="学科分类" targetType="knowledge_node" targetId={editing?.id} fieldName="discipline" currentValue={{ primary: draft.primary_discipline, related: draft.related_disciplines }} onFillSuggestion={(candidateId, value, label) => {
+          <div className="workflow-field-assistant-row"><strong>学科分类</strong><CurationFieldAssistant label="学科分类" targetType="knowledge_node" targetId={editing?.id} fieldName="discipline" currentValue={{ primary: draft.primary_discipline, related: draft.related_disciplines }} onFillSuggestion={async (candidateId, value, label) => {
             const row = asRecord(value), id = asString(row.discipline_id);
             if (!id) return false;
             if (row.relation_type === "primary") {
-              if (draft.primary_discipline && draft.primary_discipline !== id && !window.confirm(`将主要学科从“${disciplineName(draft.primary_discipline)}”改为“${label}”？这一步只填写表单，尚未保存。`)) return false;
+              if (draft.primary_discipline && draft.primary_discipline !== id && !(await confirmAction(`将主要学科从“${disciplineName(draft.primary_discipline)}”改为“${label}”？这一步只填写表单，尚未保存。`))) return false;
               setEntityLabels((current) => ({ ...current, [id]: label }));
               return prefills.fill(candidateId, (current) => ({ ...current, primary_discipline: id, related_disciplines: current.related_disciplines.filter((entry) => entry !== id) }));
             }
@@ -1059,12 +1061,12 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
     return()=>window.clearTimeout(timer);
   }, [requested.data]);
 
-  function canLeaveReview() {
+  async function canLeaveReview() {
     if(composing.current||pendingAction||reviewCommand.recovery||knownReviewId)return false;
-    return !reviewDirty||window.confirm("这条候选还有未提交的审核意见，放弃输入并切换吗？");
+    return !reviewDirty||(await confirmAction("这条候选还有未提交的审核意见，放弃输入并切换吗？"));
   }
-  function chooseTask(task: ReviewTask) {
-    if(!canLeaveReview())return;
+  async function chooseTask(task: ReviewTask) {
+    if(!(await canLeaveReview()))return;
     applyReview(task);
   }
   function applyReview(task:ReviewTask) {
@@ -1076,7 +1078,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
   }
   async function review(action:"confirm"|"modify_confirm"|"create_node"|"alias_existing"|"reject"|"defer"|"insufficient"|"needs_changes"|"delete") {
     if(!selected||composing.current||!canReview||!reviewCommand.ready||reviewCommand.recovery||knownReviewId||reviewConflict)return;
-    if(!window.confirm(action==="delete"?"删除这条错误建议？已生成的条目、关系和操作记录保留。":"提交这项审核决定？系统将核对原任务版本，已公开内容仍须按原发布流程处理。"))return;
+    if(!(await confirmAction(action==="delete"?"删除这条错误建议？已生成的条目、关系和操作记录保留。":"提交这项审核决定？系统将核对原任务版本，已公开内容仍须按原发布流程处理。")))return;
     const actionKey=`review-task:${selected.id}:${action}`;
     if(!startAction(actionKey))return;
     setMessage("正在提交审核决定…");setMessageState("pending");
@@ -1154,7 +1156,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
 
   async function publishRelation() {
     const revision = editingRelation?.editorial_revision;
-    if (composing.current || command.recovery || knownSavedId || !revision || relationDirty || !canPublish || !window.confirm("确认发布这条关系的已保存修改？相关理论页面和关系图会使用这些内容。")) return;
+    if (composing.current || command.recovery || knownSavedId || !revision || relationDirty || !canPublish || !(await confirmAction("确认发布这条关系的已保存修改？相关理论页面和关系图会使用这些内容。"))) return;
     if (!startAction("publish-relation")) return;
     try {
       await apiRequest(revision.publish_url, { method: "POST", body: "{}" }, getServerSessionCredential());
@@ -1172,7 +1174,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
 
   async function removeRelation(relation: KnowledgeRelation) {
     if (composing.current || command.recovery || knownSavedId || relationDirty) return;
-    if (!window.confirm(`删除“${relation.source_name} ${relation.relation_label} ${relation.target_name}”吗？`)) return;
+    if (!(await confirmAction(`删除“${relation.source_name} ${relation.relation_label} ${relation.target_name}”吗？`))) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-relation:${relation.id}`;
@@ -1196,9 +1198,9 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
     }
   }
 
-  function editRelation(relation: KnowledgeRelation) {
+  async function editRelation(relation: KnowledgeRelation) {
     if (relation.id === editingRelation?.id) return;
-    if (composing.current || command.recovery || knownSavedId || pendingAction || (relationDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一条关系吗？"))) return;
+    if (composing.current || command.recovery || knownSavedId || pendingAction || (relationDirty && !(await confirmAction("当前输入尚未保存，放弃这些输入并打开另一条关系吗？")))) return;
     if (!embedded && relation.id !== requestedId) { location.update({ relation: relation.id }); return; }
     setEditingRelation(relation);
     setRelationDraft(relationToDraft(relation));
@@ -1232,8 +1234,8 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
     <AdminFrame eyebrow="知识与关联" title="理论关系" description="先核对系统建议，或在下方手工编辑理论之间的关系。保存修改后，确认发布才会更新读者页面。">
       {command.recovery||knownSavedId||command.error?<section className="admin-panel" aria-label="关系保存恢复"><h2>核对原保存</h2><p>未知结果先查询；已完成但未读取的关系保留原编号，不能据此新建。</p>{command.error?<p role="alert">{command.error}</p>:null}{message?<p role="status">{message}</p>:null}{command.recovery?<><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("lookup")}>查询原请求</button><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("stop")}>停止未执行的保存</button>{command.canRetry?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("retry")}>重试同一请求</button>:null}</>:null}{knownSavedId?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverRelation("read")}>重新读取原关系</button>:null}</section>:null}
       {reviewCommand.recovery||knownReviewId||reviewCommand.error||reviewConflict?<section className="admin-panel" aria-label="核对原审核决定"><h2>核对原审核决定</h2><p>原操作未确认前，保留输入并暂停新的审核、删除和切换。</p>{reviewCommand.error?<p role="alert">{reviewCommand.error}</p>:null}{message?<p role="status">{message}</p>:null}
-        {reviewCommand.recovery?<><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverReview("lookup")}>查询原操作</button>{reviewCommand.canRetry?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverReview("retry")}>重试同一请求</button>:null}<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>{if(window.confirm("停止尚未执行的原审核请求？已完成操作会返回原结果。"))void recoverReview("stop");}}>停止未执行请求</button></>:null}
-        {knownReviewId||reviewConflict?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>{if(!reviewDirty||window.confirm("读取原任务当前版本并替换当前未提交意见？"))void recoverReview("read");}}>重新读取原任务</button>:null}
+        {reviewCommand.recovery?<><button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverReview("lookup")}>查询原操作</button>{reviewCommand.canRetry?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>void recoverReview("retry")}>重试同一请求</button>:null}<button type="button" disabled={Boolean(pendingAction)||ime} onClick={async ()=>{if((await confirmAction("停止尚未执行的原审核请求？已完成操作会返回原结果。")))void recoverReview("stop");}}>停止未执行请求</button></>:null}
+        {knownReviewId||reviewConflict?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={async ()=>{if(!reviewDirty||(await confirmAction("读取原任务当前版本并替换当前未提交意见？")))void recoverReview("read");}}>重新读取原任务</button>:null}
       </section>:null}
       <div inert={Boolean(command.recovery)||Boolean(reviewCommand.recovery)||Boolean(pendingAction)||Boolean(knownSavedId)||Boolean(knownReviewId)} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}>
       <details hidden={Boolean(embedded)} className="theory-suggestion-section" open={Boolean(taskReference || sourceWork || sourceFile || taskFilter || location.search.get("review_page") || location.search.get("review_status"))}>
@@ -1244,7 +1246,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
       <div className="theory-review-layout">
         <section className="admin-panel theory-review-list">
           <nav className="theory-review-tabs">
-            {[["pending", "待核对"], ["needs_changes", "待修改"], ["confirmed", "已确认"], ["rejected", "不采用"], ["", "全部"]].map(([value, label]) => <button className={taskStatus === value ? "active" : ""} type="button" key={label} onClick={() => { if(!canLeaveReview())return;location.update({ review_status: value || "all", review_page: 1 }); setSelected(null); }}>{label}</button>)}
+            {[["pending", "待核对"], ["needs_changes", "待修改"], ["confirmed", "已确认"], ["rejected", "不采用"], ["", "全部"]].map(([value, label]) => <button className={taskStatus === value ? "active" : ""} type="button" key={label} onClick={async () => { if(!(await canLeaveReview()))return;location.update({ review_status: value || "all", review_page: 1 }); setSelected(null); }}>{label}</button>)}
           </nav>
           <form className="theory-review-filter" onSubmit={(event) => { event.preventDefault(); location.update({ review_q: taskQuery.trim(), review_page: 1 }); }}><Search size={15} /><input aria-label="搜索待核对建议" value={taskQuery} onChange={(event) => setTaskQuery(event.target.value)} placeholder="搜索文献、理论或原文…" /><button type="submit">搜索建议</button></form>
           <ErrorNotice message={tasks.error} retry={tasks.refresh} />
@@ -1304,7 +1306,7 @@ function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string;
             <label><span>证据来源</span><textarea rows={3} value={relationDraft.evidence_source} onChange={(event) => setRelationDraft({ ...relationDraft, evidence_source: event.target.value })} placeholder="馆藏页码、参考文献或人工校订说明" /></label>
             <RelationSourcePicker sourceRequest={embedded?.sourceRequest} onSourceOpened={embedded?.onSourceOpened} key={editingRelation?.id || "new"} owner={owner} value={relationDraft.source_anchor} saved={editingRelation?.source_anchor} material={editingRelation?.source_material} onChange={source_anchor => setRelationDraft(value => ({ ...value, source_anchor }))} />
             <div className="inline-fields"><label><span>保存后的安排</span><select value={relationDraft.status} onChange={(event) => setRelationDraft({ ...relationDraft, status: event.target.value })}><option value="draft">留作草稿</option><option value="pending">留待核对</option><option value="published" disabled={!canPublish && editingRelation?.status !== "published"}>准备公开</option><option value="rejected">不采用</option><option value="archived" disabled={!canPublish}>准备下线</option></select></label></div>
-            <div className="theory-review-primary-actions"><ActionButton className="button" type="submit" state={pendingAction === (editingRelation ? `save-relation:${editingRelation.id}` : "create-relation") ? "pending" : "idle"} pendingLabel="正在保存修改" disabled={Boolean(pendingAction)||ime}><Save size={15} />保存关系</ActionButton>{editingRelation && !embedded ? <button type="button" onClick={() => { if (composing.current||command.recovery||knownSavedId)return; if (relationDirty && !window.confirm("放弃当前尚未保存的输入吗？")) return; location.update({ relation: null }); setEditingRelation(null); setRelationDraft(emptyRelationDraft); }}>新建另一条关系</button> : null}</div>
+            <div className="theory-review-primary-actions"><ActionButton className="button" type="submit" state={pendingAction === (editingRelation ? `save-relation:${editingRelation.id}` : "create-relation") ? "pending" : "idle"} pendingLabel="正在保存修改" disabled={Boolean(pendingAction)||ime}><Save size={15} />保存关系</ActionButton>{editingRelation && !embedded ? <button type="button" onClick={async () => { if (composing.current||command.recovery||knownSavedId)return; if (relationDirty && !(await confirmAction("放弃当前尚未保存的输入吗？"))) return; location.update({ relation: null }); setEditingRelation(null); setRelationDraft(emptyRelationDraft); }}>新建另一条关系</button> : null}</div>
             </fieldset>
             <SavedDraftActions revision={editingRelation?.editorial_revision} dirty={relationDirty} busy={Boolean(pendingAction)||ime} impact="请核对上方的理论、关系和来源。发布后，相关理论页面和关系图会使用已保存的内容。" publish={() => void publishRelation()} />
             <EditorialConflictHelp visible={editConflict} href={location.href({ relation: editingRelation?.id ?? null })} />
@@ -1701,8 +1703,8 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
     return()=>window.clearTimeout(timer);
   }, [requested.data, wrongNode]);
 
-  function start(event?: TimelineEvent) {
-    if (composing.current || mergeBusy || pendingAction || command.recovery || (timelineDirty && !window.confirm("当前输入尚未保存，放弃这些输入并打开另一个事件吗？"))) return;
+  async function start(event?: TimelineEvent) {
+    if (composing.current || mergeBusy || pendingAction || command.recovery || (timelineDirty && !(await confirmAction("当前输入尚未保存，放弃这些输入并打开另一个事件吗？")))) return;
     if ((event?.id || "") !== requestedId) { location.update({ event: event?.id ?? null }); return; }
     setEditing(event ?? null);
     setSavedDraft(event ? timelineToDraft(event) : { ...initialDraft });
@@ -1776,7 +1778,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
 
   async function publishEvent() {
     const revision = editing?.editorial_revision;
-    if (composing.current || !revision || command.recovery || timelineDirty || !canPublish || !window.confirm("确认发布此事件的已保存修改？公开时间线和关联页面会使用这些内容。")) return;
+    if (composing.current || !revision || command.recovery || timelineDirty || !canPublish || !(await confirmAction("确认发布此事件的已保存修改？公开时间线和关联页面会使用这些内容。"))) return;
     if (!startAction("publish-timeline")) return;
     try {
       await apiRequest(revision.publish_url, { method: "POST", body: "{}" }, getServerSessionCredential());
@@ -1793,7 +1795,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
   }
 
   async function removeEvent() {
-    if (composing.current || !editing || command.recovery || timelineDirty || !window.confirm(`删除“${editing.title}”吗？`)) return;
+    if (composing.current || !editing || command.recovery || timelineDirty || !(await confirmAction(`删除“${editing.title}”吗？`))) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-timeline-event:${editing.id}`;
@@ -1900,7 +1902,7 @@ function TimelineEditor({ requestedId, nodeId = "", embedded }: { requestedId: s
           </details></section></fieldset>
           <SavedDraftActions revision={editing?.editorial_revision} dirty={timelineDirty} busy={Boolean(pendingAction)} impact="请核对上方的事件预览与关联对象。确认发布后，公开时间线和关联页面会更新。" publish={() => void publishEvent()} />
           <EditorialConflictHelp visible={!embedded&&editConflict} href={location.href({ event: editing?.id ?? null })} />
-          {embedded&&editConflict&&editing&&!command.recovery?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={()=>{if(window.confirm("放弃当前未保存输入并重新读取事件？"))void apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${editing.id}/`).then(value=>{setEditing(value);setSavedDraft(timelineToDraft(value));setEditConflict(false);},reason=>setMessage(reason instanceof Error?reason.message:"重新读取失败，输入保留。"));}}>重新读取已保存事件</button>:null}
+          {embedded&&editConflict&&editing&&!command.recovery?<button type="button" disabled={Boolean(pendingAction)||ime} onClick={async ()=>{if((await confirmAction("放弃当前未保存输入并重新读取事件？")))void apiRequest<TimelineEvent>(`/catalog/admin/theory-timeline/${editing.id}/`).then(value=>{setEditing(value);setSavedDraft(timelineToDraft(value));setEditConflict(false);},reason=>setMessage(reason instanceof Error?reason.message:"重新读取失败，输入保留。"));}}>重新读取已保存事件</button>:null}
           {message ? <AsyncStatus state={messageState} message={message} /> : null}
         </form><aside id={`${panelId}-preview`} data-timeline-panel="preview" ref={previewRef} className="timeline-current-preview" tabIndex={-1}><header><strong>在时间线中的预览</strong><Link href={`/theories/timeline?${new URLSearchParams(draft.scholar?{author:draft.scholar}:nodeId?{node:nodeId}:{})}`} target="_blank">查看完整时间线 →</Link></header>{previewScholar.data?<div className={timelineStyles.scholar}>{previewScholar.data.portrait?<img src={normalizePublicResourceUrl(previewScholar.data.portrait)} alt=""/>:null}<div><h3>{previewScholar.data.preferred_name}</h3><p>{previewScholar.data.birth_year??"生年待核"} — {previewScholar.data.death_year??""}</p><p>{previewScholar.data.summary}</p></div></div>:null}<ErrorNotice message={previewScholar.error} retry={previewScholar.refresh}/><h3>时间线（节选）</h3>{draft.title||relatedPreview.data?.results.length?<TheoryTimelinePublicList detailLinks={false} currentEventId={editing?.id||"draft"} events={[...(relatedPreview.data?.results||[]).filter(row=>row.id!==editing?.id).slice(0,5),{id:editing?.id || "draft",start_date:draft.start_date||null,end_date:draft.end_date||null,title:draft.title,description:draft.description,event_type:draft.event_type,start_year:draft.start_year === "" ? null : Number(draft.start_year),end_year:draft.end_year === "" ? null : Number(draft.end_year),date_label:draft.date_label,date_precision:draft.date_precision,source:draft.source,evidence_page:Number(draft.evidence_page)||null,evidence_printed_label:draft.evidence_printed_label,evidence_text:draft.evidence_text,relations:draft.nodes.map(id=>({relation_type:"subject",type:"node",id,name:timelineNodeName(id)})),reader_href:null}].sort((a,b)=>(a.start_year??Number.POSITIVE_INFINITY)-(b.start_year??Number.POSITIVE_INFINITY))}/>:<p>填写事件与关联内容后，预览其在时间线中的位置。</p>}{subjectWork.data?.work.id===draft.work?<section className={timelineStyles.previewDetail}><h3>预览详情</h3><TimelineWorkCard data={subjectWork.data} editionId={draft.subject_edition} preview><p>{draft.title}</p><p>{draft.description}</p></TimelineWorkCard></section>:null}{draft.editorial_details.primary_image_rendition_id?<figure className={timelineStyles.imagePreview}><img src={timelineEvidenceImageUrl(draft.editorial_details.primary_image_rendition_id)} alt={draft.source||"主要出处展示图片"}/><figcaption>{draft.source||"主要出处展示图片"}</figcaption></figure>:null}<ErrorNotice message={relatedPreview.error} retry={relatedPreview.refresh}/>{relatedPreview.loading?<p>正在读取关联时间线…</p>:null}</aside></div>
       </div></div>

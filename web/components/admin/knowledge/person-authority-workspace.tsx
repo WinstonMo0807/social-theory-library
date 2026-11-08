@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../../lib/request-key";
@@ -74,7 +76,7 @@ function PersonEditor({ actor, original, refresh, target = "", canMerge = false 
   const readOnly = original ? !original.can_edit || original.pending_draft : false;
   const set = <K extends keyof AuthorityValues>(key: K, value: AuthorityValues[K]) => setValues(current => ({ ...current, [key]: value }));
   function submit(event: FormEvent) { event.preventDefault(); if (readOnly || activeContribution) return; setInput({ operation: original ? "update" : "create", ...(original ? { person_id: original.id, expected_version: original.version } : {}), values: {...values,key_concerns:(values.key_concerns||[]).map(value=>value.trim()).filter(Boolean)}, variants: variants.map(row => ({ ...(row.id ? { id: row.id } : {}), name: row.name, language: row.language, variant_type: row.variant_type, source_note: row.source_note, is_verified: row.is_verified, displayable: row.displayable })), reason }); }
-  function closeMaterials() { if (materialDirty && !window.confirm("放弃尚未保存的图片出处修改吗？")) return; setMaterialPicker(false); setMaterialDirty(false); }
+  async function closeMaterials() { if (materialDirty && !(await confirmAction("放弃尚未保存的图片出处修改吗？"))) return; setMaterialPicker(false); setMaterialDirty(false); }
   function addMaterial(renditionId: string) {
     if (readOnly || input) return;
     const items = values.biographical_materials || [];
@@ -197,10 +199,10 @@ function AliasesEditor({ actor, source, readError, onClose, onSaved, reload, emb
   const readOnly = !source.can_edit || source.pending_draft || needsPublisher || Boolean(input) || refreshing;
   const saveable=!readOnly&&dirty&&source.version===original.version;
   useEffect(()=>{onState?.({dirty,busy:Boolean(input)||refreshing,saveable});},[onState,dirty,input,refreshing,saveable]);
-  function close() { if (!input && !refreshing && (!dirty || window.confirm("异名修改尚未保存，关闭会放弃当前输入。是否关闭？"))) onClose(); }
+  async function close() { if (!input && !refreshing && (!dirty || (await confirmAction("异名修改尚未保存，关闭会放弃当前输入。是否关闭？")))) onClose(); }
   async function refreshSource() {
     const active=request.current;
-    if(!active || active.signal.aborted || refreshing || dirty && !window.confirm("重新读取会放弃当前未保存输入。是否继续？"))return;
+    if(!active || active.signal.aborted || refreshing || dirty && !(await confirmAction("重新读取会放弃当前未保存输入。是否继续？")))return;
     setRefreshing(true);
     try {
       const next=await authorityRequest<AuthorityDetail>(actor,`${original.id}/workspace/`,{signal:active.signal});

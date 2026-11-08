@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -36,8 +38,8 @@ function Workspace({ ownerId, canPublish }: { ownerId: string; canPublish: boole
   const item = search.get("item") || "", selected = uuid.test(item) ? item : "";
   const resource = usePersistentWorkspace<AdminCalibrationList>(`${calibrationAdminPath()}?${new URLSearchParams({ page: String(page), status })}`, ownerId);
   const dirty = useRef(false), busy = useRef(false), state = resource.data;
-  const change = (values: Record<string, string | number | null>) => {
-    if (busy.current || dirty.current && !window.confirm("当前处理说明尚未保存，确定放弃这些输入吗？")) return;
+  const change = async (values: Record<string, string | number | null>) => {
+    if (busy.current || dirty.current && !(await confirmAction("当前处理说明尚未保存，确定放弃这些输入吗？"))) return;
     dirty.current = false;
     router.push(adminListHref(pathname, search.toString(), values));
   };

@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { counterAttributions, counterAvailable, counterRelation, counterRelations, type CounterAnalysis, type CounterAttribution, type CounterDecisionInput, type CounterRelation } from "@/lib/api/counter-evidence.client";
@@ -20,7 +22,7 @@ export function CounterEvidenceEditor({ row, revision, busy, running, error, onS
   const [initial] = useState({ relation, note, attribution, scopeNote, saveNote });
   const dirty = JSON.stringify({ relation, note, attribution, scopeNote, saveNote }) !== JSON.stringify(initial);
   useEffect(() => { onDirty(dirty); return () => onDirty(false); }, [dirty, onDirty]);
-  function close() { if (!busy && (!dirty || window.confirm("分类输入尚未保存，确定放弃当前更正吗？"))) onClose(); }
+  async function close() { if (!busy && (!dirty || (await confirmAction("分类输入尚未保存，确定放弃当前更正吗？")))) onClose(); }
   const available = counterAvailable(row.reference), stale = expected !== revision;
   const reviewable = available && !running && row.status !== "awaiting_analysis";
   const suggestion = row.model_suggestion, href = researchReaderHref(row.reference);

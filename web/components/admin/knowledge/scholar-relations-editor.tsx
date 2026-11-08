@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -59,9 +61,9 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
     return()=>controller.abort();
   },[selectedId,attempt,owner,scholarId]);
   function rememberSelection(id:string){if(embedded)return;const url=new URL(window.location.href);if(id)url.searchParams.set("relation",id);else url.searchParams.delete("relation");window.history.replaceState(null,"",url.pathname+url.search);}
-  function select(id:string){
+  async function select(id:string){
     if(composing.current||busy||command.recovery||id&&id===selectedId)return;
-    if(dirty&&!window.confirm("这条关系尚未保存，放弃当前输入并切换关系吗？"))return;
+    if(dirty&&!(await confirmAction("这条关系尚未保存，放弃当前输入并切换关系吗？")))return;
     setSelectedId(id);setLoadingRecord(Boolean(id));setMessage("");setConflict(false);
     if(!id){loadedId.current="";const empty=newRelation(scholarId);setDraft(empty);setSaved(empty);}
     rememberSelection(id);
@@ -77,8 +79,8 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
     if(composing.current||!canEdit||!editingReady||!command.ready||command.recovery&&operation!=="retry")return;
     if(operation==="save"&&(!validEndpoints||!draft.id&&!canCreate))return;
     if(operation==="save"&&embedded&&![draft.source_scholar,draft.target_scholar].includes(scholarId)){setError("页内关系至少一端须是当前学者，请核对来源与目标。");return;}
-    if(operation==="publish"&&(!canPublishSaved||!window.confirm("发布这条已保存关系？两端学者页面将同时使用此方向、说明和来源。")))return;
-    if(operation==="archive"&&(!canPublish||!saved.id||dirty||!window.confirm("撤下这条已公开关系？两端公开页面将同时移除，原内容和历史保留。")))return;
+    if(operation==="publish"&&(!canPublishSaved||!(await confirmAction("发布这条已保存关系？两端学者页面将同时使用此方向、说明和来源。"))))return;
+    if(operation==="archive"&&(!canPublish||!saved.id||dirty||!(await confirmAction("撤下这条已公开关系？两端公开页面将同时移除，原内容和历史保留。"))))return;
     if(!startAction(operation))return;
     setError("");setMessage("");setConflict(false);
     try {
@@ -99,7 +101,7 @@ function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnl
   return <div className="scholar-relations-editor" data-embedded={embedded} onCompositionStartCapture={()=>{composing.current=true;setIme(true);}} onCompositionEndCapture={()=>{composing.current=false;setIme(false);}}>
     {!detailOnly?<header className="v307-editor-heading"><div>{!embedded?<Link href={`/admin/scholars/${scholarId}?section=theory`}>返回学者编辑</Link>:null}<h2>{profile?.preferred_name||"学者"} · 学术关系</h2><p>明确两端、方向与出处；保存草稿与公开发布分别进行。</p></div><button type="button" className="button secondary" disabled={busy||ime||Boolean(command.recovery)||!canCreate} onClick={()=>select("")}>新建关系</button></header>:null}
     {error?<p className="form-message" role="alert">{error}<button type="button" disabled={busy||ime||dirty||Boolean(command.recovery)} onClick={()=>{loadedId.current="";setAttempt(value=>value+1);}}>重新读取</button></p>:null}{message?<p role="status">{message}</p>:null}
-    {command.recovery?<aside role="status"><p>原操作结果尚未确认。请先查询或停止原请求，不能另建关系或重复发布。</p><button type="button" disabled={busy||ime} onClick={()=>void recover()}>查询原操作</button>{command.canRetry?<button type="button" disabled={busy||ime} onClick={()=>void act("retry")}>重试原操作</button>:null}<button type="button" disabled={busy||ime} onClick={()=>{if(window.confirm("停止尚未执行的原请求？已经完成的操作会返回原结果。"))void recover(true);}}>停止未执行请求</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
+    {command.recovery?<aside role="status"><p>原操作结果尚未确认。请先查询或停止原请求，不能另建关系或重复发布。</p><button type="button" disabled={busy||ime} onClick={()=>void recover()}>查询原操作</button>{command.canRetry?<button type="button" disabled={busy||ime} onClick={()=>void act("retry")}>重试原操作</button>:null}<button type="button" disabled={busy||ime} onClick={async ()=>{if((await confirmAction("停止尚未执行的原请求？已经完成的操作会返回原结果。")))void recover(true);}}>停止未执行请求</button></aside>:null}{command.error?<p role="alert">{command.error}</p>:null}
     <div className="scholar-relations-workspace"><aside className="fixed-editor-panel">{!detailOnly?<nav className="scholar-relation-index" aria-label="当前学者关系">{loading?<LoadingState>正在读取关系…</LoadingState>:collection.results.length?collection.results.map(row=><button type="button" key={row.id} disabled={busy||ime||Boolean(command.recovery)} aria-current={row.id===selectedId?"true":undefined} onClick={()=>select(row.id)}><strong>{row.source_name} {relationArrow(row.direction)} {row.target_name}</strong><small>{scholarRelationLabels[row.relation_type]} · {scholarRelationStatus(row)}</small></button>):<p>尚未建立条目关系，可从新建关系开始。</p>}
       {collection.count>24?<div><button type="button" disabled={page<=1||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value-1)}>上一页</button><span>第 {page} 页 · 共 {collection.count} 项</span><button type="button" disabled={!collection.next||loading||dirty||busy||ime||Boolean(command.recovery)} onClick={()=>setPage(value=>value+1)}>下一页</button></div>:null}</nav>:null}
       <form className="fixed-editor-fields" onSubmit={event=>{event.preventDefault();event.stopPropagation();void act("save");}}><h3>{draft.id?"编辑当前关系":"新建关系"}</h3><p>{dirty?"有未保存输入":draft.id?scholarRelationStatus(draft):"填写两端学者"}</p>{loadingRecord?<LoadingState role="status">正在读取所选关系…</LoadingState>:null}

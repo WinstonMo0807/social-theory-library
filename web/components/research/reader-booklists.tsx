@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { writeClipboardText } from "@/lib/clipboard";
@@ -116,14 +118,14 @@ function BooklistsWorkspace({ owner, name, id }: { owner: string; name: string; 
       setMessage(reason instanceof Error ? reason.message : "操作结果暂未确认，请核对原操作结果。");
     } finally { sending.current = false; if (!controller.current.signal.aborted) setBusy(false); }
   }
-  function removeTopic(topic_id: string) { if (!blocked && window.confirm("只移除本书单的主动关联，主题与馆藏正式关系保留。是否继续？")) void execute({ action: "topic_remove", topic_id }); }
+  async function removeTopic(topic_id: string) { if (!blocked && (await confirmAction("只移除本书单的主动关联，主题与馆藏正式关系保留。是否继续？"))) void execute({ action: "topic_remove", topic_id }); }
   const toggle = (value: string) => setSelected(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value]);
   return <Frame>
     <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/account">读者中心</Link><span>›</span><Link href="/account/collections">我的书单</Link>{detail ? <><span>›</span><span>{detail.list.title}</span></> : null}</nav>
     <header className={styles.heading}><div><h1>{detail?.list.title || (id ? "书单与材料集合" : "我的书单")}</h1><span className={styles.private}><LockKeyhole size={14} />私人 · 仅自己可见</span>{detail ? <p>{detail.list.description || "尚未填写书单说明。"}</p> : null}<small>{name}{detail ? ` · 创建于 ${stamp(detail.list.created_at)} · ${detail.active_count} 部作品` : ""}</small></div><div className={styles.actions}>{id ? <><button className={styles.primary} disabled={!detail || blocked || trash || !detail.active_count} onClick={plan}><BookOpen size={15} />开始阅读计划</button><button disabled={!detail || blocked || trash} onClick={() => setModal("export")}><Download size={15} />导出</button><Link href={`/account/sharing/new?kind=booklist&source=${id}`}>分享</Link><details data-action-menu className={styles.moreMenu}><summary aria-label="更多书单操作"><MoreHorizontal size={20}/></summary><div data-menu-panel><button disabled={!detail || blocked} onClick={edit}>编辑书单</button><button onClick={() => setTable(value=>!value)}>{table?"查看目标与关联资料":"显示作品表格"}</button><Link href={`/account/sharing/new?kind=booklist&source=${id}`}>提交策划</Link></div></details></> : <button className={styles.primary} disabled={blocked} onClick={() => setModal("create")}><Plus size={15} />创建书单</button>}</div></header>
     {!id ? <ResearchCenterNav active="lists" /> : null}
     {message ? <div role="status" className={styles.notice}>{message}</div> : null}
-    {recovery || broken ? <div className={styles.notice}><p>为避免重复写入，先处理上次操作。</p>{recovery ? <button disabled={busy || broken} onClick={() => void execute(undefined, true)}>核对原结果</button> : null}{canRetry ? <button disabled={busy || broken} onClick={() => void execute()}>重试原请求</button> : null}<Link href="/account/collections" target="_blank" rel="noopener">在新页面核对书单</Link><button disabled={busy} onClick={() => { if (window.confirm("确认已经核对服务端书单？清除这里只移除本机请求记录，不撤销已经保存的操作。")) { clear(); resource.reload(); } }}>核对后清除本机记录</button></div> : null}
+    {recovery || broken ? <div className={styles.notice}><p>为避免重复写入，先处理上次操作。</p>{recovery ? <button disabled={busy || broken} onClick={() => void execute(undefined, true)}>核对原结果</button> : null}{canRetry ? <button disabled={busy || broken} onClick={() => void execute()}>重试原请求</button> : null}<Link href="/account/collections" target="_blank" rel="noopener">在新页面核对书单</Link><button disabled={busy} onClick={async () => { if ((await confirmAction("确认已经核对服务端书单？清除这里只移除本机请求记录，不撤销已经保存的操作。"))) { clear(); resource.reload(); } }}>核对后清除本机记录</button></div> : null}
     {resource.error ? <div role="alert" className={styles.empty}><h2>暂时无法读取书单</h2><p>{resource.error}</p><button onClick={() => { setPage(1); resource.reload(); }}>重新读取</button></div> : !data ? <div className={styles.empty} role="status">正在读取书单…</div> : <div className={id ? styles.columns : undefined} data-layout={table ? "table" : "detailed"}><section>
       {detail && !table ? <nav className={styles.sectionNav} aria-label="书单内容"><button aria-pressed={view === "works"} disabled={blocked} onClick={() => show("works")}>书单作品 {detail.active_count}</button><button aria-pressed={view === "plans"} disabled={blocked} onClick={() => show("plans")}>阅读计划</button><button aria-pressed={view === "notes"} disabled={blocked} onClick={() => show("notes")}>笔记</button><button aria-pressed={view === "related"} disabled={blocked} onClick={() => show("related")}>相关推荐</button></nav> : null}
       {!detail || table || view === "works" ? <>

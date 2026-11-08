@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -40,8 +42,8 @@ export function PathRouteCandidates({ owner, pathId, version, blocked, onPending
   async function perform(operation:"generate"|"adopt"|"dismiss") {
     if(acting.current||!pathId||blocked||command.recovery||!command.ready)return;
     if(operation!=="generate"&&!current)return;
-    if(operation==="adopt"&&!window.confirm(`采用“${current?.title}”的编排并保存为原路线草稿？阶段与材料顺序将调整，公开版本需另行确认发布。`))return;
-    if(operation==="dismiss"&&!window.confirm("不采用这条候选？原路线与材料会保留。"))return;
+    if(operation==="adopt"&&!(await confirmAction(`采用“${current?.title}”的编排并保存为原路线草稿？阶段与材料顺序将调整，公开版本需另行确认发布。`)))return;
+    if(operation==="dismiss"&&!(await confirmAction("不采用这条候选？原路线与材料会保留。")))return;
     acting.current=true;setBusy(true);setError("");setMessage("");
     try {
       await command.save(route,JSON.stringify({operation,edit_version:version,...(current&&operation!=="generate"?{candidate_id:current.id,candidate_version:current.candidate_version}:{})}),{},"POST");

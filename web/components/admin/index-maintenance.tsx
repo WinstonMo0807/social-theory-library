@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -51,7 +53,7 @@ function Maintenance({owner}:{owner:string}){
   const selected=selectedResource.data?.results.find(row=>row.edition_id===selection)||data?.results.find(row=>row.edition_id===selection);
   const command=useCatalogCommand<Command,Receipt>(owner,endpoint,`stl-index-maintenance:${owner}`);
   const locked=!data||!command.ready||command.busy||Boolean(command.recovery);
-  function change(values:Record<string,string|number|null>){if(values.tab!==undefined&&values.tab!==tab&&(editor?.busy||editor?.dirty&&!window.confirm("当前规则修改尚未保存，切换栏目会放弃输入。是否继续？")))return;router.push(adminListHref(pathname,params.toString(),values));}
+  async function change(values:Record<string,string|number|null>){if(values.tab!==undefined&&values.tab!==tab&&(editor?.busy||editor?.dirty&&!(await confirmAction("当前规则修改尚未保存，切换栏目会放弃输入。是否继续？"))))return;router.push(adminListHref(pathname,params.toString(),values));}
   async function accept(result:Receipt|null){if(!result)return;setMessage(result.state==="cancelled"?"未执行的原请求已停止。":result.message);setConfirm(null);resource.reload();selectedResource.reload();}
   function searchMaterials(event:FormEvent){event.preventDefault();change({q:query||null,page:1,edition_id:null});}
   const queryPreview=()=>{if(tab!=="overview")change({tab:"overview"});requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('[aria-label="查询全站公开材料"]')?.focus());};
@@ -104,7 +106,7 @@ function TermList({owner,canSync,onSync,scope="",editor,onEditorState}:{owner:st
   const resource=useOwned<Terms>(owner,`${endpoint}terms/?${new URLSearchParams({q,entity_type:kind,page:String(page),term_group:group,availability})}`),data=resource.data;
   useEffect(()=>()=>onEditorState(null),[onEditorState]);
   useEffect(()=>{if(personId||nodeId)document.getElementById("index-term-editor")?.scrollIntoView({block:"start"});},[personId,nodeId]);
-  function choose(type:"person"|"knowledge_node",id:string){if(editor?.busy||editor?.dirty&&!window.confirm("当前规则修改尚未保存，切换来源会放弃输入。是否继续？"))return;onEditorState(null);setPersonId(type==="person"?id:"");setNodeId(type==="knowledge_node"?id:"");}
+  async function choose(type:"person"|"knowledge_node",id:string){if(editor?.busy||editor?.dirty&&!(await confirmAction("当前规则修改尚未保存，切换来源会放弃输入。是否继续？")))return;onEditorState(null);setPersonId(type==="person"?id:"");setNodeId(type==="knowledge_node"?id:"");}
   function closeEditor(){setPersonId("");setNodeId("");onEditorState(null);}
   const labels:Record<string,string>={canonical:"标准名称",translation:"译名",alias:"别名",abbreviation:"简称",historical:"历史名称",transliteration:"音译",search_variant:"检索变体",authoritative:"正式名称",verified:"人工已确认",unverified:"未确认",legacy:"历史来源",generated:"自动生成词形"};
   const groupTabs=[["","全部规则"],["canonical","标准词"],["aliases","别名与译名"],["variants","派生检索变体"]];

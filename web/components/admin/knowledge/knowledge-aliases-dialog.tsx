@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import Link from "next/link";
 import {useCallback, useEffect, useRef, useState, type FormEvent} from "react";
 import {apiRequest, getServerSessionCredential} from "@/lib/api";
@@ -43,8 +45,8 @@ function AliasForm({owner,source,readError,reload,onClose,onSaved,embedded,formI
   const changed=aliases.filter((row,index)=>JSON.stringify(row)!==JSON.stringify(original.aliases[index]));
   const saveable=!blocked&&changed.length>0&&source.version===original.version;
   useEffect(()=>{onState?.({dirty,busy:command.busy||refreshing||review||Boolean(command.recovery),saveable});},[onState,dirty,command.busy,refreshing,review,command.recovery,saveable]);
-  function close(){if(!command.busy&&!refreshing&&(!dirty||window.confirm("术语修改尚未保存，关闭会放弃当前输入。是否关闭？")))onClose();}
-  async function refreshSource(){const active=lifetime.current;if(!active||refreshing||active.signal.aborted||dirty&&!window.confirm("重新读取会放弃当前未保存输入。是否继续？"))return;setRefreshing(true);
+  async function close(){if(!command.busy&&!refreshing&&(!dirty||(await confirmAction("术语修改尚未保存，关闭会放弃当前输入。是否关闭？"))))onClose();}
+  async function refreshSource(){const active=lifetime.current;if(!active||refreshing||active.signal.aborted||dirty&&!(await confirmAction("重新读取会放弃当前未保存输入。是否继续？")))return;setRefreshing(true);
     try{const next=await readSource(owner,`${endpoint}${original.node_id}/`,AbortSignal.any([active.signal,AbortSignal.timeout(30000)]));if(!active.signal.aborted){setOriginal(next);setAliases(next.aliases);setReason("");setNotice("");reload();}}
     catch(error){if(!active.signal.aborted){setNotice(error instanceof Error?error.message:"来源暂不可读，输入仍保留。");reload();}}
     finally{if(!active.signal.aborted)setRefreshing(false);}}

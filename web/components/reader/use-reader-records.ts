@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { createRequestKey } from "../../lib/request-key";
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -198,10 +200,10 @@ export function useReaderRecords({
     };
   }, [readerId, identity, assetId, recordsAttempt]);
 
-  function beginAnnotation(
+  async function beginAnnotation(
     kind: AnnotationDraft["kind"],
     snapshot: SelectionSnapshot | null = captureSelection(),
-  ): boolean {
+  ): Promise<boolean> {
     if (!readerAuthenticated) {
       setGate(kind === "note" ? "笔记" : kind === "underline" ? "划线" : "高亮");
       return false;
@@ -226,7 +228,7 @@ export function useReaderRecords({
       if (annotationDraft.pageId === snapshot.pageId && annotationDraft.quote === snapshot.quote &&
           JSON.stringify(annotationDraft.bboxes) === JSON.stringify(snapshot.bboxes)) return true;
       if ((annotationDraft.body.trim() || annotationDraft.tags?.length) &&
-          !window.confirm("已有笔记尚未保存，改为记录这段原文会丢失当前输入。仍要继续吗？")) return false;
+          !(await confirmAction("已有笔记尚未保存，改为记录这段原文会丢失当前输入。仍要继续吗？"))) return false;
     }
     setPage(snapshot.pageIndex);
     const draft: AnnotationDraft = {
@@ -339,7 +341,7 @@ export function useReaderRecords({
   async function deleteAnnotation(annotationId: string) {
     if (!recordsReady) return;
     const annotation = annotations.find((item) => item.id === annotationId);
-    if (!annotation || !window.confirm(`确定删除这条${annotation.kind === "note" ? "笔记" : annotation.kind === "underline" ? "划线" : "高亮"}吗？`)) {
+    if (!annotation || !(await confirmAction(`确定删除这条${annotation.kind === "note" ? "笔记" : annotation.kind === "underline" ? "划线" : "高亮"}吗？`))) {
       return;
     }
     const token = getServerSessionCredential();
@@ -366,7 +368,7 @@ export function useReaderRecords({
 
   async function deleteBookmark(bookmarkId: string) {
     if (!recordsReady || !bookmarks.some(item => item.id === bookmarkId)) return;
-    if (!window.confirm("确定删除这个书签吗？")) return;
+    if (!(await confirmAction("确定删除这个书签吗？"))) return;
     const token = getServerSessionCredential();
     if (!token) return;
     const actionKey = `delete-bookmark:${bookmarkId}`;

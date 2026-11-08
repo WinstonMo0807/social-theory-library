@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
 import { EditorialConflictHelp } from "@/components/admin/knowledge/editorial-conflict-help";
 import { useActionGuard } from "@/lib/use-action-guard";
@@ -183,8 +185,8 @@ export function DisciplinesAdmin() {
     } catch (error) { setMessage(`图片操作后未能重新读取资料。请先重新打开当前学科。${error instanceof Error ? error.message : ""}`); }
   }
 
-  function start(row?: DisciplineRow) {
-    if (dirty && !window.confirm("本学科还有未保存的填写。放弃填写并切换吗？")) return;
+  async function start(row?: DisciplineRow) {
+    if (dirty && !(await confirmAction("本学科还有未保存的填写。放弃填写并切换吗？"))) return;
     prefills.clear();
     setEditConflict(false);
     setEditing(row ?? null);
@@ -212,7 +214,7 @@ export function DisciplinesAdmin() {
     event?.preventDefault();
     const token = getServerSessionCredential();
     if (!token) return false;
-    if (!draftOnly && draft.editorial_status === "published" && editing?.editorial_status !== "published" && !window.confirm("保存并公开这个学科？读者将能看到本页资料。")) return false;
+    if (!draftOnly && draft.editorial_status === "published" && editing?.editorial_status !== "published" && !(await confirmAction("保存并公开这个学科？读者将能看到本页资料。"))) return false;
     if (!startAction("save-discipline")) return false;
     setEditConflict(false);
     let metadataSaved = false;
@@ -441,8 +443,8 @@ export function SubdisciplinesAdmin() {
     } catch (error) { setMessage(`图片操作后未能重新读取资料。请先重新打开当前子学科。${error instanceof Error ? error.message : ""}`); }
   }
 
-  function start(row?: SubdisciplineRow) {
-    if (dirty && !window.confirm("本子学科还有未保存的填写。放弃填写并切换吗？")) return;
+  async function start(row?: SubdisciplineRow) {
+    if (dirty && !(await confirmAction("本子学科还有未保存的填写。放弃填写并切换吗？"))) return;
     prefills.clear();
     setEditConflict(false);
     setEditing(row ?? null);
@@ -476,7 +478,7 @@ export function SubdisciplinesAdmin() {
     const token = getServerSessionCredential();
     if (!token) return false;
     if (!startAction("save-subdiscipline")) return false;
-    if (!draftOnly && draft.editorial_status === "published" && editing?.editorial_status !== "published" && !window.confirm("保存并公开这个子学科？读者将能看到本页资料。")) { finishAction("save-subdiscipline"); return false; }
+    if (!draftOnly && draft.editorial_status === "published" && editing?.editorial_status !== "published" && !(await confirmAction("保存并公开这个子学科？读者将能看到本页资料。"))) { finishAction("save-subdiscipline"); return false; }
     setEditConflict(false);
     let metadataSaved = false;
     try {
@@ -708,7 +710,7 @@ function RecommendationPlacementEditor({owner,initialPlacement,embedded,canEdit,
       finally { publishingRequest.current = false; if(!lifetime.current.signal.aborted)setPublishing(false); }
       return;
     }
-    if (!canPublish || !command.ready || !window.confirm("发布下面预览的这一组推荐？确认后读者页面才会更新。")) return;
+    if (!canPublish || !command.ready || !(await confirmAction("发布下面预览的这一组推荐？确认后读者页面才会更新。"))) return;
     accept(await command.send({confirm:true,expected_snapshot_id:confirmedPreview.expected_snapshot_id,
       expected_updated_at:confirmedPreview.expected_updated_at,preview_token:confirmedPreview.preview_token}));
   }

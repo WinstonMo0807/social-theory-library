@@ -1,9 +1,11 @@
 "use client";
 
+import { confirmAction, confirmLinkNavigation } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
@@ -26,6 +28,7 @@ export function ScholarKnowledgeRelations({ scholarId }: { scholarId: string }) 
 }
 
 function Workspace({ scholarId, owner }: { scholarId: string; owner: string }) {
+  const router = useRouter();
   const params = useSearchParams(), guard = useRef<NodeRelationGuard>(clearGuard), materialGuard=useRef<NodeRelationGuard>(clearGuard);
   const [active,setActive]=useState<Tab>(()=>Object.hasOwn(tabs,params.get("section")||"")?params.get("section") as Tab:"relations");
   const [notice, setNotice] = useState("");
@@ -35,7 +38,7 @@ function Workspace({ scholarId, owner }: { scholarId: string; owner: string }) {
   function leave(event: MouseEvent<HTMLAnchorElement>) {
     const values=[guard.current,materialGuard.current];
     if (values.some(value=>value.composing||value.pending)) { event.preventDefault(); setNotice("请先完成输入或查询原请求，再离开关系工作区。"); return; }
-    if (values.some(value=>value.dirty) && !window.confirm("还有未保存输入，放弃这些输入并离开吗？")) event.preventDefault();
+    if (values.some(value=>value.dirty)) void confirmLinkNavigation(event, event.currentTarget, () => confirmAction("还有未保存输入，放弃这些输入并离开吗？"), href => router.push(href));
   }
   function changeTab(tab:Tab){
     if(tab===active)return;

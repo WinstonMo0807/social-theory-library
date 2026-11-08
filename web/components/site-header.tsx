@@ -35,7 +35,7 @@ export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }
   return <BrandImage config={config} />;
 }
 
-export function SiteHeader({ config = defaultSiteConfig, preview = false, previewPathname, reader = false, readerReference = "reader", beforeLogout }: { config?: SiteConfig; preview?: boolean; previewPathname?: string; reader?: boolean; readerReference?: "reader" | "reader-outline" | "reader-search" | "reader-notes" | "parallel" | "parallel-manual"; beforeLogout?: () => boolean }) {
+export function SiteHeader({ config = defaultSiteConfig, preview = false, previewPathname, reader = false, readerReference = "reader", beforeLogout }: { config?: SiteConfig; preview?: boolean; previewPathname?: string; reader?: boolean; readerReference?: "reader" | "reader-outline" | "reader-search" | "reader-notes" | "parallel" | "parallel-manual"; beforeLogout?: () => boolean | Promise<boolean> }) {
   const { t } = useEvidenceLanguage();
   const actualPathname = usePathname();
   const pathname = preview && previewPathname ? previewPathname : actualPathname;
@@ -108,7 +108,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
   }
 
   async function logout() {
-    if (beforeLogout ? !beforeLogout() : !confirmUnsavedBeforeAccountChange()) return;
+    if (beforeLogout ? !(await beforeLogout()) : !(await confirmUnsavedBeforeAccountChange())) return;
     const actionKey = "logout";
     if (!startAction(actionKey)) return;
     setLogoutError("");

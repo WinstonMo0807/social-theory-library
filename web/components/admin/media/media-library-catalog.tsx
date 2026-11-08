@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -131,8 +133,8 @@ function LibraryEditor({ owner, mediaId, canEdit, initial, onDirtyChange, onBloc
     if (busy || command.busy || !command.recovery) return;
     setError(""); await accept(await command.lookup(true));
   }
-  function loadHistory(values: Record<string, unknown>) {
-    if (dirty && !window.confirm("载入历史资料会替换本次填写中的对应字段，继续吗？")) return;
+  async function loadHistory(values: Record<string, unknown>) {
+    if (dirty && !(await confirmAction("载入历史资料会替换本次填写中的对应字段，继续吗？"))) return;
     const fields: Partial<Metadata> = {};
     for (const key of textFields) if (typeof values[key] === "string") fields[key] = values[key];
     for (const key of ["focal_x", "focal_y"] as const) if (typeof values[key] === "number" && values[key] >= 0 && values[key] <= 1) fields[key] = values[key];

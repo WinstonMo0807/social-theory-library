@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { createRequestKey } from "../../../lib/request-key";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -25,7 +27,7 @@ export function WorkFileRightsDialog({ state, ownerId, onClose, onSaved, onRefre
   }, []);
   const dirty = note !== base.note, stale = base.source_asset_id !== current.source_asset_id || base.updated_at !== current.updated_at;
   useUnsavedForm(dirty, false);
-  const close = () => { if (!inFlight.current && (!dirty || window.confirm("版权说明尚未保存，确定放弃修改吗？"))) onClose(); };
+  const close = async () => { if (!inFlight.current && (!dirty || (await confirmAction("版权说明尚未保存，确定放弃修改吗？")))) onClose(); };
   async function save() {
     if (inFlight.current || stale || !dirty || !base.source_asset_id || !base.updated_at || !current.can_edit) return;
     const input = { expected_asset_updated_at: base.updated_at, rights_note: note };

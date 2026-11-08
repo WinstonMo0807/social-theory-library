@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../lib/request-key";
 import { useEffect, useRef, useState } from "react";
@@ -105,7 +107,7 @@ function Workspace({home,stats,owner,fullPreview=false,initialPanel="",welcomePa
     {!small?<aside className={styles.detail}>{detail}</aside>:null}</div>
     {small?<Dialog open={mobileOpen} onRequestClose={()=>{if(!editor.busy)setMobileOpen(false);}} className={styles.mobileSheet} aria-label="编辑首页与公共说明"><header><strong>{selected?`编辑：${card?.title}`:welcomeSections.find(row=>row[0]===textSection)?.[1]||siteTextSections.find(row=>row.id===textSection)?.label||draft.about_blocks.find(row=>row.key===textSection)?.title||"编辑公告"}</strong><button disabled={editor.busy} onClick={()=>setMobileOpen(false)} aria-label="收起编辑面板"><X size={18}/></button></header>{detail}</Dialog>:null}
     {picker?<SiteHomePicker owner={owner} area={picker.area} used={(draft.home_layout[picker.area]||[]).filter(row=>row.id!==picker.replace).map(row=>row.target)} onChoose={choose} onClose={()=>setPicker(null)}/>:null}
-    <Dialog open={mediaOpen&&!!selected} onRequestClose={()=>{if(!locked&&(!mediaDirty||window.confirm("放弃尚未保存的图片资料并关闭吗？")))setMediaOpen(false);}} className={styles.picker} aria-label="更换首页配图"><header><h2>更换配图</h2><button disabled={locked} onClick={()=>{if(!mediaDirty||window.confirm("放弃尚未保存的图片资料并关闭吗？"))setMediaOpen(false);}} aria-label="关闭图片选择"><X size={18}/></button></header>{mediaOpen&&selected?<fieldset disabled={locked} className={styles.fields}><InlineMediaPicker key={selected.id} selectedRenditionId={selected.cover_rendition_id} onDirtyChange={setMediaDirty} onSelect={(id,url)=>{patch({cover_rendition_id:id});setCovers(current=>({...current,[selected.id]:url}));}}/></fieldset>:null}</Dialog>
+    <Dialog open={mediaOpen&&!!selected} onRequestClose={async ()=>{if(!locked&&(!mediaDirty||(await confirmAction("放弃尚未保存的图片资料并关闭吗？"))))setMediaOpen(false);}} className={styles.picker} aria-label="更换首页配图"><header><h2>更换配图</h2><button disabled={locked} onClick={async ()=>{if(!mediaDirty||(await confirmAction("放弃尚未保存的图片资料并关闭吗？")))setMediaOpen(false);}} aria-label="关闭图片选择"><X size={18}/></button></header>{mediaOpen&&selected?<fieldset disabled={locked} className={styles.fields}><InlineMediaPicker key={selected.id} selectedRenditionId={selected.cover_rendition_id} onDirtyChange={setMediaDirty} onSelect={(id,url)=>{patch({cover_rendition_id:id});setCovers(current=>({...current,[selected.id]:url}));}}/></fieldset>:null}</Dialog>
     <Dialog open={previewOpen} onRequestClose={()=>setPreviewOpen(false)} className={styles.previewDialog} aria-label="网站内容预览"><header><strong>{editor.dirty?"当前输入预览 · 尚未保存":"已保存内容预览"}</strong><button onClick={()=>setPreviewOpen(false)} aria-label="关闭预览"><X size={18}/></button></header><PreviewViewport locateFields={false}>{preview}</PreviewViewport></Dialog>
     <ConfirmDialog open={confirm!==null} title="取消当前未保存修改" description="恢复至本次打开或最近保存的版本，未保存的网站内容输入会被放弃。" confirmLabel="放弃未保存修改" pending={editor.busy} onCancel={()=>setConfirm(null)} onConfirm={()=>{if(saved){setDraft(saved);setCache({});setCovers({});}setConfirm(null);}}/>
     <p className={styles.footnote}><Check size={13}/>所有修改先保存为草稿，确认发布后才改变公开页面。</p>

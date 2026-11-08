@@ -1,0 +1,52 @@
+.dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  color: var(--ink, #272725);
+  box-shadow: 0 20px 64px rgb(24 23 20 / 20%);
+  font-family: var(--content-text, var(--sans));
+  font-size: var(--stl-readable-body, 1rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--line) transparent;
+}
+.dialog::backdrop { background: rgb(25 24 21 / 32%); }
+.card { padding: 26px 28px 24px; }
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 30px; }
+.brand :global(.brand-identity) { min-width: 0; gap: 9px; }
+.brand :global(.brand-identity-symbol) { width: 38px; }
+.brand :global(.brand-identity-words) { padding-left: 9px; }
+.brand :global(.brand-identity-en) { font-size: 14px; }
+.brand :global(.brand-identity-cn) { font-size: 18px; }
+.brand > button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
+.brand > button:hover { background: var(--paper, #f7f4ee); color: var(--ink); }
+.copy h2 { margin: 0 0 12px; font: 600 calc(1.25rem + var(--stl-readable-step, 0rem))/1.5 var(--content-text, var(--sans)); text-wrap: balance; overflow-wrap: anywhere; }
+.copy p { margin: 0; color: var(--muted, #5c6267); font: inherit; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.card > ul { margin: 16px 0 0; padding-left: 22px; line-height: 1.8; overflow-wrap: anywhere; }
+.card > label { display: grid; gap: 8px; margin-top: 22px; line-height: 1.6; }
+.card textarea { width: 100%; min-height: 104px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper, #f7f4ee); color: inherit; font: inherit; line-height: 1.75; resize: vertical; caret-color: var(--ink); }
+.card > footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 28px; }
+.cancel, .confirm { min-height: 42px; max-width: 100%; padding: 9px 17px; border: 1px solid var(--line); border-radius: 7px; font: 500 var(--stl-readable-ui, 1rem)/1.5 var(--content-text, var(--sans)); white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+.cancel { background: transparent; color: inherit; }
+.confirm { background: #2b2b28; border-color: transparent; color: #fff; }
+.confirm:hover { background: #45443e; }
+.cancel:hover { background: var(--paper, #f7f4ee); }
+.danger { background: #8c3530; }
+.danger:hover { background: #742b27; }
+.dialog :is(button, textarea):focus-visible { outline: 2px solid #9b753d; outline-offset: 3px; }
+.dialog :is(button, textarea):disabled { opacity: .5; cursor: not-allowed; }
+.dialog ::selection { background: #e7d9bf; color: #242424; }
+:global(html[data-theme="dark"]) .confirm:not(.danger) { background: #e8e4dc; color: #252522; }
+@media (max-width: 560px) {
+  .card { padding: 22px 20px 20px; }
+  .brand { gap: 8px; margin-bottom: 24px; }
+  .brand :global(.brand-identity-symbol) { width: 30px; }
+  .brand :global(.brand-identity-en) { font-size: 12px; }
+  .brand :global(.brand-identity-cn) { font-size: 16px; }
+  .card > footer { margin-top: 24px; }
+}

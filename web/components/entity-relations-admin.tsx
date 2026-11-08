@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { Check, ExternalLink, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -100,7 +102,7 @@ function RelationEditor({
 
   async function remove(id: string) {
     const token = getServerSessionCredential();
-    if (!token || !window.confirm("删除这条已确认关系吗？相关前台模块会同步更新。")) return;
+    if (!token || !(await confirmAction("删除这条已确认关系吗？相关前台模块会同步更新。"))) return;
     const actionKey = `delete-relation:${id}`;
     if (!startAction(actionKey)) return;
     setMessage("正在删除关系……");

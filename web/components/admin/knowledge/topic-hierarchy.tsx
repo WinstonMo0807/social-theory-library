@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect, useState } from "react";
@@ -44,7 +46,7 @@ function HierarchyProposal({ topicId, name, value, onApply, onClose }: {
     }, 250);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [topicId, owner, body, key, parent?.id]);
-  function close() { if (!dirty || window.confirm("放弃这次尚未应用的层级选择？")) onClose(); }
+  async function close() { if (!dirty || (await confirmAction("放弃这次尚未应用的层级选择？"))) onClose(); }
   return <Dialog open data-editor-transient className={styles.hierarchyDialog} onRequestClose={close} aria-label="调整主题层级">
     <header><h2>调整层级</h2><button type="button" onClick={close} aria-label="关闭层级调整">关闭</button></header>
     <p>当前主题 <strong>{name || "未命名主题"}</strong></p>

@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -28,10 +30,10 @@ export function ScholarTimeline({scholarId,blocked,onChanged}:{scholarId:string;
     return()=>controller.abort();
   },[scholarId,owner,page,attempt]);
   function open(id:string){if(blocked)return;guard.current={dirty:false,pending:false,composing:false};setNotice("");setSelected(id);}
-  function close(){
+  async function close(){
     if(ime.current||guard.current.composing)return;
     if(guard.current.pending){setNotice("请先查询或停止未确认的原操作，再关闭事件编辑。");return;}
-    if(guard.current.dirty&&!window.confirm("事件有未保存输入，放弃并返回学者页吗？"))return;
+    if(guard.current.dirty&&!(await confirmAction("事件有未保存输入，放弃并返回学者页吗？")))return;
     setSelected(null);setNotice("");setAttempt(value=>value+1);onChanged();
   }
   return <>

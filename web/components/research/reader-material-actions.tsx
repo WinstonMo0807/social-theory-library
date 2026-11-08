@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { useEffect, useRef, useState } from "react";
 import { Archive, ArchiveRestore, Pencil, X } from "lucide-react";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -46,9 +48,9 @@ export function ReaderMaterialActions({ ownerId, selection, blocked, onApplied, 
   const canRename = selection.length > 0 && selection.length <= 20;
   const canArchive = selection.length > 0 && selection.length <= 100;
   function open(action: Action) { setMessage(""); setEditor({ action, rows: selection, titles: selection.map(row => row.editable_title) }); }
-  function close() {
+  async function close() {
     if (busy) return;
-    if (editor?.action === "rename" && !pending && editor.titles.some((title, i) => title !== editor.rows[i].editable_title) && !window.confirm("名称尚未保存，确定放弃修改吗？")) return;
+    if (editor?.action === "rename" && !pending && editor.titles.some((title, i) => title !== editor.rows[i].editable_title) && !(await confirmAction("名称尚未保存，确定放弃修改吗？"))) return;
     setEditor(null);
   }
   async function dispatch(mode: "submit" | "read" | "stop", next?: Command) {

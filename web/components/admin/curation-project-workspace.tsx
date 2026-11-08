@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -52,10 +54,10 @@ function Workspace({owner}:{owner:string}){
   const command=useCatalogCommand<Command,Receipt>(owner,endpoint,`stl-curation-project:${owner}`);
   const locked=!command.ready||command.busy||detail.pending||Boolean(command.recovery);
   const articleDirty=useUnsavedForm(dialog==="article"?articleTitle:"","");
-  function canLeave(){return !(dirty||articleDirty)||window.confirm("当前项目设置尚未保存，放弃这些输入并继续吗？");}
-  function navigate(values:Record<string,string|number|null>){if(!canLeave())return;setDirty(false);router.push(adminListHref(pathname,params.toString(),values));}
-  function open(value:typeof dialog){if(!canLeave())return;setDirty(false);if(tab==="settings")router.push(adminListHref(pathname,params.toString(),{tab:"articles"}));setDialog(value);setArticleTitle("");}
-  function closeDialog(){if(command.busy||!canLeave())return;setDirty(false);setDialog(null);}
+  async function canLeave(){return !(dirty||articleDirty)||(await confirmAction("当前项目设置尚未保存，放弃这些输入并继续吗？"));}
+  async function navigate(values:Record<string,string|number|null>){if(!(await canLeave()))return;setDirty(false);router.push(adminListHref(pathname,params.toString(),values));}
+  async function open(value:typeof dialog){if(!(await canLeave()))return;setDirty(false);if(tab==="settings")router.push(adminListHref(pathname,params.toString(),{tab:"articles"}));setDialog(value);setArticleTitle("");}
+  async function closeDialog(){if(command.busy||!(await canLeave()))return;setDirty(false);setDialog(null);}
   async function accept(result:Receipt|null){
     if(!result)return false;
     setMessage(result.state==="cancelled"?"尚未执行的原请求已停止。":result.message);setConfirmation(null);
@@ -71,10 +73,10 @@ function Workspace({owner}:{owner:string}){
     list.reload();detail.reload();return result.state==="applied";
   }
   function action(action:Command["action"],extra:Partial<Command>={}){return project?{action,project_id:project.id,expected_version:project.version,...extra}:null;}
-  function ask(actionName:Command["action"]){const next=action(actionName);if(next&&canLeave()){setDirty(false);setConfirmation(next);}}
-  function reorder(id:string,offset:number){if(!project||!canLeave())return;const ids=[...project.article_ids],index=ids.indexOf(id),target=index+offset;if(index<0||target<0||target>=ids.length)return;[ids[index],ids[target]]=[ids[target],ids[index]];const next=action("reorder",{article_ids:ids});if(next)void command.send(next).then(accept);}
+  async function ask(actionName:Command["action"]){const next=action(actionName);if(next&&(await canLeave())){setDirty(false);setConfirmation(next);}}
+  async function reorder(id:string,offset:number){if(!project||!(await canLeave()))return;const ids=[...project.article_ids],index=ids.indexOf(id),target=index+offset;if(index<0||target<0||target>=ids.length)return;[ids[index],ids[target]]=[ids[target],ids[index]];const next=action("reorder",{article_ids:ids});if(next)void command.send(next).then(accept);}
   function search(event:FormEvent){event.preventDefault();navigate({q:query||null,page:1,project:null,articles_page:1,tab:"articles"});}
-  function moveArticle(target:string){if(!project||!dragArticle||dragArticle===target||locked||!canLeave())return;const ids=project.article_ids.filter(id=>id!==dragArticle),index=ids.indexOf(target);if(index<0)return;ids.splice(index,0,dragArticle);setDragArticle("");const next=action("reorder",{article_ids:ids});if(next)void command.send(next).then(accept);}
+  async function moveArticle(target:string){if(!project||!dragArticle||dragArticle===target||locked||!(await canLeave()))return;const ids=project.article_ids.filter(id=>id!==dragArticle),index=ids.indexOf(target);if(index<0)return;ids.splice(index,0,dragArticle);setDragArticle("");const next=action("reorder",{article_ids:ids});if(next)void command.send(next).then(accept);}
   useEffect(()=>setChecked([]),[selected,project?.version]);
   const isEmpty=Boolean(data&&!data.results.length);
   const error=command.error||detail.error||list.error;

@@ -23,6 +23,7 @@ import { loadSiteChromeConfig } from "@/lib/api/site.server";
 import { RouteTransition } from "@/components/route-transition";
 import { PublicSessionProvider } from "@/components/public-session-provider";
 import { AuthSessionDialog } from "@/components/auth-session-dialog";
+import { AppDialogHost } from "@/components/app-dialog-host";
 import { EvidenceLanguageProvider } from "@/components/evidence-language";
 
 import "../styles/features/workspace-polish.css";
@@ -82,6 +83,7 @@ export default async function RootLayout({
           {unavailable ? <p className="site-config-unavailable" role="status">网站设置暂时无法加载，当前使用默认导航。</p> : null}
           <main id="main-content"><RouteTransition>{children}</RouteTransition></main>
           <AuthSessionDialog />
+          <AppDialogHost />
         </EvidenceLanguageProvider>
         </AppearanceProvider>
         </PublicSessionProvider>

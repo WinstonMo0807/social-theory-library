@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -20,7 +22,7 @@ export function CounterSaveDialog({ ownerId, projectId, turnId, kind, statement,
   const [initial] = useState({ body, selected });
   const dirty = !saved && JSON.stringify({ body, selected }) !== JSON.stringify(initial);
   useEffect(() => { onDirty(dirty); return () => onDirty(false); }, [dirty, onDirty]);
-  function close() { if (!busy && (!dirty || window.confirm("当前内容尚未保存，确定放弃输入吗？"))) onClose(); }
+  async function close() { if (!busy && (!dirty || (await confirmAction("当前内容尚未保存，确定放弃输入吗？")))) onClose(); }
   const alive = useRef(false), pending = useRef(false), request = useRef({ fingerprint: "", id: "" });
   useEffect(() => { alive.current = true; const off = subscribeToSessionChanges(() => { alive.current = false; setBody(""); setSelected([]); setSaved(""); request.current = { fingerprint: "", id: "" }; }); return () => { alive.current = false; off(); }; }, []);
   const selectedRefs = references.filter(ref => selected.includes(researchEvidenceKey(ref)) && counterAvailable(ref));
@@ -51,6 +53,6 @@ export function CounterSubclaims({ record, busy, error, onClose, onSave, onStart
   const [saved, setSaved] = useState(JSON.stringify(record.data.subclaims || []));
   const dirty = JSON.stringify(values) !== saved, stale = revision !== record.revision;
   useEffect(() => { onDirty(dirty); return () => onDirty(false); }, [dirty, onDirty]);
-  function close() { if (!busy && (!dirty || window.confirm("子命题拆分尚未保存，确定放弃修改吗？"))) onClose(); }
+  async function close() { if (!busy && (!dirty || (await confirmAction("子命题拆分尚未保存，确定放弃修改吗？")))) onClose(); }
   return <Dialog className="stl4-counter-dialog" open aria-labelledby="counter-subclaim-title" onRequestClose={close}><h2 id="counter-subclaim-title">拆分与检验子命题</h2><p>把复杂判断拆成可单独核对的命题。保存后用于新分支，前次分析所用命题保持原样。</p>{values.map((claim, index) => <div className="stl4-counter-subclaim" key={claim.id}><label>子命题 {index + 1}<textarea maxLength={1200} required value={claim.proposition} disabled={busy} onChange={event => setValues(values.map(row => row.id === claim.id ? { ...row, proposition: event.target.value } : row))} /></label><button type="button" disabled={busy} onClick={() => setValues(values.filter(row => row.id !== claim.id))}>移除子命题</button><button type="button" disabled={busy || dirty || stale || claim.proposition.trim().length < 2} onClick={() => void onStart(claim)}>检验此子命题</button></div>)}<button type="button" disabled={busy || values.length >= 12} onClick={() => setValues([...values, { id: createRequestKey(), proposition: "" }])}>添加子命题（{values.length} / 12）</button>{stale ? <p role="alert">本轮已更新，拆分内容保留。<button type="button" disabled={busy} onClick={() => setRevision(record.revision)}>核对最新轮次后沿用拆分</button></p> : null}{error ? <p role="alert">{error}</p> : null}<footer><button type="button" disabled={busy} onClick={close}>关闭</button><button type="button" className="is-primary" disabled={busy || stale || !dirty || values.some(row => row.proposition.trim().length < 2)} onClick={async () => { if (await onSave(values, revision)) { setSaved(JSON.stringify(values)); setRevision(revision + 1); } }}>保存子命题</button></footer></Dialog>;
 }

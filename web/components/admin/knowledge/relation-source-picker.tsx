@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { components } from "@/lib/api/generated/schema";
 import { PlacementSourcePicker, type PlacementChoice } from "./placement-source-picker";
@@ -36,7 +38,7 @@ export function RelationSourcePicker({ owner, value, saved, material, onChange, 
     {value ? <>
       {details?.available ? <><strong>{details.title || "原题名待补"}</strong><p>{details.edition_label}{details.pdf_page ? ` · PDF 第 ${details.pdf_page} 页` : ""}</p><blockquote>{details.quote}</blockquote>{details.reader_href ? <a href={details.reader_href} target="_blank" rel="noopener">查看准确版本与原文 ↗</a> : null}</> : <p>原引用仍保留，当前不能核对原文。请重新读取或选择准确材料。</p>}
       {details?.detail ? <p role="status">{details.detail}</p> : null}{details && !details.public_eligible ? <small>当前不能作为公开关系的原文依据。</small> : null}
-      <button type="button" onClick={() => { if (window.confirm("移除此原文引用吗？原材料和文字出处保留，关系修改仍需保存或明确确认。")) { onChange(null); setPicked(null); setOpen(false); } }}>移除此原文引用</button>
+      <button type="button" onClick={async () => { if ((await confirmAction("移除此原文引用吗？原材料和文字出处保留，关系修改仍需保存或明确确认。"))) { onChange(null); setPicked(null); setOpen(false); } }}>移除此原文引用</button>
     </> : <p>可从馆藏选择准确原文。已有的文字出处保留为书目信息，不冒充可定位引文。</p>}
     <button type="button" onClick={() => setOpen(current => !current)}>{open ? "收起选材" : value ? "更换原文材料" : "从材料选原文"}</button>
     {error ? <p role="alert">{error}</p> : null}{open ? <PlacementSourcePicker owner={owner} kind="span" onChoose={choose} /> : null}

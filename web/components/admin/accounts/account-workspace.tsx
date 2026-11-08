@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../../lib/request-key";
@@ -163,7 +165,7 @@ function Editor(props: { actor: string; edit: Edit; canAssign: boolean; onDirty:
     void run(signal => accountRequest<AccountReceipt>(actor, "command/", { method: "POST", signal, body: JSON.stringify(data) }), value => { if (value.request_id !== data.request_id || value.state !== "applied" || !value.user_id) throw Error("返回操作结果与原账户请求不一致，请查询核对。"); if (onDone(value)) { pending.current = null; setPassword(""); } });
   }
   async function reload() {
-    if (!original || uncertain || !window.confirm("读取最新账户资料会清空本弹层未保存的修改，继续吗？")) return;
+    if (!original || uncertain || !(await confirmAction("读取最新账户资料会清空本弹层未保存的修改，继续吗？"))) return;
     void run(signal => accountRequest<AccountDirectory>(actor, `workspace/?user_id=${original.id}`, { signal }), value => { if (value.selected) { setName(value.selected.display_name); setRole((value.selected.role === "reviewer" ? "editor" : value.selected.role) as AccountInput["role"]); setActive(value.selected.is_active); setPrepared(null); setConfirmed(false); setPassword(""); onReload(value.selected); } });
   }
   if (invalid) return <div className={styles.error} role="alert"><p>{message}</p><p>操作账户或凭证已变化。请重新登录，再从账户管理查询请求结果。</p><Link href="/login?next=%2Fadmin%2Fusers">重新登录</Link></div>;

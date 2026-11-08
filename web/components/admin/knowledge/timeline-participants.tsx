@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useState } from "react";
@@ -39,9 +41,9 @@ export function TimelineParticipants({ owner, editionId, value, onChange }: {
   return <section className={styles.participants}>
     {editionId ? <EditionResponsibility key={`${owner}:${editionId}`} owner={owner} editionId={editionId} /> : null}
     <EntityPicker owner={owner} label="补充事件参与学者，可多选" endpoint="/catalog/admin/scholars/" values={selected}
-      onChange={choices => {
+      onChange={async choices => {
         const ids = new Set(choices.flatMap(row => row.id ? [row.id] : []));
-        if (value.some(row => row.scholar && !ids.has(row.scholar) && row.description) && !window.confirm("移除所选人物在此事件中的关系及说明？学者档案不会删除。")) return;
+        if (value.some(row => row.scholar && !ids.has(row.scholar) && row.description) && !(await confirmAction("移除所选人物在此事件中的关系及说明？学者档案不会删除。"))) return;
         const retained = value.filter(row => row.scholar && ids.has(row.scholar));
         const added: TimelineRelation[] = choices.flatMap(row => row.id && !retained.some(old => old.scholar === row.id) ? [{ scholar: row.id, scholar_name: row.name,
           participant_role: "participant", relation_type: "subject", node: null, discipline: null, work: null, evidence: null, description: "", sort_order: retained.length }] : []);
@@ -49,8 +51,8 @@ export function TimelineParticipants({ owner, editionId, value, onChange }: {
       }} />
     <p>事件主体仍由上方主学者字段指定。这里补充有出处支持的参与关系，不会修改原版本的作者、译者或编者。</p>
     {value.map((row, index) => <article className={styles.participantRow} key={row.id || `${row.scholar}:${row.relation_type}:${index}`}>
-      <header><strong>{row.scholar_name || `已关联学者 ${row.scholar?.slice(0, 8)}`}</strong><button type="button" onClick={() => {
-        if (!row.description || window.confirm("移除此事件中的人物关系及说明？学者档案不会删除。")) onChange(value.filter((_, position) => position !== index));
+      <header><strong>{row.scholar_name || `已关联学者 ${row.scholar?.slice(0, 8)}`}</strong><button type="button" onClick={async () => {
+        if (!row.description || (await confirmAction("移除此事件中的人物关系及说明？学者档案不会删除。"))) onChange(value.filter((_, position) => position !== index));
       }}>移除关联</button></header>
       <label>事件中的角色<select value={row.participant_role || ""} onChange={event => onChange(value.map((item, position) => position === index ? { ...item, participant_role: event.target.value } : item))}>
         {roles.map(([key, label]) => <option key={key} value={key}>{label}</option>)}

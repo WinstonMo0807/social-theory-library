@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
@@ -48,8 +50,8 @@ export function ReaderOverview({ ownerId, archive=false }: { ownerId: string; ar
   }, [ownerId]);
   const workspace = usePersistentWorkspace<Overview>(`/reading/reader-center/?${query}`, ownerId, undefined, load);
   const data = workspace.error ? null : workspace.data;
-  function filter(values: Record<string, string>) {
-    if (materialGuard && !window.confirm("原资料操作尚未完成。切换筛选不会取消请求，选择及恢复编号会保留。确定继续吗？")) return;
+  async function filter(values: Record<string, string>) {
+    if (materialGuard && !(await confirmAction("原资料操作尚未完成。切换筛选不会取消请求，选择及恢复编号会保留。确定继续吗？"))) return;
     const next = new URLSearchParams(params.toString());
     next.delete("page");
     for (const [key, value] of Object.entries(values)) { if (!value || value === "all") next.delete(key); else next.set(key, value); }

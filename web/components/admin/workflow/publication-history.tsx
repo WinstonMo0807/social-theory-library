@@ -1,5 +1,7 @@
 "use client";
 
+import { requestReason } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { useRef, useState } from "react";
@@ -20,7 +22,7 @@ export function PublicationHistory({ editionId, token, canPublish, onChanged }: 
   const submitting = useRef(false);
   async function restore(row: Revision) {
     if (submitting.current) return;
-    const reason = window.prompt(`准备恢复第 ${row.revision} 次公开内容。请填写原因，当前草稿和原文件会保留。`);
+    const reason = (await requestReason(`准备恢复第 ${row.revision} 次公开内容。请填写原因，当前草稿和原文件会保留。`));
     if (!reason?.trim() || busy) return;
     submitting.current = true;
     setBusy(true);

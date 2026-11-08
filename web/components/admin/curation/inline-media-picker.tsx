@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
@@ -40,8 +42,8 @@ export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero"
     catch (error) { if (!lifetime.current?.signal.aborted) setMessage(error instanceof Error ? error.message : "图片操作未确认完成，请重新读取素材核对。"); }
     finally { setBusy(false); finishAction("media"); }
   }
-  function open(media: Media) {
-    if (dirty && !window.confirm("放弃尚未保存的图片资料，重新读取吗？")) return;
+  async function open(media: Media) {
+    if (dirty && !(await confirmAction("放弃尚未保存的图片资料，重新读取吗？"))) return;
     setEditing(media); setMetadata(metadataOf(media));
   }
   async function load(page = 1) {

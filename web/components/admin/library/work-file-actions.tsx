@@ -1,5 +1,7 @@
 "use client";
 
+import { confirmAction } from "@/lib/ui-dialog";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { createRequestKey } from "../../../lib/request-key";
@@ -29,7 +31,7 @@ export function NewWorkEditionDialog({ state, ownerId, onClose, onCreated, onRef
   const receipt = useRef<{ fingerprint: string; id: string } | null>(null), alive = useActionLifetime();
   const dirty = Boolean(label || year || publisher), stale = base !== state.work.updated_at;
   useUnsavedForm(dirty, false);
-  const close = () => { if (!busy && (!dirty || window.confirm("新增版本尚未保存，确定放弃当前输入吗？"))) onClose(); };
+  const close = async () => { if (!busy && (!dirty || (await confirmAction("新增版本尚未保存，确定放弃当前输入吗？")))) onClose(); };
   async function save() {
     if (busy || stale || !label.trim()) return;
     const value = { expected_work_updated_at: base, version_label: label.trim(), publication_year: year ? Number(year) : null, publisher: publisher.trim() };
@@ -103,10 +105,10 @@ export function UploadWorkFileDialog({ state, ownerId, action, onClose, onAccept
     const unsubscribe = subscribeToSessionChanges(() => { URL.revokeObjectURL(url); setLocalPreview(null); });
     return () => { URL.revokeObjectURL(url); unsubscribe(); };
   }, [localPreview]);
-  const close = () => {
+  const close = async () => {
     if (busy) return;
     if (outcome === "unknown") { void checkReceipt(); return; }
-    if (!dirty || window.confirm(outcome ? "尚未查到本次请求，服务器仍可能稍后完成。确定返回文件记录核对吗？请勿另建相同文件请求。" : "文件请求尚未保存，确定放弃此次选择吗？")) onClose();
+    if (!dirty || (await confirmAction(outcome ? "尚未查到本次请求，服务器仍可能稍后完成。确定返回文件记录核对吗？请勿另建相同文件请求。" : "文件请求尚未保存，确定放弃此次选择吗？"))) onClose();
   };
   function choose(value: File | null) {
     if (busy || outcome) return;
