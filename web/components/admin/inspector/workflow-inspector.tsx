@@ -156,8 +156,8 @@ export function WorkflowInspector({
                   <div><dt>依据类型</dt><dd>{sourceLabel(candidate)}</dd></div>
                   {candidate.evidence_count !== undefined ? <div><dt>证据</dt><dd>{String(candidate.evidence_count)} 条</dd></div> : null}
                 </dl>
-                {reasons.length ? <details open><summary>匹配依据</summary><ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></details> : null}
-                {conflicts.length ? <details open className="workflow-inspector-conflicts"><summary>冲突</summary><ul>{conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul></details> : null}
+                {reasons.length ? <section data-content-section><header data-section-heading>匹配依据</header><ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></section> : null}
+                {conflicts.length ? <section data-content-section className="workflow-inspector-conflicts"><header data-section-heading>冲突</header><ul>{conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul></section> : null}
                 {evidence.length ? <h3>证据</h3> : null}
                 {evidence.map((entry, index) => <EvidenceEnvelopeCard evidence={entry} compact key={`${candidate.id}-evidence-${index}`} />)}
                 {["pending", "research_lead", "proposed"].includes(String(candidate.status ?? "pending")) ? <CandidateDecisionBar

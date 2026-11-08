@@ -656,7 +656,7 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
           {draft.kind === "theory" ? <>
             <div className="inline-fields">
               <label><span>外文名称</span><input value={draft.foreignName} onChange={(event) => setDraft({ ...draft, foreignName: event.target.value })} /></label>
-              <label><span>实体层级</span><select value={draft.entityLevel} onChange={(event) => setDraft({ ...draft, entityLevel: event.target.value as TaxonomyDraft["entityLevel"] })}><option value="tradition">理论传统</option><option value="school">流派</option><option value="branch">分支</option></select></label>
+              <label><span>实体层级</span><select data-stl-select value={draft.entityLevel} onChange={(event) => setDraft({ ...draft, entityLevel: event.target.value as TaxonomyDraft["entityLevel"] })}><option value="tradition">理论传统</option><option value="school">流派</option><option value="branch">分支</option></select></label>
             </div>
             <div className="inline-fields">
               <label><span>视觉符号或简称</span><input value={draft.symbol} onChange={(event) => setDraft({ ...draft, symbol: event.target.value })} /></label>
@@ -775,7 +775,7 @@ function TaxonomyWorkspace({mode="combined",entityId,owner}:{mode?:"combined"|"t
             onChange={(value) => setDraft({ ...draft, mapLines: formatEditorRows(value, ["source", "target", "relation", "description"]) })}
           /> : null}
           {draft.kind === "topic" && (draft.readingPaths.length > 0 || draft.primaryWorkIds.length > 0 || draft.secondaryWorkIds.length > 0) ? <div data-editor-section="versions"><p>已有的作品级书目与旧阅读编排继续保留。新版通过明确出版版本和正式阅读路径展示；保存本页不会删除旧记录或自动替换读者材料。</p></div> : null}
-          <label><span>编辑状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
+          <label><span>编辑状态</span><select data-stl-select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
           <button className="button" type="submit" disabled={Boolean(pendingAction)}><Save size={15} />{pendingAction ? "正在保存…" : "保存主题草稿"}</button>
           {message ? <p className="form-message" role="status">{message}</p> : null}
           <EditorialConflictHelp visible={editConflict} href={draft.kind === "topic" ? `/admin/topics/${draft.id}` : `/admin/theories?legacy_id=${draft.id}`} />
@@ -1326,12 +1326,12 @@ function ScholarWorkspace({ scholarId, owner }: { scholarId?: string; owner: str
             />
           </fieldset>
           <section data-editor-section="identity-tags"><ScholarProfileFieldsEditor section="identity" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
-          <section data-editor-section="sources"><h2>四、条目信息与来源</h2><details className="scholar-normative-fields"><summary>研究领域、机构与其他名称</summary><StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" /><StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" /><StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" /></details><ScholarProfileFieldsEditor section="sources" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
+          <section data-editor-section="sources"><h2>四、条目信息与来源</h2><section data-content-section className="scholar-normative-fields"><header data-section-heading>研究领域、机构与其他名称</header><StringListEditor label="其他译名或音译" itemLabel="名称" value={editorLines(draft.aliases)} onChange={(value) => setDraft({ ...draft, aliases: value.join("\n") })} addLabel="添加译名或别名" /><StringListEditor label="机构" itemLabel="机构" value={editorLines(draft.affiliations)} onChange={(value) => setDraft({ ...draft, affiliations: value.join("\n") })} addLabel="添加机构" /><StringListEditor label="关注领域" itemLabel="领域" value={editorLines(draft.concerns)} onChange={(value) => setDraft({ ...draft, concerns: value.join("\n") })} addLabel="添加领域" /></section><ScholarProfileFieldsEditor section="sources" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
           <section data-editor-section="paths"><ScholarProfileFieldsEditor section="paths" profileId={draft.id} value={draft} onChange={patch => setDraft(current => ({ ...current, ...patch }))} /></section>
-          <section data-editor-section="sources"><details><summary>历史语录文字（保留原记录）</summary><p>这些自由文字继续保存供编辑核对；新版公开页的引语只使用上方绑定的正式原文。</p>
+          <section data-editor-section="sources"><details data-disclosure="collection"><summary>历史语录文字（保留原记录）</summary><p>这些自由文字继续保存供编辑核对；新版公开页的引语只使用上方绑定的正式原文。</p>
           <label><span>代表语录</span><textarea rows={3} value={draft.quote} onChange={(event) => setDraft({ ...draft, quote: event.target.value })} /></label>
           <label><span>语录来源</span><input value={draft.quoteSource} onChange={(event) => setDraft({ ...draft, quoteSource: event.target.value })} /></label></details></section>
-          <label><span>编辑状态</span><select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
+          <label><span>编辑状态</span><select data-stl-select disabled title="状态通过发布或下线操作更新" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="draft">草稿</option><option value="published">公开</option><option value="archived">已下线</option></select></label>
           <button className="button" type="submit" disabled={saving}><Save size={15} />{saving ? "正在保存…" : "保存学者草稿"}</button>
           {message ? <p className="form-message" role="status">{message}</p> : null}
           <EditorialConflictHelp visible={editConflict} href={`/admin/scholars/${draft.id}`} />
@@ -1784,8 +1784,8 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           <label><span>首页简介，每行一段</span><textarea rows={4} value={config.intro_lines.join("\n")} onChange={(event) => updateConfig({ intro_lines: splitLines(event.target.value) })} /></label>
           <label><span>关于页标题</span><input value={config.about_title} onChange={(event) => updateConfig({ about_title: event.target.value })} /></label>
           <label><span>关于页说明</span><textarea rows={5} value={config.about_body} onChange={(event) => updateConfig({ about_body: event.target.value })} /></label>
-          <details className="about-settings-fields">
-            <summary>关于书库页面内容</summary>
+          <section data-content-section className="about-settings-fields">
+            <header data-section-heading>关于书库页面内容</header>
             <label><span>建设缘起标题</span><input value={config.about_why_title} onChange={(event) => updateConfig({ about_why_title: event.target.value })} /></label>
             <label><span>建设缘起正文</span><textarea rows={6} value={config.about_why_body} onChange={(event) => updateConfig({ about_why_body: event.target.value })} /></label>
             <label><span>寻找出处标题</span><input value={config.about_feature_search_title} onChange={(event) => updateConfig({ about_feature_search_title: event.target.value })} /></label>
@@ -1804,7 +1804,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
             <label><span>隐私说明</span><textarea rows={3} value={config.about_privacy_body} onChange={(event) => updateConfig({ about_privacy_body: event.target.value })} /></label>
             <label><span>结果提醒标题</span><input value={config.about_warning_title} onChange={(event) => updateConfig({ about_warning_title: event.target.value })} /></label>
             <label><span>结果提醒正文</span><textarea rows={3} value={config.about_warning_body} onChange={(event) => updateConfig({ about_warning_body: event.target.value })} /></label>
-          </details>
+          </section>
           <label><span>版权文字</span><input value={config.copyright_text} onChange={(event) => updateConfig({ copyright_text: event.target.value })} /></label>
           <div className="settings-label-grid">
             {Object.entries(config.navigation).map(([key, value]) => <label key={key}><span>导航 {key}</span><input value={value} onChange={(event) => updateConfig({ navigation: { ...config.navigation, [key]: event.target.value } })} /></label>)}
@@ -1827,7 +1827,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           {semanticRuntimeReady ? <>
           <label>
             <span>检索方式</span>
-            <select
+            <select data-stl-select
               value={semanticRuntime.engine}
               onChange={(event) => setSemanticDraft({
                 ...semanticRuntime,
@@ -1840,7 +1840,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           </label>
           <label>
             <span>嵌入模型来源</span>
-            <select
+            <select data-stl-select
               value={semanticRuntime.provider}
               onChange={(event) => setSemanticDraft({
                 ...semanticRuntime,
@@ -1858,7 +1858,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           <label><span>NAS 模型缓存目录</span><input value={semanticRuntime.model_local_path} onChange={(event) => setSemanticDraft({ ...semanticRuntime, model_local_path: event.target.value })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"} /></label>
           <label><span>模型版本</span><input value={semanticRuntime.model_revision} onChange={(event) => setSemanticDraft({ ...semanticRuntime, model_revision: event.target.value })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"} /></label>
           <label><span>向量维度</span><input type="number" min="1" value={semanticRuntime.dimensions ?? ""} onChange={(event) => setSemanticDraft({ ...semanticRuntime, dimensions: event.target.value ? Number(event.target.value) : null })} placeholder="由模型决定" disabled={semanticRuntime.engine !== "meilisearch_hybrid"} /></label>
-          <label><span>池化方式</span><select value={semanticRuntime.pooling} onChange={(event) => setSemanticDraft({ ...semanticRuntime, pooling: event.target.value as SemanticRuntime["pooling"] })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"}><option value="useModel">使用模型默认</option><option value="forceMean">平均池化</option><option value="forceCls">CLS 池化</option></select></label>
+          <label><span>池化方式</span><select data-stl-select value={semanticRuntime.pooling} onChange={(event) => setSemanticDraft({ ...semanticRuntime, pooling: event.target.value as SemanticRuntime["pooling"] })} disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "huggingFace"}><option value="useModel">使用模型默认</option><option value="forceMean">平均池化</option><option value="forceCls">CLS 池化</option></select></label>
           <label className="switch-row"><input type="checkbox" checked={semanticRuntime.offline_mode} onChange={(event) => setSemanticDraft({ ...semanticRuntime, offline_mode: event.target.checked })} disabled={semanticRuntime.provider !== "huggingFace"} /><span>本地模型严格离线运行</span><small>启用后缺少模型文件会直接降级关键词检索，不尝试访问 Hugging Face 公网。</small></label>
           <label><span>Ollama 服务地址</span><input type="url" value={semanticRuntime.service_url} onChange={(event) => setSemanticDraft({ ...semanticRuntime, service_url: event.target.value })} placeholder="http://ollama:11434" disabled={semanticRuntime.engine !== "meilisearch_hybrid" || semanticRuntime.provider !== "ollama"} /></label>
           <label>
@@ -1868,7 +1868,7 @@ export function SettingsAdmin({ scope = "legacy" }: { scope?: "legacy" | "backup
           </label>
           <label>
             <span>重排方式</span>
-            <select value={semanticRuntime.reranker} onChange={(event) => setSemanticDraft({ ...semanticRuntime, reranker: event.target.value })}>
+            <select data-stl-select value={semanticRuntime.reranker} onChange={(event) => setSemanticDraft({ ...semanticRuntime, reranker: event.target.value })}>
               <option value="rules">内置规则重排</option>
             </select>
             <small>目前只支持所列重排方式。外部重排服务暂不可用。</small>

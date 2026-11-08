@@ -53,8 +53,8 @@ export function CuratedClaimSections({
               </header>
               <p className="work-curated-proposition">{claim.proposition}</p>
               {claim.editorial_note ? <p className="work-curated-note">{claim.editorial_note}</p> : null}
-              <details className="work-curated-evidence">
-                <summary>查看依据 <span>{claim.evidence.length} 条馆藏原文</span></summary>
+              <section data-content-section className="work-curated-evidence">
+                <header data-section-heading>查看依据 <span>{claim.evidence.length} 条馆藏原文</span></header>
                 <div>
                   {claim.evidence.map((evidence) => {
                     const author = evidence.source.authors?.join("、");
@@ -72,7 +72,7 @@ export function CuratedClaimSections({
                     );
                   })}
                 </div>
-              </details>
+              </section>
             </article>
           ))}
         </div>

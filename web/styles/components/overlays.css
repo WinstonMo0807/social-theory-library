@@ -13,10 +13,10 @@
   to { opacity: 1; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  :where(dialog[open]:not(.site-menu-layer)) {
+  :where(dialog:is([open],[data-content-section]):not(.site-menu-layer)) {
     animation: stl-dialog-enter var(--stl-motion-panel, 220ms) var(--stl-motion-ease-out, ease-out);
   }
-  :where(dialog[open]:not(.site-menu-layer))::backdrop {
+  :where(dialog:is([open],[data-content-section]):not(.site-menu-layer))::backdrop {
     animation: stl-backdrop-enter var(--stl-motion-control, 160ms) ease-out;
   }
 }
@@ -37,7 +37,7 @@
   color: var(--ink);
 }
 
-html:has(.ui-drawer[open]) { overflow: hidden; }
+html:has(.ui-drawer:is([open],[data-content-section])) { overflow: hidden; }
 
 .ui-drawer::backdrop {
   background: rgb(10 10 10 / 34%);
@@ -67,7 +67,7 @@ html:has(.ui-drawer[open]) { overflow: hidden; }
 }
 
 /* Author display rules must not make a closed native dialog visible. */
-.ui-drawer:not([open]) {
+.ui-drawer:not(:is([open],[data-content-section])) {
   display: none;
 }
 

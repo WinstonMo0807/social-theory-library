@@ -41,7 +41,7 @@ export function PublicationHistory({ editionId, token, canPublish, onChanged }: 
       setMessage(failure instanceof Error ? failure.message : "未能提交恢复，请重试。");
     } finally { submitting.current = false; setBusy(false); }
   }
-  return <details className="admin-panel"><summary>公开版本历史</summary>
+  return <details data-disclosure="collection" className="admin-panel"><summary>公开版本历史</summary>
     {loading ? <LoadingState role="status">正在读取历史…</LoadingState> : null}
     {error ? <p role="alert">{error}<button type="button" onClick={retry}>重试</button></p> : null}
     {data?.map((row) => <article key={row.id}><strong>第 {row.revision} 次发布</strong><p>{row.title}</p>

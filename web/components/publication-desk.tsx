@@ -82,7 +82,7 @@ function PublicationDetails({ item, returnTo }: { item: WorkflowQueueItem; retur
     </dl>
     <p className={styles.scope}>以上是本次已保存的关联范围，不代表尚未确认或未发布的关联已在前台展示。公开位置以正式修订和关联对象当前资格为准。</p>
     {item.edition_id ? <PreparedPublication editionId={item.edition_id} /> : <p>文件来源尚未建立出版版本，暂不能执行发布预检。来源任务仍保留在待办。</p>}
-    <details open><summary>当前阅读文件预览</summary><PdfPreview key={`${item.id}:${item.updated_at}`} path={asString(context.pdf_preview_url)} title={item.title} /></details>
+    <section data-content-section><header data-section-heading>当前阅读文件预览</header><PdfPreview key={`${item.id}:${item.updated_at}`} path={asString(context.pdf_preview_url)} title={item.title} /></section>
   </section>;
 }
 
@@ -118,8 +118,8 @@ export function PublicationDesk() {
     <PageHeader eyebrow="内容" title="发布台、历史与撤回"  />
     <form className={styles.toolbar} onSubmit={submit}>
       <label>题名或来源<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部出版版本" /></label>
-      <label>公开状态<select value={filter} onChange={(event) => change({ publication: event.target.value })}>{Object.entries(publicFilters).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-      <label>来源<select value={source} onChange={(event) => change({ source: event.target.value })}><option value="">全部来源</option>{Object.entries(sourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+      <label>公开状态<select data-stl-select value={filter} onChange={(event) => change({ publication: event.target.value })}>{Object.entries(publicFilters).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+      <label>来源<select data-stl-select value={source} onChange={(event) => change({ source: event.target.value })}><option value="">全部来源</option>{Object.entries(sourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
       <button className="button" type="submit">搜索</button><button className="button secondary" onClick={result.retry} type="button"><RefreshCw size={15} />刷新发布结果</button>
     </form>
     <p className={styles.count} role="status">{page ? `共 ${page.count} 项 · 第 ${page.page} 页` : result.error ? "发布记录数量未能读取。" : "正在读取全部来源的发布记录…"}</p>

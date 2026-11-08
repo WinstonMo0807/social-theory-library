@@ -54,7 +54,7 @@ export function TimelineParticipants({ owner, editionId, value, onChange }: {
       <header><strong>{row.scholar_name || `已关联学者 ${row.scholar?.slice(0, 8)}`}</strong><button type="button" onClick={async () => {
         if (!row.description || (await confirmAction("移除此事件中的人物关系及说明？学者档案不会删除。"))) onChange(value.filter((_, position) => position !== index));
       }}>移除关联</button></header>
-      <label>事件中的角色<select value={row.participant_role || ""} onChange={event => onChange(value.map((item, position) => position === index ? { ...item, participant_role: event.target.value } : item))}>
+      <label>事件中的角色<select data-stl-select value={row.participant_role || ""} onChange={event => onChange(value.map((item, position) => position === index ? { ...item, participant_role: event.target.value } : item))}>
         {roles.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select></label><label>关系说明<input value={row.description} maxLength={400} onChange={event => onChange(value.map((item, position) => position === index ? { ...item, description: event.target.value } : item))} /></label>
     </article>)}

@@ -49,8 +49,8 @@ export function WelcomeFields({ owner, draft, setDraft, active, busy }: {
           {!ids.length ? <p className={styles.note}>未选书籍时，演示使用阅读示意，不显示具体书目。</p> : null}
         </>}
       </> : active === "welcome-history" ? fields : <>
-        <div className={styles.sections}>{content.chapters.map((chapter, index) => <details key={chapter.href} open={index === 0}><summary>{chapter.title || `功能介绍 ${index + 1}`}</summary>{(["title", "text", "action"] as const).map(key => <label key={key}>{{ title: "标题", text: "介绍", action: "按钮文字" }[key]}<textarea rows={key === "text" ? 3 : 2} maxLength={{ title: 40, text: 240, action: 16 }[key]} value={chapter[key]} onChange={event => update({ chapters: content.chapters.map((row, position) => ({ title: row.title, text: row.text, action: row.action, ...(position === index ? { [key]: event.target.value } : {}) })) })} /></label>)}</details>)}</div>
-        <details className={styles.sections}><summary>其他页面文字</summary>{fields}</details>
+        <div className={styles.sections}>{content.chapters.map((chapter, index) => <section data-content-section key={chapter.href}><header data-section-heading>{chapter.title || `功能介绍 ${index + 1}`}</header>{(["title", "text", "action"] as const).map(key => <label key={key}>{{ title: "标题", text: "介绍", action: "按钮文字" }[key]}<textarea rows={key === "text" ? 3 : 2} maxLength={{ title: 40, text: 240, action: 16 }[key]} value={chapter[key]} onChange={event => update({ chapters: content.chapters.map((row, position) => ({ title: row.title, text: row.text, action: row.action, ...(position === index ? { [key]: event.target.value } : {}) })) })} /></label>)}</section>)}</div>
+        <section data-content-section className={styles.sections}><header data-section-heading>其他页面文字</header>{fields}</section>
       </>}
     </fieldset>
     {picker ? <SiteHomePicker owner={owner} area="featured" onlyEditions used={(ids || []).map(id => ({ type: "edition", id }))} disabled={busy || (ids?.length || 0) >= 3} onClose={() => setPicker(false)} onChoose={choice => {

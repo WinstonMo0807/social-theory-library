@@ -193,7 +193,7 @@ function ReaderConnectionForm({
 }) {
   return (
     <div className="ask-reader-connection-form">
-      <label><span>服务类型</span><select value={draft.provider} onChange={(event) => onChange("provider", event.target.value)}><option value="openai_compatible">OpenAI 兼容接口</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option></select></label>
+      <label><span>服务类型</span><select data-stl-select value={draft.provider} onChange={(event) => onChange("provider", event.target.value)}><option value="openai_compatible">OpenAI 兼容接口</option><option value="ollama">Ollama</option><option value="vllm">vLLM</option></select></label>
       <label><span>服务地址</span><input type="url" name="reader-ai-base-url" autoComplete="url" placeholder="https://api.example.com" value={draft.base_url} onChange={(event) => onChange("base_url", event.target.value)} /></label>
       <label><span>模型名称</span><input type="text" name="reader-ai-model" autoComplete="off" placeholder="例如 gpt-4o-mini" value={draft.model} onChange={(event) => onChange("model", event.target.value)} /></label>
       <label><span>API Key（Ollama 可留空）</span><input type="password" name="reader-ai-key" autoComplete="new-password" placeholder="保存后不再显示密钥" value={draft.api_key} onChange={(event) => onChange("api_key", event.target.value)} /></label>
@@ -761,7 +761,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
   return (
     <>
       <AskLibraryIntro query={initialQuestion} />
-      <details className="ask-reader-connection-settings">
+      <details data-disclosure="collection" className="ask-reader-connection-settings">
         <summary><Settings2 size={16} />个人模型设置{modelLabel ? ` · ${modelLabel}` : ""}</summary>
         <p>当前问答来源：{effectiveSource === "reader" ? "你的个人连接" : effectiveSource === "server" ? "书库默认服务" : "尚未配置个人连接"}。密钥只提交到书库服务器并加密保存，不写入浏览器存储。</p>
         <ReaderConnectionForm
@@ -799,7 +799,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
           <div><p>向书库提问</p><h2>{conversations.find((item) => item.id === activeConversationId)?.title || "新对话"}</h2></div>
           <label>
             <span>馆藏辅助</span>
-            <select value={assistMode} onChange={(event) => setAssistMode(event.target.value as AssistMode)} disabled={isSending || !canGenerate}>
+            <select data-stl-select value={assistMode} onChange={(event) => setAssistMode(event.target.value as AssistMode)} disabled={isSending || !canGenerate}>
               <option value="auto">自动</option>
               <option value="on">始终检索</option>
             </select>

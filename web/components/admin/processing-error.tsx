@@ -6,5 +6,5 @@ export function ProcessingError({ message, code = "" }: { message: string; code?
     : unavailable
       ? "未能连接文字识别服务。已保存的页数会保留，可在处理中心重试并查看进度。"
       : "本次处理未完成。请查看原因后重试，或删除本次上传；原文件和处理历史会保留。";
-  return <div className="ingestion-item-error" role="alert"><div><p>{guidance}</p><details><summary>查看具体原因</summary><p>{code ? `${code}：` : ""}{message}</p></details></div></div>;
+  return <div className="ingestion-item-error" role="alert"><div><p>{guidance}</p><details data-disclosure="collection"><summary>查看具体原因</summary><p>{code ? `${code}：` : ""}{message}</p></details></div></div>;
 }

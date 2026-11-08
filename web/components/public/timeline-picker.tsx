@@ -51,7 +51,7 @@ export function TimelinePicker({ kind, values, selected }: {
   return <div className={styles.picker}>
     {chosen.map(value => <input type="hidden" name={kind} value={value} key={value} />)}
     <span className={styles.filterLabel}>{label}</span>
-    <details onToggle={event => { if (event.currentTarget.open && !result && !loading && !error) void load(1); }}>
+    <details data-disclosure="collection" onToggle={event => { if (event.currentTarget.open && !result && !loading && !error) void load(1); }}>
       <summary aria-label={`选择${label}`}><span>{chosen.length ? `${selectedNames.filter(Boolean).slice(0, 2).join("、") || `所选${label}当前不可用`}${chosen.length > 2 ? ` 等 ${chosen.length} 项` : ""}${selectedNames.some(value => !value) && selectedNames.some(Boolean) ? " · 含不可用项" : ""}` : `全部${label}`}</span><ChevronDown size={13} aria-hidden="true" /></summary>
       <div className={styles.pickerPanel}>
         <div className={styles.pickerSearch}><input aria-label={`搜索${label}`} value={query} placeholder={`搜索${label}名称`} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void load(1); } }} /><button type="button" aria-label={`搜索${label}候选`} onClick={() => void load(1)}><Search size={15} aria-hidden="true" /></button></div>

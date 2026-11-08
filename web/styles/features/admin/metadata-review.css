@@ -505,7 +505,7 @@
   border-top: 1px solid var(--line);
 }
 
-.workflow-recommendation-image > summary {
+.workflow-recommendation-image > :is(summary,:where([data-section-heading])) {
   padding: 16px 0;
   cursor: pointer;
   line-height: 1.6;

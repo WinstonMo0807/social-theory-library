@@ -21,7 +21,7 @@
   font-family: var(--sans);
   overscroll-behavior: contain;
 }
-.dialog[open] { animation: arrive 260ms cubic-bezier(.2,.8,.2,1) both; }
+.dialog:is([open],[data-content-section]) { animation: arrive 260ms cubic-bezier(.2,.8,.2,1) both; }
 .dialog::backdrop { background: #17140f69; backdrop-filter: blur(3px); animation: fade 200ms ease-out both; }
 .dialog::before { display: none; }
 .heading { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 25px; padding-right: 32px; }
@@ -116,4 +116,4 @@
 }
 @keyframes arrive { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .dialog[open], .dialog::backdrop { animation: none; } .dialog *, .scene { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .dialog:is([open],[data-content-section]), .dialog::backdrop { animation: none; } .dialog *, .scene { transition: none; } }

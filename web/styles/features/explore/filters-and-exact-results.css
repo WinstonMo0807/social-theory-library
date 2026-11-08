@@ -66,7 +66,7 @@
   display: block;
 }
 
-.collapsible-filter summary {
+.collapsible-filter :is(summary,:where([data-section-heading])) {
   display: flex;
   width: 100%;
   justify-content: space-between;
@@ -79,11 +79,11 @@
   text-transform: uppercase;
 }
 
-.collapsible-filter summary::-webkit-details-marker {
+.collapsible-filter :is(summary,:where([data-section-heading]))::-webkit-details-marker {
   display: none;
 }
 
-.collapsible-filter[open] summary {
+.collapsible-filter:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) {
   border-bottom: 0;
 }
 

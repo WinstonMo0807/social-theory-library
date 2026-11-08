@@ -86,7 +86,7 @@ export function RecommendationIssueView({ issue, preview = false, selectedExhibi
       </div></header>
       <div className={styles.articleTopActions}>{toolbar}{notice ? <span role="status">{notice}</span> : null}</div>
       <div className={`${styles.articleLayout} ${isExhibition ? styles.exhibition : ""}`}>
-        <aside className={styles.toc} id="article-toc"><div className={styles.desktopToc}><h2>{isExhibition ? "展项目录" : "文章目录"}</h2>{toc}</div><details className={styles.mobileToc}><summary>{isExhibition ? "展项目录" : "文章目录"}</summary>{toc}</details></aside>
+        <aside className={styles.toc} id="article-toc"><div className={styles.desktopToc}><h2>{isExhibition ? "展项目录" : "文章目录"}</h2>{toc}</div><details data-disclosure="collection" className={styles.mobileToc}><summary>{isExhibition ? "展项目录" : "文章目录"}</summary>{toc}</details></aside>
         <div className={styles.prose} id="article-body" data-edit-section="body">{isExhibition ? <ExhibitionBody issue={issue} rows={exhibitRows} base={base}/> : issue.body_blocks.map((block,index) => <section key={block.id || index} id={anchor(block,index)} className={heading(block) ? styles.proseHeading : ""}><IssueBlockView block={block} /></section>)}{!issue.body_blocks.length ? <p>本期以相关材料为阅读入口。</p> : null}<div className={styles.articleToolbar}>{toolbar}{notice ? <span role="status">{notice}</span> : null}</div>
         </div>
         {!isExhibition ? <aside className={styles.materials} data-edit-section="items"><header><h2>相关材料</h2><a href="#article-materials">查看全部 <ArrowRight size={14} /></a></header>{issue.items.slice(0,3).map(item => <IssueItemCard key={item.id} item={item} />)}{!issue.items.length ? <p>尚未编入独立书目，可从正文的原文入口继续阅读。</p> : null}</aside> : null}

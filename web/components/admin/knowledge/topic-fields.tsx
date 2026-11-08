@@ -55,14 +55,14 @@ export function TopicFieldsEditor({ topicId, name, section, value, onChange }: {
   const owner = String(useAdminSession()?.id || "");
   return <section>
     {section === "identity" ? <><ScholarTagInput label="别名" addLabel="添加别名" value={value.topicAliases} onChange={topicAliases=>onChange({topicAliases})}/><TopicHierarchy topicId={topicId} name={name} value={value} onChange={onChange} />
-      <details className="topic-organization-checks"><summary>层级规则与相似主题</summary><p>一级主题没有上级。不能以自身或后代为上级；上级未公开时不对读者展示其名称。</p><TopicOrganizationChecks topicId={topicId} name={name} value={value}/></details></> : null}
+      <section data-content-section className="topic-organization-checks"><header data-section-heading>层级规则与相似主题</header><p>一级主题没有上级。不能以自身或后代为上级；上级未公开时不对读者展示其名称。</p><TopicOrganizationChecks topicId={topicId} name={name} value={value}/></section></> : null}
     {choices.filter(row => row[0] === section).map(([, field, label]) => {
       const key = topicSelectionFields[field];
       const editor=<TopicAssociations key={`${owner}:${topicId}:${field}`} field={key} label={label} ids={value[field]} labels={value.preview_labels}
         notes={value.associationNotes[key] || {}} onChange={(ids, labels) => onChange({ [field]: ids, preview_labels: { ...value.preview_labels, ...labels },
           associationNotes: { ...value.associationNotes, [key]: Object.fromEntries(ids.flatMap(id => value.associationNotes[key]?.[id] ? [[id, value.associationNotes[key][id]]] : [])) } })}
         onNote={(id, text) => onChange({ associationNotes: { ...value.associationNotes, [key]: { ...value.associationNotes[key], [id]: text } } })} />;
-      return field==="foundationalEditionIds"||field==="disputedEditionIds"?<details key={field} className="topic-additional-readings"><summary>{label}</summary>{editor}</details>:editor;
+      return field==="foundationalEditionIds"||field==="disputedEditionIds"?<section data-content-section key={field} className="topic-additional-readings"><header data-section-heading>{label}</header>{editor}</section>:editor;
     })}
     {section === "questions" ? <p>请选择已有的问题和争论。导读文字不会新增条目。</p> : null}
     {section === "works" ? <p>每项固定到准确出版版本。没有全文只显示书目；待购状态来自已发布策划中的明确计划记录。</p> : null}
@@ -75,7 +75,7 @@ export function TopicFieldsEditor({ topicId, name, section, value, onChange }: {
 function TopicQuoteField({ topicId, value, onChange }: { topicId: string | null; value: string; onChange: (value: string) => void }) {
   const evidence = useApiResource<PublishedEvidenceCuration>(topicId ? `/catalog/evidence-curation/topic/${topicId}/` : "", getServerSessionCredential());
   const sources = evidence.data?.items.filter(row => row.source.public_eligible) || [];
-  return <><label><span>首屏原文引语</span><select value={value} disabled={evidence.loading} onChange={event => onChange(event.target.value)}>
+  return <><label><span>首屏原文引语</span><select data-stl-select value={value} disabled={evidence.loading} onChange={event => onChange(event.target.value)}>
     <option value="">不展示引语</option>{value && !sources.some(row => row.id === value) ? <option value={value}>原选择当前不可公开，需核对</option> : null}
     {sources.map(row => <option key={row.id} value={row.id}>{row.source.work_title} · {row.source.printed_label || `PDF ${row.source.page_start}`} · {row.source.text.slice(0, 65)}</option>)}
   </select></label>{evidence.error ? <p role="alert">原文读取失败。<button type="button" onClick={evidence.retry}>重新读取引语来源</button></p> : null}

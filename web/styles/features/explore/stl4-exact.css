@@ -1,7 +1,7 @@
 /* Exact catalog page aligned to final-r2 pages 24–27. Data and actions remain those of the existing search domain. */
 .stl4-catalog-page { --catalog-line: var(--night-line,#e5e9ed); --catalog-muted: var(--night-muted,#526e9c); --catalog-ink: var(--night-ink,#08274e); --catalog-surface: var(--night-white,#fff); width:100%; min-height: calc(100svh - 125px); margin-inline: auto; padding: 0 30px; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--serif); }
 .stl4-catalog-page a { color: inherit; text-decoration: none; }
-.stl4-catalog-page :is(button, input, select, a, summary):focus-visible { outline: 2px solid #a48146; outline-offset: 3px; }
+.stl4-catalog-page :is(button, input, select, a, :is(summary,:where([data-section-heading]))):focus-visible { outline: 2px solid #a48146; outline-offset: 3px; }
 .stl4-catalog-hero { position: relative; min-height: 244px; margin-inline: -30px; border-bottom: 1px solid var(--catalog-line); background: var(--catalog-surface); }
 .stl4-catalog-hero-copy { position: relative; z-index: 1; width: 58%; padding: 19px 0 20px 4.8%; }
 .stl4-catalog-hero nav { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; color: var(--catalog-muted); font-size: max(12px, var(--stl-readable-meta)); }
@@ -26,10 +26,10 @@
 .stl4-catalog-filter-group input[type="checkbox"] { width: 13px; height: 13px; margin: 0; accent-color: var(--catalog-ink); }
 .stl4-catalog-filter-group small { margin-left: auto; color: var(--catalog-muted); font-size: max(10px, var(--stl-readable-meta)); }
 .stl4-catalog-filter-group p { clear: both; margin: 6px 0; color: var(--catalog-muted); font-size: max(11px, var(--stl-readable-body)); }
-.stl4-catalog-filter-group summary { display: flex; justify-content: space-between; align-items: center; list-style: none; font: 600 max(15px, var(--stl-readable-meta))/1.5 var(--serif); cursor: pointer; }
-.stl4-catalog-filter-group summary::-webkit-details-marker { display: none; }
-.stl4-catalog-filter-group[open] summary { margin-bottom: 8px; }
-.stl4-catalog-filter-group[open] summary svg { transform: rotate(180deg); }
+.stl4-catalog-filter-group :is(summary,:where([data-section-heading])) { display: flex; justify-content: space-between; align-items: center; list-style: none; font: 600 max(15px, var(--stl-readable-meta))/1.5 var(--serif); cursor: pointer; }
+.stl4-catalog-filter-group :is(summary,:where([data-section-heading]))::-webkit-details-marker { display: none; }
+.stl4-catalog-filter-group:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) { margin-bottom: 8px; }
+.stl4-catalog-filter-group:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) svg { transform: rotate(180deg); }
 .stl4-catalog-year-inputs { display: flex; align-items: center; gap: 7px; font-size: max(11px, var(--stl-readable-meta)); }
 .stl4-catalog-year-inputs input { width: 0; min-width: 0; flex: 1; min-height: 30px; padding: 3px 5px; border: 1px solid var(--catalog-line); background: var(--catalog-surface); color: inherit; font-size: max(11px, var(--stl-readable-ui)); }
 .stl4-catalog-year-bars { display: flex; align-items: end; height: 42px; gap: 2px; margin-top: 12px; }
@@ -68,11 +68,11 @@
 .stl4-catalog-result-tags span { padding: 2px 7px; background: var(--night-paper,#eef1f5); color: var(--catalog-ink); border-radius: 3px; font-size: max(14px, var(--stl-readable-meta)); white-space: nowrap; }
 .stl4-catalog-result-tags span + span { color: #8c6c35; background: #f7f0df; }
 .stl4-catalog-abstract { margin-top: 8px; color: var(--catalog-muted); font: max(14px, var(--stl-readable-meta))/1.6 var(--serif); }
-.stl4-catalog-abstract summary { list-style: none; cursor: pointer; }
-.stl4-catalog-abstract summary::-webkit-details-marker { display: none; }
-.stl4-catalog-abstract summary span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.stl4-catalog-abstract[open] summary span { display: none; }
-.stl4-catalog-abstract[open] summary::after { content: "收起摘要"; font-size: 10px; }
+.stl4-catalog-abstract :is(summary,:where([data-section-heading])) { list-style: none; cursor: pointer; }
+.stl4-catalog-abstract :is(summary,:where([data-section-heading]))::-webkit-details-marker { display: none; }
+.stl4-catalog-abstract :is(summary,:where([data-section-heading])) span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.stl4-catalog-abstract:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) span { display: none; }
+.stl4-catalog-abstract:is([open],[data-content-section]) :is(summary,:where([data-section-heading]))::after { content: "收起摘要"; font-size: 10px; }
 .stl4-catalog-abstract p { margin: 5px 0; }
 .stl4-catalog-availability { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; color: #8b713e; font-size: max(10px, var(--stl-readable-meta)); }
 .stl4-catalog-availability::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
@@ -84,9 +84,9 @@
 .stl4-catalog-result-actions .download-status { flex-basis: 100%; color: var(--catalog-muted); font-size: max(10px, var(--stl-readable-meta)); text-align: right; }
 .stl4-catalog-single-actions { display: flex; justify-content: end; gap: 16px; padding-top: 8px; color: var(--catalog-muted); font-size: max(11px, var(--stl-readable-meta)); }
 .stl4-catalog-versions { margin: 12px 0 0 126px; border-top: 1px solid var(--catalog-line); padding-top: 10px; }
-.stl4-catalog-versions > summary { display: flex; justify-content: space-between; align-items: center; list-style: none; cursor: pointer; font-size: max(12px, var(--stl-readable-meta)); }
-.stl4-catalog-versions > summary::-webkit-details-marker { display: none; }
-.stl4-catalog-versions[open] > summary svg { transform: rotate(180deg); }
+.stl4-catalog-versions > :is(summary,:where([data-section-heading])) { display: flex; justify-content: space-between; align-items: center; list-style: none; cursor: pointer; font-size: max(12px, var(--stl-readable-meta)); }
+.stl4-catalog-versions > :is(summary,:where([data-section-heading]))::-webkit-details-marker { display: none; }
+.stl4-catalog-versions:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) svg { transform: rotate(180deg); }
 .stl4-catalog-version-table { margin-top: 10px; font-size: max(11px, var(--stl-readable-meta)); }
 .stl4-catalog-version-head, .stl4-catalog-version-row { display: grid; grid-template-columns: minmax(0, 2.5fr) .7fr .7fr 1.1fr minmax(90px, 1fr); gap: 9px; align-items: center; padding: 9px 6px; }
 .stl4-catalog-version-head { padding-block: 5px; color: var(--catalog-muted); border-bottom: 1px solid var(--catalog-line); font-size: max(10px, var(--stl-readable-meta)); }
@@ -152,8 +152,8 @@
 .stl4-catalog-scope a > span { width:14px; height:14px; border:1px solid #a0b4cf; border-radius:50%; }
 .stl4-catalog-scope a.is-selected > span { border:4px solid var(--night-gold,#cc841b); }
 .stl4-catalog-advanced { padding-top:14px; }
-.stl4-catalog-advanced > summary { display:flex; align-items:center; justify-content:space-between; list-style:none; cursor:pointer; font-size:max(13px, var(--stl-readable-meta)); }
-.stl4-catalog-advanced > summary::-webkit-details-marker { display:none; }
+.stl4-catalog-advanced > :is(summary,:where([data-section-heading])) { display:flex; align-items:center; justify-content:space-between; list-style:none; cursor:pointer; font-size:max(13px, var(--stl-readable-meta)); }
+.stl4-catalog-advanced > :is(summary,:where([data-section-heading]))::-webkit-details-marker { display:none; }
 .stl4-catalog-filter-group label, .stl4-catalog-filter-group legend { font:max(14px, var(--stl-readable-meta))/1.6 var(--serif); }
 .stl4-catalog-filter-group small { font-size:max(12px, var(--stl-readable-meta)); }
 .stl4-catalog-result-heading { display:flex; flex-wrap:wrap; align-items:baseline; gap:7px 12px; }
@@ -167,10 +167,10 @@
 .stl4-catalog-version-previews :is(a,button) { min-height:33px; font:max(12px, var(--stl-readable-ui)) var(--serif); }
 .stl4-catalog-publication:has(.stl4-catalog-version-previews) .stl4-catalog-result-actions { flex-direction:row; width:auto; justify-content:end; }
 .stl4-catalog-more { position:relative; }
-.stl4-catalog-more > summary { display:flex; justify-content:center; cursor:pointer; list-style:none; padding:3px; }
-.stl4-catalog-more > summary::-webkit-details-marker { display:none; }
+.stl4-catalog-more > :is(summary,:where([data-section-heading])) { display:flex; justify-content:center; cursor:pointer; list-style:none; padding:3px; }
+.stl4-catalog-more > :is(summary,:where([data-section-heading]))::-webkit-details-marker { display:none; }
 .stl4-catalog-more > div { position:absolute; z-index:3; right:0; min-width:130px; display:grid; gap:5px; padding:8px; border:1px solid var(--catalog-line); background:var(--catalog-surface); box-shadow:0 3px 10px #0000000d; }
-.stl4-catalog-versions > summary { font:max(14px, var(--stl-readable-meta))/1.5 var(--serif); }
+.stl4-catalog-versions > :is(summary,:where([data-section-heading])) { font:max(14px, var(--stl-readable-meta))/1.5 var(--serif); }
 .stl4-catalog-version-table { font:max(13px, var(--stl-readable-meta))/1.6 var(--serif); }
 .stl4-catalog-version-head { font-size:max(12px, var(--stl-readable-meta)); }
 .stl4-catalog-version-row small { font-size:max(12px, var(--stl-readable-meta)); }
@@ -225,7 +225,7 @@
   .stl4-catalog-filter-dialog > header :is(button, a) { padding: 6px 0; border: 0; background: none; color: var(--catalog-muted); font-size: max(12px, var(--stl-readable-ui)); }
   .stl4-catalog-filter-scroll { max-height: calc(90dvh - 140px); overflow: auto; overscroll-behavior: contain; padding: 0 22px 20px; }
   .stl4-catalog-filter-dialog .stl4-catalog-filter-group label { min-height: 35px; font-size: max(13px, var(--stl-readable-meta)); }
-  .stl4-catalog-filter-dialog .stl4-catalog-filter-group legend, .stl4-catalog-filter-dialog .stl4-catalog-filter-group summary { font-size: max(14px, var(--stl-readable-meta)); }
+  .stl4-catalog-filter-dialog .stl4-catalog-filter-group legend, .stl4-catalog-filter-dialog .stl4-catalog-filter-group :is(summary,:where([data-section-heading])) { font-size: max(14px, var(--stl-readable-meta)); }
   .stl4-catalog-filter-dialog footer { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 12px 22px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--catalog-line); }
   .stl4-catalog-filter-dialog footer button { min-height: 39px; margin: 0; border: 1px solid var(--catalog-line); color: var(--catalog-ink); background: var(--catalog-surface); }
   .stl4-catalog-filter-dialog footer .stl4-catalog-apply { border-color: var(--catalog-ink); background: var(--catalog-ink); color: var(--catalog-surface); }

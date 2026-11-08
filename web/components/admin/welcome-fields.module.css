@@ -15,7 +15,7 @@
 .books span { display: block; color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); }
 .bookActions { display: flex; flex-wrap: wrap; gap: 5px; }
 .fields .bookActions button { padding: 7px; min-width: 32px; }
-.sections details, details.sections { border-top: 1px solid var(--line); padding-block: 16px; }
-.sections summary { font: 500 17px/1.6 var(--serif); cursor: pointer; padding: 5px 0 15px; }
+.sections :is(details,:where([data-content-section])), :is(details,:where([data-content-section])).sections { border-top: 1px solid var(--line); padding-block: 16px; }
+.sections :is(summary,:where([data-section-heading])) { font: 500 17px/1.6 var(--serif); cursor: pointer; padding: 5px 0 15px; }
 .sections label { margin-top: 16px; }
 @media(max-width: 599px) { .bookActions { max-width: 76px; } }

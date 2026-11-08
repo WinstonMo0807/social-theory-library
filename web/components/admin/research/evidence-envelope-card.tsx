@@ -21,7 +21,7 @@ export function EvidenceEnvelopeCard({ evidence, compact = false }: { evidence: 
         {row.section ? <span>{row.section}</span> : null}
         {row.locatorDetails.map((detail) => <span key={detail}>{detail}</span>)}
       </div>
-      {(extraction || ocr || row.staleReason || row.qualityDetails.length) ? <details><summary>质量与来源</summary>{row.qualityDetails.length ? <p>{row.qualityDetails.join(" · ")}</p> : null}{extraction ? <p>提取 {extraction}</p> : null}{ocr ? <p>OCR {ocr}</p> : null}{row.staleReason ? <p>失效原因 {row.staleReason}</p> : null}</details> : null}
+      {(extraction || ocr || row.staleReason || row.qualityDetails.length) ? <section data-content-section><header data-section-heading>质量与来源</header>{row.qualityDetails.length ? <p>{row.qualityDetails.join(" · ")}</p> : null}{extraction ? <p>提取 {extraction}</p> : null}{ocr ? <p>OCR {ocr}</p> : null}{row.staleReason ? <p>失效原因 {row.staleReason}</p> : null}</section> : null}
       {(row.readerUrl || row.pdfUrl || row.sourceUrl) ? <footer>
         {row.readerUrl ? <a href={row.readerUrl} target="_blank" rel="noreferrer">回到阅读器 <ExternalLink size={12} /></a> : null}
         {row.pdfUrl ? <a href={row.pdfUrl} target="_blank" rel="noreferrer">打开 PDF <ExternalLink size={12} /></a> : null}

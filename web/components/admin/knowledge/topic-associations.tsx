@@ -68,10 +68,10 @@ function SelectionRows({ field, ids, labels, notes, sorting = false, onOrder, on
         <span className={styles.associationNumber}>{index + 1}</span><Cover row={row} />
         <div className={styles.associationCopy}><strong>{name}</strong>{row?.subtitle ? <small>{row.subtitle}</small> : null}
           {resource.data && !row ? <small>当前无法读取此关联，请核对后决定是否保留。</small> : null}
-          {!sorting ? <details><summary>{notes[id] ? "编辑关联说明" : "补充关联说明"}</summary>
+          {!sorting ? <section data-content-section><header data-section-heading>{notes[id] ? "编辑关联说明" : "补充关联说明"}</header>
             <label><span>关联说明 · 发布后读者可见</span><textarea rows={3} maxLength={600} value={notes[id] || ""}
               onChange={event => onNote?.(id, event.target.value)} aria-label={`${name}的关联说明`} /></label><small>{(notes[id] || "").length} / 600</small>
-          </details> : null}
+          </section> : null}
         </div>
         <span className={styles.associationAuthor}>{row?.contributor_label||"—"}</span><span className={styles.associationKind}>{row?.kind_label||"—"}</span>
         <div className={styles.associationActions}>
@@ -80,7 +80,7 @@ function SelectionRows({ field, ids, labels, notes, sorting = false, onOrder, on
           }} onDragEnd={() => { dragging.current = null; }} aria-label={`拖动${name}排序；也可使用上下移和位置选择`} title="拖动排序">⠿</button> : null}
           {sorting ? <details data-action-menu className={styles.sortMenu}><summary aria-label={name+"排序操作"}>···</summary><div data-menu-panel><button type="button" disabled={index === 0} aria-label={`上移${name}`} onClick={() => move(id, index - 1)}>上移</button>
           <button type="button" disabled={index === ids.length - 1} aria-label={`下移${name}`} onClick={() => move(id, index + 1)}>下移</button></div></details> : null}
-          {sorting ? <select aria-label={`${name}的位置`} value={index} onChange={event => move(id, Number(event.target.value))}>
+          {sorting ? <select data-stl-select aria-label={`${name}的位置`} value={index} onChange={event => move(id, Number(event.target.value))}>
             {ids.map((_, position) => <option key={position} value={position}>第 {position + 1} 项</option>)}
           </select> : <button type="button" onClick={async () => {
             if (!notes[id] || (await confirmAction(`移除“${name}”的关联及本主题中的说明？原条目不会删除。`))) onRemove?.(id);

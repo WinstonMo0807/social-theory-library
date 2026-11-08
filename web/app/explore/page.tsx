@@ -433,7 +433,7 @@ export default async function ExplorePage({
                 ))}
                 <label>
                   <span className="sr-only">结果排序</span>
-                  <select name="sort" defaultValue={sort}>
+                  <select data-stl-select name="sort" defaultValue={sort}>
                     <option value="relevance">相关性降序</option>
                     <option value="newest">最新入库</option>
                     <option value="year">出版年份</option>
@@ -576,7 +576,7 @@ function SemanticExplorePage({
                 ))}
                 <label>
                   <span>馆内证据排序</span>
-                  <select name="sort" defaultValue={filters.sort ?? "relevance"}>
+                  <select data-stl-select name="sort" defaultValue={filters.sort ?? "relevance"}>
                     <option value="relevance">优先核对</option>
                     <option value="newest">最近入库</option>
                     <option value="year">出版年份</option>
@@ -603,8 +603,8 @@ function SemanticExplorePage({
                   <div><span>相关馆内概念</span><p>{results.understanding.related_concepts.map((concept) => <em key={`${concept.kind}-${concept.slug}`}>{concept.name}</em>)}</p></div>
                 ) : null}
                 {results.query_rewrite_enabled && results.understanding.rewrites.length > 1 ? (
-                  <details open={Boolean(filters.rewrite)}>
-                    <summary>查看和调整检索表达</summary>
+                  <section data-content-section>
+                    <header data-section-heading>查看和调整检索表达</header>
                     <p>原始查询始终参与检索。下面的表达只用于补充语义召回。</p>
                     {results.understanding.rewrites.map((rewrite) => <p key={rewrite}>{rewrite}</p>)}
                     <form className="semantic-rewrite-form" action="/explore/opinions">
@@ -620,7 +620,7 @@ function SemanticExplorePage({
                       <button type="submit">应用表达</button>
                       <Link href={buildExploreHref(params, { rewrite: null, rewrite_disabled: "1" })}>关闭改写</Link>
                     </form>
-                  </details>
+                  </section>
                 ) : null}
                 {results.query_rewrite_enabled && filters.rewriteDisabled ? (
                   <Link className="semantic-rewrite-enable" href={buildExploreHref(params, { rewrite_disabled: null })}>重新启用查询改写</Link>
@@ -637,14 +637,14 @@ function SemanticExplorePage({
                 </section>
               ) : null}
               {moreEvidence.length ? (
-                <details className="semantic-more-evidence" open>
-                  <summary><span>2</span><strong>更多候选原文</strong><small>{moreEvidence.length} 个段落</small></summary>
+                <section data-content-section className="semantic-more-evidence">
+                  <header data-section-heading><span>2</span><strong>更多候选原文</strong><small>{moreEvidence.length} 个段落</small></header>
                   <div>
                     {moreEvidence.map((item, index) => (
                       <SemanticEvidenceCard item={item} query={query} rank={index + 4} compact key={item.id} />
                     ))}
                   </div>
-                </details>
+                </section>
               ) : null}
               {topEvidence.length > 1 ? (
                 <section className="semantic-comparison">
@@ -796,12 +796,12 @@ function SemanticPassageBlock({
       </p>
       <blockquote><Quote size={18} fill="currentColor" aria-hidden="true" /><span className="semantic-snippet">{item.snippet}</span></blockquote>
       {item.context_before || item.context_after ? (
-        <details className="semantic-context">
-          <summary>查看上下文</summary>
+        <section data-content-section className="semantic-context">
+          <header data-section-heading>查看上下文</header>
           {item.context_before ? <p>{item.context_before}</p> : null}
           <blockquote>{item.snippet}</blockquote>
           {item.context_after ? <p>{item.context_after}</p> : null}
-        </details>
+        </section>
       ) : null}
       {item.concepts.length ? <p className="semantic-concepts">{item.concepts.map((concept) => <span key={concept}>{concept}</span>)}</p> : null}
       {item.reasons.length ? (
@@ -867,10 +867,10 @@ function FilterGroup({
 
   if (collapsible) {
     return (
-      <details className="filter-group collapsible-filter" open={selected.length > 0}>
-        <summary>{title}<span>{selected.length ? selected.length : "＋"}</span></summary>
+      <section data-content-section className="filter-group collapsible-filter">
+        <header data-section-heading>{title}<span>{selected.length ? selected.length : "＋"}</span></header>
         <div>{content}</div>
-      </details>
+      </section>
     );
   }
   return (
@@ -899,8 +899,8 @@ function ExactMobileFilters({
   preserved: [string, string][];
 }) {
   return (
-    <details className="mobile-filter-disclosure">
-      <summary>筛选结果{activeFilterCount ? ` · 已选 ${activeFilterCount}` : ""}<span>展开</span></summary>
+    <section data-content-section className="mobile-filter-disclosure">
+      <header data-section-heading>筛选结果{activeFilterCount ? ` · 已选 ${activeFilterCount}` : ""}<span>展开</span></header>
       <form action="/explore/original">
         <input type="hidden" name="context" value="global" />
         {query ? <input type="hidden" name="q" value={query} /> : null}
@@ -935,7 +935,7 @@ function ExactMobileFilters({
         <FilterGroup title="开放状态" name="access" selected={filters.access ?? []} options={results.facets.access} collapsible />
         <button className="button filter-submit" type="submit">应用筛选</button>
       </form>
-    </details>
+    </section>
   );
 }
 
@@ -953,8 +953,8 @@ function SemanticMobileFilters({
   activeFilterCount: number;
 }) {
   return (
-    <details className="mobile-filter-disclosure">
-      <summary>限定馆藏{activeFilterCount ? ` · 已选 ${activeFilterCount}` : ""}<span>展开</span></summary>
+    <section data-content-section className="mobile-filter-disclosure">
+      <header data-section-heading>限定馆藏{activeFilterCount ? ` · 已选 ${activeFilterCount}` : ""}<span>展开</span></header>
       <form action="/explore/opinions">
         {query ? <input type="hidden" name="q" value={query} /> : null}
         {entriesExcept(params, ["q", "document_type", "language", "theory", "topic", "concept", "author", "year", "access"]).map(([name, value]) => (
@@ -983,7 +983,7 @@ function SemanticMobileFilters({
         <FilterGroup title="开放状态" name="access" selected={filters.access ?? []} options={results.facets.access} collapsible />
         <button className="button filter-submit" type="submit">应用限定</button>
       </form>
-    </details>
+    </section>
   );
 }
 
@@ -1057,10 +1057,6 @@ function PassageResultGroup({
               </blockquote>
             </div>
             <div className="passage-table-actions" role="cell">
-              <details>
-                <summary>查看上下文</summary>
-                <p>{passage.snippet}</p>
-              </details>
               <CollectionLink
                 href={`/reader/${passage.asset_id}?page=${passage.page_index}&q=${encodeURIComponent(query)}&passage=${encodeURIComponent(passage.id)}`}
               >

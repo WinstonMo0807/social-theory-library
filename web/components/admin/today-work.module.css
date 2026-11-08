@@ -7,7 +7,7 @@
 .page button, .page select, .primary, .secondary { min-height: 38px; border: 1px solid #dcd7ce; border-radius: 2px; background: var(--night-white,#fff); color: var(--night-ink,#091e36); padding: 8px 14px; font: inherit; cursor: pointer; }
 .page button:disabled { cursor: wait; color: #837c71; }
 .refresh button, .sort, .primary, .secondary { display: inline-flex; justify-content: center; align-items: center; gap: 8px; white-space: nowrap; }
-.page :is(a, button, input, select, summary):focus-visible { outline: 2px solid #8b662a; outline-offset: 3px; }
+.page :is(a, button, input, select, :is(summary,:where([data-section-heading]))):focus-visible { outline: 2px solid #8b662a; outline-offset: 3px; }
 .tabs { display: flex; gap: 26px; overflow-x: auto; border-bottom: 1px solid #ded9d0; scrollbar-width: thin; }
 .tabs a { display: flex; align-items: center; gap: 9px; flex-shrink: 0; padding: 14px 3px; border-bottom: 2px solid transparent; font-size: max(14px, var(--stl-readable-meta)); color: #625d55; }
 .tabs a[aria-current] { border-bottom-color: #ac8037; color: #906c2d; }
@@ -44,8 +44,8 @@
 .primary:hover { background: #494235; }
 .secondary:hover { background: #f4f0e8; }
 .more { position: relative; }
-.more summary { width: 34px; height: 38px; display: grid; place-items: center; cursor: pointer; list-style: none; border: 1px solid #ded9d0; border-radius: 2px; background: var(--night-white,#fff); }
-.more summary::-webkit-details-marker { display: none; }
+.more :is(summary,:where([data-section-heading])) { width: 34px; height: 38px; display: grid; place-items: center; cursor: pointer; list-style: none; border: 1px solid #ded9d0; border-radius: 2px; background: var(--night-white,#fff); }
+.more :is(summary,:where([data-section-heading]))::-webkit-details-marker { display: none; }
 .more > div { position: absolute; right: 0; top: 42px; z-index: 30; width: 270px; padding: 14px; display: grid; gap: 9px; background: var(--night-white,#fff); border: 1px solid #dcd7ce; box-shadow: 0 4px 10px #24221f0a; }
 .more code { overflow-wrap: anywhere; white-space: normal; font-size: max(11px, var(--stl-readable-meta)); }
 .more a { padding: 6px 0; text-decoration: underline; }
@@ -96,7 +96,7 @@
   .actions { grid-column: 2; grid-row: 3; justify-content: end; font-size: max(11px, var(--stl-readable-meta)); gap: 8px; }
   .actions > a { min-height: 32px; padding: 6px 10px; }
   .actions > a svg { display: none; }
-  .more summary { height: 32px; width: 30px; }
+  .more :is(summary,:where([data-section-heading])) { height: 32px; width: 30px; }
   .empty { padding: 40px 14px; min-height: 330px; }
   .empty > div { gap: 9px; font-size: max(12px, var(--stl-readable-meta)); }
   .pagination { align-items: start; font-size: max(11px, var(--stl-readable-meta)); }

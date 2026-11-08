@@ -71,7 +71,7 @@
 
   .semantic-results-header,
   .semantic-passage-block > footer,
-  .semantic-more-evidence > summary {
+  .semantic-more-evidence > :is(summary,:where([data-section-heading])) {
     align-items: flex-start;
     flex-wrap: wrap;
   }

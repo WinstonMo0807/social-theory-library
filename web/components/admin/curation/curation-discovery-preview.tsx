@@ -6,8 +6,8 @@ import styles from "@/app/explore/opinions/viewpoint-search.module.css";
 export function CurationDiscoveryPreview({ sourceTitle, subjectTitle, reason }: {
   sourceTitle: string; subjectTitle?: string; reason: string;
 }) {
-  return <details className="curation-discovery-preview">
-    <summary>观点检索中的策展卡片</summary>
+  return <section data-content-section className="curation-discovery-preview">
+    <header data-section-heading>观点检索中的策展卡片</header>
     <p className={styles.help}>推荐理由可以自然写明适合讨论的问题、方法或阅读用途，无需另外建立复杂标签。保存并发布后，公开文字会参与策展检索；编辑备注只保留在后台。</p>
     {reason.trim() ? <article className={styles.curationCard}>
       <span className={styles.sourceTag}>策展推荐 · 当前输入预览</span>
@@ -16,5 +16,5 @@ export function CurationDiscoveryPreview({ sourceTitle, subjectTitle, reason }: 
       <small>来源：{sourceTitle || "尚未选择阅读路径"}</small>
       <small>这里预览当前输入，尚不能据此确认已经发布或进入索引。</small>
     </article> : <p className={styles.help}>填写推荐理由后即可预览。</p>}
-  </details>;
+  </section>;
 }

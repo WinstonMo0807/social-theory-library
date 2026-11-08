@@ -34,7 +34,7 @@ html[data-theme="dark"] {
   --text-muted: var(--stl-readable-muted);
   --stl-ink-muted: var(--stl-readable-muted);
 }
-html[data-typeset="A"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], [data-type-mode="admin"]) :is(p, li, dt, dd, label, legend, summary, small, time) {
+html[data-typeset="A"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], [data-type-mode="admin"]) :is(p, li, dt, dd, label, legend, :is(summary,:where([data-section-heading])), small, time) {
   letter-spacing: normal;
 }
 html[data-typeset="A"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], [data-type-mode="admin"]) :is(input, textarea)::placeholder {
@@ -70,7 +70,7 @@ html[data-typeset="A"] #main-content :is(
   [data-type-mode="productive"] > :not(footer),
   .admin-content,
   .reader-toolbar, .reader-sidebar, .reader-panel
-) :is(button, input, select, textarea, label, legend, summary, p, dt, dd, small, .stl4-catalog-result-actions a, .stl4-catalog-version-actions a):not(blockquote *, .brand-identity *, .brand-reference-lockup *) {
+) :is(button, input, select, textarea, label, legend, :is(summary,:where([data-section-heading])), p, dt, dd, small, .stl4-catalog-result-actions a, .stl4-catalog-version-actions a):not(blockquote *, .brand-identity *, .brand-reference-lockup *) {
   font-family: var(--content-text);
 }
 /* Keep the approved lockup and navigation out of the font trial, including auth pages. */

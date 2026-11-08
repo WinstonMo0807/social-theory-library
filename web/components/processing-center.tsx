@@ -791,7 +791,7 @@ function LegacyProcessingCenter() {
         </section> : null}
       </div>
       ) : null}
-      {activeSurface === "documents" ? <><OcrTaskMonitor /><details className="admin-panel"><summary>选择另一份馆藏 PDF，重新识别整本</summary><CatalogOcrPicker /></details></> : null}
+      {activeSurface === "documents" ? <><OcrTaskMonitor /><details data-disclosure="collection" className="admin-panel"><summary>选择另一份馆藏 PDF，重新识别整本</summary><CatalogOcrPicker /></details></> : null}
       {activeSurface === "documents" || activeSurface === "research-sources" ? <section className="processing-list admin-panel" aria-labelledby="workload-controls-title">
         <header className="processing-job-toolbar">
           <div>
@@ -845,10 +845,10 @@ function LegacyProcessingCenter() {
                 {percent !== null ? <progress value={item.completed_pages} max={item.target_pages} aria-label={`${item.title}已保存的识别页数`}>{percent}%</progress> : <p>暂无可识别页数，请先打开馆藏处理文件问题。</p>}
                 <small>任务更新于 {timeLabel(item.updated_at)}。页数完成不等于后续公开更新已完成。</small>
                 {decision === "resume" && workloads.ocr?.paused ? <p>全库识别当前暂停。先允许运行，再继续这一本馆藏。</p> : null}
-                <details className="ocr-task-details"><summary>查看页码范围和任务记录</summary>
+                <details data-disclosure="collection" className="ocr-task-details"><summary>查看页码范围和任务记录</summary>
                   <dl><div><dt>本次识别范围</dt><dd>{pageRanges(item.target_page_indexes)}</dd></div><div><dt>剩余页码范围</dt><dd>{pageRanges(item.remaining_page_indexes)}</dd></div><div><dt>创建时间</dt><dd>{timeLabel(item.created_at)}</dd></div><div><dt>任务编号</dt><dd>{item.job_id}</dd></div>{item.newer_job_id ? <div><dt>替代任务编号</dt><dd>{item.newer_job_id}</dd></div> : null}{item.newer_revision_id ? <div><dt>后续文字记录编号</dt><dd>{item.newer_revision_id}</dd></div> : null}</dl>
                 </details>
-                {item.can_manage ? <details className="ocr-task-actions"><summary>处理这一次识别</summary>
+                {item.can_manage ? <details data-disclosure="collection" className="ocr-task-actions"><summary>处理这一次识别</summary>
                   <label><span>操作说明（留在处理记录中）</span><input value={ocrDecisionReasons[item.job_id] ?? ""} onChange={(event) => setOCRDecisionReasons((current) => ({ ...current, [item.job_id]: event.target.value }))} placeholder="例如：继续补齐可检索文字，或暂时不需要识别" /></label>
                   <footer><ActionButton state={operationState(`ocr-inventory:${decision}:${item.job_id}`)} pendingLabel="正在处理" disabled={Boolean(pendingOperation) || !(ocrDecisionReasons[item.job_id] ?? "").trim() || (decision === "resume" && Boolean(workloads.ocr?.paused))} onClick={() => void resolvePausedOCR(item, decision)}>{decision === "resume" ? <Play size={14} /> : decision === "close" ? <XCircle size={14} /> : <AlertCircle size={14} />}{actionLabel}</ActionButton>
                   {decision === "resume" ? <ActionButton state={operationState(`ocr-inventory:cancel:${item.job_id}`)} pendingLabel="正在取消" disabled={Boolean(pendingOperation) || !(ocrDecisionReasons[item.job_id] ?? "").trim()} onClick={() => void resolvePausedOCR(item, "cancel")}>取消本次识别</ActionButton> : null}</footer>
@@ -918,8 +918,8 @@ function LegacyProcessingCenter() {
               <div className="processing-job-title"><div><strong>{job.title || "全库任务"}</strong><p>{job.edition_label}</p>{job.title_has_unpublished_changes ? <small>显示已保存的新名称，尚未发布。</small> : null}<small>{job.workbench_url ? <Link href={job.workbench_url}>查看当前版本与文件影响</Link> : job.item_id ? <Link href={`/admin/intake/${job.item_id}#file`}>打开来源记录</Link> : job.asset_id ? "文件归属尚未明确" : "系统任务"}</small></div>{!job.ocr_progress ? <strong>{job.progress}%</strong> : null}</div>
               {job.ocr_progress ? <OcrProgressDisplay job={job.ocr_progress} /> : <div className="processing-job-progress" role="progressbar" aria-label="处理进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={job.progress}><i style={{ width: `${Math.min(100, Math.max(0, job.progress))}%` }} /></div>}
               <p>已用时 {durationLabel(job.duration_seconds)} · {job.finished_at ? `结束于 ${timeLabel(job.finished_at)}` : `创建于 ${timeLabel(job.created_at)}`}</p>
-              <details className="ocr-task-details"><summary>查看任务记录与技术信息</summary><dl><div><dt>处理服务</dt><dd>{job.engine || "未记录"}</dd></div><div><dt>配置版本</dt><dd>{job.settings_version || "环境默认"}</dd></div><div><dt>尝试次数</dt><dd>{job.attempt}/{job.max_attempts}</dd></div><div><dt>开始时间</dt><dd>{timeLabel(job.started_at)}</dd></div><div><dt>任务编号</dt><dd>{job.id}</dd></div></dl></details>
-              {job.last_error ? <details className="processing-job-error" open={job.status === "failed"}><summary>{job.error_code || "查看错误"}</summary><p>{job.last_error}</p></details> : null}
+              <details data-disclosure="collection" className="ocr-task-details"><summary>查看任务记录与技术信息</summary><dl><div><dt>处理服务</dt><dd>{job.engine || "未记录"}</dd></div><div><dt>配置版本</dt><dd>{job.settings_version || "环境默认"}</dd></div><div><dt>尝试次数</dt><dd>{job.attempt}/{job.max_attempts}</dd></div><div><dt>开始时间</dt><dd>{timeLabel(job.started_at)}</dd></div><div><dt>任务编号</dt><dd>{job.id}</dd></div></dl></details>
+              {job.last_error ? <details data-disclosure="collection" className="processing-job-error" open={job.status === "failed"}><summary>{job.error_code || "查看错误"}</summary><p>{job.last_error}</p></details> : null}
               {canManageTasks && (job.status === "failed" || job.status === "pending" || job.status === "running" || job.status === "paused") ? (
                 <footer>
                   {job.status === "failed" ? <ActionButton state={operationState(`job:retry:${job.source}:${job.id}`)} pendingLabel="正在重试" disabled={Boolean(pendingOperation)} onClick={() => void jobAction(job, "retry")}><RotateCcw size={14} />重试</ActionButton> : null}

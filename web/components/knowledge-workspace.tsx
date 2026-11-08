@@ -108,7 +108,7 @@ function ConfirmedClaim({ claim }: { claim: ClaimRow }) {
   const evidence = Array.isArray(claim.evidence) ? claim.evidence : claim.evidence ? [claim.evidence] : [];
   return <article className="knowledge-studio-claim-card"><header><strong>{claim.title || fieldLabels[claim.kind || ""] || "馆藏观点"}</strong><span>{statusLabels[claim.status || ""] || "需要核对"}</span></header>
     <p>{claim.proposition}</p>
-    {evidence.length ? <details><summary>查看依据</summary>{evidence.map((item, index) => <ReaderEvidence key={`${claim.id}:${index}`} evidence={item} />)}</details> : null}
+    {evidence.length ? <section data-content-section><header data-section-heading>查看依据</header>{evidence.map((item, index) => <ReaderEvidence key={`${claim.id}:${index}`} evidence={item} />)}</section> : null}
   </article>;
 }
 
@@ -158,7 +158,7 @@ function ObjectFields({ selection, onRefresh, publishing, publishState, onPublis
     <div id="studio-public-control">{selection.public_control ? <PublicPageTree control={selection.public_control} /> : <p>这个条目没有单独的读者页面，请从相关作品或分类中查看。</p>}</div>
     {selection.assistance_usage ? <AssistanceUsagePanel key={`${selection.object_type}:${selection.id}`} usage={selection.assistance_usage} /> : null}
 
-    <details className="admin-panel" id="studio-fields"><summary>基本资料与修改建议</summary>
+    <section data-content-section className="admin-panel" id="studio-fields"><header data-section-heading>基本资料与修改建议</header>
       <div className="knowledge-studio-list">{fields.map((field) => <article key={field.key}>
         <header><strong>{fieldLabels[field.key]}</strong><div>
           {target && field.fieldName && canEdit ? <CurationFieldAssistant label={fieldLabels[field.key]} targetType={target.object_type} targetId={target.object_id} fieldName={field.fieldName} query={selection.label} currentValue={fieldValue(field)} formContext={current} lookupLabel={field.lookupLabel || "查找建议"} onAccepted={onRefresh} /> : null}
@@ -166,21 +166,21 @@ function ObjectFields({ selection, onRefresh, publishing, publishState, onPublis
         </div></header><p>{fieldText(fieldValue(field))}</p>
       </article>)}</div>
       {!fields.length ? <p className="admin-list-state">尚未取得字段内容，请进入完整编辑核对。</p> : null}
-    </details>
+    </section>
 
-    <details className="admin-panel" id="studio-viewpoints"><summary>观点与讨论 · {claims.length} 项</summary>
+    <section data-content-section className="admin-panel" id="studio-viewpoints"><header data-section-heading>观点与讨论 · {claims.length} 项</header>
       {selection.object_type === "work" ? claimFields.map((kind) => <section key={kind} className="knowledge-studio-list">
         <header><h4>{fieldLabels[kind]}</h4>{target && canEdit ? <CurationFieldAssistant label={fieldLabels[kind]} targetType="work" targetId={target.object_id} fieldName={kind} query={selection.label} currentValue={claims.filter((row) => row.kind === kind).map((row) => row.proposition)} lookupLabel="查找建议" onAccepted={onRefresh} /> : null}</header>
         {claims.filter((row) => row.kind === kind).map((claim) => <ConfirmedClaim claim={claim} key={claim.id} />)}
         {!claims.some((row) => row.kind === kind) ? <p className="admin-list-state">尚未确认{fieldLabels[kind]}。可以查看建议，或在完整编辑中补充。</p> : null}
       </section>) : <>{claims.map((claim) => <ConfirmedClaim claim={claim} key={claim.id} />)}{!claims.length ? <p className="admin-list-state">暂无已确认的馆藏观点，可在完整编辑中核对相关作品与观点。</p> : null}</>}
       {curationEditor ? <Link className="button secondary" href={curationEditor}>编辑观点与讨论 <ArrowRight size={14} /></Link> : null}
-    </details>
+    </section>
 
-    <details className="admin-panel" id="studio-relations"><summary>相关作品、人物和主题 · {relations.length} 项</summary>
+    <section data-content-section className="admin-panel" id="studio-relations"><header data-section-heading>相关作品、人物和主题 · {relations.length} 项</header>
       <div className="knowledge-studio-list">{relations.map((row) => <article key={`${row.kind}:${row.id}`}><div><strong>{row.target}</strong><span>{statusLabels[row.status] || "需要核对"}</span></div><p>{row.label}</p></article>)}{!relations.length ? <p className="admin-list-state">尚未建立馆内关联。可从上面的分类字段查找建议，或在完整编辑中添加。</p> : null}</div>
       <nav>{selection.editor_url ? <Link className="button secondary" href={selection.editor_url}>编辑馆内关联</Link> : null}{selection.related_editor_urls?.map((row) => <Link className="button secondary" href={row.url} key={row.url}>{row.label}<ArrowRight size={13} /></Link>)}</nav>
-    </details>
+    </section>
 
     <section className="admin-panel" id="studio-publication"><header><h3><FileClock size={16} />发布与记录</h3><span>{selection.frontend_impact?.public_visibility ? "当前有公开版本" : "当前尚未公开"}</span></header>
       <p className="knowledge-studio-boundary-note">点击发布后，修改才会出现在读者页面。更新期间仍可阅读原来的内容。</p>
@@ -273,9 +273,9 @@ export function KnowledgeWorkspace() {
     <header className="admin-page-title"><div><h1>内容管理</h1></div>
       <div className="admin-title-actions"><button className="button secondary" disabled={loading} type="button" onClick={() => void load()}><RefreshCw size={15} className={loading ? "spin" : ""} />刷新</button><Link className="button secondary" href={current ? `/admin/system-health/knowledge?object_type=${encodeURIComponent(current.object_type)}&object_id=${encodeURIComponent(current.id)}` : "/admin/system-health/knowledge"}>系统诊断</Link></div></header>
     <nav className="knowledge-studio-quick-links" aria-label="完整编辑页面"><Link href="/admin/theories">理论与概念</Link><Link href="/admin/scholars">学者</Link><Link href="/admin/people">人物查重</Link><Link href="/admin/topics">主题</Link><Link href="/admin/disciplines">学科</Link><Link href="/admin/subdisciplines">子学科</Link><Link href="/admin/reading-paths">阅读路径</Link></nav>
-    {studio?.public_management_coverage?.public_surfaces ? <details id="studio-public-pages" className="admin-panel"><summary>首页、推荐和其他页面在哪里修改？</summary>{studio.public_management_coverage.public_surfaces.filter((row) => ["site", "recommendation", "media", "reader"].includes(row.object_type)).map((row) => <section key={`${row.object_type}:${row.page_id}`}><h3>{row.display_name}</h3><Link href={row.admin_management_destination}>打开编辑页面</Link><details><summary>查看内容来源</summary>{row.modules.map((module) => <p key={module.module_id}><strong>{module.display_name}</strong> {module.control_note}</p>)}</details></section>)}</details> : null}
+    {studio?.public_management_coverage?.public_surfaces ? <section data-content-section id="studio-public-pages" className="admin-panel"><header data-section-heading>首页、推荐和其他页面在哪里修改？</header>{studio.public_management_coverage.public_surfaces.filter((row) => ["site", "recommendation", "media", "reader"].includes(row.object_type)).map((row) => <section key={`${row.object_type}:${row.page_id}`}><h3>{row.display_name}</h3><Link href={row.admin_management_destination}>打开编辑页面</Link><section data-content-section><header data-section-heading>查看内容来源</header>{row.modules.map((module) => <p key={module.module_id}><strong>{module.display_name}</strong> {module.control_note}</p>)}</section></section>)}</section> : null}
     <form className="admin-toolbar knowledge-studio-toolbar" onSubmit={submitSearch}>
-      <label><span>内容类型</span><select value={objectType} onChange={(event) => choose(event.target.value)}>{Object.entries(objectLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+      <label><span>内容类型</span><select data-stl-select value={objectType} onChange={(event) => choose(event.target.value)}>{Object.entries(objectLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
       <label className="knowledge-studio-search"><span>名称</span><div><Search size={15} /><input value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} placeholder="搜索馆内对象" /></div></label><button className="button" type="submit">搜索</button>
     </form>
     {loadError ? <p className="form-message" role="alert">{loadError}</p> : message ? <p className="form-message" role="status">{message}</p> : null}

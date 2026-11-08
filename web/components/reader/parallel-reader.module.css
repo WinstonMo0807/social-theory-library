@@ -199,7 +199,7 @@
 .root :global(.parallel-bottom) { grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:8px; margin-top:10px; }
 .root :global(.parallel-bottom > section),.root :global(.parallel-manual-bottom > section) { padding:12px; border-color:var(--parallel-line); }
 .root :global(.parallel-notes) { min-width:0; padding:12px; border:1px solid var(--parallel-line); border-radius:4px; background:var(--surface); }
-.root :global(.parallel-notes > summary) { display:none; }
+.root :global(.parallel-notes > :is(summary,:where([data-section-heading]))) { display:none; }
 .root :global(.parallel-bottom table) { font:max(13px, var(--stl-readable-meta))/1.5 var(--serif); }
 .root :global(.parallel-bottom td),.root :global(.parallel-bottom th) { padding:5px 8px; }
 .root :global(.parallel-save-bar) { padding:10px 0; }
@@ -223,9 +223,9 @@
 .root :global(.parallel-manual-version > div) { min-width:0; flex:1; padding-top:7px; }
 .root :global(.parallel-manual-version strong) { font:600 17px/1.4 var(--serif); }
 .root :global(.parallel-manual-version p) { font:max(13px, var(--stl-readable-meta))/1.6 var(--serif); color:var(--parallel-muted); margin-top:8px; }
-.root :global(.parallel-manual-version details) { flex:none; }
-.root :global(.parallel-manual-version summary) { list-style:none; border:1px solid #98a5b4; padding:7px 13px; border-radius:3px; font:max(13px, var(--stl-readable-meta)) var(--serif); cursor:pointer; }
-.root :global(.parallel-manual-version details[open] .parallel-version-select) { position:absolute; right:12px; left:12px; top:52px; z-index:3; padding:14px; background:var(--surface); border:1px solid var(--parallel-line); box-shadow:0 3px 10px #182a4210; }
+.root :global(.parallel-manual-version :is(details,:where([data-content-section]))) { flex:none; }
+.root :global(.parallel-manual-version :is(summary,:where([data-section-heading]))) { list-style:none; border:1px solid #98a5b4; padding:7px 13px; border-radius:3px; font:max(13px, var(--stl-readable-meta)) var(--serif); cursor:pointer; }
+.root :global(.parallel-manual-version :is(details,:where([data-content-section])):is([open],[data-content-section]) .parallel-version-select) { position:absolute; right:12px; left:12px; top:52px; z-index:3; padding:14px; background:var(--surface); border:1px solid var(--parallel-line); box-shadow:0 3px 10px #182a4210; }
 .root[data-manual="true"] :global(.parallel-text-pane) { height:clamp(245px,29vh,380px); }
 .root[data-manual="true"] :global(.parallel-manual-bottom) { grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
 .root :global(.parallel-manual-summary textarea) { min-height:48px; }
@@ -258,8 +258,8 @@
  .root :global(.parallel-bottom),.root[data-manual="true"] :global(.parallel-manual-bottom) { grid-template-columns:minmax(0,1fr); gap:10px; }
  .root :global(.parallel-brand-footer) { display:none; }
  .root[data-manual="false"][data-tab="versions"] :global(.parallel-notes) { display:block; }
- .root :global(.parallel-notes > summary) { display:list-item; font:600 max(15px, var(--stl-readable-meta)) var(--serif); cursor:pointer; padding:3px 0; }
- .root :global(.parallel-notes[open] > summary) { margin-bottom:14px; }
+ .root :global(.parallel-notes > :is(summary,:where([data-section-heading]))) { display:list-item; font:600 max(15px, var(--stl-readable-meta)) var(--serif); cursor:pointer; padding:3px 0; }
+ .root :global(.parallel-notes:is([open],[data-content-section]) > :is(summary,:where([data-section-heading]))) { margin-bottom:14px; }
  .root :global(.parallel-notes .parallel-section-heading h2) { display:none; }
  .root[data-manual="true"] :global(.parallel-heading) { padding-bottom:10px; }
  .root[data-manual="true"] :global(.parallel-heading h1) { font-size:28px; }
@@ -271,8 +271,8 @@
  .root :global(.parallel-manual-version) { min-height:0; padding:6px 8px; gap:10px; }
  .root :global(.parallel-manual-version > img),.root :global(.parallel-manual-version p) { display:none; }
  .root :global(.parallel-manual-version strong) { font-size:max(14px, var(--stl-readable-meta)); }
- .root :global(.parallel-manual-version summary) { font-size:max(11px, var(--stl-readable-meta)); padding:5px 8px; }
- .root :global(.parallel-manual-version details[open] .parallel-version-select) { top:40px; }
+ .root :global(.parallel-manual-version :is(summary,:where([data-section-heading]))) { font-size:max(11px, var(--stl-readable-meta)); padding:5px 8px; }
+ .root :global(.parallel-manual-version :is(details,:where([data-content-section])):is([open],[data-content-section]) .parallel-version-select) { top:40px; }
  .root[data-manual="true"] :global(.parallel-text-pane) { height:clamp(110px,22vh,180px); }
  .root[data-manual="true"] :global(.parallel-columns) { gap:32px; }
  .root[data-manual="true"] :global(.parallel-between) { width:27px; height:27px; }

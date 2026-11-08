@@ -76,8 +76,8 @@ export function FeedbackForm({ initialCategory = "content", initialPath = "" }: 
 export function FeedbackAside() {
   return <aside className="stl4-feedback-aside" aria-label="反馈说明"><nav>
     <a href="#feedback-form"><MessageCircle size={22} /><span><strong>提交反馈</strong></span></a>
-    <details id="feedback-process"><summary><ClipboardCheck size={22}/><span><strong>反馈处理流程</strong></span></summary><p>通常在 3 个工作日内回复。查询进度时，请提供反馈编号。</p></details>
-    <details id="feedback-content"><summary><CircleHelp size={22}/><span><strong>可反馈的内容</strong></span></summary><p>内容错误、功能问题、使用咨询与改进建议均可提交。</p></details>
+    <section data-content-section id="feedback-process"><header data-section-heading><ClipboardCheck size={22}/><span><strong>反馈处理流程</strong></span></header><p>通常在 3 个工作日内回复。查询进度时，请提供反馈编号。</p></section>
+    <section data-content-section id="feedback-content"><header data-section-heading><CircleHelp size={22}/><span><strong>可反馈的内容</strong></span></header><p>内容错误、功能问题、使用咨询与改进建议均可提交。</p></section>
     <a href="/help/account#site-privacy"><LockKeyhole size={22}/><span><strong>隐私说明</strong><small>你可以选择是否提供个人信息</small></span></a>
     <a href="#feedback-form"><Headphones size={22}/><span><strong>联系我们</strong></span></a>
   </nav><div><h3><CircleHelp size={22} />常见问题</h3><Link href="/help/search">找不到想要的书？<ChevronRight size={15}/></Link><Link href="/help/citation">引用格式如何生成？<ChevronRight size={15}/></Link><Link href="/help/source">某处内容是否准确？<ChevronRight size={15}/></Link><Link href="/help?section=source">如何报告来源错误？<ChevronRight size={15}/></Link></div></aside>;

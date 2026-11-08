@@ -1,4 +1,5 @@
 "use client";
+import { DefaultCover } from "@/components/default-cover";
 import { useEvidenceLanguage } from "./evidence-language";
 import { MediaPlacement } from "@/components/media-placement";
 
@@ -28,7 +29,7 @@ export function EvidenceBook({ item, compact = false, onSelect }: { item: Discov
   const book = item.bibliography;
   const cover = normalizePublicResourceUrl(book?.cover_url || "");
   return <div className={`${styles.evidenceBook} ${compact ? styles.compactBook : ""}`}>
-    {cover && failed !== cover ? <MediaPlacement uses={book?.cover_media?.display_uses} fallback={<div className={styles.coverMissing} aria-label={t("暂无封面")}><BookOpen size={22} /></div>}><img src={cover} alt={t("{title}封面", { title: item.work.title })} onError={() => setFailed(cover)} loading="lazy" /></MediaPlacement> : <div className={styles.coverMissing} aria-label={t("暂无封面")}><BookOpen size={22} /></div>}
+    {cover && failed !== cover ? <MediaPlacement uses={book?.cover_media?.display_uses} fallback={<DefaultCover className={styles.coverMissing} title={item.work.title} author={item.authors?.join("、")} />}><img src={cover} alt={t("{title}封面", { title: item.work.title })} onError={() => setFailed(cover)} loading="lazy" /></MediaPlacement> : <DefaultCover className={styles.coverMissing} title={item.work.title} author={item.authors?.join("、")} />}
     <div><h3>{onSelect ? <button type="button" className={`${styles.titleSelect} editorial-link`} onClick={onSelect} aria-label={t("查看证据摘要：{title}", { title: item.work.title })}>{item.work.title}</button> : item.work.title}</h3>{book?.original_title && book.original_title !== item.work.title ? <p className={styles.originalTitle}>{book.original_title}</p> : null}
       <p>{item.authors?.join("、") || t("责任者待核对")}</p>
       <p>{[book?.publisher, book?.publication_year, book?.language, book?.page_count ? t("PDF {count} 页", { count: book.page_count }) : ""].filter(Boolean).join(" · ") || t("出版信息待补充")}</p>
@@ -80,7 +81,7 @@ export function EvidenceSummary({ item, returnTo, onContext }: { item: Discovery
     <EvidenceQuote item={item} />
     <section><h3>{t("原文核对")}</h3><dl><div><dt>{t("定位方式")}</dt><dd>{item.locator_precision === "exact" ? t("原文定位") : t("按页定位")}</dd></div><div><dt>{t("观点归属")}</dt><dd>{item.attribution?.label || t("待人工核对")}</dd></div></dl><p>{item.attribution?.notice || t("请结合上下文核对观点的提出者。")}</p>{/ocr/i.test(item.source_kind) ? <p>{t("文字由 OCR 识别，请与原始扫描画面核对。")}</p> : null}</section>
     {([['related_concepts', t("相关概念")], ['related_theories', t("相关理论流派")]] as const).map(([key, title]) => item[key]?.length ? <section key={key}><h3>{t(title)}</h3><div className={styles.relatedTags}>{item[key]!.map(node => <Link key={node.id} href={`/theories/nodes/${encodeURIComponent(node.slug || node.id)}`}>{node.title}</Link>)}</div></section> : null)}
-    {item.match_basis?.length ? <details className={styles.matchBasis}><summary>{t("匹配依据")}</summary><div className={styles.evidenceTags}>{item.match_basis.map((text, index) => <span key={`${text}-${index}`}>{text}</span>)}</div></details> : null}
+    {item.match_basis?.length ? <section data-content-section className={styles.matchBasis}><header data-section-heading>{t("匹配依据")}</header><div className={styles.evidenceTags}>{item.match_basis.map((text, index) => <span key={`${text}-${index}`}>{text}</span>)}</div></section> : null}
     <div className={styles.summaryActions}>{href ? <Link className="button" href={href}><BookOpen size={16} />{t("阅读原文")}</Link> : <p>{t("阅读定位暂不可用，请刷新结果。")}</p>}
       <div><button type="button" onClick={() => void copy()} disabled={copying}><Copy size={14} />{copying ? t("核对来源") : t("复制引文")}</button><SharedCitationButton reference={passageReference(item)} selectedText={item.excerpt}>{t("引用")}</SharedCitationButton><SaveWorkButton workId={item.work.id} compact /></div>
       {onContext ? <button type="button" className="editorial-link" onClick={onContext}>{t("查看上下文")}<ChevronRight size={14} /></button> : null}

@@ -16,9 +16,9 @@
 .avatarButton .avatar, .preview { display: grid; width: 88px; height: 88px; border-radius: 12px; object-fit: cover; background: var(--paper); border: 1px solid var(--line); font-size: 32px; }
 .camera { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid var(--surface); border-radius: 50%; color: var(--surface); background: var(--ink); }
 .more { margin-top: 8px; }
-.more summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 0; color: var(--muted); font-size: max(13px, var(--stl-readable-meta)); cursor: pointer; list-style: none; }
-.more summary::-webkit-details-marker { display: none; }
-.more[open] summary svg { transform: rotate(180deg); }
+.more :is(summary,:where([data-section-heading])) { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 0; color: var(--muted); font-size: max(13px, var(--stl-readable-meta)); cursor: pointer; list-style: none; }
+.more :is(summary,:where([data-section-heading]))::-webkit-details-marker { display: none; }
+.more:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) svg { transform: rotate(180deg); }
 .moreActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .editor .feedback { margin: 16px 0 0; padding: 12px 14px; background: var(--paper); border-left: 2px solid var(--line-dark); }
 .feedback p { margin: 0; }
@@ -28,7 +28,7 @@
   .editor button:not(:disabled):hover, .dialog button:not(:disabled):hover { border-color: var(--ink); background: var(--paper); }
   .editor .primary:not(:disabled):hover, .dialog .primary:not(:disabled):hover { background: color-mix(in srgb, var(--ink) 88%, var(--surface)); border-color: var(--ink); }
   .editor .avatarButton:not(:disabled):hover { outline: 2px solid var(--ink); outline-offset: 3px; }
-  .more summary:hover { color: var(--ink); }
+  .more :is(summary,:where([data-section-heading])):hover { color: var(--ink); }
 }
 @media (max-width: 480px) { .row { grid-template-columns: 64px minmax(0, 1fr); gap: 16px; } .editor .avatarButton, .avatarButton .avatar, .preview { width: 64px; height: 64px; border-radius: 8px; } }
 @media (prefers-reduced-motion: reduce) { .editor button, .dialog button { transition: none; } .spinner { animation: none; } }
@@ -36,4 +36,4 @@
 .dialog::backdrop { background: rgb(0 0 0 / .4); }
 .dialog h3 { margin-top: 0; font: 600 22px var(--serif); }
 .dialog p { line-height: 1.8; font-size: max(14px, var(--stl-readable-body)); }
-.editor button:focus-visible, .more summary:focus-visible, .dialog button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.editor button:focus-visible, .more :is(summary,:where([data-section-heading])):focus-visible, .dialog button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }

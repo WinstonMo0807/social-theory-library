@@ -17,8 +17,8 @@ export function OutlineDiagnostics({ items, nodes, pageCount, onSelect, onPrevie
   const byId = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
   const rows = useMemo(() => items.filter(item => item.stage !== "before_automatic_matching" && item.code !== "automatic_outline"), [items]);
   if (!rows.length) return null;
-  return <details className={styles.diagnosticPanel}>
-    <summary>需要补充的目录</summary>
+  return <section data-content-section className={styles.diagnosticPanel}>
+    <header data-section-heading>需要补充的目录</header>
     <ul className={styles.diagnostics}>{rows.slice(0, limit).map((item, index) => {
       const node = typeof item.node_id === "string" ? byId.get(item.node_id) : undefined;
       const pages = Array.isArray(item.observed_pages) ? [...new Set(item.observed_pages.filter((page): page is number => typeof page === "number" && Number.isInteger(page) && page >= 1 && page <= pageCount))].slice(0, 20) : [];
@@ -33,5 +33,5 @@ export function OutlineDiagnostics({ items, nodes, pageCount, onSelect, onPrevie
       </li>;
     })}</ul>
     {rows.length > limit ? <button type="button" onClick={() => setLimit(value => value + 50)}>再显示 50 条（已显示 {Math.min(limit, rows.length)} / {rows.length}）</button> : null}
-  </details>;
+  </section>;
 }

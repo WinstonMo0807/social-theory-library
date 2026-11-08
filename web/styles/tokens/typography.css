@@ -63,7 +63,7 @@ html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-ty
 html[data-typeset="B"] #main-content [data-type-mode="productive"] h1 + p { font: var(--type-ui)/1.75 var(--type-text); }
 html[data-typeset="B"] #main-content .stl4-explore-entry-body > strong { font: 600 var(--type-card)/1.5 var(--type-display); }
 
-html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], .admin-content) :is(button, input, select, textarea, label, legend, summary) {
+html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-type-mode="reading"], [data-type-mode="productive"], .admin-content) :is(button, input, select, textarea, label, legend, :is(summary,:where([data-section-heading]))) {
   font-family: var(--type-text);
   letter-spacing: 0;
 }
@@ -125,7 +125,7 @@ html[data-typeset="B"] #main-content .stl4-catalog-filter-title h2,
 html[data-typeset="B"] #main-content .stl4-catalog-toolbar h2 { font: 500 1rem/1.6 var(--type-text); }
 html[data-typeset="B"] #main-content .stl4-catalog-filter-group :is(label, p, a, legend),
 html[data-typeset="B"] #main-content :is(.stl4-catalog-sort, .stl4-catalog-filter-title) { font-family: var(--type-text); font-size: var(--type-meta); }
-html[data-typeset="B"] #main-content .stl4-catalog-filter-group summary { font: 500 .9375rem/1.6 var(--type-text); }
+html[data-typeset="B"] #main-content .stl4-catalog-filter-group :is(summary,:where([data-section-heading])) { font: 500 .9375rem/1.6 var(--type-text); }
 html[data-typeset="B"] #main-content .stl4-catalog-filter-group label { min-height: 32px; }
 html[data-typeset="B"] #main-content .stl4-catalog-result { padding: 24px 0; }
 html[data-typeset="B"] #main-content .stl4-catalog-result-main { grid-template-columns: 96px minmax(0, 1fr) minmax(160px, 26%); gap: 24px; }

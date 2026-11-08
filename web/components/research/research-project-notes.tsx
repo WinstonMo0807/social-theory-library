@@ -59,10 +59,10 @@ export function ResearchProjectNotes({ workspace }: { workspace: ReturnType<type
     <header><h2>我的研究笔记</h2><button type="button" className="stl4-research-secondary" disabled={pending || !storage.scanned || Boolean(storage.recovery) || Boolean(storage.error)} onClick={() => setDraft({ text: record.data.notes || "", initial: record.data.notes || "", revision: record.revision })}>编辑笔记</button></header>
     <p>笔记与比较页同步，仅本人可见。</p>
     <div className="stl4-research-notes-copy">{record.data.notes || "尚未填写研究笔记。可以记录判断、疑问和下一步需要核对的材料。"}</div>
-    {materialNotes.length ? <details className="stl4-research-material-notes"><summary>选材备注（{materialNotes.length}）</summary><p>移除选材后，已写备注仍保留。旧来源变化时不会自动关联到新版本。</p><ul>{materialNotes.slice(0, noteLimit).map(([id, body]) => {
+    {materialNotes.length ? <section data-content-section className="stl4-research-material-notes"><header data-section-heading>选材备注（{materialNotes.length}）</header><p>移除选材后，已写备注仍保留。旧来源变化时不会自动关联到新版本。</p><ul>{materialNotes.slice(0, noteLimit).map(([id, body]) => {
       const source = record.data.selection_note_sources?.[id], href = source ? researchReaderHref(source) : "";
       return <li key={id}><strong>{source?.source_status === "available" ? source.title || "原文材料" : "原来源待核对"}</strong><p className="stl4-research-notes-copy">{body}</p>{href ? <Link href={href} target="_blank" rel="noreferrer">核对原备注来源{source?.pdf_page ? ` · PDF 第 ${source.pdf_page} 页` : ""}</Link> : source ? <button type="button" disabled={pending} onClick={()=>void readNoteSource(id)}>核对原备注来源</button> : <small>旧来源定位未记录，备注文字仍保留。</small>}</li>;
-    })}</ul>{noteLimit < materialNotes.length ? <button type="button" onClick={()=>setNoteLimit(value=>value+50)}>继续显示备注（已显示 {noteLimit}/{materialNotes.length}）</button> : null}{sourceError ? <p role="alert">{sourceError}</p> : null}</details> : null}
+    })}</ul>{noteLimit < materialNotes.length ? <button type="button" onClick={()=>setNoteLimit(value=>value+50)}>继续显示备注（已显示 {noteLimit}/{materialNotes.length}）</button> : null}{sourceError ? <p role="alert">{sourceError}</p> : null}</section> : null}
     {draft ? null : recovery}
     <Dialog open={draft !== null} onRequestClose={close} className="stl4-research-dialog" aria-labelledby="workspace-notes-title">
       {draft ? <form onSubmit={event => { event.preventDefault(); void save(); }}>

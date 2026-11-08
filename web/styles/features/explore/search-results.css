@@ -186,7 +186,7 @@
 }
 
 .semantic-understanding > div,
-.semantic-understanding details {
+.semantic-understanding :is(details,:where([data-content-section])) {
   display: grid;
   gap: 6px;
 }
@@ -198,7 +198,7 @@
 }
 
 .semantic-understanding span,
-.semantic-understanding summary {
+.semantic-understanding :is(summary,:where([data-section-heading])) {
   color: var(--muted);
   font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
@@ -333,7 +333,7 @@
   border-top: 1px solid var(--line-dark);
 }
 
-.semantic-work-more > summary {
+.semantic-work-more > :is(summary,:where([data-section-heading])) {
   padding: 13px 0;
   cursor: pointer;
   font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-meta));
@@ -458,7 +458,7 @@
   border: 1px solid var(--line);
 }
 
-.semantic-context summary {
+.semantic-context :is(summary,:where([data-section-heading])) {
   cursor: pointer;
   font-weight: 700;
 }

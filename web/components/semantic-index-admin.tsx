@@ -453,7 +453,7 @@ export function SemanticIndexAdmin() {
                 <p>{item.snippet}</p>
                 <label className="evaluation-relevance-field">
                   <span>评估相关性</span>
-                  <select
+                  <select data-stl-select
                     name={`evaluation_relevance_${index}`}
                     value={evaluationJudgments[item.id] ?? ""}
                     onChange={(event) => {
@@ -501,7 +501,7 @@ export function SemanticIndexAdmin() {
             <p>先在上方运行查询，再给结果标注相关性。至少需要一个相关结果。</p>
             <label>
               <span>保存位置</span>
-              <select
+              <select data-stl-select
                 name="evaluation_target_set"
                 value={evaluationTargetSetId}
                 onChange={(event) => setEvaluationTargetSetId(event.target.value)}
@@ -536,7 +536,7 @@ export function SemanticIndexAdmin() {
                 </label>
                 <label>
                   <span>主要语言</span>
-                  <select
+                  <select data-stl-select
                     name="evaluation_language"
                     value={evaluationLanguage}
                     onChange={(event) => setEvaluationLanguage(event.target.value)}
@@ -564,7 +564,7 @@ export function SemanticIndexAdmin() {
             <div className="evaluation-index-picker">
               <label>
                 <span>运行所用索引</span>
-                <select
+                <select data-stl-select
                   name="evaluation_index_version"
                   value={effectiveEvaluationIndexId}
                   onChange={(event) => setEvaluationIndexId(event.target.value)}

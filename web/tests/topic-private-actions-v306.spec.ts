@@ -97,7 +97,6 @@ test("old collection removal keeps the original version through a failed post-wr
   expect((await page.request.post(`${saves}command/`, { headers: await headers(page), data: { topic, saved: true, expected_version: "0", request_id: randomUUID() } })).status()).toBe(200);
   const original = await saveState(page), writes: TopicSaveCommand[] = [];
   await page.goto("/account");
-  await page.getByText("更多资料与账户操作", { exact: true }).click();
   await page.getByRole("button", { name: "收藏", exact: true }).click();
   await expect(page.getByRole("button", { name: "已收藏 · 取消收藏", exact: true })).toBeEnabled();
   let failVerification = false;

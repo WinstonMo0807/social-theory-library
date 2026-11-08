@@ -69,12 +69,12 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
         <h3>事件介绍</h3>
         {event.description ? <div className={styles.description}><p>{event.description}</p></div> : <p className={styles.muted}>尚无公开的事件介绍。</p>}
         {event.participants?.length ? <section className={styles.participantRoles} aria-label="事件人物与版本责任"><h3>人物与版本责任</h3><ul>{event.participants.map(person=><li key={person.key}><span>{person.role_label}</span>{person.href?<Link href={person.href}>{person.name}</Link>:<strong>{person.name}</strong>}<small>{person.source === "edition" ? "所选版本书目" : "事件确认关联"}</small></li>)}</ul></section>:null}
-        <details className={styles.moreInfo}><summary>展开更多事件资料</summary>
+        <section data-content-section className={styles.moreInfo}><header data-section-heading>展开更多事件资料</header>
           {event.scholars.length ? <><h3>相关学者</h3><div className={styles.people}>{event.scholars.map(person => <Link href={person.href} key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses}><img src={person.portrait_url} alt="" /></MediaPlacement> : null}<span>{person.name}</span></Link>)}</div></> : null}
           {event.topics.length ? <><h3>相关主题</h3><div className={styles.chips}>{event.topics.map(topic => <Link href={topic.href} key={topic.id}>{topic.name}</Link>)}</div></> : null}
           {event.relations.length ? <><h3>涉及对象</h3><ul className={styles.objectList}>{event.relations.map((row, rowIndex) => <li key={`${row.type}-${row.id}-${rowIndex}`}>{row.href ? <Link href={row.href}>{row.name}<ArrowRight size={12} aria-hidden="true" /></Link> : <span>{row.name}</span>}{row.description ? <p>{row.description}</p> : null}</li>)}</ul></> : <p className={styles.muted}>没有可公开的关联对象。</p>}
           {event.source ? <><h3>来源说明</h3><p>{event.source}</p></> : null}
-        </details>
+        </section>
         {!standalone ? <Link className={styles.textLink} href={`/theories/events/${event.id}`}>查看事件完整页面<ArrowRight size={13} aria-hidden="true" /></Link> : null}
       </> : index === 1 ? <>
         <h3>相关事件 <small>{event.related_count}</small></h3>

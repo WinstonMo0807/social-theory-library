@@ -228,7 +228,7 @@ export function StructuredRowsEditor({
                   <label key={column.key} htmlFor={fieldId} className={column.multiline ? "span-all" : undefined}>
                     <span>{column.label}</span>
                     {column.options ? (
-                      <select id={fieldId} value={row[column.key] ?? ""} onChange={(event) => {
+                      <select data-stl-select id={fieldId} value={row[column.key] ?? ""} onChange={(event) => {
                         const next = [...rows];
                         next[index] = { ...row, [column.key]: event.target.value };
                         onChange(next);

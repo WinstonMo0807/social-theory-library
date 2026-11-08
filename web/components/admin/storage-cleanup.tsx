@@ -38,7 +38,7 @@ export function StorageCleanup({owner,id,revision,disabled,canOperate,onCommand,
       {plan.stale&&plan.status==="scanned"?<p className={styles.notice}>清单已超过一小时，请重新扫描后确认。</p>:null}
       {plan.stalled?<p className={styles.notice}>任务超过执行时限，结果待核对。可停止后续项目，再重新扫描；未登记结果不能当作从未删除。</p>:null}
       {plan.error_message?<p className={styles.alert} role="status">{plan.error_message}</p>:null}
-      <details className={styles.cleanupDetails}><summary>查看影响详情 · {selection.length} 项已选</summary><p className={styles.hint}>{plan.scope} 确认后逐项完整校验永久原件；状态变化、文件缺失、权限不足会保留或跳过，不会扩大到其他目录。</p>
+      <details data-disclosure="collection" className={styles.cleanupDetails}><summary>查看影响详情 · {selection.length} 项已选</summary><p className={styles.hint}>{plan.scope} 确认后逐项完整校验永久原件；状态变化、文件缺失、权限不足会保留或跳过，不会扩大到其他目录。</p>
         {actionable&&plan.rows.length?<label className={styles.checkbox}><input type="checkbox" disabled={controlsDisabled} checked={selection.length===plan.rows.length} onChange={event=>setSelected(event.target.checked?plan.rows.map(row=>row.id):[])}/><span>选择本清单全部 {plan.rows.length} 项</span></label>:null}
         <div className={styles.cleanupRows}>{plan.rows.map(row=><label key={row.id} className={styles.cleanupRow}><input type="checkbox" disabled={controlsDisabled||!actionable} checked={actionable?selected.includes(row.id):plan.selected.includes(row.id)} onChange={event=>setSelected(previous=>event.target.checked?[...previous,row.id]:previous.filter(id=>id!==row.id))}/><span><strong>{row.label}</strong><small>{new Date(row.modified_at).toLocaleString("zh-CN")} · {size(row.bytes)} · {outcomes[row.outcome]||"待核对"}</small><small>{row.detail}</small></span></label>)}</div>
         {!plan.rows.length?<p className={styles.hint}>本次扫描范围没有满足保护条件的候选。</p>:null}

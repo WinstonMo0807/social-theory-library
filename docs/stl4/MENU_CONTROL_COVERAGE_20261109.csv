@@ -1,0 +1,666 @@
+﻿source,original_line,control,before,after,reason,verification
+web/app/explore/page.tsx,606,details,查看和调整检索表达,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,640,details,<span>2</span><strong>更多候选原文</strong><small>{moreEvidence.length} 个段落</small>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,799,details,查看上下文,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,870,details,"{title}<span>{selected.length ? selected.length : ""＋""}</span>",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,902,details,"筛选结果{activeFilterCount ? ` · 已选 ${activeFilterCount}` : """"}<span>展开</span>",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,956,details,"限定馆藏{activeFilterCount ? ` · 已选 ${activeFilterCount}` : """"}<span>展开</span>",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,1060,details,查看上下文,removed-duplicate,删除重复摘要按钮；同一摘要已在该行完整显示,源码全量；真实页面代表状态另见报告
+web/app/explore/semantic/[workId]/page.tsx,64,details,展开前后文,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/app/layout-preview/preview.tsx,26,details,首页排版参考,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/account-recovery-appeal.tsx,45,details,无法访问邮箱？提交找回申请,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/accounts/account-workspace.tsx,173,details,编辑账户资料与状态,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/accounts/account-workspace.tsx,180,details,"{({ retained: ""变更后保留的"", gained: ""将新增的"", lost: ""将失去的"" })[kind]}{prepared.preview[kind].length}项能力",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/admin-work-notices.tsx,20,details,"<Bell size={18} />{data && data.count > 0 ? <span className=""stl4-notice-count"">{data.count > 99 ? ""99+"" : data.count}</span> : resource.error ? <span className=""stl4-notice-error"">!</span> : null}",menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/article-body-fields.tsx,48,details,<MoreHorizontal size={15}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/article-comment-review.tsx,23,details,审核范围,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/article-metadata-fields.tsx,27,details,选择公开头像,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/curation-discovery-preview.tsx,9,details,观点检索中的策展卡片,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/curation-field-assistant.tsx,308,details,查看依据,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/evidence-curation-editor.tsx,24,details,查看上下文（只读）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/inline-media-picker.tsx,85,details,图片出处与使用说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-assistance-review.tsx,97,details,查看依据与原文对比,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-publication-review.tsx,67,details,<MoreHorizontal size={17}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-selection-workbench.tsx,41,details,<MoreHorizontal size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/path-route-candidates.tsx,71,details,{stage.name}· {stage.items.length}项,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,68,details,<MoreVertical size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,87,details,<MoreVertical size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,87,details,内部阅读目标（仅编辑可见）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-workspace.tsx,82,details,查看当前已保存内容,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-workspace.tsx,84,details,"{group.name||""未命名分组""}（{rows.length}）",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-workspace.tsx,84,details,<MoreVertical size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-workspace.tsx,85,details,内部阅读目标（仅编辑可见）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,519,details,⋮,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,522,details,查找与切换阅读路径,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,537,details,固定链接、路径介绍与分类,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,540,details,路径主题、学习问题与策划说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,564,details,编辑阶段 ···,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,568,details,本阶段学习问题与相关争论,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,572,details,编辑所选条目 · 推荐理由、阅读目标与先修依赖,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/curation-project-workspace.tsx,87,details,<MoreHorizontal size={18}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation-project-workspace.tsx,109,details,<MoreHorizontal size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/curation-project-workspace.tsx,159,details,项目封面与图片出处,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/index-maintenance.tsx,91,details,检索服务的最近检查记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/index-query-preview.tsx,64,details,本次检索来源与版本,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/inspector/workflow-inspector.tsx,159,details,匹配依据,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/inspector/workflow-inspector.tsx,160,details,冲突,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/assistance-usage-panel.tsx,32,details,建议处理记录 · {usage.total}条,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/assistance-usage-panel.tsx,38,details,统计范围与限制,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/assistance-usage-panel.tsx,40,details,追溯候选与人工复核记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/concept-placement-editor.tsx,74,details,<MoreHorizontal size={15}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/concept-placement-editor.tsx,76,details,"{group}（{data.items.filter(item=>!item.concept_usage&&(item.group||""未分组"")===group).length}）",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/concept-placement-editor.tsx,76,details,保存与公开,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-aliases-dialog.tsx,72,details,正式来源中的术语（{original.saved_aliases.length}项）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-history.tsx,112,details,"{row.label}· {row.changed?""有变化"":""未变化""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-node-editor-frame.tsx,50,details,字段候选与材料助手,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-object-context-panel.tsx,504,details,<Sparkles size={14} /><span>字段建议</span><b>{candidates.length}</b>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-object-context-panel.tsx,514,details,<Sparkles size={14} /><span>关联建议</span><b>{knowledgeUpdates.length}</b>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-object-context-panel.tsx,524,details,<FileText size={14} /><span>依据</span><b>{evidence.length}</b>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-object-context-panel.tsx,529,details,<BookOpen size={14} /><span>馆藏观点</span><b>{curatedClaims.length + derivedClaims.length}</b>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-object-context-panel.tsx,534,details,<GitFork size={14} /><span>关系</span><b>{relations.length}</b>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-object-context-panel.tsx,539,details,<FileClock size={14} /><span>已保存修改与预览</span><b>{revisions.length}</b>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-object-context-panel.tsx,549,details,查看各处更新结果,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-visual-editor.tsx,150,details,字段候选与材料助手,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-visual-editor.tsx,179,details,"{selected === ""media"" ? ""选择图片"" : selected === ""relations"" ? ""管理共享关联"" : ""已保存草稿、发布与记录""}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/material-relation-candidates.tsx,25,details,识别时保留的摘录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-alias-fields.tsx,9,details,"{row.alias || ""新增异名""}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-merge-workspace.tsx,96,details,合并历史 · {history.count}条,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-relations.tsx,106,details,关系依据,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-authority-workspace.tsx,90,details,<MoreHorizontal size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-authority-workspace.tsx,133,details,查找其他人物进行比较,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-materials-gallery.tsx,24,details,<Pencil size={12} />编辑资料说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,129,details,"{targetId ? ""更换保留人物"" : ""没有合适候选？查找其他人物""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,145,details,{textValue(asRecord(row).name)},collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,145,details,展开详细信息 <ChevronDown size={12}/>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,150,details,查看作品与版本,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,150,details,版本 {textValue(asRecord(value).id)},collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,151,details,查看历史公开修订,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,153,details,"{textValue(row.label)}· 来源 {textValue(row.source_count)}项 · 保留人物 {textValue(row.target_count)}项{Array.isArray(row.collisions) && row.collisions.length ? "" · 存在重复关系"" : """"}{row.truncated ? "" · 未完整显示"" : """"}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,157,details,活动检索词条 · 来源 {preview.lexicon_entries.source}项 · 保留人物 {preview.lexicon_entries.target}项,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,167,details,公开更新的实际处理结果,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-resolution-workspace.tsx,249,details,引用移动及处理记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/public-page-tree.tsx,96,details,查看这项修改,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/public-page-tree.tsx,97,details,还会显示在哪里,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/public-page-tree.tsx,98,details,技术详情,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-concept-usages.tsx,35,details,选择概念并从材料提取用法,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-editor-frame.tsx,41,details,历史编排记录与原编辑入口,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-editor-frame.tsx,42,details,候选资料与编辑辅助,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-editor-frame.tsx,54,details,原资料、关联与操作记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-links.tsx,61,details,查看关系出处,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-links.tsx,65,details,馆藏著作涉及的概念 · 当前公开摘要 {derived.length}项,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-person-relations.tsx,41,details,关系依据,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-timeline.tsx,46,details,查看来源,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-work-editor.tsx,36,details,<MoreVertical size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/timeline-editor-details.tsx,28,details,"证据 {index + 2}· {row.status === ""disputed"" ? ""存疑"" : row.status === ""adopted"" ? ""辅助采用"" : ""相关研究""}· {row.citation || ""待填写出处""}",collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/timeline-merge-workspace.tsx,75,details,合并历史 · {history.count}条,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-associations.tsx,71,details,"{notes[id] ? ""编辑关联说明"" : ""补充关联说明""}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-associations.tsx,81,details,···,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-editor-frame.tsx,36,details,字段候选与材料助手,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-fields.tsx,58,details,层级规则与相似主题,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-fields.tsx,65,details,{label},content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-hierarchy.tsx,55,details,选择其他上级,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/library/document-outline-workspace.tsx,199,details,原始定位信息,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/library/ocr-workspace.tsx,115,details,<MoreHorizontal size={19}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/library/ocr-workspace.tsx,119,details,更多,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/library/ocr-workspace.tsx,137,details,"处理记录与暂停恢复{active?` · ${active.phase_label}`:""""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/library/outline-diagnostics.tsx,20,details,需要补充的目录,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/library/page-mapping-workspace.tsx,158,details,批量操作<ChevronDown size={13}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/library/supporting-materials.tsx,49,details,其他补充材料 ,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/library/work-files-workspace.tsx,105,details,<MoreHorizontal size={16} />,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/library/work-library.tsx,71,details,馆藏质量与处理原因,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/library/work-library.tsx,72,details,版本文件与历史（{work.assets?.length ?? 0}）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/local-services.tsx,150,details,<Icon size={16}/><strong>{data.groups.find(row=>row.id===service.group)?.label}</strong><span>{service.name}</span><span className={styles.status} data-tone={tone(service.status)}>{service.status_label}</span><ChevronDown size={14}/>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/local-services.tsx,175,details,模型版本、设备与加载记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/media/media-crop.tsx,63,details,精确调整裁切范围,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/media/media-library-catalog.tsx,155,details,默认焦点,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/media/media-workspace.tsx,104,details,"{data.current||data.cover.image_url?""更换封面"":""从候选中选择""}<span>⌄</span>",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/media/media-workspace.tsx,117,details,来源网址、许可与署名,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/media/scholar-portrait-panel.tsx,50,details,肖像来源与操作,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/preview/knowledge-page-preview.tsx,326,details,有内容暂不能完整预览,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-error.tsx,9,details,查看具体原因,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-workspace.tsx,76,details,<CircleHelp size={14}/>如何处理文件？,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-workspace.tsx,85,details,"提交时间{params.get(""date_from"")||params.get(""date_to"")?"" · 已筛选"":""""}<ChevronDown size={12}/>",menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-workspace.tsx,162,details,···,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/recommendation-issue-editor.tsx,120,details,<MoreHorizontal size={19}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/recommendation-issue-list.tsx,93,details,当前公开推荐与已确认排期,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/research/evidence-envelope-card.tsx,24,details,质量与来源,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/site-workspace.tsx,104,details,<ChevronDown size={14}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/site-workspace.tsx,106,details,馆头、品牌与页脚,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/site-workspace.tsx,106,details,更多内容（未上首页）,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/admin/storage-cleanup.tsx,41,details,查看影响详情 · {selection.length}项已选,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/storage-workspace.tsx,162,details,统计范围,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/storage-workspace.tsx,164,details,计划与存储配置说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/storage-workspace.tsx,222,details,查看错误详情,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/visual-review/visual-review-workspace.tsx,71,details,当前实施记录,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/welcome-fields.tsx,52,details,{chapter.title || `功能介绍 ${index + 1}`},content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/welcome-fields.tsx,53,details,其他页面文字,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/bibliographic-candidate-panel.tsx,69,details,横向比较候选与当前填写,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/catalog-availability.tsx,19,details,查看处理记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/catalog-availability.tsx,20,details,技术信息,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/edition-ocr-control.tsx,48,details,查看当前处理的页码范围,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/edition-ocr-control.tsx,52,details,上次失败原因,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/edition-ocr-control.tsx,54,details,其他处理提醒,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/edition-ocr-control.tsx,161,details,"{index === 0 ? ""最近一次识别"" : ""历史识别""}· {job.phase_label}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/field-assistant-control.tsx,325,details,查看依据,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/intake-confirmation.tsx,61,details,修改类型,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/intake-confirmation.tsx,61,details,<Search size={13}/>查找其他书目,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/journal-contents-candidates.tsx,27,details,从文件目录选取论文题名,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-catalog.tsx,134,details,更多作品信息,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-catalog.tsx,135,details,更多信息（丛书、版次、页数等）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-metadata-prefill.tsx,37,details,从书目来源预填 <small>逐项核对后采用</small>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-metadata-prefill.tsx,40,details,逐项核对来源与当前填写,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/material-assistant.tsx,55,details,相关材料（{materials.length}）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/material-assistant.tsx,56,details,页面预览（节选）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-diff.tsx,16,details,"{row.after_display||row.before_display||""未填写""}<span>查看 ›</span>",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-diff.tsx,25,details,发布前建议核对,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-diff.tsx,26,details,发布后后台处理,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-history.tsx,44,details,公开版本历史,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-ledger.tsx,97,details,<MoreHorizontal size={15}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-ledger.tsx,102,details,操作结果与状态 <ChevronDown size={14}/>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-retry-control.tsx,79,details,查看处理情况,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-review.tsx,41,details,查看其余 {extra.length}项变化,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-review.tsx,42,details,查看全部 {group.items.length}项,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/publication-review.tsx,45,details,仍需核对 · {preparation.warnings.length}项提醒,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/upload-batch-view.tsx,20,details,本批处理方式、访问范围与配套元数据,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/upload-batch-view.tsx,22,details,<MoreHorizontal size={17}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/upload-batch-view.tsx,26,details,<MoreHorizontal size={16}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/upload-source-context.tsx,63,details,来源与处理记录,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,411,details,为推荐卡片另选图片（可选，不影响封面）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,439,details,高级书目字段,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,495,details,其他贡献者 <span>{otherItems.length}</span>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,529,details,技术详情,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,556,details,"其他提醒与处理详情{warnings.length ? `（${warnings.length} 项提醒）` : """"}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,1413,details,<ChevronDown size={15}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,1418,details,馆藏状态与待确认事项,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,1453,details,查看其余 {requiredActions.length - 3}项,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,1455,details,完整草稿预览,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/admin-dashboard.tsx,48,details,<MoreHorizontal size={18} />,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1329,details,研究领域、机构与其他名称,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1331,details,历史语录文字（保留原记录）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1787,details,关于书库页面内容,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin-shell.tsx,280,details,<SelfAccountAvatar owner={String(user.id)} name={user.display_name} /><ChevronDown size={13} />,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/admin-system-health.tsx,106,details,诊断详情,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin-system-health.tsx,110,details,查看检查详情,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/admin-ui.tsx,273,details,{evidenceSummary},content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/admin-upload.tsx,1169,details,持续上传与恢复记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/candidate-review.tsx,214,details,来源冲突,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/candidate-review.tsx,215,details,置信度因素,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/catalog-result-card.tsx,31,details,<span>{row.abstract}</span>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/catalog-result-card.tsx,44,details,<MoreHorizontal size={20} />,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/catalog-result-card.tsx,48,details,<strong>可查看的版本（{editions.length}）</strong><ChevronDown size={16} />,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/catalog-search-workspace.tsx,133,details,匹配范围<ChevronDown size={14} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/catalog-search-workspace.tsx,137,details,年份<ChevronDown size={14} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/catalog-search-workspace.tsx,145,details,高级筛选<ChevronDown size={14} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/catalog-search-workspace.tsx,167,details,{filterNames[name]}<ChevronDown size={14} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/curated-claim-sections.tsx,56,details,查看依据 <span>{claim.evidence.length} 条馆藏原文</span>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/discovery-evidence-detail.tsx,83,details,"{t(""匹配依据"")}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/discovery-index-panel.tsx,102,details,"最近索引任务{hasActiveJobs ? "" · 有任务进行中"" : """"}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/discovery-index-panel.tsx,103,details,当前生效版本,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/discovery-search-workspace.tsx,350,details,"{t(""更多筛选"")}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/discovery-search-workspace.tsx,413,details,"{t(""来源与版本"")}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/discovery-search-workspace.tsx,444,details,"{t(""本次检索覆盖"")}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/explore-ask-client.tsx,764,details,"<Settings2 size={16} />个人模型设置{modelLabel ? ` · ${modelLabel}` : """"}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/functional-health-panel.tsx,460,details,{layer.label}· {statusLabel(layer.status)},collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/functional-health-panel.tsx,537,details,"<span><StatusIcon status={dependency.status} />{dependency.label}</span><b>{dependency.stale ? ""已过期，待重新检测"" : statusLabel(dependency.status)}</b>",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/knowledge-admin.tsx,735,details,查看最近保存的推荐,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/knowledge-map.tsx,16,details,阅读全部关系,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace-diagnostics.tsx,168,details,修订与并发约束,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace-diagnostics.tsx,169,details,原文依据与定位检查,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace-diagnostics.tsx,170,details,自动分析结果（待确认）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace-diagnostics.tsx,171,details,候选来源与状态,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace.tsx,111,details,查看依据,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace.tsx,161,details,基本资料与修改建议,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace.tsx,171,details,观点与讨论 · {claims.length}项,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace.tsx,180,details,相关作品、人物和主题 · {relations.length}项,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace.tsx,276,details,首页、推荐和其他页面在哪里修改？,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace.tsx,276,details,查看内容来源,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/processing-center.tsx,794,details,选择另一份馆藏 PDF，重新识别整本,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-center.tsx,848,details,查看页码范围和任务记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-center.tsx,851,details,处理这一次识别,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-center.tsx,921,details,查看任务记录与技术信息,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-center.tsx,922,details,"{job.error_code || ""查看错误""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-diagnostics.tsx,266,details,查看 revision 与任务信息,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-diagnostics.tsx,312,details,Executor heartbeat <strong>{diagnostics.executors.length}</strong>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-diagnostics.tsx,333,details,AI Runtime profiles <strong>{diagnostics.provider_profiles.length}</strong>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-diagnostics.tsx,347,details,Prompt Registry <strong>{diagnostics.prompt_registry?.active.length ?? 0}</strong>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/processing-diagnostics.tsx,364,details,人工接受表现 <strong>{(diagnostics.feedback_calibration ?? []).length}</strong>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/profile-avatar-editor.tsx,133,details,"更多<ChevronDown size={14} aria-hidden=""true"" />",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/public/about-public-view.tsx,15,details,"{why?.title || ""为什么建设这座书库""}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/editorial-directory.tsx,89,details,"{value(""year_from"") || value(""year_to"") ? `${value(""year_from"") || ""最早""}–${value(""year_to"") || ""至今""}` : ""时期""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/public/feedback-form.tsx,79,details,<ClipboardCheck size={22}/><span><strong>反馈处理流程</strong></span>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/feedback-form.tsx,80,details,<CircleHelp size={22}/><span><strong>可反馈的内容</strong></span>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/feedback-page-picker.tsx,74,details,手动填写网址,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/public/graph-center-search.tsx,26,details,选择或搜索中心节点<Search size={14} />,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/public/graph-center-search.tsx,53,details,"学科范围{value ? "" · 已限定"" : "" · 全部学科""}<ChevronDown size={13} />",collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/public/home-feature-story.tsx,172,details,"{texts.faq_read_title}<Plus size={20} aria-hidden=""true"" />",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/home-feature-story.tsx,173,details,"{texts.faq_cite_title}<Plus size={20} aria-hidden=""true"" />",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/home-feature-story.tsx,174,details,"{texts.faq_private_title}<Plus size={20} aria-hidden=""true"" />",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/legacy-theory-public-view.tsx,129,details,<span className={styles.debateSymbol}><BookOpen size={18} /></span><strong>{relation.theory.name}<small>已确认的批评关系</small></strong><ChevronDown size={15} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/legacy-theory-public-view.tsx,145,details,相关学派（{related.length + curatedNeighbors.length}）<ChevronDown size={14} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/legacy-theory-public-view.tsx,154,details,区别与批评（{critiques.length}）<ChevronDown size={14} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-list.tsx,56,details,"<Tag size={22} /><span>主题<strong>{selected ? selectedName || ""已选择主题"" : ""全部主题""}</strong></span><ChevronDown size={15} />",collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-personal.tsx,125,details,本人跟读记录,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-workspace.tsx,58,details,<Target size={20} />目标,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-workspace.tsx,59,details,<Users size={20} />对象,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-workspace.tsx,60,details,<ChartNoAxesColumnIncreasing size={20} />难度,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/recommendation-issue-view.tsx,89,details,"{isExhibition ? ""展项目录"" : ""文章目录""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/public/scholar-content.tsx,23,details,章节贡献与准确来源（{uniqueChapters.length}）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/scholar-content.tsx,32,details,"<span className={styles.relationType}>{candidate ? ""关系未确认"" : row.relation_label}</span><strong>{row.source_name} {row.direction === ""directed"" ? ""→"" : row.direction === ""bidirectional"" ? ""↔"" : ""—""} {row.target_name}</strong><ArrowRight size={16} />",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/scholar-profile.tsx,26,details,已确认的异名与译名（{data.person.aliases.length}）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/scholar-profile.tsx,31,details,区分同名学者（另有 {data.disambiguation.length}位公开档案）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/subdiscipline-public-view.tsx,76,details,查看关联记录,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/subdiscipline-public-view.tsx,87,details,关联说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/subdiscipline-public-view.tsx,102,details,查看关联依据,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/subdiscipline-public-view.tsx,102,details,关联说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/subdiscipline-public-view.tsx,124,details,本页原文依据（{sources.length}）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/support-hero.tsx,14,details,{label}<ChevronDown size={16} />,direct-links,手机与桌面共用直接导航，不增加展开步骤,源码全量；真实页面代表状态另见报告
+web/components/public/support-hub.tsx,34,details,{row.question},content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-interactions.tsx,74,details,"筛选用法{author || period || context ? "" · 已筛选"" : """"}<ChevronDown size={13} />",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-public-view.tsx,49,details,<span className={styles.debateSymbol}><BookOpen size={18} /></span><span><strong>{claim.title || claim.groupLabel}</strong><small>{claim.proposition}</small></span><ChevronDown size={16} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-public-view.tsx,100,details,"<span>常见译名</span><strong>{node.aliases.slice(0, 3).map(alias => alias.alias).join("" · "")}</strong><span>更多译名<ChevronDown size={13} /></span>",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-public-view.tsx,114,details,适用范围与理论边界<ChevronDown size={15} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-public-view.tsx,124,details,基本命题<ChevronDown size={15} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-public-view.tsx,125,details,适用范围与理论边界<ChevronDown size={15} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-graph-workspace.tsx,115,details,<Filter size={15} />关系类型与范围<ChevronDown size={15} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-graph-workspace.tsx,118,details,更多范围条件<ChevronDown size={13} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-timeline-workspace.tsx,77,details,"{types.length ? `${timelineTypeLabels[types[0]] || ""已选类型""}${types.length > 1 ? ` 等 ${types.length} 项` : """"}` : ""全部类型""}<ChevronDown size={12} />",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-timeline-workspace.tsx,77,details,"其他类型<ChevronDown size={12} aria-hidden=""true"" />{types.filter(type => otherTypes.includes(type)).length ? ` (${types.filter(type => otherTypes.includes(type)).length})` : """"}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-timeline-workspace.tsx,81,details,更多筛选<ChevronDown size={12} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/theory-timeline-workspace.tsx,100,details,"时间轴与同年事件<ChevronDown size={14} aria-hidden=""true"" />",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/timeline-event-details.tsx,72,details,展开更多事件资料,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/timeline-picker.tsx,54,details,"<span>{chosen.length ? `${selectedNames.filter(Boolean).slice(0, 2).join(""、"") || `所选${label}当前不可用`}${chosen.length > 2 ? ` 等 ${chosen.length} 项` : """"}${selectedNames.some(value => !value) && selectedNames.some(Boolean) ? "" · 含不可用项"" : """"}` : `全部${label}`}</span><ChevronDown size={13} aria-hidden=""true"" />",collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/public/topic-content.tsx,28,details,展开问题说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/topic-content.tsx,29,details,查看说明,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/topic-content.tsx,41,details,展开阅读导语<ChevronDown size={14} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/public/topic-directory.tsx,18,details,<ChevronRight size={13} />{choice},collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/public/topic-profile.tsx,22,details,更多主题资料<ArrowRight size={13} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/publication-desk.tsx,85,details,当前阅读文件预览,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/reader/parallel-column.tsx,65,details,更换版本,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/reader/parallel-reader.tsx,327,details,术语差异与笔记（{terms.length}）,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/reader-center.tsx,508,details,<Plus size={17}/>新建研究 <ChevronRight size={15}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/reader-center.tsx,517,details,更多资料与账户操作,account-navigation,阅读资料直接展示，研究入口去重，账户操作独立排列,源码全量；真实页面代表状态另见报告
+web/components/research/booklist-plan-form.tsx,75,details,"{data.items.length}部作品 · {data.ready ? ""可生成计划"" : ""存在不可读的来源""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-issue.tsx,132,details,从馆藏查找其他版本,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-issue.tsx,144,details,核验与人工决定历史,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-parse.tsx,55,details,已解析位置与书目（{rows.length + entries.length}）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-report.tsx,116,details,任务状态与进度,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-report.tsx,117,details,查看稿件与解析预览,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-report.tsx,143,details,前次解析记录（{data.parse_history.length}版）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-versions.tsx,60,details,回看保存的稿件版本（{available.length}）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/citation-private-sources.tsx,91,details,<FilePlus2 size={13} />上传用于核对的来源,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,132,details,<MoreVertical size={17} />,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/research/counter-evidence-editor.tsx,46,details,前次人工记录（{row.decision_history.length}）,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/counter-evidence-workspace.tsx,138,details,检索范围,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/research/privacy-workspace.tsx,112,details,其他记录类型,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/privacy-workspace.tsx,116,details,其他资料类型,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/privacy-workspace.tsx,122,details,"{coreErase.includes(category) ? ""其他资料类型"" : `其他资料类型 · ${eraseLabels[category]}`}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/reader-booklists.tsx,125,details,<MoreHorizontal size={20}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/research/reader-booklists.tsx,132,details,更多,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/research/reader-booklists.tsx,140,details,<MoreHorizontal size={17}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/research/reader-collection-list.tsx,121,details,查看任务记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/reader-notebook.tsx,130,details,{label},collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/research/reader-overview.tsx,67,details,本机记录,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/reading-plan-detail.tsx,150,details,"<span className=""stl4-plan-stage-number"">阶段 {index + 1}</span><strong>{stage}</strong><small>{items.length} 项材料</small><span>{items.filter(item => item.status === ""completed"").length} / {items.length} 已完成</span><progress aria-label={`${stage}完成进度`} max={items.length} value={items.filter(item => item.status === ""completed"").length} />",collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/research/research-comparison-search.tsx,90,details,<Search size={13}/>本轮材料（{references.length}）· 核对后加入选材,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/research/research-project-notes.tsx,62,details,选材备注（{materialNotes.length}）,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/research/research-replay.tsx,64,details,研究来源与分支,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/research/research-selection-draft.tsx,91,details,待同步选材的本机恢复,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-compare.tsx,123,details,"<span className=""stl4-comparison-index"">{index+1}</span><ColumnHeading column={column}/><ChevronDown size={14}/>",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-compare.tsx,139,details,<ColumnHeading column={column}/><ChevronDown size={16}/>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-detail.tsx,225,details,未确认请求的断网恢复设置,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-detail.tsx,230,details,分支断网恢复设置,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/scholar-relation-network.tsx,34,details,按文字阅读全部关系,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/shared-citation-overlay.tsx,415,details,<MoreHorizontal size={18}/>,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/system-status-center.tsx,68,details,{value.length}项,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/system-status-center.tsx,70,details,查看详情,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/system-status-center.tsx,134,details,模型配置,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/system-status-center.tsx,135,details,资料来源,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory/theory-directory.tsx,125,details,全部学科<ChevronDown size={16} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory/theory-directory.tsx,132,details,{discipline.name}<ChevronDown size={16} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory/theory-directory.tsx,162,details,<span>{group.title}</span><ChevronDown size={17} />,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,755,details,···,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,764,details,选择已有条目或新建理论、概念,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,804,details,名称建议、外文与分类,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,836,details,更多学科和主题关联,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,862,details,定义、问题、命题与发展时期,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1241,details,"系统建议{tasks.data ? `（当前筛选共 ${tasks.data.count} 条）` : """"}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1557,details,"证据文件与原文定位{draft.evidence_asset?"" · 已关联"":""""}",content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1839,details,编辑说明与关联范围,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1843,details,"查找与切换事件 · {events.data?.count ?? ""正在读取""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1871,details,事件管理,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1872,details,<h2>基本信息</h2>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1877,details,时间说明与显示时期,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1878,details,<h2>关联内容</h2>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1880,details,"{draft.work?""更换关联作品"":""选择关联作品""}",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1886,details,事件标题,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1888,details,学科与参与关系,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1893,details,<h2>出处与证据</h2>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1899,details,<h2>人工确认与发布状态</h2>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1899,details,编辑备注与发布安排,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/ui.tsx,102,details,"<span className=""book-summary"">{work.summary}</span><span className=""book-summary-toggle"">展开 / 收起简介</span>",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/work-detail-evidence.tsx,22,details,查看依据 <span>{claim.evidence.length} 条馆藏原文</span>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/work-detail-view.tsx,80,details,版本责任者,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
+web/components/work-detail-view.tsx,110,details,{row.title}<ChevronDown size={16} />,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
+web/components/work-detail-view.tsx,122,details,<span>{text}</span><small>展开 / 收起<ChevronDown size={12} /></small>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/work-detail-view.tsx,131,details,···,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,436,select,"name=""sort"" defaultValue={sort}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/app/explore/page.tsx,579,select,"name=""sort"" defaultValue={filters.sort ?? ""relevance""}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/app/layout-preview/preview.tsx,30,select,"value={count} onChange={event => { setCount(Number(event.target.value)); setNotice(""""); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/app/policy/policy-workspace.tsx,76,select,"value={filters.region} onChange={event => setFilters({ ...filters, region: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/app/policy/policy-workspace.tsx,76,select,"value={filters.kind} onChange={event => setFilters({ ...filters, kind: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/add-work-to-list-button.tsx,61,select,"value={selected} onChange={event => { setSelected(event.target.value); setMessage(""""); }} disabled={busy}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/accounts/account-workspace.tsx,92,select,"aria-label=""筛选角色"" value={role} onChange={event => { setRole(event.target.value); setPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/accounts/account-workspace.tsx,93,select,"aria-label=""筛选状态"" value={status} onChange={event => { setStatus(event.target.value); setPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/accounts/account-workspace.tsx,98,select,"aria-label=""每页账户数量"" value={size} onChange={event => { setSize(Number(event.target.value)); setPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/accounts/account-workspace.tsx,175,select,"value={invite ? ""invite"" : ""password""} onChange={event => { setInvite(event.target.value === ""invite""); setPassword(""""); setActive(false); setPrepared(null); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/accounts/account-workspace.tsx,177,select,"value={role} disabled={original ? !original.can_change_role : !canAssign} onChange={event => setRole(event.target.value as AccountInput[""role""])}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/ai-runtime-editor.tsx,95,select,"value={source?.key||""""} disabled={hasWork} onChange={event=>{setSelected(event.target.value);setMessage("""");}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/ai-runtime-editor.tsx,101,select,"value={profile.provider} onChange={event=>change({provider:event.target.value as Profile[""provider""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/ai-runtime-editor.tsx,104,select,"value={String(reasoning.json_mode||""json_schema"")} onChange={event=>change({reasoning:{...reasoning,json_mode:event.target.value}})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/ai-runtime-editor.tsx,105,select,value={input.activeKey} onChange={event=>changeDraft({activeKey:event.target.value})},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/ai-runtime-editor.tsx,106,select,"value={profile.fallback_profile_key||""""} onChange={event=>change({fallback_profile_key:event.target.value})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/ai-runtime-editor.tsx,114,select,"value={input.credential} onChange={event=>changeDraft({credential:event.target.value as Draft[""credential""],secret:"""",confirmDelete:false,profile:{...profile,enabled:event.target.value===""delete""?false:profile.enabled,credential_alias:event.target.value===""delete""?source!.credential_alias:event.target.value===""set""&&profile.credential_alias===""default""?`ai-${profile.key}`.slice(0,64):profile.credential_alias}})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/article-body-fields.tsx,53,select,"value={block.heading_level||1} onChange={event=>update(index,{heading_level:Number(event.target.value) as 1|2|3})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/article-body-fields.tsx,56,select,"value={block.style || ""paragraph""} disabled={structuralLocked||protectedHeadings.includes(id)} onChange={event=>update(index,{style:event.target.value as ""paragraph""|""heading"",heading_level:event.target.value===""heading""?block.heading_level||1:undefined})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/article-metadata-fields.tsx,13,select,"value={data.kind} onChange={event => update({ kind: event.target.value as ArticleMetadata[""kind""] })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/article-metadata-fields.tsx,23,select,"value={data.curator_account_id ? String(data.curator_account_id) : ""separate""} onChange={event => update({ curator_account_id: event.target.value === ""separate"" ? null : owner, curator_portrait_id: null })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/curation-draft-queue.tsx,39,select,value={ordering} onChange={event => change({ ordering: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/editorial-prefills.tsx,49,select,"value={state.decisions?.[row.id] || """"} onChange={(event) => { if (event.target.value) state.review?.(row.id, event.target.value as ""modified"" | ""removed""); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/evidence-curation-editor.tsx,95,select,"value={editionId} disabled={editionLoading} onChange={event => { setEditionId(event.target.value); setAssetId(""""); setSources(null); setSelected(null); setPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/evidence-curation-editor.tsx,96,select,value={assetId} onChange={event => { setAssetId(event.target.value); setSelected(null); setSources(null); setPage(1); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-discovery-materials.tsx,55,select,"aria-label=""候选排序"" value={sort} onChange={event=>setSort(event.target.value as DiscoverySort)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-selection-workbench.tsx,39,select,"value={Array.isArray(selection.filters.document_types)?selection.filters.document_types[0]||"""":""""} onChange={event=>update({filters:{...selection.filters,document_types:event.target.value?[event.target.value]:[]}})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-selection-workbench.tsx,39,select,"value={Array.isArray(selection.filters.languages)?selection.filters.languages[0]||"""":""""} onChange={event=>update({filters:{...selection.filters,languages:event.target.value?[event.target.value]:[]}})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-source-picker.tsx,26,select,"value={kind} onChange={event=>{setKind(event.target.value as IssueSourceReference[""type""]);setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/issue-text-editor.tsx,139,select,"disabled={!prose||formatDisabled} value={block.text_style||""paragraph""} onChange={event=>style(event.target.value as TextValue[""text_style""])}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,86,select,"aria-label=""书刊类型"" value={filters.document_type} onChange={event=>{setFilters({...filters,document_type:event.target.value});setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,86,select,"aria-label=""主题"" value={filters.topic} onChange={event=>{setFilters({...filters,topic:event.target.value});setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,86,select,"aria-label=""可读状态"" value={filters.readable} onChange={event=>{setFilters({...filters,readable:event.target.value});setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,86,select,"aria-label=""语言"" value={filters.language} onChange={event=>{setFilters({...filters,language:event.target.value});setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,86,select,"aria-label=""排序"" value={filters.sort} onChange={event=>{setFilters({...filters,sort:event.target.value});setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-catalog-picker.tsx,87,select,value={group} onChange={event=>chooseGroup(Number(event.target.value))},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-directory.tsx,32,select,value={kind} onChange={event=>{setKind(event.target.value as typeof kind);setPage(1);}},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/placement-workspace.tsx,90,select,value={sourceKind} onChange={event=>setSourceKind(event.target.value as typeof sourceKind)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-dependencies.tsx,16,select,value={target} onChange={event=>setTarget(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-dependencies.tsx,16,select,"value={kind} onChange={event=>setKind(event.target.value as PathDependency[""kind""])}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-fields.tsx,65,select,"value={value.material_kind} onChange={event => onChange({ material_kind: event.target.value as PathMaterialFields[""material_kind""] })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-fields.tsx,67,select,"value={value.status} onChange={event => onChange({ status: event.target.value as PathMaterialFields[""status""] })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-fields.tsx,70,select,"value={value.edition || """"} disabled={rows.loading} onChange={event => onChange({ edition: event.target.value || null, asset: null, document_revision: null, page_start: null, page_end: null })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-fields.tsx,74,select,"value={value.asset || """"} disabled={!edition} onChange={event => onChange({ asset: event.target.value || null, document_revision: null, page_start: null, page_end: null })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,536,select,"value={draft.difficulty} onChange={event=>setDraft({...draft,difficulty:event.target.value})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,538,select,"disabled title=""状态通过发布或下线操作更新"" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,573,select,"value={stage.key} onChange={event => moveItem(item.key, event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/reading-path-workbench.tsx,573,select,"value={itemIndex} onChange={event => { const position = Number(event.target.value), others = stage.items.filter(row => row.key !== item.key); moveItem(item.key, stage.key, others[position]?.key); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/topic-merge-panel.tsx,92,select,value={targetId} disabled={working} onChange={(event) => { setTargetId(event.target.value); setPreview(null); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation/work-curation-editor.tsx,268,select,value={selectedStage} onChange={(event) => setSelectedStage(event.target.value)} disabled={Boolean(busy) || !selectedPath || pathLoading},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation-project-workspace.tsx,95,select,"value={params.get(""scope"")||""all""} onChange={event=>navigate({scope:event.target.value,page:1,project:null,articles_page:1})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation-project-workspace.tsx,156,select,"value={values.visibility} onChange={event=>setValues({...values,visibility:event.target.value as Values[""visibility""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/curation-project-workspace.tsx,228,select,"value={current?.id||""""} onChange={event=>setSelected(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/forms/workflow-fields.tsx,339,select,value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/index-maintenance.tsx,116,select,"aria-label=""查询词来源类别"" value={kind} onChange={event=>{setKind(event.target.value);setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/index-maintenance.tsx,117,select,"aria-label=""使用状态"" value={availability} onChange={event=>{setAvailability(event.target.value);setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/index-maintenance.tsx,138,select,"value={kind} onChange={event=>{setKind(event.target.value as ""person""|""knowledge_node"");setSelected([]);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/index-query-preview.tsx,56,select,value={kind} onChange={event=>setKind(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/index-query-preview.tsx,56,select,value={language} onChange={event=>setLanguage(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/concept-placement-editor.tsx,108,select,"value={usage.usage_type} onChange={event=>setUsage({...usage,usage_type:event.target.value})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/concept-placement-editor.tsx,108,select,"value={usage.review_status} onChange={event=>setUsage({...usage,review_status:event.target.value})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-aliases-dialog.tsx,66,select,"value={row.alias_type} onChange={event=>setAliases(rows=>rows.map((value,at)=>at===index?{...value,alias_type:event.target.value as Alias[""alias_type""]}:value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-aliases-dialog.tsx,66,select,"value={row.source_kind} onChange={event=>setAliases(rows=>rows.map((value,at)=>at===index?{...value,source_kind:event.target.value as Alias[""source_kind""]}:value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-node-editor-frame.tsx,47,select,"aria-label=""其他编辑区域"" value={tabs.some(tab => tab.id === active) ? """" : active} onChange={event => { if (event.target.value) changeSection(event.target.value); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/knowledge-publication-review.tsx,87,select,"value={pageId} disabled={locked} onChange={event=>{setFrameState(""loading"");setPageId(event.target.value);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-alias-fields.tsx,13,select,"value={row.alias_type} onChange={event => update(index, { alias_type: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-relations.tsx,93,select,"value={filters.relation_type} onChange={event => filter(""relation_type"", event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-relations.tsx,94,select,"value={filters.direction} onChange={event => filter(""direction"", event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-relations.tsx,95,select,"value={filters.status} onChange={event => filter(""status"", event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/node-relations.tsx,96,select,"value={filters.kind} onChange={event => filter(""kind"", event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/path-editor-frame.tsx,31,select,"aria-label=""更多阅读路径操作"" value={pathEditorSections.slice(5).some(section=>section.id===active)?active:""""} onChange={event=>{if(event.target.value)changeSection(event.target.value);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-authority-workspace.tsx,54,select,"aria-label=""人物状态"" value={filter} onChange={event => { setFilter(event.target.value); setPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-authority-workspace.tsx,96,select,"value={values.preferred_language} onChange={event=>set(""preferred_language"",event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-authority-workspace.tsx,97,select,"value={values.original_language} onChange={event=>set(""original_language"",event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-authority-workspace.tsx,103,select,"value={values.authority_status} onChange={event => set(""authority_status"", event.target.value as AuthorityValues[""authority_status""])}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-authority-workspace.tsx,117,select,"aria-label=""异名类型"" value={value.variant_type} onChange={event => onChange({ ...value, variant_type: event.target.value as AuthorityVariant[""variant_type""] })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/person-contributions.tsx,74,select,disabled={blocked} value={changes[index]||asString(item.role)} onChange={event=>{const role=event.target.value;setChanges(current=>{const next={...current};if(role===item.role)delete next[index];else next[index]=role;return next;});}},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/public-page-tree.tsx,83,select,value={page.page_id} onChange={event=>setSelectedPage(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-editor-frame.tsx,46,select,"value={tabs.slice(0,3).some(tab => tab.id === active) ? """" : active} onChange={event => { if (event.target.value) changeSection(event.target.value); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-links.tsx,130,select,"value={draft.relation_type} onChange={event=>{const value=event.target.value as Fields[""relation_type""];setDraft(current=>({...current,relation_type:value,direction:value===""related""?current.direction:""directed"",node_is_source:[""proposes"",""defines"",""develops"",""interprets"",""uses""].includes(value)?false:current.node_is_source}));}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-links.tsx,130,select,"value={draft.direction===""undirected""?""undirected"":draft.node_is_source?""node"":""person""} onChange={event=>setDraft(value=>({...value,direction:event.target.value===""undirected""?""undirected"":""directed"",node_is_source:event.target.value===""node""}))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-profile-fields.tsx,21,select,value={value.featuredSourceId} disabled={evidence.loading} onChange={event => onChange({ featuredSourceId: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-relations-editor.tsx,111,select,"value={draft.relation_type} onChange={event=>setDraft({...draft,relation_type:event.target.value as ScholarRelation[""relation_type""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/scholar-relations-editor.tsx,112,select,"value={draft.direction} onChange={event=>setDraft({...draft,direction:event.target.value as ScholarRelation[""direction""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/timeline-editor-details.tsx,37,select,"value={row.kind} onChange={event => change(row.id,{kind:event.target.value as TimelineSourceRecord[""kind""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/timeline-editor-details.tsx,41,select,"value={row.status} onChange={event => change(row.id,{status:event.target.value as TimelineSourceRecord[""status""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/timeline-participants.tsx,57,select,"value={row.participant_role || """"} onChange={event => onChange(value.map((item, position) => position === index ? { ...item, participant_role: event.target.value } : item))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-associations.tsx,83,select,"aria-label={`${name}的位置`} value={index} onChange={event => move(id, Number(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-editor-frame.tsx,34,select,"aria-label=""更多主题编辑区域"" value={[""publication"",""passages"",""media"",""structure""].includes(active)?active:""""} onChange={event=>{if(event.target.value)changeSection(event.target.value);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/knowledge/topic-fields.tsx,78,select,value={value} disabled={evidence.loading} onChange={event => onChange(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/document-outline-workspace.tsx,193,select,"value={currentNode.parent_id || """"} onChange={event => patchNode({ parent_id: event.target.value || null })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/document-outline-workspace.tsx,196,select,"aria-label=""查看同页其他节点"" value="""" onChange={event=>{const node=samePageNodes.find(row=>row.id===event.target.value);if(node)selectNode(node);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/document-outline-workspace.tsx,197,select,"value={positionValue} onChange={event=>{if(event.target.value!==""source"")patchNode({pdf_position:[],source_locator:undefined,clear_position:true,normalized_position:event.target.value===""middle""?[0,.5]:event.target.value===""lower""?[0,.75]:event.target.value===""custom""?[0,0]:[]});}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/ocr-workspace.tsx,122,select,"aria-label=""页面状态"" value={filter} onChange={event=>{setFilter(event.target.value);setListPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/ocr-workspace.tsx,124,select,"aria-label=""页面状态"" value={filter} onChange={event => { setFilter(event.target.value); setListPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/ocr-workspace.tsx,134,select,"aria-label=""待校对置信度阈值"" value={options.quality_threshold} disabled={busy} onChange={event => { setOptions(current => ({ ...current, quality_threshold: Number(event.target.value) })); setListPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/page-mapping-workspace.tsx,160,select,"value={section?.id||""all""} onChange={event=>{chooseSegment(event.target.value);setMobilePageOpen(false);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/page-mapping-workspace.tsx,162,select,"aria-label={`PDF 第 ${row.pdf_page} 页类型`} value={row.page_type} disabled={!editable} onChange={event => patchPage(row.pdf_page, { page_type: event.target.value as MappingPage[""page_type""], confirmed: false })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/page-mapping-workspace.tsx,165,select,"value={current.page_type} onChange={event => patchPage(currentPage, { page_type: event.target.value as MappingPage[""page_type""], confirmed: false })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/page-mapping-workspace.tsx,175,select,"value={segment.style} onChange={event => setSegment(old => ({ ...old, style: event.target.value as MappingSegment[""style""] }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/work-files-workspace.tsx,103,select,"value={state.selected_edition_id || """"} onChange={event => selectEdition(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/work-library.tsx,48,select,"value={view} onChange={(event) => change({ view: event.target.value, work_id: null })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/work-library.tsx,49,select,value={documentType} onChange={(event) => change({ document_type: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/library/work-library.tsx,50,select,value={ordering} onChange={(event) => change({ ordering: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/local-service-history.tsx,18,select,value={service} onChange={event=>{setService(event.target.value);setPage(1);}},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/local-service-history.tsx,18,select,value={status} onChange={event=>{setStatus(event.target.value);setPage(1);}},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/local-services.tsx,150,select,"aria-label=""查看服务配置"" value={compactCurrent.id} disabled={configurationBusy} onChange={event=>setSelected(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/media/media-workspace.tsx,115,select,"required value={metadata.source_label} onChange={event=>{setMetadata({...metadata,source_label:event.target.value});edit();}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/ocr-runtime-editor.tsx,88,select,"value={input.mode} onChange={event=>change({mode:event.target.value as Input[""mode""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-task-composer.tsx,85,select,"value={file?.id || fileId} onChange={event => { setFileId(event.target.value); setError(""""); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-task-composer.tsx,88,select,"value={kind} onChange={event => setKind(event.target.value as ""ocr"" | ""outline"")}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-task-composer.tsx,89,select,value={scope} onChange={event => setScope(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-task-composer.tsx,90,select,"value={options.quality_threshold} onChange={event => setOptions(current => ({ ...current, quality_threshold: Number(event.target.value) }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-workspace.tsx,76,select,"value={params.get(""view"")===""tasks""?""tasks"":""files""} onChange={event=>change({view:event.target.value===""tasks""?""tasks"":null,page:1,selection:null,task_id:null,task_source:null})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-workspace.tsx,83,select,"value={kind} onChange={event=>change({type:event.target.value||null,page:1})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/processing-workspace.tsx,84,select,"value={status} onChange={event=>change({status:event.target.value||null,page:1,selection:null,task_id:null,task_source:null})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recommendation-issue-editor.tsx,49,select,value={value} disabled={disabled || loading || !workId} onChange={event => onChange(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recommendation-issue-editor.tsx,56,select,"value={item.kind} disabled={savedPlan} onChange={event => change({ ...item, kind: event.target.value as IssueItem[""kind""], work_id: null, edition_id: null })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recommendation-issue-editor.tsx,134,select,"value={draft.items[selected].section_id || """"} onChange={event => update({items:draft.items.map((row,index) => index === selected ? {...row,section_id:event.target.value} : row)})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recommendation-issue-list.tsx,95,select,"value={kind} disabled={Boolean(command.recovery) || command.busy} onChange={event => setKind(event.target.value as Creation[""kind""])}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recovery-workspace.tsx,77,select,"aria-label=""对象类型"" value={kind} disabled={locked} onChange={event=>{setKind(event.target.value);reset();}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recovery-workspace.tsx,77,select,"aria-label=""操作时间"" value={period} disabled={locked} onChange={event=>{setPeriod(event.target.value);setSince(event.target.value?new Date(Date.now()-Number(event.target.value)*86400000).toISOString():"""");reset();}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recovery-workspace.tsx,77,select,"aria-label=""操作人"" value={operator} disabled={locked} onChange={event=>{setOperator(event.target.value);reset();}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recovery-workspace.tsx,80,select,"aria-label=""每页条数"" value={pageSize} disabled={locked} onChange={event=>{setPageSize(Number(event.target.value));reset();}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/recovery-workspace.tsx,198,select,"value={relation||data.relation} onChange={event=>{setRelation(event.target.value);setPage(1);setAsOf("""");}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/research/candidate-decision-bar.tsx,116,select,"value={rejection.reason} onChange={(event) => setRejection({ ...rejection, reason: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/site-history.tsx,35,select,value={compare} onChange={event=>setCompare(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/site-home-picker.tsx,22,select,"aria-label=""筛选来源主题"" value={topic} onChange={event=>{setTopic(event.target.value);setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/site-home-picker.tsx,22,select,"aria-label=""来源排序"" value={sort} onChange={event=>{setSort(event.target.value);setPage(1);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/storage-workspace.tsx,167,select,"aria-label=""筛选备份任务状态"" value={status} onChange={event=>{setStatus(event.target.value);setPage(1);setAsOf("""");}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/storage-workspace.tsx,209,select,"value={status} onChange={event=>{setStatus(event.target.value);setPage(1);setAsOf("""");}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/support/feedback-workspace.tsx,60,select,"name=""category"" defaultValue={category}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/support/feedback-workspace.tsx,121,select,"value={draft.status} onChange={event => setDraft({ ...draft, status: event.target.value as FeedbackStatus })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/visual-review/visual-review-workspace.tsx,70,select,value={entry.id} disabled={dirty||locked} onChange={event=>reset(data.atlas.find(row=>row.id===event.target.value)!)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/visual-review/visual-review-workspace.tsx,74,select,"value={`${size.width}x${size.height}`} disabled={dirty||locked||drawing} onChange={event=>{const [width,height]=event.target.value.split(""x"").map(Number);setSize({width,height});}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/visual-review/visual-review-workspace.tsx,79,select,"value={color} disabled={locked} onChange={event=>setColor(event.target.value as Stroke[""color""])}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/visual-review/visual-review-workspace.tsx,81,select,"value={draft.status} disabled={locked} onChange={event=>setDraft({...draft,status:event.target.value as Draft[""status""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/catalog-field-locks.tsx,77,select,"value={editor.name} disabled={busy || Boolean(pending) || Boolean(reason)} onChange={event => setEditor({ name: event.target.value, version })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/contribution-scope-editor.tsx,23,select,"value={chapterMode ? ""chapter"" : ""edition""} onChange={event => onChange(event.target.value === ""chapter"" ? { kind: ""chapter"", chapters: [] } : { kind: ""edition"" })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/contribution-scope-editor.tsx,27,select,"value={fileId} onChange={event => { setFileId(event.target.value); setNodeId(""""); setLastPage(""""); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/contribution-scope-editor.tsx,28,select,"value={nodeId} disabled={!outline || source.loading} onChange={event => { setNodeId(event.target.value); setLastPage(""""); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/edition-ocr-control.tsx,149,select,"value={fileId} disabled={pending || unresolved} onChange={(event) => { setFileId(event.target.value); request.current = null; setMessage(""""); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/edition-ocr-control.tsx,205,select,value={edition} onChange={(event) => setEdition(event.target.value)} disabled={!data},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/intake-confirmation.tsx,61,select,"aria-label=""文献类型"" disabled={locked} value={choice.document_type} onChange={event=>edit({document_type:event.target.value})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/journal-contents-candidates.tsx,34,select,"value={fileId || data.asset_id || """"} onChange={event => { setFileId(event.target.value); setPage(1); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-catalog.tsx,41,select,"aria-label=""责任角色"" disabled={disabled} value={row.role} onChange={event=>onChange({...row,role:event.target.value})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-catalog.tsx,133,select,"disabled={locked||shared||Boolean(current)} value={kind} onChange={event=>editWork(""document_type"",event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-catalog.tsx,134,select,"disabled={locked||shared} value={form.work.language} onChange={event=>editWork(""language"",event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/manual-catalog.tsx,137,select,disabled={locked} value={editionId} onChange={event=>setEditionId(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/material-assistant.tsx,56,select,"value={source?.id||""""} onChange={event=>{setSelected(event.target.value);setEvidenceIndex(0);}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin/workflow/workflow-editor.tsx,1438,select,"value={editionId} aria-label=""当前出版版本"" onChange={(event) => exit(withAdminReturn(`/admin/library/works/${encodeURIComponent(asString(payload.context.work_id))}?edition=${encodeURIComponent(event.target.value)}#${active}`,returnHref))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-dashboard.tsx,77,select,"value={search.get(""kind"") || """"} onChange={event => change({ kind: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-dashboard.tsx,78,select,"value={search.get(""state"") || """"} onChange={event => change({ state: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-dashboard.tsx,79,select,"value={search.get(""owner"") || ""all""} onChange={event => change({ owner: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,659,select,"value={draft.entityLevel} onChange={(event) => setDraft({ ...draft, entityLevel: event.target.value as TaxonomyDraft[""entityLevel""] })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,778,select,"disabled title=""状态通过发布或下线操作更新"" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1334,select,"disabled title=""状态通过发布或下线操作更新"" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1830,select,"value={semanticRuntime.engine} onChange={(event) => setSemanticDraft({
+                ...semanticRuntime,
+                engine: event.target.value as SemanticRuntime[""engine""],
+              })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1843,select,"value={semanticRuntime.provider} onChange={(event) => setSemanticDraft({
+                ...semanticRuntime,
+                provider: event.target.value as SemanticRuntime[""provider""],
+              })} disabled={semanticRuntime.engine !== ""meilisearch_hybrid""}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1861,select,"value={semanticRuntime.pooling} onChange={(event) => setSemanticDraft({ ...semanticRuntime, pooling: event.target.value as SemanticRuntime[""pooling""] })} disabled={semanticRuntime.engine !== ""meilisearch_hybrid"" || semanticRuntime.provider !== ""huggingFace""}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-sections.tsx,1871,select,"value={semanticRuntime.reranker} onChange={(event) => setSemanticDraft({ ...semanticRuntime, reranker: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-upload.tsx,1045,select,value={accessPolicy} disabled={pending||Boolean(workspace.data?.batch)} onChange={(event) => setAccessPolicy(event.target.value as AccessPolicy)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-upload.tsx,1058,select,value={ocrStrategy} disabled={pending||Boolean(workspace.data?.batch)} onChange={(event) => setOcrStrategy(event.target.value as OcrStrategy)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/admin-upload.tsx,1071,select,value={duplicatePolicy} disabled={pending||Boolean(workspace.data?.batch)} onChange={(event) => setDuplicatePolicy(event.target.value as DuplicatePolicy)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/candidate-review.tsx,197,select,value={status} onChange={(event) => setStatus(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/candidate-review.tsx,198,select,value={kind} onChange={(event) => setKind(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/catalog-search-workspace.tsx,101,select,"id=""catalog-sort"" value={params.get(""sort"") ?? ""relevance""} onChange={event => router.push(catalogHref(key, { sort: event.target.value, page: null }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/discovery-search-workspace.tsx,352,select,"name={name} value={first(filters[name])} onChange={event => setFilters(current => ({ ...current, [name]: event.target.value }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/discovery-search-workspace.tsx,380,select,"aria-label={t(""结果排序"")} value={result?.sort || ""relevance""} disabled={!result || Boolean(busy)} onChange={event => void sessionAction(""sort"", event.target.value as DiscoverySort)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/entity-relations-admin.tsx,134,select,value={target} onChange={(event) => setTarget(event.target.value)} required,shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/entity-relations-admin.tsx,193,select,"value={draft.role || ""related""} onChange={(event) => setDraft({ ...draft, role: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/entity-relations-admin.tsx,194,select,"value={draft.role || ""related""} onChange={(event) => setDraft({ ...draft, role: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/entity-relations-admin.tsx,195,select,"value={draft.relation_type || ""adjacent""} onChange={(event) => setDraft({ ...draft, relation_type: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/entity-relations-admin.tsx,195,select,"value={draft.strength || ""medium""} onChange={(event) => setDraft({ ...draft, strength: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/explore-ask-client.tsx,196,select,"value={draft.provider} onChange={(event) => onChange(""provider"", event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/explore-ask-client.tsx,802,select,value={assistMode} onChange={(event) => setAssistMode(event.target.value as AssistMode)} disabled={isSending || !canGenerate},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/knowledge-admin.tsx,322,select,"disabled title=""状态通过发布或下线操作更新"" value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/knowledge-admin.tsx,590,select,"disabled title=""状态通过发布或下线操作更新"" value={draft.editorial_status} onChange={(event) => setDraft({ ...draft, editorial_status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/knowledge-admin.tsx,814,select,"value={current.block_type} onChange={(event) => setEditing({ ...current, block_type: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/knowledge-admin.tsx,815,select,"value={current.icon} onChange={(event) => setEditing({ ...current, icon: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/knowledge-workspace.tsx,278,select,value={objectType} onChange={(event) => choose(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/page-mapping-editor.tsx,96,select,"value={segment.style} onChange={(event) => setSegment({ ...segment, style: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/prompt-registry-admin.tsx,267,select,value={draft.taskProfileKey} onChange={(event) => selectTaskProfile(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/prompt-registry-admin.tsx,269,select,"value={draft.capability} onChange={(event) => setDraft({ ...draft, capability: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/editorial-directory.tsx,87,select,"form=""editorial-filter"" name=""topic"" defaultValue={value(""topic"")} onChange={submit}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/editorial-directory.tsx,88,select,"form=""editorial-filter"" name=""theory"" defaultValue={value(""theory"")} onChange={submit}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/editorial-directory.tsx,90,select,"form=""editorial-filter"" name=""kind"" defaultValue={value(""kind"")} onChange={submit}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/editorial-directory.tsx,91,select,"form=""editorial-filter"" name=""curator"" defaultValue={value(""curator"")} onChange={submit}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/editorial-directory.tsx,95,select,"id=""editorial-sort"" form=""editorial-filter"" name=""sort"" defaultValue={value(""sort"") || ""newest""} onChange={submit}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/feedback-page-picker.tsx,59,select,"value={kind} onChange={event => { setKind(event.target.value as Kind); setQuery(""""); setResult(null); setLoadError(""""); setSearch({ query: """", page: 1, attempt: 0 }); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/graph-center-search.tsx,28,select,value={kind} onChange={event => setKind(event.target.value as GraphKind)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-list.tsx,27,select,"name=""difficulty"" defaultValue={filters.difficulty || """"} onChange={event => applyChoice(""difficulty"", event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-materials.tsx,33,select,"value={progress?.status || ""pending""} disabled={busy || progress?.status === ""completed""} onChange={event => { if (personal.record) void personal.mutate({ action: ""progress"", request_id: createRequestKey(), id: personal.record.id, expected_revision: personal.record.revision, item_id: item.id, status: event.target.value as PathProgress[""status""] }); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-workspace.tsx,68,select,"className={styles.mobileStageSelect} aria-label=""选择阅读阶段"" value={stage.id} onChange={event => chooseStage(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/reading-path-workspace.tsx,73,select,value={current.revision.token} disabled={busy || preview} onChange={event => void readVersion(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/scholar-directory.tsx,30,select,"key={result.filters.sort} name=""sort"" defaultValue={result.filters.sort}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/scholar-profile.tsx,46,select,"name=""relation_direction"" defaultValue={data.filters.relation_direction}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-interactions.tsx,75,select,value={author} onChange={event => setAuthor(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-interactions.tsx,76,select,value={period} onChange={event => setPeriod(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-interactions.tsx,77,select,value={context} onChange={event => setContext(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-detail-interactions.tsx,144,select,"value={selected?.id || """"} onChange={event => setSelectedId(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-graph-workspace.tsx,121,select,"value={draft.has_collection || """"} onChange={event => setDraft(previous => ({ ...previous, has_collection: event.target.value }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-graph-workspace.tsx,122,select,"value={draft.limit || ""60""} onChange={event => setDraft(previous => ({ ...previous, limit: event.target.value }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-graph-workspace.tsx,123,select,"value={draft.edge_limit || ""150""} onChange={event => setDraft(previous => ({ ...previous, edge_limit: event.target.value }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-timeline-workspace.tsx,84,select,"name=""has_collection"" defaultValue={filters.has_collection || """"}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/theory-timeline-workspace.tsx,91,select,"aria-label=""事件排序"" value={filters.sort || ""asc""} onChange={e => router.push(timelineHref(actionPath, filters, { sort: e.target.value, page: null, focus: null }))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/topic-content.tsx,53,select,"name=""reading"" aria-label=""阅读方向"" defaultValue={data.filters.reading}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/topic-content.tsx,53,select,"name=""sort"" aria-label=""作品排序"" defaultValue={data.filters.sort}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/public/topic-directory.tsx,41,select,"key={result.filters.sort} name=""sort"" defaultValue={result.filters.sort}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/publication-desk.tsx,121,select,value={filter} onChange={(event) => change({ publication: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/publication-desk.tsx,122,select,value={source} onChange={(event) => change({ source: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader/parallel-column.tsx,71,select,value={fontSize} onChange={event => setFontSize(Number(event.target.value))},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader/parallel-column.tsx,76,select,"value={activeSegment?.id || """"} onChange={event => { const row = resource.data?.segments.find(item => item.id === event.target.value); if (row) onSelect(row); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader/parallel-reader.tsx,299,select,"value={current?.edition_id || """"} disabled={locked || loadingTask} onChange={event => changeVersion(side, event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader/parallel-reader.tsx,335,select,required value={selectedAlignment} onChange={event => setSelectedAlignment(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader/reader-settings.tsx,26,select,"value={draft.highlight} onChange={event=>setDraft({...draft,highlight:event.target.value as ReaderPreferences[""highlight""]})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader-shell.tsx,378,select,"value={citationStyle} onChange={event => setCitationStyle(event.target.value as CitationStyle)} aria-label=""引用格式""",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader-shell.tsx,406,select,"aria-label=""更换阅读版本"" value={work.editionId} onChange={async event => {
+              const version = versions.find(row => row.id === event.target.value);
+              if (!version || version.id === work.editionId || !(await canLeave())) return;
+              const url = version.readable_asset ? `/reader/${encodeURIComponent(version.readable_asset.id)}` : `/works/${encodeURIComponent(version.public_slug || version.id)}`;
+              router.push(researchReturn && version.readable_asset ? `${url}?${new URLSearchParams({ return_to: researchReturn })}` : url);
+            }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/reader-shell.tsx,462,select,"aria-label=""书内结果排序"" value={searchOrder} onChange={event => setSearchOrder(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-issue.tsx,109,select,"value={reference ? researchEvidenceKey(reference) : """"} onChange={event => setSourceKey(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-issue.tsx,140,select,disabled={disabled} value={projectId} onChange={event => { setProjectId(event.target.value); onChange(null); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-report.tsx,121,select,value={location} onChange={event => { setLocation(event.target.value); setPage(1); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-report.tsx,121,select,value={entryFilter} onChange={event => { setEntryFilter(event.target.value); setPage(1); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-report.tsx,121,select,value={relationFilter} onChange={event=>{setRelationFilter(event.target.value);setPage(1)}},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-report.tsx,121,select,value={filter} onChange={event=>{setFilter(event.target.value as AuditCategory);setPage(1)}},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-audit-versions.tsx,45,select,"aria-label=""选择稿件版本"" disabled={disabled || uploading} value={record.id} onChange={event => router.push(`/account/citation-audits/${event.target.value}`)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-docx-preview.tsx,65,select,value={zoom} onChange={event => setZoom(Number(event.target.value))},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-manuscript-preview.tsx,83,select,value={zoom} onChange={event => setZoom(Number(event.target.value))},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/citation-source-preview.tsx,111,select,"aria-label=""原文缩放"" value={zoom} onChange={event => setZoom(Number(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,102,select,"aria-label=""笔记排序"" value={order} onChange={event => filter(() => setOrder(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,150,select,"aria-label=""确认队列来源状态"" value={queueSource} onChange={event=>queueFilter(()=>setQueueSource(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,150,select,"aria-label=""确认队列笔记状态"" value={queueState} onChange={event=>queueFilter(()=>setQueueState(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,150,select,"aria-label=""确认队列排序"" value={queueOrder} onChange={event=>queueFilter(()=>setQueueOrder(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,212,select,value={kind} onChange={event => setKind(event.target.value as MemoryKind)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,249,select,value={kind} onChange={event => setKind(event.target.value as MemoryKind)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/confirmed-notes-workspace.tsx,266,select,value={choice} onChange={event => setChoice(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/counter-evidence-editor.tsx,38,select,value={attribution} disabled={busy || !reviewable} onChange={event => setAttribution(event.target.value as CounterAttribution)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/counter-evidence-workspace.tsx,116,select,value={sort} onChange={event => setSort(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/counter-evidence-workspace.tsx,138,select,value={scopeChoice} disabled={busy} onChange={event => setScopeChoice(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/counter-evidence-workspace.tsx,144,select,"value={custom?""__custom"":value} disabled={disabled} onChange={event=>{if(event.target.value===""__custom"")setCustom(true);else{setCustom(false);onChange(event.target.value);}}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-booklists.tsx,133,select,"aria-label=""作品类型"" value={kind} disabled={blocked} onChange={event => filter(() => setKind(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-booklists.tsx,133,select,"aria-label=""排序方式"" value={order} disabled={blocked} onChange={event => filter(() => setOrder(event.target.value))}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-groups.tsx,102,select,value={kind} onChange={event => setKind(event.target.value as typeof kind)} disabled={blocked},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-notebook.tsx,95,select,"value={filters.order} onChange={event => change(""order"", event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-notebook.tsx,139,select,"aria-label={label} value={data?.results.some(row => row.id === value) ? value : value ? ""__selected"" : """"} onChange={event => { if (event.target.value !== ""__selected"") onChange(event.target.value, data?.results.find(row => row.id === event.target.value)); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-overview.tsx,80,select,value={order} onChange={event => filter({ order: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-overview.tsx,80,select,"value={view} onChange={event => setView(event.target.value as ""list"" | ""cards"")}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-overview.tsx,81,select,value={kind} onChange={event => filter({ material: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reader-overview.tsx,81,select,value={visibility} onChange={event => filter({ visibility: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reading-plan-detail.tsx,150,select,"value={item.status} disabled={busy || generating || Boolean(order) || item.status === ""completed""} onChange={async event => { const status = event.target.value as PlanItem[""status""]; if (status !== ""completed"" || (await confirmAction(""将此项记为已完成后，计划会保留它的材料、位置和时长，不再参与替换或重新排序。确认已完成阅读？""))) void patch({ item_id: item.id, status }); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reading-plan-detail.tsx,183,select,value={difficulty} onChange={event => setDifficulty(event.target.value)} disabled={replacing},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reading-plan-form.tsx,60,select,"value={budgetMode} onChange={event => setBudgetMode(event.target.value as ""weekly"" | ""total"")}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reading-plan-form.tsx,60,select,value={language} onChange={event => setLanguage(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/reading-plan-form.tsx,84,select,value={projectId} onChange={event => setProjectId(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-comparison-draft.tsx,54,select,value={current.id} onChange={event => setChosen(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-comparison-search.tsx,89,select,value={current.id} onChange={event => setSelectedTurn(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-comparison-translations.tsx,28,select,"id=""comparison-translation-version"" value={edition} onChange={event => setEdition(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-replay.tsx,71,select,value={sort} onChange={event => setSort(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-replay.tsx,73,select,"value={compareId || """"} onChange={event => { setCompareId(event.target.value); setSelected([]); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-compare.tsx,127,select,value={activeDimension} disabled={!dimensions.length} onChange={(event) => setFilter(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-detail.tsx,218,select,value={documentType} onChange={event=>setDocumentType(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-detail.tsx,218,select,value={sort} onChange={event=>setSort(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/research-session-list.tsx,46,select,value={scope} onChange={event => { setScope(event.target.value); setPage(1); setExpanded(true); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/share-composer.tsx,182,select,disabled={blocked} value={groupId} onChange={event => { setGroupId(event.target.value); setMembers([]); invalidate(); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research/share-composer.tsx,187,select,value={expires} disabled={blocked} onChange={event => { setExpires(Number(event.target.value)); invalidate(); }},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research-source-registry.tsx,93,select,"disabled={hasWork||!!recordError} value={source?.key||""""} onChange={event=>{setSelected(event.target.value);setMessage("""");}}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/research-source-registry.tsx,102,select,"value={input.credential} onChange={event=>change({credential:event.target.value as Draft[""credential""],secret:"""",alias:event.target.value===""delete""?source.credential_alias:input.alias||`source-${source.key.replaceAll(""_"",""-"")}`})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/review-queue.tsx,50,select,value={category} onChange={(event) => change({ category: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/review-queue.tsx,51,select,value={source} onChange={(event) => change({ source: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/review-queue.tsx,52,select,value={ordering} onChange={(event) => change({ ordering: event.target.value })},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/scholar-relation-network.tsx,28,select,value={filter} onChange={event=>setFilter(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/semantic-index-admin.tsx,456,select,"name={`evaluation_relevance_${index}`} value={evaluationJudgments[item.id] ?? """"} onChange={(event) => {
+                      const value = event.target.value;
+                      setEvaluationJudgments((current) => {
+                        if (value === """") {
+                          const next = { ...current };
+                          delete next[item.id];
+                          return next;
+                        }
+                        return { ...current, [item.id]: Number(value) };
+                      });
+                    }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/semantic-index-admin.tsx,504,select,"name=""evaluation_target_set"" value={evaluationTargetSetId} onChange={(event) => setEvaluationTargetSetId(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/semantic-index-admin.tsx,539,select,"name=""evaluation_language"" value={evaluationLanguage} onChange={(event) => setEvaluationLanguage(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/semantic-index-admin.tsx,567,select,"name=""evaluation_index_version"" value={effectiveEvaluationIndexId} onChange={(event) => setEvaluationIndexId(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/shared-citation-overlay.tsx,398,select,"aria-label={t(""选择目标研究"")} value={projectId} disabled={busy || unknown} onChange={event => { setProjectId(event.target.value); setUndo(null); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/shared-citation-overlay.tsx,403,select,"aria-label={t(""选择目标书单"")} value={listId} disabled={busy || unknown || listLoading || Boolean(bookRecovery)} onChange={event => { setListId(event.target.value); setUndo(null); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/structured-editors.tsx,231,select,"id={fieldId} value={row[column.key] ?? """"} onChange={(event) => {
+                        const next = [...rows];
+                        next[index] = { ...row, [column.key]: event.target.value };
+                        onChange(next);
+                      }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,770,select,"value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); theoryLocation.update({ page: 1, status: event.target.value }); }}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,800,select,"value={draft.node_type} onChange={(event) => setDraft({ ...draft, node_type: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,869,select,"disabled title=""状态通过发布或下线操作更新"" value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1276,select,value={newNodeType} onChange={(event) => setNewNodeType(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1277,select,value={relationRole} onChange={(event) => setRelationRole(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1303,select,"value={relationDraft.relation_type} onChange={(event) => setRelationDraft({ ...relationDraft, relation_type: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1303,select,"value={relationDraft.direction} onChange={(event) => setRelationDraft({ ...relationDraft, direction: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1308,select,"value={relationDraft.status} onChange={(event) => setRelationDraft({ ...relationDraft, status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1318,select,"value={relationStatus} onChange={(event) => location.update({ relation_status: event.target.value, relations_page: 1 })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1522,select,"name=""subject_edition"" value={value} disabled={Boolean(work && editions.loading)} onChange={event => onChange(event.target.value)}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1567,select,"name=""evidence_edition"" value={draft.source_edition} disabled={editions.loading} onChange={(event) => changeSource({ source_edition: event.target.value, evidence_asset: """" })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1578,select,"name=""evidence_asset"" value={draft.evidence_asset} disabled={!edition || Boolean(editions.error || selected.error)} onChange={(event) => changeSource({ evidence_asset: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1847,select,value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1848,select,value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)},shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1873,select,"value={draft.event_type} onChange={event=>setDraft({...draft,event_type:event.target.value})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1876,select,"name=""date_precision"" value={draft.date_precision} onChange={event=>setDraft({...draft,start_date:"""",end_date:"""",date_precision:event.target.value as TimelineDraft[""date_precision""],editorial_details:{...draft.editorial_details,confirmed:false}})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1894,select,"value={draft.editorial_details.primary_kind||""other""} onChange={event=>setDraft({...draft,editorial_details:{...draft.editorial_details,primary_kind:event.target.value as NonNullable<TimelineEditorialDetails[""primary_kind""]>,confirmed:false}})}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
+web/components/theory-system-admin.tsx,1900,select,"value={draft.review_status} onChange={(event) => setDraft({ ...draft, review_status: event.target.value })}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告

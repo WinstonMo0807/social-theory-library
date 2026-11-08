@@ -42,7 +42,7 @@ export function CitationAuditVersions({ record, ownerId, disabled = false, onRef
   const refresh = () => { versions.reload(); onRefresh(); };
   return <section className="stl4-audit-versions" aria-label="稿件版本与变化">
     <div className="stl4-audit-version-bar"><label><History size={14} />稿件版本
-      {current ? <select aria-label="选择稿件版本" disabled={disabled || uploading} value={record.id} onChange={event => router.push(`/account/citation-audits/${event.target.value}`)}>
+      {current ? <select data-stl-select aria-label="选择稿件版本" disabled={disabled || uploading} value={record.id} onChange={event => router.push(`/account/citation-audits/${event.target.value}`)}>
         {available.map(version => <option key={version.id} value={version.id}>v{version.manuscript_revision} · {version.filename} · {new Date(version.created_at).toLocaleString("zh-CN")}{version.id === record.id ? "（当前查看）" : ""}</option>)}
       </select> : <span>v{record.data.manuscript_revision || 1} · {record.data.filename}</span>}
     </label><div><button type="button" onClick={() => setUploading(true)} disabled={uploadingDisabled || uploading}><FileUp size={14} />上传新版本</button><button type="button" disabled={disabled || uploading || versions.loading} onClick={refresh}>读取版本记录</button></div></div>
@@ -57,7 +57,7 @@ export function CitationAuditVersions({ record, ownerId, disabled = false, onRef
       {record.data.version_lineage ? <p>{record.data.version_lineage.check_changed_only ? "本版按变化内容重新核验；可继承的记录由实际比较结果确定。" : "本版重新核验全部引文。"}</p> : null}
       {baseId && !base && !versions.loading && !versions.error ? <p>基准稿件当前未能从版本列表读取，不能据此认定旧报告已删除。</p> : null}
     </div> : null}
-    {available.length > 1 ? <details className="stl4-audit-version-changes"><summary>回看保存的稿件版本（{available.length}）</summary><ul className="stl4-audit-version-history">{available.map(version => <li key={version.id}><span>v{version.manuscript_revision} · {version.filename}<br /><time dateTime={version.created_at}>{new Date(version.created_at).toLocaleString("zh-CN")}</time> · {auditStatuses[version.status] || "已保存"}</span>{version.id === record.id ? <span>当前查看</span> : <Link href={`/account/citation-audits/${version.id}`}>打开报告</Link>}</li>)}</ul></details> : null}
+    {available.length > 1 ? <details data-disclosure="collection" className="stl4-audit-version-changes"><summary>回看保存的稿件版本（{available.length}）</summary><ul className="stl4-audit-version-history">{available.map(version => <li key={version.id}><span>v{version.manuscript_revision} · {version.filename}<br /><time dateTime={version.created_at}>{new Date(version.created_at).toLocaleString("zh-CN")}</time> · {auditStatuses[version.status] || "已保存"}</span>{version.id === record.id ? <span>当前查看</span> : <Link href={`/account/citation-audits/${version.id}`}>打开报告</Link>}</li>)}</ul></details> : null}
     {uploading ? <VersionUploadForm record={record} ownerId={ownerId} disabled={uploadingDisabled} onClose={() => setUploading(false)} onRefresh={refresh} retrySession={retrySession}
       onUpload={({ file, requestId, expectedRevision, onlyChanged }) => createCitationAuditVersion(record.id, file, { request_id: requestId, expected_revision: expectedRevision, check_changed_only: onlyChanged })} /> : null}
   </section>;

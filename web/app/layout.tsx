@@ -28,6 +28,8 @@ import { EvidenceLanguageProvider } from "@/components/evidence-language";
 
 import "../styles/features/workspace-polish.css";
 import "../styles/features/workbench-editorial.css";
+import "../styles/components/content-controls.css";
+import "../styles/features/support-flow.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { config } = await loadSiteChromeConfig();

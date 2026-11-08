@@ -61,12 +61,12 @@ export default async function SemanticWorkResultsPage({
                 </p>
                 <blockquote><Quote size={18} fill="currentColor" />{item.snippet}</blockquote>
                 {item.context_before || item.context_after ? (
-                  <details className="semantic-context">
-                    <summary>展开前后文</summary>
+                  <section data-content-section className="semantic-context">
+                    <header data-section-heading>展开前后文</header>
                     {item.context_before ? <p>{item.context_before}</p> : null}
                     <blockquote>{item.snippet}</blockquote>
                     {item.context_after ? <p>{item.context_after}</p> : null}
-                  </details>
+                  </section>
                 ) : null}
                 <footer>
                   <SemanticResultActions query={query} chunkId={item.id} rank={index + 1} />

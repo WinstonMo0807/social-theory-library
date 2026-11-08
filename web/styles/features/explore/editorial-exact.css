@@ -186,7 +186,7 @@
 
 .filter-title strong,
 .filter-group legend,
-.collapsible-filter > summary {
+.collapsible-filter > :is(summary,:where([data-section-heading])) {
   font-size: max(12px, var(--stl-readable-meta));
 }
 
@@ -364,7 +364,7 @@
   font-size: max(10px, var(--stl-readable-meta));
 }
 
-.passage-table-actions summary,
+.passage-table-actions :is(summary,:where([data-section-heading])),
 .passage-table-actions > a {
   cursor: pointer;
   font-weight: 700;
@@ -377,12 +377,12 @@
   border-bottom: 1px solid currentColor;
 }
 
-.passage-table-actions details {
+.passage-table-actions :is(details,:where([data-content-section])) {
   position: relative;
   text-align: right;
 }
 
-.passage-table-actions details p {
+.passage-table-actions :is(details,:where([data-content-section])) p {
   position: absolute;
   right: 0;
   z-index: 4;

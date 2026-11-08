@@ -323,7 +323,7 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
             key={page.page_id}
           >{page.display_name}</Link>)}
         </nav> : null}
-        {unsupported.length ? <details className="admin-preview-warning"><summary>有内容暂不能完整预览</summary><p>{unsupported.join("、")}。请返回编辑页核对这些内容后再发布。</p></details> : null}
+        {unsupported.length ? <details data-disclosure="collection" className="admin-preview-warning"><summary>有内容暂不能完整预览</summary><p>{unsupported.join("、")}。请返回编辑页核对这些内容后再发布。</p></details> : null}
         {anchorMessage ? <p className="admin-preview-warning">{anchorMessage}</p> : null}
       </div>
       <div className="admin-knowledge-page-preview-body" data-ui-scope="stl4" data-type-mode="expressive" inert>

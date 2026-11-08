@@ -98,7 +98,7 @@
   flex: 0 0 auto;
 }
 
-.theory-filter-panel > summary {
+.theory-filter-panel > :is(summary,:where([data-section-heading])) {
   display: flex;
   width: 30px;
   height: 30px;
@@ -108,11 +108,11 @@
   list-style: none;
 }
 
-.theory-filter-panel > summary::-webkit-details-marker {
+.theory-filter-panel > :is(summary,:where([data-section-heading]))::-webkit-details-marker {
   display: none;
 }
 
-.theory-filter-panel[open] > summary {
+.theory-filter-panel:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) {
   background: var(--ink);
   color: var(--surface);
 }

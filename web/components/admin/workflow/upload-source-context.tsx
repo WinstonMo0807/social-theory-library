@@ -60,7 +60,7 @@ export function UploadSourceContext({ itemId }: { itemId: string }) {
       {item.error_message || item.dispatch_error ? <ProcessingError code={item.error_code} message={item.error_message || item.dispatch_error || ""} /> : null}
       <p>如果原文件已经缺失，可以在下方重新上传。这里会保留之前的处理记录。</p>
       <div className="admin-title-actions"><button type="button" onClick={result.retry}>刷新来源状态</button>{item.status === "failed" || item.status === "received" ? <button type="button" disabled={busy} onClick={() => void retrySource()}>{busy ? "正在请求安全重试…" : "重试原来源任务"}</button> : null}{item.edition ? <Link href={withAdminReturn(`/admin/intake/${encodeURIComponent(item.id)}`, returnTo)}>进入当前版本复核</Link> : null}</div>
-      <details><summary>来源与处理记录</summary><p>上传编号：{item.id}；错误类型：{item.error_code || "未记录错误"}；暂存：{item.staging_status || "不适用或尚未记录"}</p>{item.attempts?.map((attempt) => <p key={attempt.id}>{attempt.stage} · {fileProcessingStatusLabel(attempt.status)} {attempt.error_message}</p>)}</details>
+      <section data-content-section><header data-section-heading>来源与处理记录</header><p>上传编号：{item.id}；错误类型：{item.error_code || "未记录错误"}；暂存：{item.staging_status || "不适用或尚未记录"}</p>{item.attempts?.map((attempt) => <p key={attempt.id}>{attempt.stage} · {fileProcessingStatusLabel(attempt.status)} {attempt.error_message}</p>)}</section>
     </>}
   </section>;
 }

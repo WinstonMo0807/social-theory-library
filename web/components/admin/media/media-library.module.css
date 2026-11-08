@@ -4,9 +4,9 @@
 .form label { display: grid; gap: 6px; font-size: max(13px, var(--stl-readable-meta)); }
 .form input, .form textarea { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .form textarea { resize: vertical; }
-.form small, .form details p { color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); line-height: 1.8; }
-.form details { padding-top: 12px; border-top: 1px solid var(--line); }
-.form details label { margin-top: 9px; }
+.form small, .form :is(details,:where([data-content-section])) p { color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); line-height: 1.8; }
+.form :is(details,:where([data-content-section])) { padding-top: 12px; border-top: 1px solid var(--line); }
+.form :is(details,:where([data-content-section])) label { margin-top: 9px; }
 .form button, .search button, .pagination button, .history button { border: 1px solid var(--line); padding: 8px 11px; background: var(--surface); color: var(--ink); }
 .form > button { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .search { margin: 18px 0 13px; font-size: max(12px, var(--stl-readable-meta)); }

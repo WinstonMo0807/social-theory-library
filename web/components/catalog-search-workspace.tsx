@@ -98,7 +98,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
           <div className="stl4-catalog-toolbar">
             <button className="stl4-catalog-mobile-trigger" type="button" onClick={() => setMobileFilters(true)}><SlidersHorizontal size={15} />筛选{activeFilters.length ? ` (${activeFilters.length})` : ""}</button>
             <h2>{data ? <>找到 <em>{data.pagination.total.toLocaleString("zh-CN")}</em> 条结果</> : loading ? "正在读取检索结果" : "检索结果暂不可用"}</h2>
-            <div className="stl4-catalog-sort"><label className="sr-only" htmlFor="catalog-sort">排序</label><select id="catalog-sort" value={params.get("sort") ?? "relevance"} onChange={event => router.push(catalogHref(key, { sort: event.target.value, page: null }))}>
+            <div className="stl4-catalog-sort"><label className="sr-only" htmlFor="catalog-sort">排序</label><select data-stl-select id="catalog-sort" value={params.get("sort") ?? "relevance"} onChange={event => router.push(catalogHref(key, { sort: event.target.value, page: null }))}>
               <option value="relevance">相关性优先</option><option value="year">出版时间</option><option value="newest">最新入库</option>
             </select></div>
             <div className="stl4-catalog-view"><Link href={catalogHref(key, { view: "list" })} aria-current={view === "list" ? "true" : undefined} aria-label="列表视图"><List size={16} /></Link><Link href={catalogHref(key, { view: "grid" })} aria-current={view === "grid" ? "true" : undefined} aria-label="网格视图"><Grid2X2 size={16} /></Link></div>
@@ -130,24 +130,24 @@ function CatalogFilterFields({ params, facets, mobile = false }: { params: URLSe
   const largestYearCount = Math.max(1, ...facets.year_histogram.map(row => row.count));
   return <>
     {["q", "sort", "view"].map(name => params.get(name) ? <input key={name} type="hidden" name={name} value={params.get(name) ?? ""} /> : null)}
-    {mobile ? <CatalogFacet name="document_type" options={facets.document_types} params={params} /> : <details className="stl4-catalog-filter-group stl4-catalog-scope" open><summary>匹配范围<ChevronDown size={14} /></summary><div>
+    {mobile ? <CatalogFacet name="document_type" options={facets.document_types} params={params} /> : <section data-content-section className="stl4-catalog-filter-group stl4-catalog-scope"><header data-section-heading>匹配范围<ChevronDown size={14} /></header><div>
       <Link className={!params.has("document_type") ? "is-selected" : ""} href={catalogHref(params, { document_type: null, page: null })} aria-current={!params.has("document_type") ? "true" : undefined}><span aria-hidden="true" />全部馆藏{typeof facets.total === "number" ? `（${facets.total}）` : ""}</Link>
       {facets.document_types.map(option => <Link key={option.value} className={params.getAll("document_type").includes(option.value) ? "is-selected" : ""} href={catalogHref(params, { document_type: option.value, page: null })} aria-current={params.getAll("document_type").includes(option.value) ? "true" : undefined}><span aria-hidden="true" />{option.label}（{option.count}）</Link>)}
-    </div></details>}
-    <details className="stl4-catalog-filter-group" open={params.has("year") || params.has("year_min") || params.has("year_max")}><summary>年份<ChevronDown size={14} /></summary><div className="stl4-catalog-year-inputs"><label htmlFor={`${id}-from`} className="sr-only">起始年份</label><input id={`${id}-from`} aria-label="起始年份" type="number" name="year_min" min="1" max="9999" placeholder="起始年" defaultValue={params.get("year_min") ?? ""} /><span>至</span><label htmlFor={`${id}-to`} className="sr-only">截止年份</label><input id={`${id}-to`} aria-label="截止年份" type="number" name="year_max" min="1" max="9999" placeholder="截止年" defaultValue={params.get("year_max") ?? ""} /></div>
+    </div></section>}
+    <section data-content-section className="stl4-catalog-filter-group"><header data-section-heading>年份<ChevronDown size={14} /></header><div className="stl4-catalog-year-inputs"><label htmlFor={`${id}-from`} className="sr-only">起始年份</label><input id={`${id}-from`} aria-label="起始年份" type="number" name="year_min" min="1" max="9999" placeholder="起始年" defaultValue={params.get("year_min") ?? ""} /><span>至</span><label htmlFor={`${id}-to`} className="sr-only">截止年份</label><input id={`${id}-to`} aria-label="截止年份" type="number" name="year_max" min="1" max="9999" placeholder="截止年" defaultValue={params.get("year_max") ?? ""} /></div>
       {facets.year_histogram.length ? <div className="stl4-catalog-year-bars" aria-label="关键词匹配文献的出版年份分布">{facets.year_histogram.map(row => <Link key={row.year} title={`${row.year}年 · ${row.count}部作品`} aria-label={`筛选${row.year}年，${row.count}部作品`} href={catalogHref(params, { year: null, year_min: String(row.year), year_max: String(row.year), page: null })} style={{ height: `${Math.max(5, row.count / largestYearCount * 100)}%` }} />)}</div> : null}
       {params.getAll("year").map(value => <input key={value} type="hidden" name="year" value={value} />)}
-    </details>
+    </section>
     <CatalogFacet name="language" options={facets.languages} params={params} collapsed />
     <CatalogFacet name="topic" options={facets.topics} params={params} collapsed />
     <CatalogFacet name="theory" options={facets.theories} params={params} collapsed />
     <CatalogFacet name="access" options={facets.access} params={params} collapsed />
-    <details className="stl4-catalog-advanced"><summary>高级筛选<ChevronDown size={14} /></summary>
+    <section data-content-section className="stl4-catalog-advanced"><header data-section-heading>高级筛选<ChevronDown size={14} /></header>
       <fieldset className="stl4-catalog-filter-group"><legend>检索字段</legend>{matches.map(option => <label key={option.value}><input type="checkbox" name="match" value={option.value} defaultChecked={selectedMatches.includes(option.value)} /><span>{option.label}</span></label>)}</fieldset>
       {!mobile ? <CatalogFacet name="document_type" options={facets.document_types} params={params} /> : null}
       <CatalogFacet name="author" options={facets.authors} params={params} collapsed />
       <CatalogFacet name="concept" options={facets.concepts} params={params} collapsed />
-    </details>
+    </section>
   </>;
 }
 
@@ -164,5 +164,5 @@ function CatalogFacet({ name, options, params, collapsed = false }: { name: keyo
   const selected = params.getAll(name);
   const rows = [...options, ...selected.filter(value => !options.some(option => option.value === value)).map(value => ({ value, label: value, count: null }))];
   const contents = rows.length ? rows.map(option => <label key={option.value}><input type="checkbox" name={name} value={option.value} defaultChecked={selected.includes(option.value)} /><span>{option.label}</span><small>{option.count}</small></label>) : <p>暂无可用选项</p>;
-  return collapsed ? <details className="stl4-catalog-filter-group" open={selected.length > 0}><summary>{filterNames[name]}<ChevronDown size={14} /></summary><div>{contents}</div></details> : <fieldset className="stl4-catalog-filter-group"><legend>{filterNames[name]}</legend>{contents}</fieldset>;
+  return collapsed ? <section data-content-section className="stl4-catalog-filter-group"><header data-section-heading>{filterNames[name]}<ChevronDown size={14} /></header><div>{contents}</div></section> : <fieldset className="stl4-catalog-filter-group"><legend>{filterNames[name]}</legend>{contents}</fieldset>;
 }

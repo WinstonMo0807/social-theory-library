@@ -408,7 +408,7 @@ function WorkBody(props: BodyProps) {
       {render("abstract", documentType === "journal_article" ? "论文摘要" : documentType === "journal_issue" ? "本期简介" : "馆藏简介", { multiline: true, rows: 6, help: "填入建议后请核对，再保存草稿。" })}
     </div>
     <CoverField {...props} />
-    <details className="workflow-recommendation-image"><summary>为推荐卡片另选图片（可选，不影响封面）</summary><RecommendationImageEditor workId={asString(props.context.work_id)} editionId={asString(props.context.edition_id)} documentType={documentType} disabled={!canEdit} beforeAction={props.beforeFieldAction} onUpdated={props.research.onUpdated} onMessage={props.message} mediaLibraryUrl={`/admin/media?edition=${encodeURIComponent(asString(props.context.edition_id))}&slot=recommendation`} /></details>
+    <section data-content-section className="workflow-recommendation-image"><header data-section-heading>为推荐卡片另选图片（可选，不影响封面）</header><RecommendationImageEditor workId={asString(props.context.work_id)} editionId={asString(props.context.edition_id)} documentType={documentType} disabled={!canEdit} beforeAction={props.beforeFieldAction} onUpdated={props.research.onUpdated} onMessage={props.message} mediaLibraryUrl={`/admin/media?edition=${encodeURIComponent(asString(props.context.edition_id))}&slot=recommendation`} /></section>
   </>;
 }
 
@@ -436,7 +436,7 @@ function BibliographyBody(props: BodyProps) {
       {render("report_institution", "报告机构", { required: documentType === "report" })}
     </div>
     {issue ? <JournalContentsField {...props} /> : null}
-    {fields.has("extent") || fields.has("responsibility_statement") ? <details><summary>高级书目字段</summary><div className="workflow-field-grid">{render("extent", "页数与装帧说明")}{render("responsibility_statement", "贡献说明原文")}</div></details> : null}
+    {fields.has("extent") || fields.has("responsibility_statement") ? <details data-disclosure="collection"><summary>高级书目字段</summary><div className="workflow-field-grid">{render("extent", "页数与装帧说明")}{render("responsibility_statement", "贡献说明原文")}</div></details> : null}
   </ConditionalFieldGroup>;
 }
 
@@ -492,7 +492,7 @@ function ContributorsBody(props: BodyProps) {
       <ContributionScopeEditor editionId={asString(props.context.edition_id)} value={item.scope} disabled={!canEdit} onChange={scope => setItem({ ...item, scope })} />
     </div>;
   };
-  return <div className="workflow-contributor-groups"><section className="workflow-field-assistant-row"><strong>作者</strong><WorkflowFieldAssistant {...props} fieldName="author" query={asString(authorItems[0]?.display_name)} /></section><RepeatableField disabled={!canEdit} label="作者" values={authorItems} emptyValue={blank("author")} create={() => blank("author")} onChange={(next) => replaceRoles(["author"], next)} addLabel="添加作者" render={(item, index, setItem) => renderContributor("author", item, index, setItem)} /><section className="workflow-field-assistant-row"><strong>译者</strong><WorkflowFieldAssistant {...props} fieldName="translator" query={asString(translatorItems[0]?.display_name)} /></section><RepeatableField disabled={!canEdit} label="译者" values={translatorItems} create={() => blank("translator")} onChange={(next) => replaceRoles(["translator"], next)} addLabel="添加译者" render={(item, index, setItem) => renderContributor("translator", item, index, setItem)} /><details className="workflow-other-contributors" open={otherItems.length > 0}><summary>其他贡献者 <span>{otherItems.length}</span></summary><RepeatableField disabled={!canEdit} label="主编、编者、校注、摄影及其他贡献者" values={otherItems} create={() => blank("editor")} onChange={(next) => replaceRoles([...new Set(otherItems.map((item) => asString(item.role, "editor")))], next)} addLabel="添加其他贡献者" render={(item, index, setItem) => renderContributor(undefined, item, index, setItem)} /></details></div>;
+  return <div className="workflow-contributor-groups"><section className="workflow-field-assistant-row"><strong>作者</strong><WorkflowFieldAssistant {...props} fieldName="author" query={asString(authorItems[0]?.display_name)} /></section><RepeatableField disabled={!canEdit} label="作者" values={authorItems} emptyValue={blank("author")} create={() => blank("author")} onChange={(next) => replaceRoles(["author"], next)} addLabel="添加作者" render={(item, index, setItem) => renderContributor("author", item, index, setItem)} /><section className="workflow-field-assistant-row"><strong>译者</strong><WorkflowFieldAssistant {...props} fieldName="translator" query={asString(translatorItems[0]?.display_name)} /></section><RepeatableField disabled={!canEdit} label="译者" values={translatorItems} create={() => blank("translator")} onChange={(next) => replaceRoles(["translator"], next)} addLabel="添加译者" render={(item, index, setItem) => renderContributor("translator", item, index, setItem)} /><section data-content-section className="workflow-other-contributors"><header data-section-heading>其他贡献者 <span>{otherItems.length}</span></header><RepeatableField disabled={!canEdit} label="主编、编者、校注、摄影及其他贡献者" values={otherItems} create={() => blank("editor")} onChange={(next) => replaceRoles([...new Set(otherItems.map((item) => asString(item.role, "editor")))], next)} addLabel="添加其他贡献者" render={(item, index, setItem) => renderContributor(undefined, item, index, setItem)} /></section></div>;
 }
 
 function ClassificationBody({ draft, canEdit, update }: BodyProps) {
@@ -526,7 +526,7 @@ function FileBody({ draft, context, canEdit, errors, inspectPdf, fileAction, bus
     </div>
     {draft.error_message ? <p role="alert">{asString(draft.error_message)} 原文件及记录保留，请恢复原任务并刷新结果。</p> : null}
     {asString(context.edition_id) ? <EditionOcrControl key={asString(context.edition_id)} editionId={asString(context.edition_id)} workId={asString(context.work_id)} /> : null}
-    {history.length ? <section className="workflow-file-history" aria-label="当前出版版本的文件及历史"><h3>文件记录</h3>{history.map((asset) => <article key={asString(asset.id)}><strong>{asString(asset.filename) || fileKindLabel(asset.kind)} · 第 {asNumber(asset.version)} 份</strong><p>{fileKindLabel(asset.kind)} · {asset.is_public_reader ? "读者正在使用" : asset.is_current ? "当前文件" : "保留的旧文件或尚未发布的新文件"} · {pdfValidationPresentation(asset.validation).label} · {asNumber(asset.page_count)} 页</p><details><summary>技术详情</summary><p>文件 {asString(asset.id)}<br />来源 {asString(asset.source_asset_id) || "原始文件"}<br />SHA256 {asString(asset.sha256)}</p></details></article>)}</section> : null}
+    {history.length ? <section className="workflow-file-history" aria-label="当前出版版本的文件及历史"><h3>文件记录</h3>{history.map((asset) => <article key={asString(asset.id)}><strong>{asString(asset.filename) || fileKindLabel(asset.kind)} · 第 {asNumber(asset.version)} 份</strong><p>{fileKindLabel(asset.kind)} · {asset.is_public_reader ? "读者正在使用" : asset.is_current ? "当前文件" : "保留的旧文件或尚未发布的新文件"} · {pdfValidationPresentation(asset.validation).label} · {asNumber(asset.page_count)} 页</p><details data-disclosure="collection"><summary>技术详情</summary><p>文件 {asString(asset.id)}<br />来源 {asString(asset.source_asset_id) || "原始文件"}<br />SHA256 {asString(asset.sha256)}</p></details></article>)}</section> : null}
   </div>;
 }
 
@@ -553,13 +553,13 @@ function PublicationBody({ draft, context, permissions, goToIssue, saveDraft, pr
   return <div className="workflow-publication">
     <div className="workflow-publication-summary"><article><strong>公开状态</strong><span>{stateLabel}</span></article><article><strong>阅读文件</strong><span>{draft.reader_state === "ready" ? "可以阅读" : draft.reader_state === "not_applicable" ? "纯书目，无 PDF" : "等待验证或处理"}</span></article></div>
     <div className="workflow-preflight-groups"><section className="blockers"><h3>发布前确认</h3>{blockers.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="blocker" onActivate={() => goToIssue(issue)} />)}{!blockers.length ? <p>{preparation ? "检查已完成，可以发布。请核对下方内容变化，再点击发布。" : "先点击发布前检查，再核对本次要公开的内容。"}</p> : null}</section>
-      <details className="workflow-optional-checks"><summary>其他提醒与处理详情{warnings.length ? `（${warnings.length} 项提醒）` : ""}</summary>
+      <section data-content-section className="workflow-optional-checks"><header data-section-heading>其他提醒与处理详情{warnings.length ? `（${warnings.length} 项提醒）` : ""}</header>
         {warnings.map((issue) => <QualityIssue key={issue.code || issue.message} message={issue.message} tone="warning" onActivate={() => goToIssue(issue)} />)}
         <p>封面、主题、观点和推荐可以稍后完善，不是上架必填项。</p>
         <p>{asString(draft.curation_summary, "尚未整理主题与推荐，不影响发布").replaceAll("策展", "整理主题与推荐")}</p>
         {tasks.length ? <><h3>仍在处理的功能</h3><p>书目、PDF 阅读和正文搜索分别检查；某项功能未就绪，不代表其他功能不可用。</p>{tasks.map((task,index) => <p key={index}>{typeof task === "string" ? task : asString(asRecord(task).message ?? asRecord(task).detail ?? asRecord(task).label,"处理事项待核对")}</p>)}</> : null}
         {newEntities.length ? <p>本次还会公开 {newEntities.length} 项已确认的关联资料，请一并核对。</p> : null}
-      </details></div>
+      </section></div>
     {preparation ? <PublicationDiff value={preparation} showChecks={false} /> : null}
     <div className="workflow-publication-actions">
       <ActionButton className="button secondary" disabled={Boolean(busy)} onClick={saveDraft}><Save size={14} />保存草稿</ActionButton><ActionButton className="button secondary" disabled={Boolean(busy)} onClick={preview}><Eye size={14} />预览</ActionButton>
@@ -1415,7 +1415,7 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
         <div className={atlas.columns}><div className={atlas.editing}>
 
         {busy && !message ? <AsyncStatus state="pending" message="正在执行馆藏工作操作……" className="workflow-editor-message" /> : null}
-        <details><summary>馆藏状态与待确认事项</summary><CatalogHealth value={payload.health} /></details>
+        <section data-content-section><header data-section-heading>馆藏状态与待确认事项</header><CatalogHealth value={payload.health} /></section>
         {message ? <AsyncStatus state={workflowMessageState(message)} message={message} className="workflow-editor-message" assertive={workflowMessageState(message) === "error"} /> : null}
         {saveRecovery?<section className="workflow-editor-message" role="status"><p>上次保存结果尚未确认，已填写内容仍保留。请先查询原请求。</p><button disabled={Boolean(busy)} onClick={()=>void recoverSave()}>查询原保存</button><button disabled={Boolean(busy)} onClick={()=>void recoverSave(true)}>停止未执行请求</button></section>:null}
         {requiresRefresh && !busy ? <p role="alert">修改已保存，但当前页面未刷新。请点击顶部刷新后继续；不必重复新建或采用。</p> : null}
@@ -1435,7 +1435,7 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
       </div>
       {inspector ? <WorkflowInspector selection={inspector} token={token} onClose={() => setInspector(null)} onDecision={decideCandidate} onVerify={verifyCandidate} /> : <aside className="workflow-v306-preview" id="workflow-current-preview" aria-label="当前版本预览与建议">
         <section className="workflow-v306-identity" aria-label="当前作品与出版版本"><h2>版本与状态</h2>
-          <label>当前出版版本<select value={editionId} aria-label="当前出版版本" onChange={(event) => exit(withAdminReturn(`/admin/library/works/${encodeURIComponent(asString(payload.context.work_id))}?edition=${encodeURIComponent(event.target.value)}#${active}`,returnHref))}>
+          <label>当前出版版本<select data-stl-select value={editionId} aria-label="当前出版版本" onChange={(event) => exit(withAdminReturn(`/admin/library/works/${encodeURIComponent(asString(payload.context.work_id))}?edition=${encodeURIComponent(event.target.value)}#${active}`,returnHref))}>
             {asArray(payload.context.available_editions).map(asRecord).map((edition) => <option key={asString(edition.id)} value={asString(edition.id)}>{asString(edition.version_label) || "未命名版本"} · {asString(edition.publication_year) || "年份待补"}{edition.is_primary ? " · 主版本" : " · 非主版本"}</option>)}
           </select></label>
           <p>来源：{source} · {payload.context.is_primary ? "主版本" : "非主版本"}<br />{publicationDescription(publication as CatalogPublication)}</p>
@@ -1450,9 +1450,9 @@ function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEdition
         {currentDirtyCount ? <p>先保存本页修改，再检查能否发布。以下提醒依据上次保存的内容。</p> : null}
         {requiredActions.length ? <p>发布前需要处理 {requiredActions.length} 项，点击可回到对应字段。</p> : null}
         {requiredActions.slice(0, 3).map((issue, index) => <button type="button" key={`${issue.code}-${index}`} onClick={() => goToIssue(issue)}>{issue.message}</button>)}
-        {requiredActions.length > 3 ? <details><summary>查看其余 {requiredActions.length - 3} 项</summary>{requiredActions.slice(3).map((issue, index) => <button type="button" key={`${issue.code}-${index}`} onClick={() => goToIssue(issue)}>{issue.message}</button>)}</details> : null}
+        {requiredActions.length > 3 ? <details data-disclosure="collection"><summary>查看其余 {requiredActions.length - 3} 项</summary>{requiredActions.slice(3).map((issue, index) => <button type="button" key={`${issue.code}-${index}`} onClick={() => goToIssue(issue)}>{issue.message}</button>)}</details> : null}
         {!requiredActions.length ? <p>{currentDirtyCount ? "上次检查没有必须处理的问题。" : "目前没有必须处理的问题。可以先预览，再发布。"}封面、主题和观点可以以后补充。</p> : null}
-        <details open={previewExpanded} onToggle={(event) => setPreviewExpanded(event.currentTarget.open)}><summary>完整草稿预览</summary>
+        <details data-disclosure="collection" open={previewExpanded} onToggle={(event) => setPreviewExpanded(event.currentTarget.open)}><summary>完整草稿预览</summary>
           {currentDirtyCount ? <p>请先保存草稿，再在新标签页核对完整预览。</p> : previewUrl ? <a href={withAdminReturn(previewUrl,previewReturnHref)} target="_blank" rel="noreferrer">在新标签页打开已保存草稿</a> : null}
         </details>
         {publication.public_url ? <a href={asString(publication.public_url)} target="_blank" rel="noreferrer">核对实际公开页面</a> : <p>这个版本还没有可供读者访问的页面。</p>}

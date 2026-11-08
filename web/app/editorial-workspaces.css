@@ -133,7 +133,7 @@
 .admin-evidence-envelope > header small,
 .admin-evidence-envelope > header b,
 .admin-evidence-locator,
-.admin-evidence-envelope details {
+.admin-evidence-envelope :is(details,:where([data-content-section])) {
   color: #6d675d;
   font-size: max(10px, var(--stl-readable-meta));
 }
@@ -159,12 +159,12 @@
   border: 1px solid #ded6c8;
 }
 
-.admin-evidence-envelope details summary {
+.admin-evidence-envelope :is(details,:where([data-content-section])) :is(summary,:where([data-section-heading])) {
   cursor: pointer;
   font-weight: 700;
 }
 
-.admin-evidence-envelope details p {
+.admin-evidence-envelope :is(details,:where([data-content-section])) p {
   margin: 5px 0 0;
 }
 
@@ -407,7 +407,7 @@
 }
 
 [data-ui-scope="editorial-v2"] .processing-diagnostic-item > p strong { display: block; color: var(--stl2-ink-soft); }
-[data-ui-scope="editorial-v2"] .processing-diagnostic-item details summary { cursor: pointer; color: var(--stl2-muted); font-size: max(.7rem, var(--stl-readable-meta)); }
+[data-ui-scope="editorial-v2"] .processing-diagnostic-item :is(details,:where([data-content-section])) :is(summary,:where([data-section-heading])) { cursor: pointer; color: var(--stl2-muted); font-size: max(.7rem, var(--stl-readable-meta)); }
 [data-ui-scope="editorial-v2"] .processing-diagnostic-details { margin-top: 8px; }
 [data-ui-scope="editorial-v2"] .processing-diagnostic-item footer { display: flex; flex-wrap: wrap; gap: 7px; }
 
@@ -427,13 +427,13 @@
   gap: 10px;
 }
 
-[data-ui-scope="editorial-v2"] .processing-runtime-inventory > details {
+[data-ui-scope="editorial-v2"] .processing-runtime-inventory > :is(details,:where([data-content-section])) {
   border: 1px solid var(--stl2-line);
   border-radius: var(--stl2-radius-sm);
   background: var(--stl2-paper);
 }
 
-[data-ui-scope="editorial-v2"] .processing-runtime-inventory summary {
+[data-ui-scope="editorial-v2"] .processing-runtime-inventory :is(summary,:where([data-section-heading])) {
   display: flex;
   justify-content: space-between;
   padding: 10px 12px;
@@ -1011,7 +1011,7 @@
   padding: 0 12px 12px;
 }
 
-[data-ui-scope="editorial-v2"] .admin-ui-candidate-evidence > summary {
+[data-ui-scope="editorial-v2"] .admin-ui-candidate-evidence > :is(summary,:where([data-section-heading])) {
   padding: 8px 12px;
 }
 
@@ -1042,12 +1042,12 @@
 }
 
 [data-ui-scope="editorial-v2"] .admin-ui-candidate-evidence,
-[data-ui-scope="editorial-v2"] .admin-ui-candidate-evidence[open] > summary,
+[data-ui-scope="editorial-v2"] .admin-ui-candidate-evidence:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])),
 [data-ui-scope="editorial-v2"] .admin-ui-candidate-card > footer {
   border-color: var(--stl2-line);
 }
 
-[data-ui-scope="editorial-v2"] .admin-ui-candidate-evidence > summary {
+[data-ui-scope="editorial-v2"] .admin-ui-candidate-evidence > :is(summary,:where([data-section-heading])) {
   color: var(--stl2-muted);
 }
 
@@ -1426,7 +1426,7 @@
 }
 
 [data-ui-scope="editorial-v2"] .field-enrichment-comparison section,
-[data-ui-scope="editorial-v2"] .field-enrichment-candidates details {
+[data-ui-scope="editorial-v2"] .field-enrichment-candidates :is(details,:where([data-content-section])) {
   min-width: 0;
   padding: 8px;
   border: 1px solid var(--stl2-line);
@@ -1532,7 +1532,7 @@
 }
 
 [data-ui-scope="editorial-v2"] .candidate-review-comparison section,
-[data-ui-scope="editorial-v2"] .candidate-review-card details {
+[data-ui-scope="editorial-v2"] .candidate-review-card :is(details,:where([data-content-section])) {
   min-width: 0;
   padding: 9px;
   border: 1px solid var(--stl2-line);
@@ -3732,7 +3732,7 @@ html:has(.workflow-editor) {
   border: 1px solid #d9d4ca;
 }
 
-.workflow-other-contributors > summary {
+.workflow-other-contributors > :is(summary,:where([data-section-heading])) {
   cursor: pointer;
   font-weight: 700;
 }
@@ -4083,7 +4083,7 @@ dialog.field-assistant-dialog {
   color: var(--admin-ink, #292722);
 }
 
-dialog.field-assistant-dialog:not([open]) { display: none; }
+dialog.field-assistant-dialog:not(:is([open],[data-content-section])) { display: none; }
 dialog.field-assistant-dialog::backdrop { background: rgb(25 23 20 / 38%); }
 dialog.field-assistant-dialog > header { margin-bottom: 1rem; }
 dialog.field-assistant-dialog button { min-height: 40px; white-space: normal; }
@@ -4579,7 +4579,7 @@ dialog.field-assistant-dialog article,
 }
 
 .workflow-preflight-groups > section,
-.workflow-preflight-groups > details {
+.workflow-preflight-groups > :is(details,:where([data-content-section])) {
   padding: 12px;
   border: 1px solid #d4cfc3;
 }
@@ -4588,12 +4588,12 @@ dialog.field-assistant-dialog article,
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.workflow-optional-checks > summary {
+.workflow-optional-checks > :is(summary,:where([data-section-heading])) {
   cursor: pointer;
   font-size: max(13px, var(--stl-readable-meta));
 }
 
-.workflow-optional-checks[open] > summary {
+.workflow-optional-checks:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) {
   margin-bottom: 12px;
 }
 
@@ -4921,7 +4921,7 @@ dialog.field-assistant-dialog article,
   border-left: 2px solid #8e897e;
 }
 
-.workflow-inspector-items details {
+.workflow-inspector-items :is(details,:where([data-content-section])) {
   margin: 9px 0;
   padding: 7px 9px;
   color: #4f4a42;
@@ -4930,12 +4930,12 @@ dialog.field-assistant-dialog article,
   border: 1px solid #ded9cf;
 }
 
-.workflow-inspector-items details summary {
+.workflow-inspector-items :is(details,:where([data-content-section])) :is(summary,:where([data-section-heading])) {
   cursor: pointer;
   font-weight: 700;
 }
 
-.workflow-inspector-items details ul {
+.workflow-inspector-items :is(details,:where([data-content-section])) ul {
   margin: 7px 0 0;
   padding-left: 18px;
 }
@@ -5438,7 +5438,7 @@ dialog.field-assistant-dialog article,
     scroll-padding-top: 72px;
   }
 
-  .workflow-editor-main :where(a, button, input, select, textarea, summary),
+  .workflow-editor-main :where(a, button, input, select, textarea, :is(summary,:where([data-section-heading]))),
   .workflow-editor-main .workflow-section {
     scroll-margin-block: 72px 20px;
   }
@@ -5714,12 +5714,12 @@ dialog.field-assistant-dialog article,
   gap: 4px;
 }
 
-[data-ui-scope="editorial-v2"] .public-page-tree-list > details {
+[data-ui-scope="editorial-v2"] .public-page-tree-list > :is(details,:where([data-content-section])) {
   background: var(--stl2-paper-deep);
   border: 1px solid var(--stl2-line);
 }
 
-[data-ui-scope="editorial-v2"] .public-page-tree-list > details > summary {
+[data-ui-scope="editorial-v2"] .public-page-tree-list > :is(details,:where([data-content-section])) > :is(summary,:where([data-section-heading])) {
   display: grid;
   grid-template-columns: 12px minmax(0, 1fr) auto;
   gap: 6px;
@@ -5730,17 +5730,17 @@ dialog.field-assistant-dialog article,
   font-size: max(10px, var(--stl-readable-meta));
 }
 
-[data-ui-scope="editorial-v2"] .public-page-tree-list > details > summary::-webkit-details-marker {
+[data-ui-scope="editorial-v2"] .public-page-tree-list > :is(details,:where([data-content-section])) > :is(summary,:where([data-section-heading]))::-webkit-details-marker {
   display: none;
 }
 
-[data-ui-scope="editorial-v2"] .public-page-tree-list > details > summary small {
+[data-ui-scope="editorial-v2"] .public-page-tree-list > :is(details,:where([data-content-section])) > :is(summary,:where([data-section-heading])) small {
   color: var(--stl2-muted);
   font-size: max(9px, var(--stl-readable-meta));
   font-weight: 400;
 }
 
-[data-ui-scope="editorial-v2"] .public-page-tree-list > details > div {
+[data-ui-scope="editorial-v2"] .public-page-tree-list > :is(details,:where([data-content-section])) > div {
   padding: 0 7px 7px;
 }
 
@@ -5795,7 +5795,7 @@ dialog.field-assistant-dialog article,
   font-size: max(9px, var(--stl-readable-meta));
 }
 
-[data-ui-scope="editorial-v2"] :is(.public-page-source-authority, .public-page-legacy-warning, .public-page-field-usage) > summary {
+[data-ui-scope="editorial-v2"] :is(.public-page-source-authority, .public-page-legacy-warning, .public-page-field-usage) > :is(summary,:where([data-section-heading])) {
   cursor: pointer;
   font-weight: 700;
 }
@@ -5904,7 +5904,7 @@ dialog.field-assistant-dialog article,
   border-bottom: 1px solid var(--stl2-line);
 }
 
-[data-ui-scope="editorial-v2"] .knowledge-object-context-section > summary {
+[data-ui-scope="editorial-v2"] .knowledge-object-context-section > :is(summary,:where([data-section-heading])) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 7px;
@@ -5916,11 +5916,11 @@ dialog.field-assistant-dialog article,
   font-weight: 700;
 }
 
-[data-ui-scope="editorial-v2"] .knowledge-object-context-section > summary::-webkit-details-marker {
+[data-ui-scope="editorial-v2"] .knowledge-object-context-section > :is(summary,:where([data-section-heading]))::-webkit-details-marker {
   display: none;
 }
 
-[data-ui-scope="editorial-v2"] .knowledge-object-context-section > summary b {
+[data-ui-scope="editorial-v2"] .knowledge-object-context-section > :is(summary,:where([data-section-heading])) b {
   color: var(--stl2-muted);
   font-size: max(10px, var(--stl-readable-meta));
   font-variant-numeric: tabular-nums;
@@ -6165,9 +6165,9 @@ dialog.field-assistant-dialog article,
 .knowledge-studio-section-nav { display: flex; flex-wrap: wrap; gap: 6px; }
 .knowledge-studio-section-nav > a { min-width: 0; }
 html:has(.admin-shell) { scroll-padding-top: 90px; }
-.admin-content :where(a,button,input,select,textarea,summary) { scroll-margin-block: 90px 100px; }
+.admin-content :where(a,button,input,select,textarea,:is(summary,:where([data-section-heading]))) { scroll-margin-block: 90px 100px; }
 dialog.workflow-step-rail { margin: 0; max-height: none; max-width: min(340px,92vw); border: 0; border-right: 1px solid var(--workflow-line); box-shadow: 10px 0 40px rgb(0 0 0 / 15%); }
-dialog.workflow-step-rail:not([open]) { display: none; }
+dialog.workflow-step-rail:not(:is([open],[data-content-section])) { display: none; }
 
 [data-ui-scope="editorial-v2"] .knowledge-studio-object-types button {
   display: inline-flex;
@@ -6289,13 +6289,13 @@ dialog.workflow-step-rail:not([open]) { display: none; }
 }
 
 [data-ui-scope="editorial-v2"] .knowledge-studio-detail > * { min-width: 0; }
-[data-ui-scope="editorial-v2"] .admin-nav-group > summary { padding: 12px 10px; cursor: pointer; color: var(--stl2-ink); font-size: max(13px, var(--stl-readable-meta)); font-weight: 650; list-style-position: inside; }
-[data-ui-scope="editorial-v2"] .admin-nav-group[open] > summary { margin-bottom: 4px; border-bottom: 1px solid var(--stl2-line); }
+[data-ui-scope="editorial-v2"] .admin-nav-group > :is(summary,:where([data-section-heading])) { padding: 12px 10px; cursor: pointer; color: var(--stl2-ink); font-size: max(13px, var(--stl-readable-meta)); font-weight: 650; list-style-position: inside; }
+[data-ui-scope="editorial-v2"] .admin-nav-group:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) { margin-bottom: 4px; border-bottom: 1px solid var(--stl2-line); }
 [data-ui-scope="editorial-v2"] .admin-nav-group { min-width: 0; }
 [data-ui-scope="editorial-v2"] .admin-sidebar footer { min-width: 0; overflow-wrap: anywhere; }
-[data-ui-scope="editorial-v2"] .admin-nav-group > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+[data-ui-scope="editorial-v2"] .admin-nav-group > :is(summary,:where([data-section-heading])):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 [data-ui-scope="editorial-v2"] .knowledge-studio-detail :where(p, h2, h3, strong, small, pre) { overflow-wrap: anywhere; }
-[data-ui-scope="editorial-v2"] .knowledge-studio-detail > details > summary { padding: 16px 20px; cursor: pointer; font-size: max(14px, var(--stl-readable-meta)); font-weight: 650; }
+[data-ui-scope="editorial-v2"] .knowledge-studio-detail > :is(details,:where([data-content-section])) > :is(summary,:where([data-section-heading])) { padding: 16px 20px; cursor: pointer; font-size: max(14px, var(--stl-readable-meta)); font-weight: 650; }
 .public-page-manager { padding: 20px; border: 1px solid var(--line); background: var(--paper); min-width: 0; }
 .public-page-manager h3 { margin: 0 0 10px; font-size: 19px; }
 .public-page-manager p { line-height: 1.7; font-size: max(13px, var(--stl-readable-body)); margin: 8px 0; }
@@ -6309,9 +6309,9 @@ dialog.workflow-step-rail:not([open]) { display: none; }
 .public-page-manager :where(pre, p) { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
 .public-page-manager-changes { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); }
 .public-page-manager-changes > div { padding: 8px 0; }
-.public-page-manager details > summary { padding: 12px 0; cursor: pointer; }
-.assistance-history > summary { padding: 16px 20px; cursor: pointer; }
-.assistance-history[open] > :not(summary) { margin-inline: 20px; }
+.public-page-manager :is(details,:where([data-content-section])) > :is(summary,:where([data-section-heading])) { padding: 12px 0; cursor: pointer; }
+.assistance-history > :is(summary,:where([data-section-heading])) { padding: 16px 20px; cursor: pointer; }
+.assistance-history:is([open],[data-content-section]) > :not(:is(summary,:where([data-section-heading]))) { margin-inline: 20px; }
 @media(max-width:560px) { .public-page-manager { padding: 16px; } .public-page-manager-modules > article { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
 
 [data-ui-scope="editorial-v2"] .knowledge-studio-object-header {
@@ -6624,7 +6624,7 @@ dialog.workflow-step-rail:not([open]) { display: none; }
 .workflow-v306-preview h2 { font-size: 16px; margin: 0 0 12px; }
 .workflow-v306-preview p { font-size: max(12px, var(--stl-readable-body)); line-height: 1.8; overflow-wrap: anywhere; }
 .workflow-v306-preview > button { display: block; width: 100%; padding: 10px; margin-bottom: 8px; text-align: left; }
-.workflow-v306-preview summary { cursor: pointer; padding-block: 14px; font-weight: 650; }
+.workflow-v306-preview :is(summary,:where([data-section-heading])) { cursor: pointer; padding-block: 14px; font-weight: 650; }
 .workflow-v306-preview iframe { width: 100%; height: 65vh; min-height: 380px; border: 1px solid var(--workflow-line); margin-top: 12px; }
 .workflow-file-history { margin-top: 20px; }
 .workflow-file-history article { border-top: 1px solid var(--workflow-line); padding: 14px 0; overflow-wrap: anywhere; }

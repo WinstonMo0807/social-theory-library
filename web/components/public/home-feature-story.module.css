@@ -13,7 +13,7 @@
 .story h2 { font-size: clamp(30px, 3.5vw, 48px); line-height: 1.45; }
 .story h3 { font-size: clamp(23px, 2.4vw, 31px); line-height: 1.5; }
 .story p { font-size: calc(17px + var(--font-bump, 0px)); line-height: 1.85; text-wrap: pretty; }
-.story a:focus-visible, .story button:focus-visible, .story summary:focus-visible { outline: 2px solid var(--story-gold); outline-offset: 5px; }
+.story a:focus-visible, .story button:focus-visible, .story :is(summary,:where([data-section-heading])):focus-visible { outline: 2px solid var(--story-gold); outline-offset: 5px; }
 .hero, .collections, .features, .principles, .invitation, .faq { width: min(1180px, calc(100% - 96px)); margin-inline: auto; }
 .heroCopy { text-align: center; padding: 76px 0 54px; }
 .heroCopy h1 { font-size: clamp(38px, 4.8vw, 70px); line-height: 1.4; }
@@ -109,12 +109,12 @@
 .invitation p { margin-top: 25px; color: var(--story-muted); }
 .invitation > img { width: 100%; aspect-ratio: 1.2; height: auto; object-fit: cover; border-radius: 22px; }
 .faq { display: grid; grid-template-columns: .8fr 1.2fr; gap: 60px; padding-block: 35px 100px; }
-.faq details { border-top: 1px solid var(--story-line); }
-.faq details:last-child { border-bottom: 1px solid var(--story-line); }
-.faq summary { display: flex; justify-content: space-between; gap: 18px; align-items: center; cursor: pointer; list-style: none; font: 500 19px/1.6 var(--serif); padding: 22px 0; }
-.faq summary::-webkit-details-marker { display: none; }
-.faq summary svg { flex: none; color: var(--story-gold); }
-.faq details[open] summary svg { transform: rotate(45deg); }
+.faq :is(details,:where([data-content-section])) { border-top: 1px solid var(--story-line); }
+.faq :is(details,:where([data-content-section])):last-child { border-bottom: 1px solid var(--story-line); }
+.faq :is(summary,:where([data-section-heading])) { display: flex; justify-content: space-between; gap: 18px; align-items: center; cursor: pointer; list-style: none; font: 500 19px/1.6 var(--serif); padding: 22px 0; }
+.faq :is(summary,:where([data-section-heading]))::-webkit-details-marker { display: none; }
+.faq :is(summary,:where([data-section-heading])) svg { flex: none; color: var(--story-gold); }
+.faq :is(details,:where([data-content-section])):is([open],[data-content-section]) :is(summary,:where([data-section-heading])) svg { transform: rotate(45deg); }
 .faq p { margin: 0 35px 24px 0; font-size: calc(15px + var(--font-bump, 0px)); color: var(--story-muted); }
 .closing { position: relative; isolation: isolate; text-align: center; overflow: hidden; background: color-mix(in srgb, var(--story-gold) 16%, var(--story-paper)); padding: 88px 24px; }
 .closing .grain { opacity: .2; z-index: -1; }
@@ -268,7 +268,7 @@
   .invitation { grid-template-columns: 1fr; gap: 26px; padding-block: 20px 60px; }
   .invitation > img { aspect-ratio: 1.4; }
   .faq { grid-template-columns: 1fr; gap: 28px; padding-block: 15px 56px; }
-  .faq summary { font-size: 17px; padding-block: 19px; }
+  .faq :is(summary,:where([data-section-heading])) { font-size: 17px; padding-block: 19px; }
   .closing { padding: 60px 24px; }
   .closing h2 { font-size: 38px; }
 }

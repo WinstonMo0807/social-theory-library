@@ -19,8 +19,8 @@ export function WorkDetailEvidence({ work, preview }: { work: Work; preview: boo
                   {claim.title ? <h3>{claim.title}</h3> : null}
                   <p className="work-curated-proposition">{claim.proposition}</p>
                   {claim.editorial_note ? <p className="work-curated-note">{claim.editorial_note}</p> : null}
-                  <details className="work-curated-evidence">
-                    <summary>查看依据 <span>{claim.evidence.length} 条馆藏原文</span></summary>
+                  <section data-content-section className="work-curated-evidence">
+                    <header data-section-heading>查看依据 <span>{claim.evidence.length} 条馆藏原文</span></header>
                     <div>
                       {claim.evidence.map((evidence) => {
                         const author = evidence.source.authors?.join("、");
@@ -42,7 +42,7 @@ export function WorkDetailEvidence({ work, preview }: { work: Work; preview: boo
                         );
                       })}
                     </div>
-                  </details>
+                  </section>
                 </article>
               ))}
             </div>

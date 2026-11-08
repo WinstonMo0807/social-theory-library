@@ -270,10 +270,10 @@ export function CandidateCard({
       </div>
       {typeof confidence === "number" ? <ConfidenceBar value={confidence} /> : null}
       {evidence ? (
-        <details className="admin-ui-candidate-evidence">
-          <summary>{evidenceSummary}</summary>
+        <section data-content-section className="admin-ui-candidate-evidence">
+          <header data-section-heading>{evidenceSummary}</header>
           <div className="admin-ui-candidate-evidence-body" aria-label="候选证据">{evidence}</div>
-        </details>
+        </section>
       ) : null}
       {conflicts ? <div className="admin-ui-candidate-conflicts" role="alert">{conflicts}</div> : null}
       {actions ? <footer aria-label={`${title}候选操作`}>{actions}</footer> : null}

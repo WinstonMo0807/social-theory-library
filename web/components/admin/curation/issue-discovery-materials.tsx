@@ -52,7 +52,7 @@ export function IssueDiscoveryMaterials({issueId,owner,selection,disabled,reques
     catch(reason){if(!lifetime.current?.signal.aborted)setError(reason instanceof Error?reason.message:"任务操作未确认，请读取进度核对。");}
     finally{operation.current=false;if(!lifetime.current?.signal.aborted)setBusy(false);}
   }
-  return <section className={styles.candidates} aria-label="原文候选"><header><h2>原文候选 {result?.count??""}</h2><select aria-label="候选排序" value={sort} onChange={event=>setSort(event.target.value as DiscoverySort)}><option value="relevance">相关性排序</option><option value="year_desc">出版年从新到旧</option><option value="year_asc">出版年从旧到新</option></select></header>
+  return <section className={styles.candidates} aria-label="原文候选"><header><h2>原文候选 {result?.count??""}</h2><select data-stl-select aria-label="候选排序" value={sort} onChange={event=>setSort(event.target.value as DiscoverySort)}><option value="relevance">相关性排序</option><option value="year_desc">出版年从新到旧</option><option value="year_asc">出版年从旧到新</option></select></header>
     <button type="button" className={styles.primary} disabled={disabled||busy||!selection.query.trim()} onClick={()=>void start()}>按当前范围查找原文</button>
     <p className={styles.queryNote}>按当前主题与馆藏范围查找原文，可逐项查看上下文。</p>
     {error||resource.error?<p role="alert" className={styles.warning}>{error||resource.error}{session?<button type="button" disabled={busy} onClick={resource.reload}>读取当前结果</button>:null}</p>:null}

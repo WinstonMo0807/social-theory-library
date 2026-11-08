@@ -36,7 +36,7 @@ export function CurationDraftQueue() {
     <p className="admin-help">继续整理学者、主题、理论、阅读路径、网站和推荐草稿。每个对象只列一次，保存与公开发布分别完成。</p>
     <form className={styles.toolbar} onSubmit={submit}>
       <label>名称或标题<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部策展草稿" /></label>
-      <label>排序<select value={ordering} onChange={event => change({ ordering: event.target.value })}><option value="-updated_at">最近更新在前</option><option value="updated_at">较早更新在前</option></select></label>
+      <label>排序<select data-stl-select value={ordering} onChange={event => change({ ordering: event.target.value })}><option value="-updated_at">最近更新在前</option><option value="updated_at">较早更新在前</option></select></label>
       <button className="button" type="submit">搜索</button><button className="button secondary" type="button" onClick={resource.retry}><RefreshCw size={14} />刷新草稿</button>
     </form>
     {resource.error ? <div className={styles.error} role="alert">{resource.error}<button type="button" onClick={resource.retry}>重新读取策展草稿</button></div> : null}

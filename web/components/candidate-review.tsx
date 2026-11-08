@@ -194,8 +194,8 @@ export function CandidateReview() {
         <div className="admin-section-actions"><button type="button" onClick={() => void load()} disabled={loading}><Filter size={15} />刷新</button></div>
       </header>
       <div className="admin-toolbar candidate-review-toolbar">
-        <label><span>状态</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="pending">待审核</option><option value="accepted">已接受</option><option value="rejected">已拒绝</option><option value="all">全部</option></select></label>
-        <label><span>候选类型</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">全部审核来源</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">PDF 词典</option><option value="new_authority">新条目</option><option value="metadata">书目元数据</option><option value="theory">理论 / 关系</option></select></label>
+        <label><span>状态</span><select data-stl-select value={status} onChange={(event) => setStatus(event.target.value)}><option value="pending">待审核</option><option value="accepted">已接受</option><option value="rejected">已拒绝</option><option value="all">全部</option></select></label>
+        <label><span>候选类型</span><select data-stl-select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">全部审核来源</option><option value="field_enrichment">字段补全</option><option value="query_lexicon">PDF 词典</option><option value="new_authority">新条目</option><option value="metadata">书目元数据</option><option value="theory">理论 / 关系</option></select></label>
         {data ? <small>待审核队列共 {data.counts.total ?? data.results.length} 条 · 字段补全 {data.counts.field_enrichment ?? 0} · PDF 词典 {data.counts.query_lexicon ?? 0} · 新条目 {data.counts.new_authority ?? 0}{data.truncated ? " · 当前只显示排序靠前的一页" : ""}</small> : null}
       </div>
       <p className="admin-help candidate-review-explanation">审核结果保存到对应条目。检索词典会根据已确认条目更新。</p>
@@ -211,8 +211,8 @@ export function CandidateReview() {
             </header>
             <div className="candidate-review-comparison"><section><small>当前值</small><pre>{valueText(candidate.current_value)}</pre></section><section><small>候选值</small><pre>{valueText(candidate.proposed_value ?? candidate.proposed_term)}</pre></section></div>
             <p className="candidate-review-meta">{candidate.language ? `语言 ${candidate.language} · ` : ""}状态 {statusLabel(candidate.status)} · 证据 {candidate.evidence_count} 条 · 独立来源 {candidate.independent_source_count} 个</p>
-            {candidate.conflicts?.length ? <details><summary>来源冲突</summary><pre>{valueText(candidate.conflicts)}</pre></details> : null}
-            {candidate.confidence_factors ? <details><summary>置信度因素</summary><pre>{valueText(candidate.confidence_factors)}</pre></details> : null}
+            {candidate.conflicts?.length ? <section data-content-section><header data-section-heading>来源冲突</header><pre>{valueText(candidate.conflicts)}</pre></section> : null}
+            {candidate.confidence_factors ? <details data-disclosure="collection"><summary>置信度因素</summary><pre>{valueText(candidate.confidence_factors)}</pre></details> : null}
             <div className="candidate-review-evidence">
               {(candidate.evidence_records ?? []).filter((evidence) => evidence.is_current !== false).map((evidence) => <EvidenceEnvelopeCard evidence={evidence} key={evidence.id} />)}
             </div>

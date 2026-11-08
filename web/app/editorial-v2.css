@@ -2359,7 +2359,7 @@
   border-top: 1px solid var(--stl2-line);
 }
 
-[data-ui-scope="editorial-v2"] .work-curated-evidence summary {
+[data-ui-scope="editorial-v2"] .work-curated-evidence :is(summary,:where([data-section-heading])) {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -2370,7 +2370,7 @@
   font-weight: 650;
 }
 
-[data-ui-scope="editorial-v2"] .work-curated-evidence summary span {
+[data-ui-scope="editorial-v2"] .work-curated-evidence :is(summary,:where([data-section-heading])) span {
   color: var(--stl2-muted);
   font-weight: 450;
 }

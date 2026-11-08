@@ -93,7 +93,7 @@ export function PageMappingEditor({ assetId, onMessage }: { assetId: string; onM
         <label><span>PDF 起始页</span><input type="number" min="1" value={segment.start} onChange={(event) => setSegment({ ...segment, start: event.target.value })} /></label>
         <label><span>PDF 结束页</span><input type="number" min="1" value={segment.end} onChange={(event) => setSegment({ ...segment, end: event.target.value })} placeholder="留空到下一段" /></label>
         <label><span>起始印刷页码</span><input value={segment.label} onChange={(event) => setSegment({ ...segment, label: event.target.value })} /></label>
-        <label><span>编号样式</span><select value={segment.style} onChange={(event) => setSegment({ ...segment, style: event.target.value })}><option value="arabic">阿拉伯数字</option><option value="roman_lower">小写罗马数字</option><option value="roman_upper">大写罗马数字</option><option value="custom">自定义标签</option><option value="none">无页码</option></select></label>
+        <label><span>编号样式</span><select data-stl-select value={segment.style} onChange={(event) => setSegment({ ...segment, style: event.target.value })}><option value="arabic">阿拉伯数字</option><option value="roman_lower">小写罗马数字</option><option value="roman_upper">大写罗马数字</option><option value="custom">自定义标签</option><option value="none">无页码</option></select></label>
         <button type="button" disabled={pending} onClick={() => void action({
           action: "create_segment",
           start_file_page_index: Number(segment.start),

@@ -62,16 +62,16 @@ export function PathMaterialEditor({ work, value, onChange }: { work: string | n
   const currentRevision = source.data?.asset?.document_revision_id;
   const error = rows.error || selected.error || source.error;
   return <section aria-label="材料版本与阅读位置">
-    <div className="inline-fields"><label><span>材料类型</span><select value={value.material_kind} onChange={event => onChange({ material_kind: event.target.value as PathMaterialFields["material_kind"] })}>
+    <div className="inline-fields"><label><span>材料类型</span><select data-stl-select value={value.material_kind} onChange={event => onChange({ material_kind: event.target.value as PathMaterialFields["material_kind"] })}>
       {work ? <><option value="work">整部作品</option><option value="chapter">章节或选段</option><option value="paper">论文</option></> : <option value="node">理论或概念条目</option>}
-    </select></label><label><span>材料在路径中的状态</span><select value={value.status} onChange={event => onChange({ status: event.target.value as PathMaterialFields["status"] })}><option value="active">保留在阅读路线</option><option value="withdrawn">已从路线撤回，保留位置说明</option></select></label></div>
+    </select></label><label><span>材料在路径中的状态</span><select data-stl-select value={value.status} onChange={event => onChange({ status: event.target.value as PathMaterialFields["status"] })}><option value="active">保留在阅读路线</option><option value="withdrawn">已从路线撤回，保留位置说明</option></select></label></div>
     {work ? <>
       {error ? <p role="alert">{error}<button type="button" onClick={() => { rows.retry(); selected.retry(); source.retry(); }}>重新读取材料版本</button></p> : null}
-      <label><span>明确出版版本</span><select value={value.edition || ""} disabled={rows.loading} onChange={event => onChange({ edition: event.target.value || null, asset: null, document_revision: null, page_start: null, page_end: null })}>
+      <label><span>明确出版版本</span><select data-stl-select value={value.edition || ""} disabled={rows.loading} onChange={event => onChange({ edition: event.target.value || null, asset: null, document_revision: null, page_start: null, page_end: null })}>
         <option value="">版本尚未明确</option>{value.edition && !listed ? <option value={value.edition}>{edition?.label || "已保存版本，待核对"}</option> : null}
         {rows.data?.results.map(row => <option key={row.id} value={row.id}>{row.label || row.title}{row.is_primary ? "（主版本）" : ""}</option>)}
       </select></label><nav aria-label="阅读材料版本分页"><button type="button" disabled={!rows.data?.previous || rows.loading} onClick={() => setPage(p => p - 1)}>上一页版本</button><span>第 {page} 页 · 共 {rows.data?.count ?? "—"} 个版本</span><button type="button" disabled={!rows.data?.next || rows.loading} onClick={() => setPage(p => p + 1)}>下一页版本</button></nav>
-      <label><span>原文文件</span><select value={value.asset || ""} disabled={!edition} onChange={event => onChange({ asset: event.target.value || null, document_revision: null, page_start: null, page_end: null })}>
+      <label><span>原文文件</span><select data-stl-select value={value.asset || ""} disabled={!edition} onChange={event => onChange({ asset: event.target.value || null, document_revision: null, page_start: null, page_end: null })}>
         <option value="">暂无明确原文，只保留书目</option>{value.asset && !file ? <option value={value.asset}>已保存文件，待核对</option> : null}
         {files.map(row => <option key={row.id} value={row.id} disabled={row.status !== "ready" || row.validation_status !== "valid" || row.page_count < 1}>{row.original_filename || "阅读文件"} · 第 {row.version} 版 · {row.page_count} 页</option>)}
       </select></label>

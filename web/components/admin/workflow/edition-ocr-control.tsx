@@ -45,13 +45,13 @@ export function OcrProgressDisplay({ job, compact = false }: { job: OcrProgress;
     <strong>{job.phase_label}</strong>
     <progress aria-label="已完成 OCR 页数" max={job.total_pages || 1} value={job.completed_pages === null ? undefined : job.completed_pages} />
     <p>{job.completed_pages === null || job.total_pages === null ? "尚无可靠页数，等待任务报告。" : `已识别 ${job.completed_pages} / ${job.total_pages} 页（${job.percent}%）`}{job.active_pages.length ? job.active_pages.length <= 5 ? `，当前处理第 ${ocrPageRanges(job.active_pages)} 页。` : `，正在处理 ${job.active_pages.length} 页。` : ""}</p>
-    {job.active_pages.length > 5 ? <details><summary>查看当前处理的页码范围</summary><p>{ocrPageRanges(job.active_pages)}</p></details> : null}
+    {job.active_pages.length > 5 ? <section data-content-section><header data-section-heading>查看当前处理的页码范围</header><p>{ocrPageRanges(job.active_pages)}</p></section> : null}
     <p>结果最近保存：<time dateTime={job.updated_at}>{new Date(job.updated_at).toLocaleString("zh-CN")}</time>。进度按实际保存页数更新。</p>
     {job.status === "running" ? <p role="status">{job.worker_alive ? "后台执行进程在线。" : job.stale ? "暂未收到后台心跳，可能已中断，正在检查。" : "正在等待后台心跳。"}{job.service_activity === "running" ? "OCR 服务正在识别当前页。" : job.service_activity === "queued" ? "当前页正在 OCR 服务内排队。" : job.service_activity === "unavailable" ? "尚未取得 OCR 服务内部状态，不能据此认定识别已停止。" : ""}{job.heartbeat_at ? ` 最近心跳 ${new Date(job.heartbeat_at).toLocaleTimeString("zh-CN")}` : ""}</p> : null}
     {job.status === "running" || job.status === "pending" ? <p>本阶段已等待 {job.phase_elapsed_seconds} 秒。页面仍会自动查询，不需要重复点击开始。</p> : null}
-    {job.error ? <details open={!compact}><summary>上次失败原因</summary><p>{job.error}</p><p>这是该次任务的错误记录，不代表 OCR 服务当前仍不可用。</p></details> : null}
+    {job.error ? <section data-content-section><header data-section-heading>上次失败原因</header><p>{job.error}</p><p>这是该次任务的错误记录，不代表 OCR 服务当前仍不可用。</p></section> : null}
     {!compact ? <p>{job.public_result}</p> : null}
-    {job.warnings?.length ? <details><summary>其他处理提醒</summary>{job.warnings.map((warning, index) => <p key={index}>{warning}</p>)}</details> : null}
+    {job.warnings?.length ? <section data-content-section><header data-section-heading>其他处理提醒</header>{job.warnings.map((warning, index) => <p key={index}>{warning}</p>)}</section> : null}
     {!compact && job.workbench_url ? <Link href={job.workbench_url}>查看这个版本的公开更新结果</Link> : null}
   </div>;
 }
@@ -146,7 +146,7 @@ function EditionOcrControlState({ editionId, workId, owner }: { editionId: strin
     {current ? <>
       <p><strong>{current.title}</strong> · {current.edition_label}</p>
       {current.title_has_unpublished_changes ? <p>这里显示已保存的新馆藏名称，尚未发布；仍对应原来的作品、出版版本和文件。</p> : null}
-      <label><span>需要识别的 PDF</span><select value={fileId} disabled={pending || unresolved} onChange={(event) => { setFileId(event.target.value); request.current = null; setMessage(""); }}>
+      <label><span>需要识别的 PDF</span><select data-stl-select value={fileId} disabled={pending || unresolved} onChange={(event) => { setFileId(event.target.value); request.current = null; setMessage(""); }}>
         <option value="">请选择文件</option>
         {current.files.map((row) => <option key={row.id} value={row.id} disabled={!row.can_run}>{row.filename} · 文件版本 {row.version} · {row.page_count} 页{row.reason ? ` · ${row.reason}` : ""}</option>)}
       </select></label>
@@ -158,7 +158,7 @@ function EditionOcrControlState({ editionId, workId, owner }: { editionId: strin
       {active ? <p>本版本已有未结束任务，请先完成、继续或取消该任务，避免重复识别。{historyPage > 1 ? <button type="button" onClick={() => setHistoryPage(1)}>返回最近任务</button> : null}</p> : null}
       {message ? <p role="status">{message}</p> : null}
       <p>有未结束任务时自动读取进度，离开页面或长时间等待后暂停刷新。最近读取：<time dateTime={current.checked_at}>{new Date(current.checked_at).toLocaleTimeString("zh-CN")}</time>；这不是 OCR 完成时间。</p>
-      {jobs.length ? <div className="catalog-ocr-jobs">{jobs.map((job, index) => <details key={job.id} open={index === 0}>
+      {jobs.length ? <div className="catalog-ocr-jobs">{jobs.map((job, index) => <details data-disclosure="collection" key={job.id} open={index === 0}>
         <summary>{index === 0 ? "最近一次识别" : "历史识别"} · {job.phase_label}</summary>
         <OcrProgressDisplay job={job} />
         <div className="catalog-ocr-actions">
@@ -202,7 +202,7 @@ function CatalogOcrPickerState({ owner, renderEdition, disabled = false, initial
     <fieldset disabled={disabled} style={{ border: 0, padding: 0, margin: 0 }}><legend className="sr-only">馆藏与出版版本</legend>
     <EntityPicker owner={owner} label="馆藏作品" endpoint="/catalog/admin/library/works/" queryParam="q" nameField="title" values={works} onChange={(values) => { setWorks(values.slice(-1)); setEdition(""); setPage(1); setData(null); setError(""); }} />
     {error ? <p role="alert">{error}<button type="button" onClick={() => setRefresh((n) => n + 1)}>重试版本查询</button></p> : null}
-    {work ? <><label><span>出版版本</span><select value={edition} onChange={(event) => setEdition(event.target.value)} disabled={!data}>
+    {work ? <><label><span>出版版本</span><select data-stl-select value={edition} onChange={(event) => setEdition(event.target.value)} disabled={!data}>
       <option value="">请选择出版版本</option>
       {edition && !data?.results.some((row) => row.id === edition) ? <option value={edition}>已选版本（在其他分页）</option> : null}
       {data?.results.map((row) => <option key={row.id} value={row.id}>{row.label || "出版信息待补"}{row.is_primary ? "（主版本）" : ""}</option>)}

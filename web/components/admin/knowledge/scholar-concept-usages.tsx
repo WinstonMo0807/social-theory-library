@@ -32,6 +32,6 @@ export function ScholarConceptUsages({scholarId,owner}:{scholarId:string;owner:s
       {!resource.data.count?<p>还没有明确归属到此学者的概念用法。选择知识条目，在原文中核对作者和归属依据后保存。</p>:null}
       <nav className={styles.pagination} aria-label="概念用法分组分页"><button type="button" disabled={!resource.data.previous} onClick={()=>setPage(value=>value-1)}>上一页</button><button type="button" disabled={!resource.data.next} onClick={()=>setPage(value=>value+1)}>下一页</button></nav>
     </>}
-    <details className={styles.panel}><summary>选择概念并从材料提取用法</summary><EntityPicker owner={owner} label="选择知识条目" endpoint="/catalog/admin/theory-system/nodes/" nameField="canonical_name_zh" values={selected} onChange={values=>{const value=values.at(-1);setSelected(value?.id?[{id:value.id,name:value.name}]:[]);}}/>{selected[0]?<Link href={`/admin/theories/${selected[0].id}?section=usages`}>进入{selected[0].name}的概念用法 →</Link>:null}</details>
+    <details data-disclosure="collection" className={styles.panel}><summary>选择概念并从材料提取用法</summary><EntityPicker owner={owner} label="选择知识条目" endpoint="/catalog/admin/theory-system/nodes/" nameField="canonical_name_zh" values={selected} onChange={values=>{const value=values.at(-1);setSelected(value?.id?[{id:value.id,name:value.name}]:[]);}}/>{selected[0]?<Link href={`/admin/theories/${selected[0].id}?section=usages`}>进入{selected[0].name}的概念用法 →</Link>:null}</details>
   </section>;
 }

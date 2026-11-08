@@ -22,7 +22,7 @@ export function MaterialRelationCandidates({owner,centerKind,centerId}:{owner:st
     {resource.error?<p role="alert">{resource.error}<button type="button" onClick={()=>{setPage(1);resource.reload();}}>从第一页重新读取</button></p>:!resource.data?<LoadingState role="status">正在读取原材料审核任务…</LoadingState>:<>
       <ul className={styles.candidateRows}>{resource.data.results.map(row=><li key={row.id}>
         <div><strong>{row.work_title||"原文献当前不可读"} → {row.node_name||row.suggested_node_name||"待核对条目"}</strong><p>{labels[row.status||""]||row.status||"状态待核对"}</p>
-          {row.evidence_text?<details><summary>识别时保留的摘录</summary><p>{row.evidence_text}</p><small>此摘录不是已确认的原文位置，须核对原文件及当前准确版本。它不代表关系已成立。</small></details>:<small>原任务没有保留摘录，请先补齐材料证据。</small>}
+          {row.evidence_text?<details data-disclosure="collection"><summary>识别时保留的摘录</summary><p>{row.evidence_text}</p><small>此摘录不是已确认的原文位置，须核对原文件及当前准确版本。它不代表关系已成立。</small></details>:<small>原任务没有保留摘录，请先补齐材料证据。</small>}
           <small>{row.submitted_at?`最近提交 ${new Date(row.submitted_at).toLocaleString("zh-CN")}`:"原任务未记录提交时间"}</small></div>
         <a target="_blank" rel="noopener" href={`/admin/theories/relations?review_task=${encodeURIComponent(row.id)}&review_status=all${row.work?`&review_work=${encodeURIComponent(row.work)}`:""}${row.file?`&review_file=${encodeURIComponent(row.file)}`:""}`}>在新页核对原任务 ↗</a>
       </li>)}</ul>

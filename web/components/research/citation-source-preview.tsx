@@ -108,7 +108,7 @@ function SourceDocument({ reference, assetId, revisionId, initialPage }: {
       <button type="button" aria-label="下一页原文" disabled={!totalPages || page >= totalPages} onClick={() => jumpToPage(page + 1)}><ChevronRight size={14} /></button>
       <span className="stl4-citation-source-divider" />
       <button type="button" aria-label="缩小原文" disabled={zoom <= 60} onClick={() => setZoom(value => Math.max(60, value - 20))}><Minus size={14} /></button>
-      <select aria-label="原文缩放" value={zoom} onChange={event => setZoom(Number(event.target.value))}>
+      <select data-stl-select aria-label="原文缩放" value={zoom} onChange={event => setZoom(Number(event.target.value))}>
         {[60, 80, 100, 120, 140, 160, 180].map(value => <option key={value} value={value}>{value}%</option>)}
       </select>
       <button type="button" aria-label="放大原文" disabled={zoom >= 180} onClick={() => setZoom(value => Math.min(180, value + 20))}><Plus size={14} /></button>

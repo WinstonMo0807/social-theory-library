@@ -122,20 +122,20 @@ export function TheoryDirectory({
     </nav>
     <div className={styles.columns}>
       <aside className={styles.disciplines} aria-label="学科与条目类型">
-        <details className={styles.discipline} open={!filters.discipline}>
-          <summary>全部学科<ChevronDown size={16} /></summary>
+        <section data-content-section className={styles.discipline}>
+          <header data-section-heading>全部学科<ChevronDown size={16} /></header>
           <nav aria-label="全部学科的条目类型">{theoryDirectoryKinds.map(kind => <Link
             key={kind} aria-current={!filters.discipline && filters.type === kind ? "page" : undefined}
             href={theoryDirectoryHref(filters, { discipline: "", type: kind, parent: "", page: 1, selected: "" })} scroll={false}
           >{theoryDirectoryLabels[kind]}</Link>)}</nav>
-        </details>
-        {directory?.disciplines.map(discipline => <details className={styles.discipline} key={discipline.id} open={filters.discipline === discipline.slug}>
-          <summary>{discipline.name}<ChevronDown size={16} /></summary>
+        </section>
+        {directory?.disciplines.map(discipline => <section data-content-section className={styles.discipline} key={discipline.id}>
+          <header data-section-heading>{discipline.name}<ChevronDown size={16} /></header>
           <nav aria-label={`${discipline.name}的条目类型`}>{theoryDirectoryKinds.map(kind => <Link
             key={kind} aria-current={filters.discipline === discipline.slug && filters.type === kind ? "page" : undefined}
             href={theoryDirectoryHref(filters, { discipline: discipline.slug, type: kind, parent: "", page: 1, selected: "" })} scroll={false}
           >{theoryDirectoryLabels[kind]}</Link>)}</nav>
-        </details>)}
+        </section>)}
         {!directory ? <p className={styles.missing}>学科目录待重新加载。</p> : null}
       </aside>
 
@@ -159,8 +159,8 @@ export function TheoryDirectory({
           <p>{directory.parent && !filters.q ? "当前上级条目下没有已公开的直属条目。" : "请尝试调整关键词或移除筛选条件。"}</p>
           <Link className={styles.secondary} href={theoryDirectoryHref(filters, { q: "", discipline: "", parent: "", page: 1, selected: "" })}>清除筛选</Link>
         </div> : directory ? <>
-          {directory.groups.map(group => <details className={styles.group} key={group.id || "ungrouped"} open>
-            <summary><span>{group.title}</span><ChevronDown size={17} /></summary>
+          {directory.groups.map(group => <section data-content-section className={styles.group} key={group.id || "ungrouped"}>
+            <header data-section-heading><span>{group.title}</span><ChevronDown size={17} /></header>
             {group.parent && !directory.parent ? <Link className={styles.groupChildren} href={theoryDirectoryHref(filters, { parent: group.parent.id, q: "", page: 1, selected: "" })} scroll={false}>浏览直属条目<ArrowRight size={12} /></Link> : null}
             <ul>{group.items.map(item => <li key={item.id} data-selected={filters.selected === item.slug || undefined}>
               <Link className={styles.item} href={theoryDirectoryHref(filters, { selected: item.slug })} scroll={false} aria-current={filters.selected === item.slug ? "true" : undefined}>
@@ -168,7 +168,7 @@ export function TheoryDirectory({
               </Link>
               {item.child_count > 0 ? <Link className={styles.children} href={theoryDirectoryHref(filters, { parent: item.id, q: "", page: 1, selected: "" })} scroll={false} aria-label={`展开${item.name}的${item.child_count}个直属条目`}>{item.child_count}<List size={13} /></Link> : null}
             </li>)}</ul>
-          </details>)}
+          </section>)}
           {directory.total_pages > 1 ? <nav className={styles.pagination} aria-label="目录分页">
             {directory.page > 1 ? <Link href={theoryDirectoryHref(filters, { page: directory.page - 1, selected: "" })} scroll={false}><ArrowLeft size={14} />上一页</Link> : <span />}
             <span>第 {directory.page} / {directory.total_pages} 页</span>

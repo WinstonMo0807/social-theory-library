@@ -51,7 +51,7 @@ export function ResearchComparisonDrafts({ workspace, dimension, onReview }: { w
       {canRetry ? <button type="button" disabled={pending || record.archived} onClick={() => void retry()}>重新生成</button> : null}
       <button type="button" disabled={pending} onClick={refresh}>{pollPaused ? "继续更新" : "刷新"}</button>
     </div></header>
-    {drafts.length > 1 ? <label>生成记录<select value={current.id} onChange={event => setChosen(event.target.value)}>{drafts.map((turn, index) => <option value={turn.id} key={turn.id}>第 {index + 1} 次 · {states[turn.status || ""] || "已保存"}</option>)}</select></label> : null}
+    {drafts.length > 1 ? <label>生成记录<select data-stl-select value={current.id} onChange={event => setChosen(event.target.value)}>{drafts.map((turn, index) => <option value={turn.id} key={turn.id}>第 {index + 1} 次 · {states[turn.status || ""] || "已保存"}</option>)}</select></label> : null}
     <p>{draft.notice}</p>
     {current.status === "failed" ? <p role="alert">本轮未取得完整可用草稿。可核对分析服务、所选原文和材料范围后重试，原比较笔记未改动。</p> : null}
     {draft.missing_columns ? <p>本轮还有 {draft.missing_columns} 个文献列未取得有效草稿，已完成部分保留。</p> : null}

@@ -30,7 +30,7 @@
 
 .semantic-top-evidence > header,
 .semantic-comparison > header,
-.semantic-more-evidence > summary {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) {
   margin: 0 12px;
   padding: 14px 4px 10px;
   border-bottom: 1px solid #d9d6cf;
@@ -39,7 +39,7 @@
 
 .semantic-top-evidence > header > span,
 .semantic-comparison > header > span,
-.semantic-more-evidence > summary > span {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) > span {
   border: 0;
   font-size: 16px;
   font-weight: 760;
@@ -187,7 +187,7 @@
   font-size: max(11px, var(--stl-readable-meta));
 }
 
-.semantic-more-evidence > summary {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) {
   border-top: 1px solid #d9d6cf;
   cursor: pointer;
 }

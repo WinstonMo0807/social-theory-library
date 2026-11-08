@@ -28,7 +28,7 @@ export function CatalogResultCard({ row }: { row: CatalogSearchWork }) {
         <div className="stl4-catalog-result-heading"><h3><Link href={`/works/${work.slug}`}>{row.title}</Link></h3><p className="stl4-catalog-result-tags"><span>{editions.length > 1 ? "作品聚合" : work.kind}</span></p></div>
         <p>{authors.length ? `${authors.join("、")} 著` : "作者信息待补充"}{translators.length ? ` · ${translators.join("、")} 译` : ""}</p>
         <p>{row.document_type === "journal_article" ? journal : publication}</p>
-        {row.abstract ? <details className="stl4-catalog-abstract"><summary><span>{row.abstract}</span></summary><p>{row.abstract}</p></details> : null}
+        {row.abstract ? <details data-disclosure="collection" className="stl4-catalog-abstract"><summary><span>{row.abstract}</span></summary><p>{row.abstract}</p></details> : null}
         <span className={`stl4-catalog-availability ${anyReadable ? "is-readable" : ""}`}>{anyReadable ? "可在线阅读" : "仅书目信息"}</span>
         <Link className="stl4-catalog-detail-link" href={`/works/${work.slug}`}><ChevronRight size={14} />查看{editions.length > 1 ? "作品" : "文献"}详情<ArrowRight size={14} /></Link>
       </div>
@@ -45,7 +45,7 @@ export function CatalogResultCard({ row }: { row: CatalogSearchWork }) {
         </div>
       </aside>
     </div>
-    {editions.length > 1 ? <details className="stl4-catalog-versions">
+    {editions.length > 1 ? <details data-disclosure="collection" className="stl4-catalog-versions">
       <summary><strong>可查看的版本（{editions.length}）</strong><ChevronDown size={16} /></summary>
       <div className="stl4-catalog-version-table" role="table" aria-label={`${row.title}的出版版本`}>
         <div role="row" className="stl4-catalog-version-head"><span role="columnheader">版本信息</span><span role="columnheader">语言</span><span role="columnheader">格式</span><span role="columnheader">可用性</span><span role="columnheader">操作</span></div>

@@ -190,7 +190,7 @@
     justify-content: space-between;
   }
 
-  .passage-table-actions details p {
+  .passage-table-actions :is(details,:where([data-content-section])) p {
     right: auto;
     left: 0;
     width: min(82vw, 390px);

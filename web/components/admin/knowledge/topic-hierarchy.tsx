@@ -52,7 +52,7 @@ function HierarchyProposal({ topicId, name, value, onApply, onClose }: {
     <p>当前主题 <strong>{name || "未命名主题"}</strong></p>
     <div className={styles.parentSelection}><div><span>新的上级主题</span><strong>{parent?.name || "无上级 · 一级主题"}</strong></div>
       {parent ? <button type="button" onClick={() => setParent(null)}>改为一级主题</button> : null}</div>
-    <details className={styles.parentChoices}><summary>选择其他上级</summary>
+    <details data-disclosure="collection" className={styles.parentChoices}><summary>选择其他上级</summary>
       <div className={styles.treeSearch}><input value={input} maxLength={240} aria-label="查找上级主题" placeholder="搜索名称或别名" onChange={event => setInput(event.target.value)} onKeyDown={event => {
         if (event.key === "Enter" && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); setQuery(input.trim()); }
       }} /><button type="button" onClick={() => setQuery(input.trim())}>查找</button></div>

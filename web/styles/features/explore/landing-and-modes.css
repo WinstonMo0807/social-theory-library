@@ -151,7 +151,7 @@
   background: var(--surface);
 }
 
-.mobile-filter-disclosure > summary {
+.mobile-filter-disclosure > :is(summary,:where([data-section-heading])) {
   display: flex;
   min-height: 46px;
   align-items: center;
@@ -162,11 +162,11 @@
   list-style: none;
 }
 
-.mobile-filter-disclosure > summary::-webkit-details-marker {
+.mobile-filter-disclosure > :is(summary,:where([data-section-heading]))::-webkit-details-marker {
   display: none;
 }
 
-.mobile-filter-disclosure > summary span {
+.mobile-filter-disclosure > :is(summary,:where([data-section-heading])) span {
   color: var(--muted);
   font-size: max(calc(8px + var(--font-bump)), var(--stl-readable-meta));
 }
@@ -185,7 +185,7 @@
 
 .semantic-top-evidence > header,
 .semantic-comparison > header,
-.semantic-more-evidence > summary {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) {
   display: flex;
   align-items: flex-start;
   gap: 14px;
@@ -195,7 +195,7 @@
 
 .semantic-top-evidence > header > span,
 .semantic-comparison > header > span,
-.semantic-more-evidence > summary > span {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) > span {
   display: grid;
   width: 28px;
   height: 28px;
@@ -224,21 +224,21 @@
   font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-body));
 }
 
-.semantic-more-evidence > summary {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) {
   cursor: pointer;
   list-style: none;
 }
 
-.semantic-more-evidence > summary::-webkit-details-marker {
+.semantic-more-evidence > :is(summary,:where([data-section-heading]))::-webkit-details-marker {
   display: none;
 }
 
-.semantic-more-evidence > summary strong {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) strong {
   align-self: center;
   font-size: max(calc(13px + var(--font-bump)), var(--stl-readable-meta));
 }
 
-.semantic-more-evidence > summary small {
+.semantic-more-evidence > :is(summary,:where([data-section-heading])) small {
   align-self: center;
   margin-left: auto;
   color: var(--muted);

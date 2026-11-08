@@ -1,4 +1,5 @@
 "use client";
+import { DefaultCover } from "@/components/default-cover";
 import { useEvidenceLanguage } from "./evidence-language";
 import { MediaPlacement } from "./media-placement";
 
@@ -38,7 +39,7 @@ export function DiscoveryDocumentProgress({ data, busy, onRemove, onView, onAdju
     {data.truncated ? <p role="status">{t("当前仅列出前200个版本的状态。请缩小范围查看指定文献；检索结果仍来自完整允许范围。")}</p> : null}
     <div className={styles.documentTabs} role="group" aria-label={t("文献处理状态筛选")}>{tabs.map(value => <button type="button" key={value} aria-pressed={tab === value} onClick={() => { setTab(value); setLimit(4); }}>{t(value)} <small>{data.items.filter(row => matches(row, value)).length}</small></button>)}</div>
     {!rows.length ? <p className={styles.help}>{t("当前没有此状态的文献。")}</p> : rows.slice(0, limit).map(row => <article className={styles.documentRow} key={row.edition_id}>
-      <div className={styles.documentCover}>{row.bibliography?.cover_url ? <MediaPlacement uses={row.bibliography.cover_media?.display_uses} fallback={<BookOpen size={25} aria-hidden="true"/>}><img src={normalizePublicResourceUrl(row.bibliography.cover_url)} alt="" loading="lazy" /></MediaPlacement> : <BookOpen size={25} aria-hidden="true" />}</div>
+      <div className={styles.documentCover}>{row.bibliography?.cover_url ? <MediaPlacement uses={row.bibliography.cover_media?.display_uses} fallback={<DefaultCover title={row.title} />}><img src={normalizePublicResourceUrl(row.bibliography.cover_url)} alt="" loading="lazy" /></MediaPlacement> : <DefaultCover title={row.title} />}</div>
       <div><h4>{row.title}</h4><p>{[row.authors.join("、"), row.bibliography?.publication_year, row.bibliography?.version_label].filter(Boolean).join(" · ")}</p>
         <div className={styles.documentState} data-state={row.status}>{row.status === "unreadable" ? <LockKeyhole size={16} /> : ["failed", "changed"].includes(row.status) ? <CircleAlert size={16} /> : null}<strong>{t(labels[row.status])}</strong>{row.material_count ? <span>{t("已获得 {count} 段原文", { count: row.material_count })}</span> : null}</div>
         {row.status === "no_returned" ? <p>{t("本次未找到该版本的材料，请调整问题或筛选。")}</p> : null}

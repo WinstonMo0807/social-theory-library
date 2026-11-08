@@ -1,3 +1,4 @@
+import { DefaultCover } from "@/components/default-cover";
 import Image from "next/image";
 import Link from "next/link";
 import { MediaPlacement } from "@/components/media-placement";
@@ -73,7 +74,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
               <MediaPlacement uses={theory.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${theory.cover_url || `${photos}/${relatedPhotos[index % relatedPhotos.length]}`}")` }} aria-hidden="true" /></MediaPlacement>
               <div><h3>{theory.href ? <Link href={theory.href}>{theory.name}<ArrowRight size={16} aria-hidden="true" /></Link> : theory.name}</h3><p>{theory.summary || theory.role || "介绍尚未发布"}</p></div>
             </div>
-            {theory.legacy_identities?.length ? <details className={styles.relationSource}><summary>查看关联记录</summary><ul>{theory.legacy_identities.map(legacy => <li key={legacy.id}>{legacy.name}{legacy.role ? ` · ${legacy.role}` : ""}{legacy.source ? <p>{legacy.source}</p> : null}</li>)}</ul></details> : null}
+            {theory.legacy_identities?.length ? <section data-content-section className={styles.relationSource}><header data-section-heading>查看关联记录</header><ul>{theory.legacy_identities.map(legacy => <li key={legacy.id}>{legacy.name}{legacy.role ? ` · ${legacy.role}` : ""}{legacy.source ? <p>{legacy.source}</p> : null}</li>)}</ul></section> : null}
           </article>)}</div> : <p className={styles.empty}>尚无已确认并公开的相关理论。</p>}
         </section>
         <section className={styles.section} id="scholars" aria-labelledby="subdiscipline-scholars-title" data-edit-section="scholars">
@@ -84,7 +85,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
               {person.reason || person.relation_label || person.summary ? <p>{person.reason || person.relation_label || person.summary}</p> : null}
               {person.source_href ? <Link className={styles.sourceLink} href={person.source_href} target="_blank" rel="noopener noreferrer">查看来源<ArrowRight size={14} aria-hidden="true" /></Link>
                 : <span className={styles.unavailable}>原文来源未提供</span>}
-              {person.source_label ? <details className={styles.relationSource}><summary>关联说明</summary><p>{person.source_label}</p></details> : null}
+              {person.source_label ? <section data-content-section className={styles.relationSource}><header data-section-heading>关联说明</header><p>{person.source_label}</p></section> : null}
             </div>
           </article>)}</div> : <p className={styles.empty}>尚无已确认并公开的代表性学者。</p>}
         </section>
@@ -95,11 +96,11 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
               ? `共 ${worksPage.count} 部文献 · 当前第 ${(worksPage.page - 1) * 48 + 1}—${Math.min(worksPage.count, (worksPage.page - 1) * 48 + works.length)} 部`
               : `共 ${worksPage.count} 部文献`}</p> : null}
             {works.length ? <div className={styles.works}>{works.map(work => <article key={work.edition_id || work.id}>
-              {work.cover_url ? <MediaPlacement uses={work.cover_media?.display_uses} fallback={<span className={styles.bookPlaceholder}><FileText size={25}/></span>}><img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /></MediaPlacement> : <span className={styles.bookPlaceholder}><FileText size={25} aria-hidden="true" /><span>暂无封面</span></span>}
+              {work.cover_url ? <MediaPlacement uses={work.cover_media?.display_uses} fallback={<DefaultCover className={styles.bookPlaceholder} title={work.title} />}><img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /></MediaPlacement> : <span className={styles.bookPlaceholder}><FileText size={25} aria-hidden="true" /><span>暂无封面</span></span>}
               <div><h3>{work.detail_href ? <Link href={work.detail_href}>{work.title}</Link> : work.title}</h3><small>{[work.author, work.year, work.publisher].filter(value => value !== "" && value !== null).join(" · ") || "出版信息未提供"}</small>
                 {work.relation_label ? <p>{work.relation_label}</p> : null}
                 <div className={styles.workActions}>{work.detail_href ? <Link className={styles.primary} href={work.detail_href}>查看版本</Link> : null}{work.reader_href ? <Link href={work.reader_href} target="_blank" rel="noopener noreferrer">阅读原文</Link> : <span className={styles.unavailable}>这一版本暂无可读原文</span>}</div>
-                {work.evidence ? <details className={styles.relationSource}><summary>查看关联依据</summary><SourceExcerpt source={work.evidence} /></details> : work.source ? <details className={styles.relationSource}><summary>关联说明</summary><p>{work.source}</p></details> : null}
+                {work.evidence ? <section data-content-section className={styles.relationSource}><header data-section-heading>查看关联依据</header><SourceExcerpt source={work.evidence} /></section> : work.source ? <section data-content-section className={styles.relationSource}><header data-section-heading>关联说明</header><p>{work.source}</p></section> : null}
               </div>
             </article>)}</div> : worksPage?.count ? <div className={styles.empty}><p>当前页没有可展示的文献，公开状态可能已变化。</p><a href={worksHref(worksPage.page)}>重新载入本页文献</a></div> : <p className={styles.empty}>尚无与本子学科建立公开关联的核心文献。</p>}
             {worksPage && worksPage.total_pages > 1 ? <nav className={styles.pagination} aria-label="核心文献分页">
@@ -121,9 +122,9 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
           {paths.length ? paths.map(path => <Link href={path.href} className={styles.path} key={path.id}><BookOpen size={19} strokeWidth={1.5} aria-hidden="true" /><span><strong>查看阅读路径 · {path.title}</strong>{path.introduction ? <span>{path.introduction}</span> : null}</span><ArrowRight size={18} strokeWidth={1.5} aria-hidden="true" /></Link>)
             : <p className={styles.empty}>尚无包含本子学科已确认条目的公开阅读路径。</p>}
         </section>
-        {sources.length ? <details className={styles.sources} id="sources"><summary>本页原文依据（{sources.length}）</summary>
+        {sources.length ? <section data-content-section className={styles.sources} id="sources"><header data-section-heading>本页原文依据（{sources.length}）</header>
           <p>包含当前页文献的关联依据与本子学科已公开编排的原文依据。每条来源保留自己的版本与页码。</p>
-          {sources.map(source => <SourceExcerpt key={`${source.source_kind}-${source.id}`} source={source} />)}</details> : null}
+          {sources.map(source => <SourceExcerpt key={`${source.source_kind}-${source.id}`} source={source} />)}</section> : null}
         {item.children?.length || item.discipline || item.parent ? <nav className={styles.hierarchy} aria-label="继续浏览相关学科">
           {item.discipline ? <Link href={`/theories/disciplines/${encodeURIComponent(item.discipline.slug)}`}>所属学科 · {item.discipline.name}</Link> : null}
           {item.parent ? <Link href={`/subdisciplines/${encodeURIComponent(item.parent.slug)}`}>上级子学科 · {item.parent.name}</Link> : null}

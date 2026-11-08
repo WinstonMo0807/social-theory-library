@@ -21,12 +21,12 @@
 }
 .action-feedback.button:not(.secondary)[data-pressed="true"] { background: #171717; color: #fff; }
 
-:where(button, a[href], summary, [role="button"]):not([aria-disabled="true"]):focus-visible {
+:where(button, a[href], :is(summary,:where([data-section-heading])), [role="button"]):not([aria-disabled="true"]):focus-visible {
   outline: var(--stl-border-focus) solid var(--stl-accent-focus);
   outline-offset: 3px;
 }
 
-:where(button, a[href], summary, [role="button"]):not(:disabled):not([aria-disabled="true"]) {
+:where(button, a[href], :is(summary,:where([data-section-heading])), [role="button"]):not(:disabled):not([aria-disabled="true"]) {
   transition: color var(--stl-motion-control) ease, background-color var(--stl-motion-control) ease, border-color var(--stl-motion-control) ease, box-shadow var(--stl-motion-control) ease, opacity var(--stl-motion-control) ease, transform var(--stl-motion-press) var(--ease-out);
 }
 
@@ -114,5 +114,5 @@ a[data-route-pending="true"] {
   .action-feedback,
   .action-feedback-indicator,
   .toast-item,
-  :where(button, a[href], summary, [role="button"]) { animation: none !important; transition: none !important; transform: none !important; }
+  :where(button, a[href], :is(summary,:where([data-section-heading])), [role="button"]) { animation: none !important; transition: none !important; transform: none !important; }
 }

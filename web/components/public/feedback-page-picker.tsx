@@ -56,7 +56,7 @@ export function FeedbackPagePicker({ path, title, error, onChange, onClose, onSa
   return <Dialog open onRequestClose={onClose} className={`stl4-support-path-dialog ${styles.picker}`} aria-labelledby="feedback-path-title">
     <header><h2 id="feedback-path-title">选择相关页面</h2><button type="button" aria-label="关闭关联页面" onClick={onClose}><X size={20} /></button></header>
     <form onSubmit={event => { event.preventDefault(); setSearch(value => ({ query: query.trim(), page: 1, attempt: value.attempt + 1 })); }} className={styles.search}>
-      <label><span className="sr-only">页面类型</span><select value={kind} onChange={event => { setKind(event.target.value as Kind); setQuery(""); setResult(null); setLoadError(""); setSearch({ query: "", page: 1, attempt: 0 }); }}>{kinds.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+      <label><span className="sr-only">页面类型</span><select data-stl-select value={kind} onChange={event => { setKind(event.target.value as Kind); setQuery(""); setResult(null); setLoadError(""); setSearch({ query: "", page: 1, attempt: 0 }); }}>{kinds.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
       {kind !== "pages" ? <><label><span className="sr-only">按名称查找页面</span><input type="search" placeholder="输入名称查找" value={query} maxLength={120} onChange={event => setQuery(event.target.value)} /></label><button type="submit" aria-label="查找页面"><Search size={18} /></button></> : null}
     </form>
     <div className={styles.choices} aria-label="可关联页面" aria-busy={kind !== "pages" && !result && !loadError}>
@@ -71,7 +71,7 @@ export function FeedbackPagePicker({ path, title, error, onChange, onClose, onSa
       const page = Number(event.target.value);
       if (Number.isInteger(page) && page > 0 && page <= 999999) onChange(`${publicPath.split("?", 1)[0]}?page=${page}`, title || source.source?.title);
     }} /></label> : null}
-    <details className={styles.address}><summary>手动填写网址</summary><label>本站页面地址<input value={path} maxLength={2048} onChange={event => onChange(event.target.value)} placeholder="粘贴本站页面的网址" /></label><p>网址仅保留页面路径与 PDF 页码，不附带检索词或私人信息。</p></details>
+    <details data-disclosure="collection" className={styles.address}><summary>手动填写网址</summary><label>本站页面地址<input value={path} maxLength={2048} onChange={event => onChange(event.target.value)} placeholder="粘贴本站页面的网址" /></label><p>网址仅保留页面路径与 PDF 页码，不附带检索词或私人信息。</p></details>
     {path ? <p className={styles.selected}>已选：{title || feedbackPages.find(([href]) => href === path)?.[1] || path}{publicPath.startsWith("/reader/") ? ` · PDF 第 ${new URLSearchParams(publicPath.split("?")[1] || "").get("page") || "1"} 页` : ""}</p> : null}
     {error ? <p role="alert">{error}</p> : null}
     <footer><button type="button" onClick={onClose}>取消</button><button className="stl4-support-primary" type="button" disabled={!path.trim()} onClick={onSave}>关联页面</button></footer>

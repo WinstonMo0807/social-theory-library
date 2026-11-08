@@ -1,4 +1,5 @@
 "use client";
+import { DefaultCover } from "@/components/default-cover";
 import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
@@ -53,7 +54,7 @@ export function SharingPagination({ page, total, disabled, onPage }: { page: num
 
 export function SharingCover({work}:{work?:ShareWorkSummary|null}){
   const [failed,setFailed]=useState("");
-  const cover=work?.cover_url||"",fallback=<span className={styles.coverBlank} aria-label="暂无可显示封面">暂无封面</span>;
+  const cover=work?.cover_url||"",fallback=<DefaultCover className={styles.coverBlank} title={work?.title || "未题名资料"} />;
   return cover&&failed!==cover?<MediaPlacement uses={work?.cover_media?.display_uses} fallback={fallback}><Image unoptimized width={48} height={68} src={cover} alt="文献封面" onError={()=>setFailed(cover)}/></MediaPlacement>:fallback;
 }
 

@@ -34,7 +34,7 @@
 .detail dd, .generation dd { margin: 0; overflow-wrap: anywhere; }
 .detail dd p { margin: 6px 0 0; line-height: 1.7; }
 .jobs, .generation { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
-.jobs summary, .generation summary { cursor: pointer; font-size: max(13px, var(--stl-readable-meta)); }
+.jobs :is(summary,:where([data-section-heading])), .generation :is(summary,:where([data-section-heading])) { cursor: pointer; font-size: max(13px, var(--stl-readable-meta)); }
 .jobs article { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: max(12px, var(--stl-readable-meta)); }
 .jobs article > div { flex: 1; min-width: 0; }
 .jobs span { margin-left: 15px; color: var(--muted); font-size: max(11px, var(--stl-readable-meta)); }

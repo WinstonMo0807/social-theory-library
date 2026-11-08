@@ -336,5 +336,5 @@ export function LifecycleControl({
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
-  return <label className="workflow-lifecycle-control"><span>状态</span><select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>;
+  return <label className="workflow-lifecycle-control"><span>状态</span><select data-stl-select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>;
 }

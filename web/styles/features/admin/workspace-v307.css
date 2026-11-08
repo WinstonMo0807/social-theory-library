@@ -20,8 +20,8 @@
 .work-library-row > div > strong { font-family:var(--stl-type-serif); font-size:16px; }
 .work-library-row > div:first-child > strong { font-size:18px; }
 .work-library-row > div > small:first-child { display:none; }
-.work-library-row > details { padding-top:5px; border:0; margin-top:-7px; font-size:max(12px, var(--stl-readable-meta)); }
-.work-library-row > details[open] { margin-top:0; padding-top:10px; border-top:1px solid var(--stl-border-default); }
+.work-library-row > :is(details,:where([data-content-section])) { padding-top:5px; border:0; margin-top:-7px; font-size:max(12px, var(--stl-readable-meta)); }
+.work-library-row > :is(details,:where([data-content-section])):is([open],[data-content-section]) { margin-top:0; padding-top:10px; border-top:1px solid var(--stl-border-default); }
 @media(max-width:1000px) { .work-library-table-heading { display:none; }.work-library-results .work-library-row { grid-template-columns:repeat(2,minmax(0,1fr)); }.work-library-row > div > small:first-child { display:block; } }
 @media(max-width:560px) { .work-library-results .work-library-row { grid-template-columns:minmax(0,1fr); padding:16px; } }
 .admin-content .admin-page-title { min-height: 110px; gap: 20px; padding: 7px 0 24px; }
@@ -73,7 +73,7 @@
 .upload-page { display:grid; grid-template-columns:minmax(0,2.25fr) minmax(250px,1fr); align-items:start; gap:18px; }
 .upload-page > .admin-page-title, .upload-page > .upload-policy-panel, .upload-page > .upload-result, .upload-page > .pipeline-explainer, .upload-page > .upload-staging-sessions, .upload-page > .form-message { grid-column:1/-1; }
 .upload-policy-panel { padding:14px 18px; }
-.upload-policy-panel summary { cursor:pointer; font-size:max(14px, var(--stl-readable-meta)); font-weight:550; }
+.upload-policy-panel :is(summary,:where([data-section-heading])) { cursor:pointer; font-size:max(14px, var(--stl-readable-meta)); font-weight:550; }
 .upload-policy-panel > header { margin-top:16px; }
 .upload-page .upload-dropzone { grid-column:1; grid-row:3; min-height:310px; border:1px dashed var(--stl-border-strong); border-radius:4px; background:var(--stl-surface-default); margin:0; padding:30px; }
 .upload-page .upload-dropzone h2 { font-family:var(--stl-type-serif); font-size:24px; }
@@ -237,5 +237,5 @@
 .upload-recent-batches table { width:100%; min-width:700px; border-collapse:collapse; font-size:max(12px, var(--stl-readable-meta)); }
 .upload-recent-batches th, .upload-recent-batches td { padding:16px 20px; text-align:left; border-bottom:1px solid var(--stl-border-default); }
 .upload-recent-batches th { color:var(--stl-ink-muted); font-weight:500; background:var(--stl-surface-wash); }
-.upload-recent-batches summary { cursor:pointer; }
+.upload-recent-batches :is(summary,:where([data-section-heading])) { cursor:pointer; }
 .upload-recent-batches li { margin:10px 0; }

@@ -86,8 +86,8 @@ export function ResearchComparisonActivity({ workspace }: { workspace: Workspace
         <button type="button" disabled={pending} onClick={refresh}><RefreshCw size={13}/>{pollPaused ? "继续更新" : "刷新"}</button>
       </div>
     </header>
-    {rows.length > 1 ? <label>补充检索轮次<select value={current.id} onChange={event => setSelectedTurn(event.target.value)}>{rows.map((turn, index) => <option key={turn.id} value={turn.id}>{index + 1} · {turn.data.question}</option>)}</select></label> : null}
-    <details><summary><Search size={13}/>本轮材料（{references.length}）· 核对后加入选材</summary>
+    {rows.length > 1 ? <label>补充检索轮次<select data-stl-select value={current.id} onChange={event => setSelectedTurn(event.target.value)}>{rows.map((turn, index) => <option key={turn.id} value={turn.id}>{index + 1} · {turn.data.question}</option>)}</select></label> : null}
+    <section data-content-section><header data-section-heading><Search size={13}/>本轮材料（{references.length}）· 核对后加入选材</header>
       {references.map(ref => { const key = researchEvidenceKey(ref), added = selected.has(key), href = researchReaderHref(ref); return <article key={key}>
         <h3>{ref.title || "原文证据"}</h3><p>{ref.source_status === "available" ? ref.quote || ref.text || "请打开原文核对。" : "来源暂不可用，原引用记录保留。"}</p>
         <div className="stl4-comparison-inline-actions">{href ? <Link href={href} target="_blank" rel="noreferrer">查看原文</Link> : null}
@@ -96,7 +96,7 @@ export function ResearchComparisonActivity({ workspace }: { workspace: Workspace
         </div>
       </article>; })}
       {!references.length ? <p>{running ? "仍在寻找材料，已有比较可以继续阅读。" : "本轮没有取得可展示的材料，可调整问题或检索范围后继续。没有结果不代表观点不成立。"}</p> : null}
-    </details>
+    </section>
     <Link href={`/account/research/${record.id}?turn=${current.id}`}>在持续研究中查看完整轮次 →</Link>
   </section>;
 }

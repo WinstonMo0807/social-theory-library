@@ -1042,7 +1042,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
           </label>
           <label className="upload-policy-field">
             <span>访问权限</span>
-            <select
+            <select data-stl-select
               value={accessPolicy}
               disabled={pending||Boolean(workspace.data?.batch)}
               onChange={(event) => setAccessPolicy(event.target.value as AccessPolicy)}
@@ -1055,7 +1055,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
           </label>
           <label className="upload-policy-field">
             <span>OCR 策略</span>
-            <select
+            <select data-stl-select
               value={ocrStrategy}
               disabled={pending||Boolean(workspace.data?.batch)}
               onChange={(event) => setOcrStrategy(event.target.value as OcrStrategy)}
@@ -1068,7 +1068,7 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
           </label>
           <label className="upload-policy-field">
             <span>重复检测</span>
-            <select
+            <select data-stl-select
               value={duplicatePolicy}
               disabled={pending||Boolean(workspace.data?.batch)}
               onChange={(event) => setDuplicatePolicy(event.target.value as DuplicatePolicy)}
@@ -1166,6 +1166,6 @@ function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
                 </article>
               );
             })}
-          </div>{!ingestionItems.some(item=>item.id===detailItemId)?<p>当前文件尚未进入识别，上传完成后可在批次或收件详情查看。</p>:null}{stagingSessions.length?<details><summary>持续上传与恢复记录</summary>{stagingSessions.map(session=><p key={session.upload_session_id}>{session.source_filename} · {r2StagingStatusLabel(session.staging_status)}{session.can_abort?<button disabled={Boolean(stagingAction)} onClick={()=>void abortStagingSession(session.upload_session_id)}>取消上传</button>:null}{session.can_retry_import?<button disabled={Boolean(stagingAction)} onClick={()=>void retryStagingImport(session.upload_session_id)}>重新入库</button>:null}</p>)}</details>:null}</>}
+          </div>{!ingestionItems.some(item=>item.id===detailItemId)?<p>当前文件尚未进入识别，上传完成后可在批次或收件详情查看。</p>:null}{stagingSessions.length?<details data-disclosure="collection"><summary>持续上传与恢复记录</summary>{stagingSessions.map(session=><p key={session.upload_session_id}>{session.source_filename} · {r2StagingStatusLabel(session.staging_status)}{session.can_abort?<button disabled={Boolean(stagingAction)} onClick={()=>void abortStagingSession(session.upload_session_id)}>取消上传</button>:null}{session.can_retry_import?<button disabled={Boolean(stagingAction)} onClick={()=>void retryStagingImport(session.upload_session_id)}>重新入库</button>:null}</p>)}</details>:null}</>}
     recent={<section className="upload-recent-batches admin-panel"><header><h2>我的最近批次</h2><button onClick={workspace.reload}>刷新批次</button></header>{workspace.data?.recent.length?<ul>{workspace.data.recent.map(batch=><li key={batch.id}><Link href={`/admin/uploads?batch=${batch.id}`}>{batch.label||`批次 ${batch.created_at.slice(0,10)}`}</Link> · {batch.expected_count} 个预留文件位 · {batch.completed_count} 项处理完成 · {batch.failed_count} 项待复核或重试</li>)}</ul>:<p>尚无上传批次。</p>}</section>}/>;
 }

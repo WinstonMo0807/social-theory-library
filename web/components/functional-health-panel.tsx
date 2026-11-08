@@ -457,7 +457,7 @@ export function FunctionalHealthPanel({
 
   return (
     <section className="functional-health-panel admin-panel" aria-labelledby="functional-health-title" aria-busy={loading || Boolean(pendingAction)}>
-      {payload?.layers ? <section className="workflow-publication-summary" aria-label="分层健康检查">{payload.layers.map((layer) => <details key={layer.key}>
+      {payload?.layers ? <section className="workflow-publication-summary" aria-label="分层健康检查">{payload.layers.map((layer) => <details data-disclosure="collection" key={layer.key}>
         <summary>{layer.label} · {statusLabel(layer.status)}</summary>
         {layer.checks.map((check) => <p key={check.key}><strong>{check.label}</strong> {statusLabel(check.status)}<br />{check.summary}</p>)}
       </details>)}</section> : null}
@@ -534,7 +534,7 @@ export function FunctionalHealthPanel({
                 </div>
                 <div className="functional-health-dependencies">
                   {capability.dependencies.map((dependency) => (
-                    <details key={dependency.probe_key}>
+                    <details data-disclosure="collection" key={dependency.probe_key}>
                       <summary>
                         <span><StatusIcon status={dependency.status} />{dependency.label}</span>
                         <b>{dependency.stale ? "已过期，待重新检测" : statusLabel(dependency.status)}</b>

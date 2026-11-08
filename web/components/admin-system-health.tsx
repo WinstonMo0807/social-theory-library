@@ -103,11 +103,11 @@ export function AdminSystemHealth() {
                   <div><dt>最近成功检查</dt><dd>{component.last_successful_check ? new Date(component.last_successful_check).toLocaleString("zh-CN") : "尚无"}</dd></div>
                 </dl>
                 {component.last_error ? <p className="health-error">{component.last_error}</p> : null}
-                <details><summary>诊断详情</summary><pre>{JSON.stringify(component.detail, null, 2)}</pre></details>
+                <details data-disclosure="collection"><summary>诊断详情</summary><pre>{JSON.stringify(component.detail, null, 2)}</pre></details>
               </article>
             ))}
           </section>
-          {selfTest ? <section className="admin-panel system-health-v2-self-test"><header><Activity size={18} /><h2>最近一次运行检查</h2><strong>{selfTest.all_available ? "通过" : "需要处理"}</strong></header><dl>{selfTestSteps.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value && typeof value === "object" && "available" in value ? ((value as { available?: unknown }).available ? "可用" : "不可用") : "已返回结果"}</dd></div>)}</dl><details><summary>查看检查详情</summary><pre>{JSON.stringify(selfTest, null, 2)}</pre></details></section> : null}
+          {selfTest ? <section className="admin-panel system-health-v2-self-test"><header><Activity size={18} /><h2>最近一次运行检查</h2><strong>{selfTest.all_available ? "通过" : "需要处理"}</strong></header><dl>{selfTestSteps.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value && typeof value === "object" && "available" in value ? ((value as { available?: unknown }).available ? "可用" : "不可用") : "已返回结果"}</dd></div>)}</dl><details data-disclosure="collection"><summary>查看检查详情</summary><pre>{JSON.stringify(selfTest, null, 2)}</pre></details></section> : null}
         </div>
 
       </section>

@@ -130,7 +130,7 @@ function AvatarEditor({ owner, name }: { owner: string; name: string }) {
           </> : <button type="button" className={styles.primary} disabled={blocked || !snapshot} onClick={() => fileInput.current?.click()}><Camera size={16} aria-hidden="true" />更换头像</button>}
         </div>
         <p className={styles.hint}>{file ? "已居中裁切，保存后生效。" : "JPG、PNG 或 WebP，不超过 2 MB。"}</p>
-        {!file ? <details className={styles.more}><summary>更多<ChevronDown size={14} aria-hidden="true" /></summary><div className={styles.moreActions}>
+        {!file ? <details data-disclosure="collection" className={styles.more}><summary>更多<ChevronDown size={14} aria-hidden="true" /></summary><div className={styles.moreActions}>
           {snapshot?.has_avatar ? <><button type="button" disabled={busy} onClick={download}>下载头像</button><button type="button" disabled={blocked} onClick={() => setConfirmation("remove")}>恢复默认头像</button></> : null}
           <button type="button" disabled={busy} onClick={() => void run(async () => setSnapshot(await request<Snapshot>()))}>刷新头像</button>
         </div></details> : null}

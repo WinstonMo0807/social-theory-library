@@ -264,9 +264,9 @@ export function PromptRegistryAdmin() {
       {payload ? (
         <>
           <form className="prompt-registry-form" onSubmit={createRevision}>
-            <label><span>Research Task Profile</span><select value={draft.taskProfileKey} onChange={(event) => selectTaskProfile(event.target.value)}><option value="">不限定 Task Profile</option>{payload.active_task_profiles.map((profile) => <option key={profile.key} value={profile.key}>{profile.name} · {profile.key} v{profile.version}</option>)}</select></label>
+            <label><span>Research Task Profile</span><select data-stl-select value={draft.taskProfileKey} onChange={(event) => selectTaskProfile(event.target.value)}><option value="">不限定 Task Profile</option>{payload.active_task_profiles.map((profile) => <option key={profile.key} value={profile.key}>{profile.name} · {profile.key} v{profile.version}</option>)}</select></label>
             <label><span>Prompt key</span><input required maxLength={160} value={draft.key} onChange={(event) => setDraft({ ...draft, key: event.target.value })} placeholder="research.claim_stance" /></label>
-            <label><span>AI capability</span><select value={draft.capability} onChange={(event) => setDraft({ ...draft, capability: event.target.value })}>{capabilities.map((capability) => <option key={capability} value={capability}>{CAPABILITY_LABELS[capability] ?? capability}</option>)}</select></label>
+            <label><span>AI capability</span><select data-stl-select value={draft.capability} onChange={(event) => setDraft({ ...draft, capability: event.target.value })}>{capabilities.map((capability) => <option key={capability} value={capability}>{CAPABILITY_LABELS[capability] ?? capability}</option>)}</select></label>
             <label className="prompt-registry-wide"><span>Prompt 内容</span><textarea required rows={10} value={draft.content} onChange={(event) => setDraft({ ...draft, content: event.target.value })} /></label>
             <label><span>输出 schema，JSON 对象</span><textarea rows={8} value={draft.outputSchema} onChange={(event) => setDraft({ ...draft, outputSchema: event.target.value })} /></label>
             <label><span>Provider 指引，JSON 对象</span><textarea rows={8} value={draft.providerGuidance} onChange={(event) => setDraft({ ...draft, providerGuidance: event.target.value })} /></label>

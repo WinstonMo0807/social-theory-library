@@ -25,7 +25,7 @@ export function TimelineSupplementalSources({ owner, value, onChange }: { owner:
   return <section className={styles.sources} aria-label="补充出处与来源分歧">
     <header><h3>补充出处</h3><button type="button" disabled={value.sources.length >= 20} onClick={addSource}>＋ 添加证据</button></header>
     {!value.sources.length ? <p>可添加相关研究或不同记载，保留各自出处。</p> : null}
-    {value.sources.map((row,index) => <details key={row.id} open={expanded.has(row.id)} onToggle={event => {
+    {value.sources.map((row,index) => <details data-disclosure="collection" key={row.id} open={expanded.has(row.id)} onToggle={event => {
       const open = event.currentTarget.open;
       setExpanded(current => {
         if (current.has(row.id) === open) return current;
@@ -34,11 +34,11 @@ export function TimelineSupplementalSources({ owner, value, onChange }: { owner:
       if (!open) setPicking(current => current === row.id ? "" : current);
     }} className={styles.source}>
       <summary>证据 {index + 2} · {row.status === "disputed" ? "存疑" : row.status === "adopted" ? "辅助采用" : "相关研究"} · {row.citation || "待填写出处"}</summary>
-      <label>来源类型<select value={row.kind} onChange={event => change(row.id,{kind:event.target.value as TimelineSourceRecord["kind"]})}><option value="book">图书</option><option value="article">论文</option><option value="archive">档案</option><option value="other">其他出处</option></select></label>
+      <label>来源类型<select data-stl-select value={row.kind} onChange={event => change(row.id,{kind:event.target.value as TimelineSourceRecord["kind"]})}><option value="book">图书</option><option value="article">论文</option><option value="archive">档案</option><option value="other">其他出处</option></select></label>
       <label>书目或来源信息<textarea required rows={2} maxLength={1000} value={row.citation} onChange={event => change(row.id,{citation:event.target.value})}/></label>
       <label>引用位置<input maxLength={240} value={row.locator} onChange={event => change(row.id,{locator:event.target.value})}/></label>
       <label>原文摘录<textarea rows={3} maxLength={4000} value={row.quote} onChange={event => change(row.id,{quote:event.target.value})}/></label>
-      <label>核对结果<select value={row.status} onChange={event => change(row.id,{status:event.target.value as TimelineSourceRecord["status"]})}><option value="related">相关研究</option><option value="adopted">辅助采用</option><option value="disputed">存疑，保留分歧</option></select></label>
+      <label>核对结果<select data-stl-select value={row.status} onChange={event => change(row.id,{status:event.target.value as TimelineSourceRecord["status"]})}><option value="related">相关研究</option><option value="adopted">辅助采用</option><option value="disputed">存疑，保留分歧</option></select></label>
       <TimelineEvidenceImage key={`${owner}:${row.id}`} owner={owner} value={row.image_rendition_id} onChange={image_rendition_id => change(row.id, { image_rendition_id })} />
       <div className={styles.controls}><button type="button" onClick={() => setPicking(picking === row.id ? "" : row.id)}>{picking === row.id ? "收起选取" : "从馆藏选取原文"}</button>{row.asset_id ? <button type="button" onClick={() => change(row.id,{asset_id:null,page:null})}>移除文件关联</button> : null}<button type="button" onClick={() => onChange({...value,confirmed:false,sources:value.sources.filter(item => item.id !== row.id)})}>移除这条出处</button></div>
       {row.asset_id ? <p>已关联原文文件 · PDF 第 {row.page} 页。</p> : null}

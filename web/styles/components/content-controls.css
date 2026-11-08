@@ -1,0 +1,78 @@
+/* Shared controls scale with the reader's chosen font size. */
+html select[data-stl-select] {
+  box-sizing: border-box;
+  height: auto !important;
+  block-size: auto !important;
+  min-height: calc(1.5em + 18px) !important;
+  max-height: none !important;
+  line-height: 1.5 !important;
+  padding-block: 8px !important;
+  padding-inline: 12px 32px !important;
+  max-inline-size: 100%;
+  text-overflow: clip;
+  vertical-align: middle;
+}
+html select[data-stl-select]:not([multiple]):not([size]) { field-sizing: content; }
+html select[data-stl-select][multiple] { min-height: 8em !important; }
+html select[data-stl-select]:focus-visible { outline: 2px solid var(--stl-accent-gold, #aa854d); outline-offset: 3px; }
+
+/* Regular information is a section, not an interactive summary. Existing page
+   selectors also match these attributes to preserve each surface's spacing. */
+html [data-content-section] { min-inline-size: 0; }
+html [data-content-section] > [data-section-heading] {
+  cursor: default;
+  list-style: none;
+  height: auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-family: var(--sans);
+  line-height: 1.6;
+}
+html [data-content-section] > [data-section-heading]::before,
+html [data-content-section] > [data-section-heading]::after { content: none !important; }
+html [data-section-heading] > :is(.lucide-chevron-down,.lucide-chevron-right,.lucide-plus) { display: none; }
+
+/* Only long histories, optional comparisons and pickers retain disclosure. */
+html details[data-disclosure] { min-width: 0; }
+html details[data-disclosure] > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  height: auto;
+  padding-block: 10px;
+  list-style: none !important;
+  cursor: pointer;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  font-family: var(--sans);
+  line-height: 1.5;
+}
+html details[data-disclosure] > summary::-webkit-details-marker,
+html details[data-action-menu] > summary::-webkit-details-marker { display: none; }
+html details[data-disclosure] > summary::marker,
+html details[data-action-menu] > summary::marker { content: ''; }
+html details[data-disclosure] > summary::before { content: none !important; }
+html details[data-disclosure] > summary::after {
+  content: '展开';
+  position: static;
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  color: var(--muted);
+  font: 400 max(13px, var(--stl-readable-meta))/1.5 var(--sans);
+  transform: none;
+  border: 0;
+  width: auto;
+  height: auto;
+}
+html details[data-disclosure][open] > summary::after { content: '收起'; }
+html details[data-disclosure] > summary > :is(.lucide-chevron-down,.lucide-chevron-right) { display: none; }
+html details[data-disclosure] > summary:focus-visible { outline: 2px solid var(--stl-accent-gold, #aa854d); outline-offset: 3px; }
+html details[data-action-menu] > summary { list-style: none; }
+html details[data-action-menu] > [data-menu-panel] {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+html details[data-action-menu] > [data-menu-panel] :is(a,button,label) { white-space: normal; height: auto; min-height: 40px; }

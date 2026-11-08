@@ -47,9 +47,9 @@ export function ReviewQueue() {
     <nav className="admin-v307-review-counts" aria-label="待办筛选">{Object.entries(categories).map(([key,label])=><button type="button" className={category===key?"active":""} key={key} onClick={()=>change({category:key})}><span>{label}</span><strong>{page?.counts[key as keyof WorkflowQueuePage["counts"]]??"—"}</strong></button>)}</nav>
     <form className={styles.toolbar} onSubmit={submit}>
       <label>题名或来源文件<input key={query} name="q" type="search" defaultValue={query} placeholder="搜索全部待办" /></label>
-      <label>待办类型<select value={category} onChange={(event) => change({ category: event.target.value })}>{Object.entries(categories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-      <label>来源<select value={source} onChange={(event) => change({ source: event.target.value })}><option value="">全部来源</option>{Object.entries(sourceLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-      <label>排序<select value={ordering} onChange={(event) => change({ ordering: event.target.value })}>{Object.entries(orderings).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
+      <label>待办类型<select data-stl-select value={category} onChange={(event) => change({ category: event.target.value })}>{Object.entries(categories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      <label>来源<select data-stl-select value={source} onChange={(event) => change({ source: event.target.value })}><option value="">全部来源</option>{Object.entries(sourceLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      <label>排序<select data-stl-select value={ordering} onChange={(event) => change({ ordering: event.target.value })}>{Object.entries(orderings).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
       <button type="submit" className="button">搜索</button><button type="button" className="button secondary" onClick={result.retry}><RefreshCw size={15} />刷新待办</button>
     </form>
     <p className={styles.count} role="status">{page ? `当前条件共 ${page.count} 项，第 ${page.page} 页显示 ${page.results.length} 项。${ordering === "priority" ? "较早的待办排在前面，已设置优先级的项目优先。" : ordering === "-updated_at" ? "按全部匹配待办的更新时间从新到旧排序。" : "按全部匹配待办的更新时间从旧到新排序。"}` : result.error ? "待办数量未能读取。" : "正在读取完整待办数量…"}</p>

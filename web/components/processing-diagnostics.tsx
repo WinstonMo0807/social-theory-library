@@ -263,7 +263,7 @@ export function ProcessingDiagnosticsPanel({
                       </dl>
                       <p><strong>{item.safe_actions.length ? "安全恢复说明" : "处理指引"}</strong>{item.guidance}</p>
                       {Object.keys(item.details).length ? (
-                        <details>
+                        <details data-disclosure="collection">
                           <summary>查看 revision 与任务信息</summary>
                           <dl className="processing-diagnostic-details">
                             {Object.entries(item.details).slice(0, 12).map(([key, value]) => (
@@ -309,7 +309,7 @@ export function ProcessingDiagnosticsPanel({
       </div> : null}
 
       {view === "workers" ? <div className="processing-runtime-inventory">
-        <details id="processing-worker-inventory" open>
+        <details data-disclosure="collection" id="processing-worker-inventory" open>
           <summary>Executor heartbeat <strong>{diagnostics.executors.length}</strong></summary>
           <div className="processing-runtime-rows">
             {diagnostics.executors.map((executor) => (
@@ -330,7 +330,7 @@ export function ProcessingDiagnosticsPanel({
         <p className="processing-configuration-boundary" role="note">
           模型地址和密钥由系统所有者在服务器或受保护设置中配置。此处仅显示配置状态。
         </p>
-        <details id="processing-ai-runtime" open>
+        <details data-disclosure="collection" id="processing-ai-runtime" open>
           <summary>AI Runtime profiles <strong>{diagnostics.provider_profiles.length}</strong></summary>
           <div className="processing-runtime-rows">
             {diagnostics.provider_profiles.map((profile) => (
@@ -344,7 +344,7 @@ export function ProcessingDiagnosticsPanel({
             ))}
           </div>
         </details>
-        <details>
+        <details data-disclosure="collection">
           <summary>Prompt Registry <strong>{diagnostics.prompt_registry?.active.length ?? 0}</strong></summary>
           <div className="processing-runtime-rows">
             {(diagnostics.prompt_registry?.active ?? []).map((prompt) => (
@@ -361,7 +361,7 @@ export function ProcessingDiagnosticsPanel({
             {!(diagnostics.prompt_registry?.active.length) ? <p>尚无已启用 Prompt。</p> : null}
           </div>
         </details>
-        <details>
+        <details data-disclosure="collection">
           <summary>人工接受表现 <strong>{(diagnostics.feedback_calibration ?? []).length}</strong></summary>
           <div className="processing-runtime-rows">
             {(diagnostics.feedback_calibration ?? []).map((row) => (

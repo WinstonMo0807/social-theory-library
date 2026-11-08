@@ -14,7 +14,7 @@
 .choices > p { grid-column: 1/-1; }
 .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 12px; font-size: max(13px, var(--stl-readable-meta)); }
 .address { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
-.address summary { cursor: pointer; font: max(14px, var(--stl-readable-meta))/1.6 var(--sans); }
+.address :is(summary,:where([data-section-heading])) { cursor: pointer; font: max(14px, var(--stl-readable-meta))/1.6 var(--sans); }
 .address label { margin-top: 12px; }
 .selected { overflow-wrap: anywhere; }
 .picker .reader { margin-top: 12px; }

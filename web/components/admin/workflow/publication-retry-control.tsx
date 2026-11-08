@@ -76,7 +76,7 @@ export function PublicationRetryControl({ editionId, objectTarget, token, disabl
   return <section className="workflow-editorial-revision" aria-live="polite">
     <div><strong>{current?.state === "failed" ? "有内容更新失败" : "正在更新网站内容"}</strong>
       {current?.state === "processing" ? <p>您可以先做其他工作，稍后刷新查看结果。</p> : null}
-      {current?.detail ? <details><summary>查看处理情况</summary><p>{current.detail}</p>{current.pending?.length ? <p>尚未完成：{current.pending.join("、")}</p> : null}</details> : null}
+      {current?.detail ? <section data-content-section><header data-section-heading>查看处理情况</header><p>{current.detail}</p>{current.pending?.length ? <p>尚未完成：{current.pending.join("、")}</p> : null}</section> : null}
       {current?.state === "failed" ? <p>{current.withdrawal ? "内容退出检索尚未完成，请重新处理。" : "智能内容更新遇到异常。已经就绪的作品仍可正常阅读。"}{current.failures.length ? `需要重新处理的内容包括${current.failures.join("、")}。` : ""}</p> : null}
       {error ? <p role="alert">{error}</p> : null}
     </div>

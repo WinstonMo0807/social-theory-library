@@ -16,11 +16,11 @@
 }
 
 .book-summary-expand { margin: 16px 0 0; font-size: max(14px, var(--stl-readable-meta)); line-height: 1.65; }
-.book-summary-expand summary { cursor: pointer; list-style: none; }
-.book-summary-expand summary::-webkit-details-marker { display: none; }
+.book-summary-expand :is(summary,:where([data-section-heading])) { cursor: pointer; list-style: none; }
+.book-summary-expand :is(summary,:where([data-section-heading]))::-webkit-details-marker { display: none; }
 .book-summary-expand .book-summary { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; margin: 0; font-size: inherit; line-height: inherit; }
 .book-summary-toggle { display: block; margin-top: 8px; color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); text-decoration: underline; }
-.book-summary-expand[open] summary .book-summary { display: none; }
+.book-summary-expand:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) .book-summary { display: none; }
 .book-summary-expand > p { margin: 10px 0 0; overflow-wrap: anywhere; }
 .scholar-original-name { overflow-wrap: anywhere; }
 .workflow-field-attention { outline: 2px solid #a0442f; outline-offset: 5px; background: #fff7ef; scroll-margin: 100px; }
@@ -232,3 +232,7 @@
 }
 
 .recycle-entry{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;margin-block:1rem}.recycle-entry h2{font-size:1.1rem;overflow-wrap:anywhere}.recycle-control{display:inline-flex;align-items:center;gap:.4rem}.recycle-control>button{display:inline-flex;align-items:center;gap:.35rem}
+
+/* Generated artwork owns its small-scale type, independent of page text size. */
+.book-cover.has-generated-cover { padding: 0 !important; border: 0 !important; box-shadow: none !important; background: transparent; }
+.book-cover.has-generated-cover::after { display: none; }

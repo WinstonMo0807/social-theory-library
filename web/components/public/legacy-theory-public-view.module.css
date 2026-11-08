@@ -1,8 +1,8 @@
 .page { overflow-wrap: anywhere; }
 .editorialNotice { color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); margin: -8px 0 20px !important; }
 .relationGroup { border-top: 1px solid var(--line); padding: 10px 0; }
-.relationGroup > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #8d6a36; font-size: max(13px, var(--stl-readable-meta)); cursor: pointer; list-style: none; }
-.relationGroup[open] > summary { margin-bottom: 8px; }
+.relationGroup > :is(summary,:where([data-section-heading])) { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #8d6a36; font-size: max(13px, var(--stl-readable-meta)); cursor: pointer; list-style: none; }
+.relationGroup:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) { margin-bottom: 8px; }
 .relations > article { border-bottom: 1px solid var(--line); padding: 10px 0; }
 .relations a { display: flex; align-items: center; gap: 8px; font-size: max(13px, var(--stl-readable-meta)); }
 .relations a > strong { font-family: var(--font-serif), serif; }

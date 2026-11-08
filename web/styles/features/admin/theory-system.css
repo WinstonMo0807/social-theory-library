@@ -32,9 +32,9 @@
 .theory-admin-table td small { max-width: 280px; margin-top: 3px; color: var(--muted); font-size: max(10px, var(--stl-readable-meta)); overflow-wrap: anywhere; }
 .theory-admin-table td > button { width: 100%; min-width: 0; min-height: 44px; padding: 0; text-align: left; overflow-wrap: anywhere; }
 .theory-editor-group { min-width: 0; padding: 12px; border: 1px solid var(--line); }
-.theory-editor-group > summary { cursor: pointer; font-weight: 700; }
-.theory-editor-group[open] { display: grid; gap: 13px; }
-.theory-editor-group[open] > summary { margin-bottom: 10px; }
+.theory-editor-group > :is(summary,:where([data-section-heading])) { cursor: pointer; font-weight: 700; }
+.theory-editor-group:is([open],[data-content-section]) { display: grid; gap: 13px; }
+.theory-editor-group:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) { margin-bottom: 10px; }
 @container (max-width: 800px) {
   .theory-admin-table, .theory-admin-table tbody { display: block; width: 100%; min-width: 0; }
   .theory-admin-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
@@ -92,8 +92,8 @@
 .theory-editor-footer .button { width: 100%; }
 
 .theory-review-layout { display: grid; grid-template-columns: minmax(720px, 1fr) 390px; gap: 15px; align-items: start; }
-.theory-suggestion-section > summary { padding: 14px; cursor: pointer; border: 1px solid var(--line); font-weight: 700; }
-.theory-suggestion-section[open] > summary { margin-bottom: 14px; }
+.theory-suggestion-section > :is(summary,:where([data-section-heading])) { padding: 14px; cursor: pointer; border: 1px solid var(--line); font-weight: 700; }
+.theory-suggestion-section:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) { margin-bottom: 14px; }
 .theory-review-list { padding: 0; overflow: hidden; }
 .theory-review-filter { display: grid; grid-template-columns: auto 1fr auto; align-items: center; min-height: 48px; padding: 0 12px; border-bottom: 1px solid var(--line); }
 .theory-review-filter input { height: 46px; border: 0; outline: 0; background: transparent; }

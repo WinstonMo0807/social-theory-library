@@ -25,7 +25,7 @@ export function ResearchComparisonTranslations({ reference, onClose }: { referen
     {resource.loading ? <LoadingState role="status">正在读取已关联的出版版本……</LoadingState> : resource.error ? <p role="alert">{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p> : !available ? <p role="alert">原引用的文件或文字修订已变化，暂不能继续此处对照。原选材和笔记仍保留，请回到选材重新核对来源。</p> : <>
       <blockquote>{reference.quote || reference.text || "请打开原文核对所选内容。"}</blockquote>
       <label htmlFor="comparison-translation-version">选择需要对照的译本或版本</label>
-      <select id="comparison-translation-version" value={edition} onChange={event => setEdition(event.target.value)}><option value="">请选择一个版本</option>{versions.map(row => <option key={row.edition_id} value={row.edition_id}>{row.title} · {row.language || "语言待补"} · {row.publication_year || "年份待补"} · {row.version_label || "版本信息待补"}{row.state === "metadata_only" ? "（暂无正文）" : ""}</option>)}</select>
+      <select data-stl-select id="comparison-translation-version" value={edition} onChange={event => setEdition(event.target.value)}><option value="">请选择一个版本</option>{versions.map(row => <option key={row.edition_id} value={row.edition_id}>{row.title} · {row.language || "语言待补"} · {row.publication_year || "年份待补"} · {row.version_label || "版本信息待补"}{row.state === "metadata_only" ? "（暂无正文）" : ""}</option>)}</select>
       {target ? <p>{target.authors.join("、")} {target.notice}</p> : null}
       {!versions.length ? <p>暂无已关联的其他公开版本，可以提交版本建议。</p> : null}
       {resource.data?.truncated ? <p>版本关系较多，此处仅显示当前返回的范围；可提交需要补充的版本建议。</p> : null}

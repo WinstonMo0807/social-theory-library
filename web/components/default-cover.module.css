@@ -1,0 +1,22 @@
+.cover[data-default-cover] {
+  position: relative; isolation: isolate; container-type: inline-size;
+  display: block !important; padding: 0 !important; margin: 0; width: 100%; height: 100%; aspect-ratio: 2/3;
+  min-width: 0; overflow: hidden; background: #efeadf !important; color: #292a27 !important;
+  text-align: start; border-radius: 0;
+}
+.cover[data-default-cover="0"], .cover[data-default-cover="2"], .cover[data-default-cover="4"] { background: #292a29 !important; color: #eee8dc !important; }
+.cover .art { position: absolute; inset: 0; display: block; width: 100% !important; height: 100% !important; max-width: none; opacity: .82; pointer-events: none; }
+.cover .copy { display: block; position: relative; z-index: 1; padding: 19cqi 9cqi 8cqi; }
+.cover .copy strong {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4;
+  overflow: hidden; overflow-wrap: anywhere; word-break: normal; text-wrap: pretty;
+  font: 500 clamp(8px,12cqi,34px)/1.35 "STL Display Serif","Noto Serif SC","Songti SC",serif !important;
+  color: inherit !important; letter-spacing: 0 !important; margin: 0; padding: 0;
+}
+.cover .copy small {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  margin-top: 8cqi; padding: 0; overflow-wrap: anywhere;
+  font: 400 clamp(7px,5.8cqi,16px)/1.5 "STL Text Sans",sans-serif !important;
+  color: inherit !important; letter-spacing: 0; opacity: .85;
+}
+@container (max-width: 90px) { .cover .copy small { display: none; }.cover .copy strong { -webkit-line-clamp: 3; } }

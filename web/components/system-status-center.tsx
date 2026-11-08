@@ -65,9 +65,9 @@ function StatusDetails({ value }: { value: unknown }) {
   if (!value || typeof value !== "object") return <span>{scalarLabel(value)}</span>;
   if (Array.isArray(value)) {
     if (!value.length) return <span>无</span>;
-    return <details className="system-status-details"><summary>{value.length} 项</summary><ul>{value.slice(0, 30).map((item, index) => <li key={index}>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item)}</li>)}</ul></details>;
+    return <details data-disclosure="collection" className="system-status-details"><summary>{value.length} 项</summary><ul>{value.slice(0, 30).map((item, index) => <li key={index}>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item)}</li>)}</ul></details>;
   }
-  return <details className="system-status-details"><summary>查看详情</summary><dl>{Object.entries(value as Record<string, unknown>).slice(0, 30).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl></details>;
+  return <details data-disclosure="collection" className="system-status-details"><summary>查看详情</summary><dl>{Object.entries(value as Record<string, unknown>).slice(0, 30).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl></details>;
 }
 
 export function SystemStatusCenter() {
@@ -131,8 +131,8 @@ export function SystemStatusView({ payload }: { payload: StatusPayload }) {
       {selected ? <><header><h2>{selected[1]}</h2><span className="system-status-v2-state" data-status={String(serviceState(selected[2]))}>{scalarLabel(serviceState(selected[2]))}</span></header>
         {selected[2].reason ? <p className="system-status-reason">{String(selected[2].reason)}</p> : null}
         <dl>{Object.entries(selected[2]).filter(([key]) => !["profiles", "structured", "reason"].includes(key)).slice(0, 24).map(([key, item]) => <div key={key}><dt>{keyLabel(key)}</dt><dd>{item && typeof item === "object" ? <StatusDetails value={item} /> : scalarLabel(item, key)}</dd></div>)}</dl>
-        {selected[2].profiles ? <details><summary>模型配置</summary><StatusDetails value={selected[2].profiles} /></details> : null}
-        {selected[2].structured ? <details><summary>资料来源</summary><StatusDetails value={selected[2].structured} /></details> : null}
+        {selected[2].profiles ? <details data-disclosure="collection"><summary>模型配置</summary><StatusDetails value={selected[2].profiles} /></details> : null}
+        {selected[2].structured ? <section data-content-section><header data-section-heading>资料来源</header><StatusDetails value={selected[2].structured} /></section> : null}
       </> : null}
     </section>
   </section>;

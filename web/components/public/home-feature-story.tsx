@@ -169,9 +169,9 @@ export function HomeFeatureStory({ books, closingImage, brandConfig, compareCopy
     </div></section>
     <section className={styles.invitation} aria-labelledby="welcome-invitation"><div><h2 id="welcome-invitation">{texts.invitation_title}</h2><p>{texts.invitation_body}</p><Link href="/explore" className={styles.textLink}>浏览馆藏 <ArrowRight size={18} aria-hidden="true" /></Link></div><img src={closingImage} alt="" width={1536} height={1024} loading="lazy" /></section>
     <section className={styles.faq} aria-labelledby="welcome-faq"><h2 id="welcome-faq">{texts.faq_title}</h2><div>
-      <details><summary>{texts.faq_read_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_read_body}</p></details>
-      <details><summary>{texts.faq_cite_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_cite_body}</p></details>
-      <details><summary>{texts.faq_private_title}<Plus size={20} aria-hidden="true" /></summary><p>{texts.faq_private_body}</p></details>
+      <section data-content-section><header data-section-heading>{texts.faq_read_title}<Plus size={20} aria-hidden="true" /></header><p>{texts.faq_read_body}</p></section>
+      <section data-content-section><header data-section-heading>{texts.faq_cite_title}<Plus size={20} aria-hidden="true" /></header><p>{texts.faq_cite_body}</p></section>
+      <section data-content-section><header data-section-heading>{texts.faq_private_title}<Plus size={20} aria-hidden="true" /></header><p>{texts.faq_private_body}</p></section>
     </div></section>
     <section className={styles.closing} aria-labelledby="welcome-enter"><GrainField /><h2 id="welcome-enter">{texts.closing_title}</h2><a data-library-entry href="/home" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></a></section>
   </div>;

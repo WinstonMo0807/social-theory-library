@@ -171,9 +171,9 @@
   border-top: 1px solid var(--line);
 }
 
-.functional-health-dependencies details + details { border-top: 1px solid var(--line); }
-.functional-health-dependencies details[open] { background: #fbfaf7; }
-.functional-health-dependencies summary {
+.functional-health-dependencies :is(details,:where([data-content-section])) + :is(details,:where([data-content-section])) { border-top: 1px solid var(--line); }
+.functional-health-dependencies :is(details,:where([data-content-section])):is([open],[data-content-section]) { background: #fbfaf7; }
+.functional-health-dependencies :is(summary,:where([data-section-heading])) {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -183,10 +183,10 @@
   font-size: max(.78rem, var(--stl-readable-meta));
 }
 
-.functional-health-dependencies summary > span { display: inline-flex; align-items: center; gap: .4rem; min-width: 0; }
-.functional-health-dependencies summary b { color: var(--muted); font-size: max(.72rem, var(--stl-readable-meta)); white-space: nowrap; }
-.functional-health-dependencies details > p { margin: 0; padding: 0 .8rem .65rem; color: var(--muted); font-size: max(.76rem, var(--stl-readable-body)); line-height: 1.5; }
-.functional-health-dependencies details > .functional-health-dimensions { margin: 0 .8rem .65rem; }
+.functional-health-dependencies :is(summary,:where([data-section-heading])) > span { display: inline-flex; align-items: center; gap: .4rem; min-width: 0; }
+.functional-health-dependencies :is(summary,:where([data-section-heading])) b { color: var(--muted); font-size: max(.72rem, var(--stl-readable-meta)); white-space: nowrap; }
+.functional-health-dependencies :is(details,:where([data-content-section])) > p { margin: 0; padding: 0 .8rem .65rem; color: var(--muted); font-size: max(.76rem, var(--stl-readable-body)); line-height: 1.5; }
+.functional-health-dependencies :is(details,:where([data-content-section])) > .functional-health-dimensions { margin: 0 .8rem .65rem; }
 .functional-health-dependencies dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -399,7 +399,7 @@
 .processing-job-card dt { color: var(--muted); }
 .processing-job-card dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
 .processing-job-error { margin-top: .7rem; padding: .55rem; background: #fff3f1; color: #812827; }
-.processing-job-error summary { cursor: pointer; font-weight: 700; }
+.processing-job-error :is(summary,:where([data-section-heading])) { cursor: pointer; font-weight: 700; }
 .processing-job-error p { max-height: 12rem; margin: .45rem 0 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: max(.76rem, var(--stl-readable-body)); }
 .processing-job-card > footer { justify-content: flex-end; margin-top: .7rem; }
 .processing-job-card > footer button { display: inline-flex; gap: .3rem; align-items: center; cursor: pointer; }

@@ -264,7 +264,7 @@
   border-top: var(--stl-border-hairline) solid var(--line);
 }
 
-.admin-ui-candidate-evidence > summary {
+.admin-ui-candidate-evidence > :is(summary,:where([data-section-heading])) {
   padding: 9px var(--admin-space-md);
   cursor: pointer;
   color: var(--muted);
@@ -272,12 +272,12 @@
   font-weight: var(--stl-type-weight-strong);
 }
 
-.admin-ui-candidate-evidence > summary:focus-visible {
+.admin-ui-candidate-evidence > :is(summary,:where([data-section-heading])):focus-visible {
   outline: var(--stl-border-focus) solid var(--admin-focus);
   outline-offset: -2px;
 }
 
-.admin-ui-candidate-evidence[open] > summary {
+.admin-ui-candidate-evidence:is([open],[data-content-section]) > :is(summary,:where([data-section-heading])) {
   border-bottom: var(--stl-border-hairline) solid var(--line);
   color: var(--ink);
 }

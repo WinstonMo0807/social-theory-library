@@ -1,3 +1,4 @@
+import { DefaultCover } from "./default-cover";
 import Link from "next/link";
 import { ArrowRight, Eye, Search } from "lucide-react";
 import type { ReactNode } from "react";
@@ -41,7 +42,8 @@ export function SectionHeading({
 }
 
 export function BookCover({ work, size = "normal", placement = "list" }: { work: Work; size?: "small" | "normal" | "large"; placement?: "detail" | "list" }) {
-  const fallback = <div className={`book-cover ${work.cover} ${size}`} aria-label={`${work.title}文字封面`}><span>{work.originalTitle ?? work.title}</span><small>{work.author}</small></div>;
+  const fallback = <div className={`book-cover has-generated-cover ${size}`}><DefaultCover title={work.title || work.originalTitle || "未题名资料"} author={work.author} issue={work.kind === "整期期刊" ? [work.version?.publication_year, work.version?.volume, work.version?.issue].filter(Boolean).join(" · ") : undefined} /></div>;
+  if (!work.coverImage) return fallback;
   return (
     <MediaPlacement uses={work.coverDisplayUses} placement={placement} fallback={fallback}>
     <div className={`book-cover ${work.cover} ${size}${work.coverImage ? " has-image" : ""}`} aria-label={`${work.title}封面`}>
@@ -99,7 +101,7 @@ export function BookCard({
           </p>
         </div>
       </div>
-      {showSummary && work.summary ? <details className="book-summary-expand"><summary><span className="book-summary">{work.summary}</span><span className="book-summary-toggle">展开 / 收起简介</span></summary><p>{work.summary}</p></details> : null}
+      {showSummary && work.summary ? <details data-disclosure="collection" className="book-summary-expand"><summary><span className="book-summary">{work.summary}</span><span className="book-summary-toggle">展开 / 收起简介</span></summary><p>{work.summary}</p></details> : null}
       {!dense ? (
         <div className="book-actions">
           {exploreActions ? (

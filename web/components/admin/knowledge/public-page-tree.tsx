@@ -80,7 +80,7 @@ export function PublicPageTree({ control }: { control: PublicControl }) {
   return <section className="public-page-manager" aria-label="公开页面管理">
     <header><h3>读者会看到什么</h3><p>{control.eligibility.eligible ? "这个条目已经公开。保存修改后，仍需点击发布，读者才会看到新版。" : "这个条目还没有公开。可以先完善内容并预览。"}</p></header>
     {page ? <>
-      <label>选择页面<select value={page.page_id} onChange={event=>setSelectedPage(event.target.value)}>{control.page_tree.map(row=><option value={row.page_id} key={row.page_id}>{row.display_name}</option>)}</select></label>
+      <label>选择页面<select data-stl-select value={page.page_id} onChange={event=>setSelectedPage(event.target.value)}>{control.page_tree.map(row=><option value={row.page_id} key={row.page_id}>{row.display_name}</option>)}</select></label>
       <div className="public-page-manager-modules">{page.modules.map(module=>{
         const preview=`${page.preview.draft_route}${page.preview.draft_route.includes("?")?"&":"?"}module=${encodeURIComponent(module.preview_anchor)}`;
         const status=({complete:"已有内容",partial:"可以补充",missing:"尚未填写",draft:"有未发布修改",empty_computed:"暂无相关内容",not_curated:"尚未选择内容"} as Record<string,string>)[module.status]||"请核对内容";
@@ -93,9 +93,9 @@ export function PublicPageTree({ control }: { control: PublicControl }) {
       <p>不必补齐每个栏目。没有相关馆藏或暂不需要的内容，可以留空。</p>
       {page.preview.supported ? <Link className="button secondary" href={page.preview.draft_route} target="_blank">预览整个页面</Link> : null}
     </> : <p>这个条目没有单独的读者页面，请从相关作品或分类中查看。</p>}
-    {changes.length ? <section className="public-page-manager-changes"><h4>还没有发布的修改</h4>{changes.map(row=><div key={row.field}><strong>{fieldNames[row.field]||"相关资料"}</strong>{row.kind === "collection" ? <p>增加 {row.added?.length??0} 项，移除 {row.removed?.length??0} 项</p> : typeof row.draft === "object" || typeof row.published === "object" ? <details><summary>查看这项修改</summary><p>原内容</p><pre>{publicValue(row.published)}</pre><p>修改后</p><pre>{publicValue(row.draft)}</pre></details> : <p>原来：{publicValue(row.published)}<br/>修改后：{publicValue(row.draft)}</p>}</div>)}</section> : null}
-    {control.public_appearances.length ? <details><summary>还会显示在哪里</summary>{control.public_appearances.map(row=><p key={`${row.page_id}:${row.route}`}><Link href={row.route} target="_blank">{row.label}</Link> · {row.count} 项</p>)}</details> : null}
-    <details className="public-page-technical"><summary>技术详情</summary><p>配置版本：{control.contract_version}</p>{control.legacy_fallbacks.map(row=><p key={`${row.public_route}:${row.module}`}>{row.module}：{row.legacy_source}；对应新来源：{row.canonical_equivalent}</p>)}{control.admin_field_usage.map(row=><p key={row.field}>{row.field}：{row.consumers.join("、")}</p>)}</details>
+    {changes.length ? <section className="public-page-manager-changes"><h4>还没有发布的修改</h4>{changes.map(row=><div key={row.field}><strong>{fieldNames[row.field]||"相关资料"}</strong>{row.kind === "collection" ? <p>增加 {row.added?.length??0} 项，移除 {row.removed?.length??0} 项</p> : typeof row.draft === "object" || typeof row.published === "object" ? <section data-content-section><header data-section-heading>查看这项修改</header><p>原内容</p><pre>{publicValue(row.published)}</pre><p>修改后</p><pre>{publicValue(row.draft)}</pre></section> : <p>原来：{publicValue(row.published)}<br/>修改后：{publicValue(row.draft)}</p>}</div>)}</section> : null}
+    {control.public_appearances.length ? <section data-content-section><header data-section-heading>还会显示在哪里</header>{control.public_appearances.map(row=><p key={`${row.page_id}:${row.route}`}><Link href={row.route} target="_blank">{row.label}</Link> · {row.count} 项</p>)}</section> : null}
+    <details data-disclosure="collection" className="public-page-technical"><summary>技术详情</summary><p>配置版本：{control.contract_version}</p>{control.legacy_fallbacks.map(row=><p key={`${row.public_route}:${row.module}`}>{row.module}：{row.legacy_source}；对应新来源：{row.canonical_equivalent}</p>)}{control.admin_field_usage.map(row=><p key={row.field}>{row.field}：{row.consumers.join("、")}</p>)}</details>
   </section>;
 }
 

@@ -23,14 +23,14 @@ export function LayoutPreview({ data }: { data: HomeViewData }) {
     body_blocks: [], public_byline: "", display_from: null, published_at: null, items: [], edit_version: "",
   }));
   return <div className="stl-layout-preview" data-navigation={navigation}>
-    <details className="stl-layout-controls" open>
-      <summary>首页排版参考</summary>
+    <section data-content-section className="stl-layout-controls">
+      <header data-section-heading>首页排版参考</header>
       <div className="stl-layout-options">
         <fieldset><legend>导航位置</legend>{[["inline", "与 Logo 同行"], ["top", "顶行"]].map(([value, label]) => <label key={value}><input type="radio" name="navigation-position" value={value} checked={navigation === value} onChange={() => setNavigation(value)} />{label}</label>)}</fieldset>
-        <fieldset><legend>特别策划</legend><label><span>期数</span><select value={count} onChange={event => { setCount(Number(event.target.value)); setNotice(""); }}>{[1,2,3,4].map(value => <option key={value} value={value}>{value} 期</option>)}</select></label><label><input type="checkbox" checked={pictures} onChange={event => setPictures(event.target.checked)} />显示配图</label></fieldset>
+        <fieldset><legend>特别策划</legend><label><span>期数</span><select data-stl-select value={count} onChange={event => { setCount(Number(event.target.value)); setNotice(""); }}>{[1,2,3,4].map(value => <option key={value} value={value}>{value} 期</option>)}</select></label><label><input type="checkbox" checked={pictures} onChange={event => setPictures(event.target.checked)} />显示配图</label></fieldset>
       </div>
       <footer><span>策划内容为示例</span><Link href="/home">返回首页</Link></footer>
-    </details>
+    </section>
     {notice ? <p className="stl-layout-notice" role="status">{notice} <Link href="/recommendations">查看已发布策划</Link></p> : null}
     <div onClickCapture={event => {
       if ((event.target as Element).closest('a[href^="/recommendations/layout-example-"]')) {

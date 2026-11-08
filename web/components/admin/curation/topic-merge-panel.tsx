@@ -89,7 +89,7 @@ export function TopicMergePanel({ topicId, name, status }: { topicId: string; na
     <p>将当前主题的正式关系、推荐和读者收藏归入另一个馆内主题，原记录保留供审计。</p>
     {!open ? <button className="button secondary" type="button" onClick={() => setOpen(true)}>选择合并目标</button> : <>
       <label><span>搜索馆内主题</span><input value={query} disabled={working} onChange={(event) => { setQuery(event.target.value); setTargetId(""); setPreview(null); }} /></label>
-      <label><span>保留的主题</span><select value={targetId} disabled={working} onChange={(event) => { setTargetId(event.target.value); setPreview(null); }}>
+      <label><span>保留的主题</span><select data-stl-select value={targetId} disabled={working} onChange={(event) => { setTargetId(event.target.value); setPreview(null); }}>
         <option value="">请选择已发布主题</option>
         {options.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}</option>)}
       </select></label>

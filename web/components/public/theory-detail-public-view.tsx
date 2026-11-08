@@ -1,5 +1,6 @@
 "use client";
 
+import { DefaultCover } from "@/components/default-cover";
 import Link from "next/link";
 import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, ChevronDown, ExternalLink, FileText } from "lucide-react";
@@ -30,7 +31,7 @@ const sectionAlias: Record<string, string> = { concepts: "usages", timeline: "hi
 
 function WorkRow({ work, compact = false }: { work: TheoryWorkCompact; compact?: boolean }) {
   return <article className={`${styles.workRow} ${compact ? styles.compactWork : ""}`}>
-    {work.cover_url ? <MediaPlacement uses={work.cover_media?.display_uses} fallback={<span className={styles.workPlaceholder}><FileText size={25}/></span>}><img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /></MediaPlacement> : <span className={styles.workPlaceholder}><FileText size={25} /></span>}
+    {work.cover_url ? <MediaPlacement uses={work.cover_media?.display_uses} fallback={<DefaultCover className={styles.workPlaceholder} title={work.title} />}><img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /></MediaPlacement> : <DefaultCover className={styles.workPlaceholder} title={work.title} />}
     <div><h3>{work.detail_href ? <CollectionLink href={work.detail_href}>{work.title}</CollectionLink> : work.title}</h3>{work.subtitle ? <p>{work.subtitle}</p> : null}<small>{[work.author, work.year, work.publisher].filter(value => value !== "" && value !== null).join(" · ")}</small>
       {work.reader_href ? <CollectionLink className={styles.readLink} href={work.reader_href}>阅读原文<ExternalLink size={13} /></CollectionLink> : <><p className={styles.unavailable}>这一版本暂无可读取的原文。</p>{work.detail_href ? <CollectionLink className={styles.readLink} href={work.detail_href}>查看书目与其他版本<ArrowRight size={13} /></CollectionLink> : null}</>}
     </div>
@@ -46,10 +47,10 @@ function DebateSection({ node }: { node: KnowledgeNodeDetail }) {
   const visible = filter === "all" ? claims : claims.filter(claim => claim.group === filter);
   return <section className={styles.section} id="debates" data-module-id="theory-curated-claims"><header className={styles.sectionHeading}><h2>{node.node_type === "theory_tradition" ? "主要分歧与争论" : "争论与回应"}</h2></header>
     {claims.length ? <div className={styles.segmentButtons}><button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>全部（{claims.length}）</button>{groups.filter(([key]) => claims.some(claim => claim.group === key)).map(([key, name]) => <button type="button" key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{name}（{claims.filter(claim => claim.group === key).length}）</button>)}</div> : null}
-    <div className={styles.debates}>{visible.map(claim => <details key={claim.id}><summary><span className={styles.debateSymbol}><BookOpen size={18} /></span><span><strong>{claim.title || claim.groupLabel}</strong><small>{claim.proposition}</small></span><ChevronDown size={16} /></summary><div className={styles.debateBody}>
+    <div className={styles.debates}>{visible.map(claim => <section data-content-section key={claim.id}><header data-section-heading><span className={styles.debateSymbol}><BookOpen size={18} /></span><span><strong>{claim.title || claim.groupLabel}</strong><small>{claim.proposition}</small></span><ChevronDown size={16} /></header><div className={styles.debateBody}>
       {claim.editorial_note ? <p>{claim.editorial_note}</p> : null}
       {claim.evidence.length ? claim.evidence.map(evidence => <blockquote key={evidence.id}><p>{evidence.text}</p><cite>《{evidence.source.work_title}》{evidence.locator.printed_page_label ? ` · 印刷页 ${evidence.locator.printed_page_label}` : ` · PDF 第 ${evidence.locator.page} 页`}</cite>{evidence.reader_url ? <Link href={evidence.reader_url} target="_blank" rel="noopener noreferrer">查看依据<ExternalLink size={13} /></Link> : null}</blockquote>) : <p className={styles.notice}>此项尚无可公开读取的原文依据。</p>}
-    </div></details>)}</div>{!claims.length ? <p className={styles.empty}>尚无已确认并公开的争论条目。可从相关作品继续核对不同论述。</p> : null}
+    </div></section>)}</div>{!claims.length ? <p className={styles.empty}>尚无已确认并公开的争论条目。可从相关作品继续核对不同论述。</p> : null}
   </section>;
 }
 
@@ -97,10 +98,10 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
     <header className={styles.hero} data-module-id="theory-identity" data-edit-section="identity">
       {!tradition ? <div className={styles.heroMedia}>{heroMedia}</div> : null}
       <div className={styles.heroCopy}><h1>{node.canonical_name_zh}</h1>{node.canonical_name_en ? <p className={styles.foreignName}>{node.canonical_name_en}</p> : null}
-        {node.aliases.length ? <details className={styles.aliases}><summary><span>常见译名</span><strong>{node.aliases.slice(0, 3).map(alias => alias.alias).join(" · ")}</strong><span>更多译名<ChevronDown size={13} /></span></summary><div><div className={styles.aliasTable}><table><caption>已收录的译名与别名</caption><thead><tr><th>译名</th><th>使用者与语境</th><th>原文示例</th><th>本页已确认用法</th></tr></thead><tbody>{node.aliases.map(alias => {
+        {node.aliases.length ? <section data-content-section className={styles.aliases}><header data-section-heading><span>常见译名</span><strong>{node.aliases.slice(0, 3).map(alias => alias.alias).join(" · ")}</strong><span>更多译名<ChevronDown size={13} /></span></header><div><div className={styles.aliasTable}><table><caption>已收录的译名与别名</caption><thead><tr><th>译名</th><th>使用者与语境</th><th>原文示例</th><th>本页已确认用法</th></tr></thead><tbody>{node.aliases.map(alias => {
           const matches = usages.filter(usage => usage.term.normalize("NFKC").trim().toLocaleLowerCase() === alias.alias.normalize("NFKC").trim().toLocaleLowerCase());
           return <tr key={alias.id}><th scope="row">{alias.alias}<small>{({ "zh-CN": "中文", "zh-TW": "繁体中文", zh: "中文", en: "英语", de: "德语", fr: "法语" } as Record<string, string>)[alias.language] || alias.language || "语言未注明"} · {({ alias: "别名", translation: "译名", abbreviation: "简称", historical: "历史名称", transliteration: "音译" } as Record<string, string>)[alias.alias_type] || "别名"}</small></th><td>{matches.length ? [...new Set(matches.map(usage => [usage.author?.name, usage.context].filter(Boolean).join(" · ")).filter(Boolean))].join("；") || "已关联用法尚未注明语境" : "未收录关联原文"}</td><td>{matches.map(usage => <Link key={usage.id} href={usage.source.reader_url} target="_blank" rel="noopener noreferrer">《{usage.source.work_title}》<ExternalLink size={11} /></Link>)}</td><td>{matches.length}</td></tr>;
-        })}</tbody></table></div><p>这里的数量仅为本页已公开的确认用法，不代表全馆出现频次。别名登记不表示不同语境中的含义相同。</p></div></details> : null}
+        })}</tbody></table></div><p>这里的数量仅为本页已公开的确认用法，不代表全馆出现频次。别名登记不表示不同语境中的含义相同。</p></div></section> : null}
         <div data-module-id="theory-definition"><NodeProse node={node} field="definition" fallback="summary" empty="本条目的说明尚待编辑，已公开关系与馆藏可继续浏览。" className={styles.heroDescription}/></div>
         <div className={styles.tags} data-module-id="theory-disciplines">{!tradition ? <span className={styles.kind}>{nodeTypeLabels[node.node_type] || "理论条目"}</span> : null}{disciplines.map(item => <Link href={`/theories/disciplines/${item.slug}`} key={item.id}>{item.name}</Link>)}{node.topic_links.map(row => <Link href={`/topics/${row.topic.slug}`} key={row.id} data-module-id={row === node.topic_links[0] ? "theory-topics" : undefined}>{row.topic.name}</Link>)}</div>
       </div>
@@ -111,7 +112,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
     <div className={styles.document}>
 
     {tradition ? <div className={styles.traditionGrid}>
-      {shown("guide") ? <section className={styles.section} id="guide" data-module-id="theory-propositions"><header className={styles.sectionHeading}><h2>核心观点与问题</h2></header><div className={styles.propositions} data-module-id="theory-core-questions">{node.basic_propositions.map((proposition, index) => <p key={`${index}-${proposition}`}><BookOpen size={17} /><span>{proposition}</span></p>)}{node.core_questions.map((question, index) => <p key={`question-${index}`}><span className={styles.questionMark}>?</span><span>{question}</span></p>)}</div>{!node.basic_propositions.length && !node.core_questions.length ? <p className={styles.empty}>核心观点与问题尚待编辑。</p> : null}{node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><NodeProse node={node} field="theoretical_boundary"/></details> : null}</section> : null}
+      {shown("guide") ? <section className={styles.section} id="guide" data-module-id="theory-propositions"><header className={styles.sectionHeading}><h2>核心观点与问题</h2></header><div className={styles.propositions} data-module-id="theory-core-questions">{node.basic_propositions.map((proposition, index) => <p key={`${index}-${proposition}`}><BookOpen size={17} /><span>{proposition}</span></p>)}{node.core_questions.map((question, index) => <p key={`question-${index}`}><span className={styles.questionMark}>?</span><span>{question}</span></p>)}</div>{!node.basic_propositions.length && !node.core_questions.length ? <p className={styles.empty}>核心观点与问题尚待编辑。</p> : null}{node.theoretical_boundary ? <section data-content-section className={styles.boundary}><header data-section-heading>适用范围与理论边界<ChevronDown size={15} /></header><NodeProse node={node} field="theoretical_boundary"/></section> : null}</section> : null}
       {shown("scholars", "usages") ? <div >{scholarSection}</div> : null}
       {shown("debates") ? <div ><DebateSection node={node} /></div> : null}
       {shown("paths", "works") ? <div >{pathSection}</div> : null}
@@ -121,8 +122,8 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
         {shown("usages") ? <TheoryUsageExplorer key={`${node.id}:${node.public_detail?.revision_id || ""}:${usages.map(usage => `${usage.id}:${usage.source.document_revision_id}`).join(",")}`} usages={usages} unavailableCount={node.public_detail?.unavailable_usage_count} initialCompare={initialCompare} /> : null}
         {shown("guide") ? <section id="guide" className={`${styles.section} ${styles.guide}`} data-module-id="theory-propositions"><header className={styles.sectionHeading}><h2>策划导读</h2></header><NodeProse node={node} field="summary" fallback="definition" empty="概念导读尚待编写。"/>
           <dl className={styles.facts}>{node.canonical_name_en ? <div><dt>原文词</dt><dd>{node.canonical_name_en}</dd></div> : null}{node.period_label ? <div><dt>历史时期</dt><dd>{node.period_label}</dd></div> : null}{disciplines.length ? <div><dt>相关学科</dt><dd>{disciplines.map(item => item.name).join("、")}</dd></div> : null}{node.core_questions.length ? <div><dt data-module-id="theory-core-questions">核心问题</dt><dd>{node.core_questions.map(question => <p key={question}>{question}</p>)}</dd></div> : null}</dl>
-          {node.basic_propositions.length ? <details className={styles.boundary}><summary>基本命题<ChevronDown size={15} /></summary><ul>{node.basic_propositions.map(proposition => <li key={proposition}>{proposition}</li>)}</ul></details> : null}
-          {node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><NodeProse node={node} field="theoretical_boundary"/></details> : null}
+          {node.basic_propositions.length ? <section data-content-section className={styles.boundary}><header data-section-heading>基本命题<ChevronDown size={15} /></header><ul>{node.basic_propositions.map(proposition => <li key={proposition}>{proposition}</li>)}</ul></section> : null}
+          {node.theoretical_boundary ? <section data-content-section className={styles.boundary}><header data-section-heading>适用范围与理论边界<ChevronDown size={15} /></header><NodeProse node={node} field="theoretical_boundary"/></section> : null}
         </section> : null}
 
         {shown("history") ? historySection : null}

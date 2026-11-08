@@ -126,14 +126,14 @@ export function LegacyTheoryPublicView({ entity }: { entity: ApiTheorySchool }) 
       </section>
       <section className={`${styles.section} ${styles.debatesArea}`} id="debates">
         <header className={styles.sectionHeading}><h2>主要分歧与争论</h2></header>
-        <div className={styles.debates}>{critiques.map(relation => <details key={relation.id}>
-          <summary><span className={styles.debateSymbol}><BookOpen size={18} /></span><strong>{relation.theory.name}<small>已确认的批评关系</small></strong><ChevronDown size={15} /></summary>
+        <div className={styles.debates}>{critiques.map(relation => <section data-content-section key={relation.id}>
+          <header data-section-heading><span className={styles.debateSymbol}><BookOpen size={18} /></span><strong>{relation.theory.name}<small>已确认的批评关系</small></strong><ChevronDown size={15} /></header>
           <div className={styles.debateBody}>
             <p>{relation.direction === "incoming" ? relation.theory.name : entity.name} → {relation.direction === "incoming" ? entity.name : relation.theory.name}</p>
             <p className={styles.notice}>本页暂未提供可核对版本与页码的争论原文。</p>
             <Link href={`/theory-schools/${encodeURIComponent(relation.theory.slug)}`}>查看{relation.theory.name}<ArrowRight size={14} /></Link>
           </div>
-        </details>)}</div>
+        </section>)}</div>
         {!critiques.length ? <p className={styles.empty}>尚无已确认并公开的争论关系。</p> : null}
       </section>
       <section className={`${styles.section} ${styles.pathsArea}`} id="paths">
@@ -142,20 +142,20 @@ export function LegacyTheoryPublicView({ entity }: { entity: ApiTheorySchool }) 
       </section>
       <section className={`${styles.section} ${styles.relationsArea}`} id="relations">
         <header className={styles.sectionHeading}><h2>相关与区别的学派</h2><Link href="/theory-schools/graph">查看图谱<ArrowRight size={14} /></Link></header>
-        <details className={legacyStyles.relationGroup} open>
-          <summary>相关学派（{related.length + curatedNeighbors.length}）<ChevronDown size={14} /></summary>
+        <section data-content-section className={legacyStyles.relationGroup}>
+          <header data-section-heading>相关学派（{related.length + curatedNeighbors.length}）<ChevronDown size={14} /></header>
           <RelationRows entity={entity} rows={related} />
           <div className={legacyStyles.relations}>{curatedNeighbors.map(neighbor => <article key={neighbor.id}>
             <Link href={`/theory-schools/${encodeURIComponent(neighbor.slug)}`}><strong>{neighbor.name}</strong><span>策展关联</span><ArrowRight size={14} /></Link>
             {neighbor.description ? <p>{neighbor.description}</p> : null}
           </article>)}</div>
           {!related.length && !curatedNeighbors.length ? <p className={styles.empty}>尚无已确认并公开的相关学派。</p> : null}
-        </details>
-        <details className={legacyStyles.relationGroup}>
-          <summary>区别与批评（{critiques.length}）<ChevronDown size={14} /></summary>
+        </section>
+        <section data-content-section className={legacyStyles.relationGroup}>
+          <header data-section-heading>区别与批评（{critiques.length}）<ChevronDown size={14} /></header>
           <RelationRows entity={entity} rows={critiques} />
           {!critiques.length ? <p className={styles.empty}>尚无已确认并公开的批评关系。</p> : null}
-        </details>
+        </section>
       </section>
     </div>
 

@@ -48,14 +48,13 @@ test("public feedback paths discard private routes, tokens and encoded traversal
 test("FAQ filters real help entries and offers a useful no-answer path", async ({ page }) => {
   await setup(page); await page.goto("/help?section=faq", { waitUntil: "domcontentloaded" });
   await page.getByRole("searchbox", { name: "搜索问题或关键词" }).fill("页码");
-  await expect(page.locator(".stl4-support-faq details")).toContainText(["印刷页码和 PDF 页码为什么不同？"]);
-  await page.getByText("印刷页码和 PDF 页码为什么不同？", { exact: true }).click();
-  await expect(page.locator(".stl4-support-faq details[open]")).toContainText("PDF 物理页");
+  await expect(page.locator(".stl4-support-faq [data-content-section]")).toContainText(["印刷页码和 PDF 页码为什么不同？"]);
+  await expect(page.locator(".stl4-support-faq [data-content-section]")).toContainText("PDF 物理页");
   await page.getByRole("searchbox", { name: "搜索问题或关键词" }).fill("zz-no-synthetic-answer-zz");
   await expect(page.getByRole("heading", { name: "没有找到答案？" })).toBeVisible();
   await expect(page.getByRole("link", { name: "提交问题" })).toHaveAttribute("href", "/feedback?category=usage");
   await page.getByRole("button", { name: "显示全部问题" }).click();
-  await expect(page.locator(".stl4-support-faq details")).toHaveCount(8);
+  await expect(page.locator(".stl4-support-faq [data-content-section]")).toHaveCount(8);
 });
 
 test("article anchors and citation controls copy an expressly labelled example", async ({ page }) => {
@@ -72,13 +71,11 @@ test("article anchors and citation controls copy an expressly labelled example",
   expect(copied[0]).toContain("引用格式示例，非真实文献"); expect(copied[0]).toContain("PDF 页序：23");
 });
 
-test("mobile help uses disclosure navigation and keeps all categories reachable", async ({ page }) => {
+test("mobile help keeps all categories directly reachable", async ({ page }) => {
   await setup(page); await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/help", { waitUntil: "domcontentloaded" });
-  const nav = page.getByRole("navigation", { name: "手机帮助栏目", exact: true });
-  await expect(nav.locator("details")).toHaveCount(6);
-  await nav.getByText("常见问题", { exact: true }).click();
-  await expect(nav.getByRole("link", { name: "浏览常见问题" })).toBeVisible();
-  await nav.getByRole("link", { name: "浏览常见问题" }).click();
+  const nav = page.getByRole("navigation", { name: "帮助栏目", exact: true });
+  await expect(nav.locator("a")).toHaveCount(6);
+  await nav.getByRole("link", { name: "常见问题", exact: true }).click();
   await expect(page).toHaveURL(/section=faq/);
 });
 
