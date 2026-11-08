@@ -19,7 +19,7 @@ export default async function AdminWorkPreviewPage({
   const [{ editionId },query] = await Promise.all([params, searchParams]);
   if (query.frame === "1") {
     const {config} = await loadSiteChromeConfig();
-    return <><SiteHeader config={config} preview/><AdminWorkPagePreview key={`${editionId}:${query.version}:${query.fingerprint}`} editionId={editionId} footer={<SiteFooter />} /></>;
+    return <><SiteHeader config={config} preview previewPathname={`/works/${editionId}`}/><AdminWorkPagePreview key={`${editionId}:${query.version}:${query.fingerprint}`} editionId={editionId} footer={<SiteFooter />} /></>;
   }
   return <AdminWorkPagePreview editionId={editionId} footer={<SiteFooter />} />;
 }

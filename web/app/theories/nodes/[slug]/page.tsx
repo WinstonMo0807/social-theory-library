@@ -21,6 +21,6 @@ export default async function KnowledgeNodePage({ params, searchParams }: { para
   if (!node) notFound();
 
   return <KnowledgeNodePublicView key={`${node.id}:${node.public_detail?.revision_id || ""}`} node={node}
-    timeline={timeline.results} allPaths={paths.results} slug={slug} publicDesign initialCompare={Array.isArray(query.compare) ? query.compare[0] : query.compare}
+    timeline={timeline.results} allPaths={paths.results} initialCompare={Array.isArray(query.compare) ? query.compare[0] : query.compare}
     footer={<><PublishedPlacements type="node" id={node.id}/><SiteFooter /></>} />;
 }

@@ -21,7 +21,11 @@ export default async function AdminKnowledgePreviewPage({
   if(query.review==="1")return <KnowledgePublicationReview objectType={objectType} objectId={objectId}/>;
   if(query.frame==="1"){
     const {config}=await loadSiteChromeConfig();
-    return <><SiteHeader config={config} preview/><AdminKnowledgePagePreview objectType={objectType} objectId={objectId}/><div inert><SiteFooter/></div></>;
+    const sections: Record<string, string> = { scholar: "/scholars", topic: "/topics", discipline: "/theories/disciplines", subdiscipline: "/subdisciplines", reading_path: "/theories/reading-paths" };
+    const previewPathname = objectType === "theory" && query.page === "graph" ? "/theories/graph"
+      : objectType === "theory" && query.page === "timeline" ? "/theories/timeline"
+      : `${sections[objectType] || "/theories/nodes"}/${objectId}`;
+    return <><SiteHeader config={config} preview previewPathname={previewPathname}/><AdminKnowledgePagePreview objectType={objectType} objectId={objectId}/><div inert><SiteFooter/></div></>;
   }
   return <AdminKnowledgePagePreview objectType={objectType} objectId={objectId} />;
 }

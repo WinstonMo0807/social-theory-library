@@ -11,7 +11,6 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { KnowledgeNodeListItem, NormalizedReadingPath, TheoryDisciplineCompact, TheoryWorkCompact } from "@/lib/api/knowledge.types";
-import { ArchitecturalImage } from "./ui";
 import { MediaPlacement } from "./media-placement";
 import { ResponsiveMediaImage } from "./responsive-media-image";
 import type { components } from "@/lib/api/generated/schema";
@@ -35,13 +34,15 @@ export const workRoleLabels: Record<string, string> = {
   general_mention: "一般提及",
 };
 
-export function TheoryBanner({ image, media, placement = "list" }: { image?: string; placement?: "list" | "detail"; media?: components["schemas"]["PublicCoverMedia"] | null }) {
-  if (image && media?.renditions.length) return <MediaPlacement uses={media.display_uses} placement={placement} fallback={<div className="theory-system-banner"><ArchitecturalImage compact /></div>}><div className="theory-system-banner has-image" style={{ backgroundImage: "none" }}><div style={{ position: "absolute", inset: 0 }}><ResponsiveMediaImage src={image} sources={media.renditions} alt={media.alt_text || "页面配图"} sizes="(max-width: 760px) 90vw, 50vw" loading="eager" /></div></div></MediaPlacement>;
-  return image ? (
-    <div className="theory-system-banner has-image" style={{ backgroundImage: `url("${image}")` }} />
-  ) : (
-    <div className="theory-system-banner"><ArchitecturalImage compact /></div>
-  );
+export function TheoryBanner({ image, media, placement = "list", fallbackImage = "/editorial/generated-20261030/reading.webp" }: { image?: string; placement?: "list" | "detail"; fallbackImage?: string; media?: components["schemas"]["PublicCoverMedia"] | null }) {
+  const fallback = <div className="theory-system-banner has-image" style={{ backgroundImage: "none" }}><img src={fallbackImage} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
+  if (!image) return fallback;
+  return <MediaPlacement uses={media?.display_uses} placement={placement} fallback={fallback}>
+    <div className="theory-system-banner has-image" style={{ backgroundImage: "none" }}>
+      {media?.renditions.length ? <ResponsiveMediaImage src={image} sources={media.renditions} alt={media.alt_text || ""} sizes="(max-width: 760px) 90vw, 50vw" loading={placement === "detail" ? "eager" : "lazy"} />
+        : <img src={image} alt={media?.alt_text || ""} loading={placement === "detail" ? "eager" : "lazy"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+    </div>
+  </MediaPlacement>;
 }
 
 export function TheorySearchForm({ defaultValue = "", action = "/theories", discipline }: { defaultValue?: string; action?: string; discipline?: string }) {

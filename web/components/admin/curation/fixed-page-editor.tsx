@@ -29,7 +29,7 @@ export function PreviewViewport({ children, locateFields = true }: { children: R
       const source = document.documentElement, target = frameDocument.documentElement;
       target.className = source.className;
       target.lang = source.lang || "zh-CN";
-      for (const name of ["data-theme", "data-theme-choice", "data-text-size", "data-font-family"]) {
+      for (const name of ["data-theme", "data-theme-choice", "data-text-size", "data-font-family", "data-typeset", "data-typeface"]) {
         const value = source.getAttribute(name);
         if (value === null) target.removeAttribute(name);
         else target.setAttribute(name, value);
@@ -49,7 +49,7 @@ export function PreviewViewport({ children, locateFields = true }: { children: R
     const styles = new MutationObserver(copyStyles);
     styles.observe(document.head, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["href", "media", "disabled"] });
     const appearance = new MutationObserver(copyAppearance);
-    appearance.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "lang", "data-theme", "data-theme-choice", "data-text-size", "data-font-family"] });
+    appearance.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "lang", "data-theme", "data-theme-choice", "data-text-size", "data-font-family", "data-typeset", "data-typeface"] });
     const content = new ResizeObserver(() => setHeight(Math.max(320, Math.ceil(mount.scrollHeight))));
     content.observe(mount);
     return () => { styles.disconnect(); appearance.disconnect(); content.disconnect(); };
@@ -65,7 +65,7 @@ export function PreviewViewport({ children, locateFields = true }: { children: R
     </div>
     <div ref={canvasRef} className="fixed-preview-canvas">
       <div className="fixed-preview-stage" style={{ width: width * scale, height: height * scale }}>
-        <iframe ref={frameRef} title="当前输入的公开页面预览" className="fixed-preview-frame" srcDoc={'<!doctype html><html lang="zh-CN"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="fixed-preview-root" class="fixed-preview-document" data-ui-scope="editorial-v2"></div></body></html>'} style={{ width, height, transform: `scale(${scale})` }} onLoad={event => setMount(event.currentTarget.contentDocument?.getElementById("fixed-preview-root") || null)} />
+        <iframe ref={frameRef} title="当前输入的公开页面预览" className="fixed-preview-frame" srcDoc={'<!doctype html><html lang="zh-CN"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><main id="main-content"><div id="fixed-preview-root" class="fixed-preview-document" data-ui-scope="stl4" data-type-mode="expressive"></div></main></body></html>'} style={{ width, height, transform: `scale(${scale})` }} onLoad={event => setMount(event.currentTarget.contentDocument?.getElementById("fixed-preview-root") || null)} />
       </div>
     </div>
     {mount ? createPortal(children, mount) : null}

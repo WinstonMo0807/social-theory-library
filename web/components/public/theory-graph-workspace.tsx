@@ -13,6 +13,7 @@ import { GraphCenterSearch, GraphDisciplineFilter } from "./graph-center-search"
 import { GraphInspector } from "./graph-inspector";
 import { GraphSavedViews } from "./graph-saved-views";
 import styles from "./theory-graph.module.css";
+import { KnowledgeMapHero } from "./knowledge-map-hero";
 
 const modes: { value: GraphMode; label: string }[] = [{ value: "graph", label: "关系图谱" }, { value: "list", label: "关系列表" }, { value: "topics", label: "相关主题" }, { value: "scholars", label: "相关学者" }, { value: "works", label: "相关文献" }];
 function subscribeMobile(callback: () => void) { const media = window.matchMedia("(max-width: 760px)"); media.addEventListener("change", callback); return () => media.removeEventListener("change", callback); }
@@ -103,7 +104,7 @@ export function TheoryGraphWorkspace({ initialGraph, initialParams, initialError
   const inspector = graph ? <GraphInspector key={edge?.id || node?.id || "none"} graph={graph} node={node} edge={edge} onNode={chooseNode} onEdge={chooseEdge} onCenter={row => changeCenter(row.kind, row.entity_id)} onClose={() => { setInspectorOpen(false); setDrawerOpen(false); }} disabled={busy} /> : null;
   const filteredNodes = graph?.nodes.filter(row => mode === "topics" ? row.kind === "topic" : mode === "scholars" ? row.kind === "scholar" : true) || [];
   return <div className={styles.page} data-graph-kind={centerKind || "overview"}>
-    <header className={styles.hero}><div><nav aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/explore">探索</Link><span>›</span><span>知识地图与学科目录</span></nav><h1>{centerKind === "topic" ? "知识地图" : "知识地图与学科目录"}</h1><p>在局部关系中找方向，并能从图回到叙事、目录与原文。</p></div>{!focusedMap ? <img src="/visual/stl4/graph/hero-final-r2.png" alt="" width={608} height={177} /> : null}</header>
+    <KnowledgeMapHero title={centerKind === "topic" ? "知识地图" : "知识地图与学科目录"} focused={focusedMap} />
     <div className={styles.topbar}><nav aria-label="知识探索视图"><span aria-current="page">知识地图</span><Link href="/theories/directory">目录视图</Link><button type="button" onClick={() => { if (graph?.edges.length) chooseEdge(graph.edges[0]); else changeMode("list"); }}>关系依据</button></nav><div className={styles.toolbarActions}><GraphSavedViews view={savedView} title={center ? `${center.name}的关系图` : "我的知识地图"} initialSavedView={initialSavedView} onRestore={view => void read(graphParamsForView(view), "replace", view)} disabled={busy || !graph} /><button className={styles.outlineButton} type="button" disabled={!savedView || busy} onClick={() => void share()}><Share2 size={15} />分享链接</button>{center ? <Link className={styles.primaryButton} href={center.href}>进入条目<ArrowRight size={14} /></Link> : null}</div></div>
     {notice ? <p role="status" className={styles.status}>{notice}</p> : null}
     {shareUrl ? <label className={styles.shareLink}>公开图谱链接<input value={shareUrl} readOnly onFocus={event => event.currentTarget.select()} /></label> : null}

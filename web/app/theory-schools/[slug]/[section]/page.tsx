@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { SiteFooter } from "@/components/site-footer";
+import styles from "@/components/public/secondary-public-view.module.css";
 import { KnowledgeMap } from "@/components/knowledge-map";
 import { BookCard, ScholarCard } from "@/components/ui";
 import { loadTheoryEntity, loadTheorySchool } from "@/lib/api/theories.server";
@@ -54,9 +56,9 @@ export default async function TheorySectionPage({
     : data.scholars;
 
   return (
-    <main className="page-shell secondary-detail-page">
+    <><main className={`${styles.page} ${styles.content}`}>
       <Link className="back-link" href={`/theory-schools/${slug}`}><ArrowLeft size={15} />返回{data.school.name}</Link>
-      <header><p className="eyebrow">理论流派</p><h1>{titles[section]}</h1><p>{data.school.description}</p></header>
+      <header><h1>{titles[section]}</h1><p>{data.school.description}</p></header>
       {["works", "reading-list"].includes(section) ? <section className="four-book-grid">{works.map((work) => <BookCard work={work} key={work.id} />)}{!works.length ? <p className="empty-state">尚无已发布的策展文献。</p> : null}</section> : null}
       {section === "scholars" ? <section className="scholar-grid">{scholars.map((scholar) => <ScholarCard scholar={scholar} key={scholar.slug} />)}{!scholars.length ? <p className="empty-state">尚无已确认的代表学者。</p> : null}</section> : null}
       {section === "concepts" ? (
@@ -97,6 +99,6 @@ export default async function TheorySectionPage({
         </section>
       ) : null}
       {section === "concept-map" ? <section className="panel"><KnowledgeMap entries={data.curated.conceptualMap} /></section> : null}
-    </main>
+    </main><SiteFooter /></>
   );
 }

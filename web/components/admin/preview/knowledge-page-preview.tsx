@@ -14,6 +14,9 @@ import { SubdisciplinePublicView } from "@/components/public/subdiscipline-publi
 import { TopicPublicView } from "@/components/public/topic-public-view";
 import { TopicSectionPublicView } from "@/components/public/topic-section-public-view";
 import { TheoryTimelinePublicList } from "@/components/public/theory-timeline-public-view";
+import { KnowledgeMapHero } from "@/components/public/knowledge-map-hero";
+import { TimelineHero } from "@/components/public/theory-timeline-workspace";
+import surfaceStyles from "@/components/public/secondary-public-view.module.css";
 import { TheoryGraphExplorer } from "@/components/theory-graph-explorer";
 import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
@@ -144,6 +147,7 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
       const raw = data as KnowledgeNodeDetail;
       const node = {
         ...raw,
+        aliases: raw.aliases ?? [],
         core_questions: raw.core_questions ?? [],
         basic_propositions: raw.basic_propositions ?? [],
         representative_scholars: raw.representative_scholars ?? [],
@@ -161,27 +165,26 @@ export function PreviewSurface({ payload, pageId, moduleId = "", previewStageId 
         },
       } as KnowledgeNodeDetail;
       if (payload.object_type === "theory" && pageId === "graph") {
-        return <main className="page-shell theory-system-page theory-graph-page"><section className="theory-graph-heading"><div><h1>{node.canonical_name_zh}的理论图谱</h1><p>预览使用当前草稿和已发布的关系。</p></div></section><TheoryGraphExplorer graph={payload.secondary_preview?.graph ?? { center: null, nodes: [], edges: [], depth: 1, limit: 20, truncated: false }} /></main>;
+        return <main className={surfaceStyles.page}><KnowledgeMapHero title={`${node.canonical_name_zh}的理论图谱`} description="预览使用当前草稿和已发布的关系。" /><div className={surfaceStyles.content}>{payload.secondary_preview?.graph?.nodes.length ? <TheoryGraphExplorer graph={payload.secondary_preview.graph} /> : <p className="empty-state">当前没有可预览的理论关系。</p>}</div></main>;
       }
       if (payload.object_type === "theory" && pageId === "timeline") {
-        return <main className="page-shell theory-system-page theory-timeline-page"><section className="theory-timeline-hero"><div><h1>{node.canonical_name_zh}的发展脉络</h1><p>显示已审核并关联到本理论的事件。</p></div></section><div className="theory-timeline-layout"><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;
+        return <main className={surfaceStyles.page}><TimelineHero scope={{ name: node.canonical_name_zh, href: `/theories/nodes/${node.slug}` }} /><div className={surfaceStyles.content}><TheoryTimelinePublicList events={payload.secondary_preview?.timeline ?? []} /></div></main>;
       }
       if (payload.object_type === "theory" && pageId === "reading-path") {
         const path = payload.secondary_preview?.reading_paths?.[0];
         return path
           ? <ReadingPathPublicView preview path={path} footer={footer} />
-          : <main className="page-shell secondary-detail-page"><header><h1>{node.canonical_name_zh}的阅读路径</h1></header><p className="empty-state" data-module-id="theory-reading-paths">当前没有包含该理论的已发布阅读路径。</p></main>;
+          : <main className={`${surfaceStyles.page} ${surfaceStyles.content}`}><header><h1>{node.canonical_name_zh}的阅读路径</h1></header><p className="empty-state" data-module-id="theory-reading-paths">当前没有包含该理论的已发布阅读路径。</p></main>;
       }
-      if (payload.object_type === "theory" && pageId !== "overview" && !["concepts", "works", "evidence", "relations", "propositions"].includes(pageId)) {
-        return <main className="page-shell secondary-detail-page"><header><h1>{node.canonical_name_zh}</h1></header><p className="empty-state">该位置由学科、学者或主题页面消费。请从对应对象的受保护预览核对具体页面。</p></main>;
+      if (payload.object_type === "theory" && pageId !== "overview" && !["concepts", "works", "evidence", "relations", "propositions", "scholars", "paths", "usages", "debates", "contexts", "research"].includes(pageId)) {
+        return <main className={`${surfaceStyles.page} ${surfaceStyles.content}`}><header><h1>{node.canonical_name_zh}</h1></header><p className="empty-state">该位置由学科、学者或主题页面消费。请从对应对象的受保护预览核对具体页面。</p></main>;
       }
       return <KnowledgeNodePublicView
         node={node}
         timeline={payload.secondary_preview?.timeline ?? []}
         allPaths={payload.secondary_preview?.reading_paths ?? []}
-        slug={node.slug}
         footer={footer}
-        publicationStatusLabel={payload.active_perspective === "draft" ? "草稿预览" : "已审核并公开"}
+        preview
         section={pageId}
       />;
     }
@@ -293,7 +296,7 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
     );
   }
 
-  if(frame)return <div className="admin-knowledge-page-preview-body" inert><PreviewSurface payload={payload} pageId={pageId} moduleId={moduleId}/></div>;
+  if(frame)return <div className="admin-knowledge-page-preview-body" data-ui-scope="stl4" data-type-mode="expressive" inert><PreviewSurface payload={payload} pageId={pageId} moduleId={moduleId}/></div>;
 
   return (
     <div className="admin-knowledge-page-preview">
@@ -323,7 +326,7 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
         {unsupported.length ? <details className="admin-preview-warning"><summary>有内容暂不能完整预览</summary><p>{unsupported.join("、")}。请返回编辑页核对这些内容后再发布。</p></details> : null}
         {anchorMessage ? <p className="admin-preview-warning">{anchorMessage}</p> : null}
       </div>
-      <div className="admin-knowledge-page-preview-body" inert>
+      <div className="admin-knowledge-page-preview-body" data-ui-scope="stl4" data-type-mode="expressive" inert>
         <PreviewSurface payload={payload} pageId={pageId} moduleId={moduleId} />
       </div>
       <div className="page-shell"><p className="admin-preview-note">预览复用公开页面组件。为避免误操作，预览内的保存、询问、Reader 和跨页链接均已停用。</p></div>

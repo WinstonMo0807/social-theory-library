@@ -35,9 +35,10 @@ export function Wordmark({ config = defaultSiteConfig }: { config?: SiteConfig }
   return <BrandImage config={config} />;
 }
 
-export function SiteHeader({ config = defaultSiteConfig, preview = false, reader = false, readerReference = "reader", beforeLogout }: { config?: SiteConfig; preview?: boolean; reader?: boolean; readerReference?: "reader" | "reader-outline" | "reader-search" | "reader-notes" | "parallel" | "parallel-manual"; beforeLogout?: () => boolean }) {
+export function SiteHeader({ config = defaultSiteConfig, preview = false, previewPathname, reader = false, readerReference = "reader", beforeLogout }: { config?: SiteConfig; preview?: boolean; previewPathname?: string; reader?: boolean; readerReference?: "reader" | "reader-outline" | "reader-search" | "reader-notes" | "parallel" | "parallel-manual"; beforeLogout?: () => boolean }) {
   const { t } = useEvidenceLanguage();
-  const pathname = usePathname();
+  const actualPathname = usePathname();
+  const pathname = preview && previewPathname ? previewPathname : actualPathname;
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -138,7 +139,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, reader
       data-stl-privacy={privacyReference}
       data-stl-confirmed-notes={pathname==="/account/confirmed-notes"||undefined}
       data-stl-auth={authRoute ? pathname === "/reset-password" ? "recovery" : "true" : undefined}
-      data-stl-home={["/", "/welcome", "/home"].includes(pathname) || pathname === "/layout-preview" || preview ? "true" : undefined}
+      data-stl-home={["/", "/welcome", "/home"].includes(pathname) || pathname === "/layout-preview" || (preview && !previewPathname) ? "true" : undefined}
       data-stl-sharing={pathname === "/account/sharing/new" ? "true" : undefined}
       data-stl-account={readerCenterRoute ? "true" : archiveRoute ? "archive" : undefined}
       data-stl-research={pathname === "/account/research" ? "true" : undefined}

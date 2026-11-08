@@ -128,7 +128,7 @@ export function TheoryRelations({ node }: { node: KnowledgeNodeDetail }) {
   const title = node.node_type === "theory_tradition" ? "相关与区别的学派" : "关系与图谱";
   const graphRows = rows.slice(0, 7);
   const points = graphRows.map((row, index) => ({ row, x: 200 + Math.cos(-Math.PI / 2 + index * 2 * Math.PI / graphRows.length) * 133, y: 174 + Math.sin(-Math.PI / 2 + index * 2 * Math.PI / graphRows.length) * 123 }));
-  return <section id="relations" className={styles.section} aria-labelledby="theory-relations-heading">
+  return <section id="relations" data-module-id="theory-relations" className={styles.section} aria-labelledby="theory-relations-heading">
     <header className={styles.sectionHeading}><h2 id="theory-relations-heading">{title}</h2><Link href={`/theories/graph?center=${encodeURIComponent(node.slug)}`}>打开完整图谱<ArrowRight size={15} /></Link></header>
     {node.node_type === "theory_tradition" ? <div className={styles.segmentButtons}><button type="button" aria-pressed={group === "related"} onClick={() => setGroup("related")}>相关学派（{node.direct_relations.filter(row => !distinct(row)).length}）</button><button type="button" aria-pressed={group === "distinct"} onClick={() => setGroup("distinct")}>区别学派（{node.direct_relations.filter(distinct).length}）</button></div> : null}
     {rows.length ? <>
