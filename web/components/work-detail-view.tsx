@@ -86,7 +86,7 @@ function WorkDetailContent({ work, relatedWorks = [], preview, footer }: Props) 
   return <>
     <div className={`page-shell work-detail ${styles.page} ${article ? styles.article : ""}`} data-work-kind={article ? "article" : "book"} data-work-readable={readable}>
       {preview ? <div className="admin-page-preview-banner" role="status"><ShieldCheck size={16} /><strong>草稿预览</strong><span>{preview.draftRevision ? `已保存草稿第 ${preview.draftRevision.revision} 版` : "当前编目草稿"}{preview.draftRevision?.hasConflict ? "，存在待处理冲突" : "，尚未向读者公开"}</span><Link href={preview.returnHref}>返回编辑</Link></div> : null}
-      <nav className={`breadcrumbs ${styles.breadcrumbs}`} aria-label="当前位置">{preview ? <span>前台页面效果 / {work.title}</span> : <><Link href="/home">首页</Link><span>›</span><Link href="/explore">探索</Link><span>›</span><span>{work.kind}</span><span>›</span><span aria-current="page">{work.title}</span></>}</nav>
+      <nav className={`breadcrumbs ${styles.breadcrumbs}`} aria-label="当前位置">{preview ? <span>前台页面效果 / {work.title}</span> : <><Link href="/home">首页</Link><span>›</span><Link href="/explore">书库检索</Link><span>›</span><span>{work.kind}</span><span>›</span><span aria-current="page">{work.title}</span></>}</nav>
       <section className={`work-hero ${styles.hero}`}>
         <div className={styles.coverColumn}><BookCover work={work} size="large" placement="detail" />{work.coverImage ? <MediaPlacement uses={work.coverDisplayUses} placement="detail"><button className={styles.coverPreview} type="button" onClick={() => setCoverOpen(true)}><Eye size={14} />预览封面</button></MediaPlacement> : null}</div>
         <div className={styles.identity}>

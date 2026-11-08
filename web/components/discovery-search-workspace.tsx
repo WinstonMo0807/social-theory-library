@@ -359,7 +359,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   </>;
   return <SavedWorkStatusProvider workIds={result?.passages.map(item => item.work.id) || []}><div className={`page-shell ${styles.page}`}>
     <header className={styles.evidenceHead}>
-      <p className={styles.breadcrumb}><Link href="/explore">{t("探索")}</Link><span>/</span>{t("原文证据")}</p>
+      <p className={styles.breadcrumb}><Link href="/explore">{t("书库检索")}</Link><span>/</span>{t("原文证据")}</p>
       <h1>{t("原文证据结果")}</h1>
       <form className={styles.searchForm} action="/explore/evidence">
         <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">{t("概念、研究问题或观点线索")}</label><input ref={queryInputRef} id="discovery-query" type="search" name="q" required minLength={2} maxLength={500} value={queryInput} onChange={event => setQueryInput(event.target.value)} placeholder={t("输入概念、研究问题或观点线索")} />{queryInput ? <button className={styles.queryClear} type="button" aria-label={t("清除检索问题")} onClick={() => { setQueryInput(""); queryInputRef.current?.focus(); }}><X size={16} /></button> : null}<button className="button" type="submit" aria-label={t("搜索原文证据")}><span>{t("搜索")}</span><Search size={16} aria-hidden="true" /></button></div>

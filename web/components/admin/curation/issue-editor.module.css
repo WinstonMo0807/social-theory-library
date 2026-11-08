@@ -1,4 +1,4 @@
-.editor { --paper:var(--night-paper,#f7f4ee); --line:var(--night-line,#e5e0d7); --ink:var(--night-ink,#292720); --muted:var(--night-muted,#79736a); --gold:var(--night-gold,#ad8344); color:var(--ink); padding:24px 28px 48px; max-width:1600px; margin:auto; }
+.editor { --paper:var(--night-paper,#f7f4ee); --line:var(--night-line,#e5e0d7); --ink:var(--night-ink,#292720); --muted:var(--night-muted,#79736a); --gold:var(--night-gold,#ad8344); color:var(--ink); padding:24px 28px 48px; max-width:none; margin:auto; }
 .breadcrumb { display:flex; align-items:center; gap:14px; font-size:max(12px, var(--stl-readable-meta)); margin-bottom:18px; color:var(--muted); min-width:0; }
 .breadcrumb > :last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .heading { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:22px; }

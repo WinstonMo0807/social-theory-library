@@ -11,10 +11,68 @@ html select[data-stl-select] {
   max-inline-size: 100%;
   text-overflow: clip;
   vertical-align: middle;
+  font-family: var(--sans) !important;
+  font-size: max(14px, var(--stl-readable-ui)) !important;
+  font-weight: 400;
+  letter-spacing: normal;
+  border-radius: 6px;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out;
 }
 html select[data-stl-select]:not([multiple]):not([size]) { field-sizing: content; }
 html select[data-stl-select][multiple] { min-height: 8em !important; }
 html select[data-stl-select]:focus-visible { outline: 2px solid var(--stl-accent-gold, #aa854d); outline-offset: 3px; }
+html select[data-stl-select] option { font-family: var(--sans); line-height: 1.5; }
+
+/* Keep native selection, keyboard input and form submission. Supporting
+   browsers render the picker in the top layer, clear of scrolling forms. */
+@supports (appearance: base-select) {
+  html select[data-stl-select]:not([multiple]):not([size]),
+  html select[data-stl-select]:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+  html select[data-stl-select]:not([multiple]):not([size]) {
+    align-items: center;
+    gap: 16px;
+    padding-inline: 12px !important;
+    background-image: none;
+  }
+  html select[data-stl-select]::picker-icon { margin-inline-start: auto; transition: rotate 180ms ease-out; }
+  html select[data-stl-select]:open::picker-icon { rotate: 180deg; }
+  html select[data-stl-select]::picker(select) {
+    min-inline-size: min(calc(100vw - 24px), max(anchor-size(width), 14rem));
+    max-inline-size: calc(100vw - 24px);
+    max-block-size: min(24rem, 65dvh);
+    margin-block: 6px;
+    padding: 5px;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgb(27 27 24 / 18%);
+    background: var(--surface, #fdfcf9);
+    color: var(--ink, #1b1b18);
+    font: 400 max(14px, var(--stl-readable-ui))/1.5 var(--sans);
+    overflow: auto;
+    opacity: 1;
+    transition: opacity 160ms ease-out, display 160ms allow-discrete, overlay 160ms allow-discrete;
+  }
+  html select[data-stl-select]:not([multiple]):not([size]) option {
+    min-block-size: 40px;
+    padding: 9px 12px;
+    gap: 12px;
+    border: 0;
+    border-radius: 4px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  html select[data-stl-select] option:is(:hover, :focus-visible) { background: var(--wash, #eeeae2); }
+  html select[data-stl-select] option:checked { background: var(--paper, #f7f4ee); font-weight: 600; }
+  html select[data-stl-select] option:disabled { color: var(--muted); }
+  html select[data-stl-select] option::checkmark { order: 1; margin-inline-start: auto; color: var(--ink, #1b1b18); }
+  @starting-style { html select[data-stl-select]:open::picker(select) { opacity: 0; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  html select[data-stl-select], html select[data-stl-select]::picker-icon,
+  html select[data-stl-select]::picker(select) { transition: none; }
+}
 
 /* Regular information is a section, not an interactive summary. Existing page
    selectors also match these attributes to preserve each surface's spacing. */

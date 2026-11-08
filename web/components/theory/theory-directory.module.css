@@ -1,5 +1,5 @@
 .page, .drawer { --paper: #f7f4ee; --ink: var(--night-ink,#101010); --muted: #777269; --line: var(--night-line,#e1e5eb); --sand: #e5a244; --wash: var(--night-paper,#fbefdf); color: var(--ink); font-family: var(--font-sans), sans-serif; font-size: max(14px, var(--stl-readable-meta)); line-height: 1.7; overflow-wrap: anywhere; }
-.page { width:100%; min-height:calc(100svh - 74px); max-width:1440px; margin: 0 auto; padding: 24px 42px 56px; background: var(--night-white,#fff); }
+.page { width:100%; min-height:calc(100svh - 74px); max-width:none; margin: 0 auto; padding: 24px 42px 56px; background: var(--night-white,#fff); }
 .page h1, .page h2, .page h3, .drawer h2, .drawer h3 { margin: 0; font-family: var(--font-serif), "Noto Serif SC", serif; color: var(--ink); }
 .page p, .drawer p { margin: 0; }.page a, .drawer a { color: inherit; text-decoration: none; }.page button, .drawer button { font: inherit; cursor: pointer; }.page button:disabled, .drawer button:disabled { cursor: wait; opacity: .6; }
 .page :focus-visible, .drawer :focus-visible { outline: 2px solid var(--sand); outline-offset: 4px; }.page a:hover, .drawer a:hover { color: #8b682f; }

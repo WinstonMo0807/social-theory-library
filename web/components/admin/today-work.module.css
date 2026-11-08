@@ -1,4 +1,4 @@
-.page { max-width: 1400px; margin: 0 auto; color: var(--night-ink,#091e36); }
+.page { max-width:none; margin: 0 auto; color: var(--night-ink,#091e36); }
 .heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding: 12px 0 36px; }
 .heading p { margin: 0 0 10px; color: #756f64; font-size: max(13px, var(--stl-readable-body)); }
 .heading h1 { margin: 0 0 13px; font: 600 clamp(27px, 3vw, 42px)/1.25 var(--stl-type-serif, var(--serif)); letter-spacing: -.03em; }

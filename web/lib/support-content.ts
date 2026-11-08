@@ -12,7 +12,7 @@ export const helpArticles: Record<string, HelpArticle> = {
   terms: { title: "使用条款", intro: "开放原则、资源来源与使用边界。", steps: [] },
   search: { title: "搜索资料", intro: "登录或注册后，从书名、作者、概念或问题开始搜索。", steps: [
     { id: "query", title: "输入检索内容", body: "在搜索框输入书名、作者、概念或你记得的原文。先用明确词语检索，再根据结果调整范围。热门搜索来自公开汇总，不代表馆藏一定覆盖该问题。" },
-    { id: "scope", title: "选择结果范围", body: "探索页分别提供馆藏、观点、原文证据与提问入口。需要找一本书时先看馆藏；需要比较论述时查看观点或原文证据。" },
+    { id: "scope", title: "选择结果范围", body: "书库检索页分别提供馆藏、观点、原文证据与提问入口。需要找一本书时先看馆藏；需要比较论述时查看观点或原文证据。" },
     { id: "verify", title: "回到完整原文", body: "摘要和匹配段落是阅读入口。打开原文，核对作者、版本、PDF 页码和上下文，再判断结果是否回答了你的问题。" },
     { id: "empty", title: "没有找到时", body: "尝试更短的关键词、常见译名或作者名。空结果也可能表示当前公开馆藏尚未覆盖，不能据此断言文献或观点不存在。" },
   ] },
@@ -28,8 +28,8 @@ export const helpArticles: Record<string, HelpArticle> = {
     { id: "copy", title: "复制引用", body: "点击“引用”按钮，选择所需的引用格式，核对书目信息与页码，点击“复制”即可。" },
     { id: "mismatch", title: "如遇页码不符", body: "请核对版本或提交纠错。" },
   ] },
-  account: { title: "账户与隐私", intro: "登录或注册后，即可阅读、下载和使用探索功能。", steps: [
-    { id: "public", title: "浏览网页", body: "访客可以浏览书目、学者、理论流派、主题和特别策划。阅读 PDF、下载及探索功能请先登录或注册。" },
+  account: { title: "账户与隐私", intro: "登录或注册后，即可阅读、下载和使用书库检索功能。", steps: [
+    { id: "public", title: "浏览网页", body: "访客可以浏览书目、学者、理论流派、主题和特别策划。阅读 PDF、下载及书库检索功能请先登录或注册。" },
     { id: "private", title: "私人资料", body: "阅读记录、笔记、研究会话和个人上传资料按账户隔离。工作人员身份不会自动获得读取私人正文的权限。" },
     { id: "memory", title: "明确笔记用途", body: "研究过程中形成的候选笔记仍需本人确认。保存笔记与授权后续使用是不同操作，撤销授权不会把私人内容变成公开资料。" },
     { id: "manage", title: "管理个人资料", body: "在读者中心的隐私与资料页查看可导出、删除及撤销的范围。先查看具体影响，再确认不可恢复的操作。反馈中的邮箱是可选的，请勿附上密码、登录令牌或私人稿件正文。" },
@@ -47,7 +47,7 @@ export const supportFaqs = [
   { id: "unchecked", category: "citation", question: "可以引用尚未核实的内容吗？", answer: "可以把检索结果作为继续阅读的线索。正式引用前应自行核对可访问的原文、版本与页码。无法核实的内容应明确其限制，不将摘要改写为作者原话。", article: "citation" },
   { id: "missing", category: "search", question: "遇到缺失页面或来源失效怎么办？", answer: "先重新读取当前来源并确认网络状态。如果仍然不可用，可以提交来源纠错并附上公开页面位置。不要用另一文件的页码替代当前引用。", article: "source" },
   { id: "declare", category: "citation", question: "如何提交来源纠错？", answer: "进入提交反馈，选择内容错误，说明作品、文件版本、PDF 页码和问题。关联页面与联系邮箱均可选择不提供。", article: "source" },
-  { id: "login", category: "account", question: "阅读需要登录吗？", answer: "需要。登录或注册后，即可阅读 PDF、下载和使用探索功能。", article: "account" },
+  { id: "login", category: "account", question: "阅读需要登录吗？", answer: "需要。登录或注册后，即可阅读 PDF、下载和使用书库检索功能。", article: "account" },
   { id: "empty", category: "search", question: "找不到想要的书怎么办？", answer: "尝试作者名、原文书名或不同译名，并检查检索范围。无结果可能表示当前公开馆藏没有收录；可以通过反馈提出内容建议。", article: "search" },
   { id: "contact", category: "account", question: "我还有其他问题，如何联系？", answer: "可以直接提交使用反馈。邮箱为可选字段，不填写也可以提交；请只提供处理该问题所需的信息。", article: "account" },
 ] as const;

@@ -57,7 +57,7 @@ function DirectoryRelated({related}:{related:EditorialDirectory["related"]}){
         <div><h3>{row.person.preferred_name}</h3>{row.person.birth_year!=null||row.person.death_year!=null?<small>{row.person.birth_year==null?"出生年未详":row.person.birth_year}{row.person.death_year!=null?`—${row.person.death_year}`:""}</small>:null}<p>{row.short_description||row.fields.map(field=>field.name).join("、")||"公开资料待补充"}</p><ArrowRight size={13}/></div>
       </Link>)}</div>:<p className={styles.directoryRelatedEmpty}>当前文章尚未编入公开学者档案。</p>}
     </section>
-    <section aria-labelledby="directory-related-materials"><header><h2 id="directory-related-materials">相关材料与阅读路线 </h2><Link href="/explore">探索馆藏 <ArrowRight size={13}/></Link></header>
+    <section aria-labelledby="directory-related-materials"><header><h2 id="directory-related-materials">相关材料与阅读路线 </h2><Link href="/explore">检索馆藏 <ArrowRight size={13}/></Link></header>
       {related.materials.length?<ol className={styles.directoryMaterials}>{related.materials.map(row=><li key={row.id}><Link href={row.href}>
         <EditorialImage src={row.cover_url} displayUses={row.cover_display_uses} className={styles.relatedCover}/><span><strong>{row.title}</strong>{row.authors?<small>{row.authors}</small>:null}<small>{row.source_status==="available"?"馆藏原文":"公开书目"}</small></span><ArrowRight size={13}/>
       </Link></li>)}</ol>:<p className={styles.directoryRelatedEmpty}>当前文章暂无可公开的关联材料。</p>}

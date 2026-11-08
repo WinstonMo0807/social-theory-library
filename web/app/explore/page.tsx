@@ -29,7 +29,7 @@ import { loadHotSearches, loadSearch, loadSemanticSearch } from "@/lib/api/searc
 import type { SearchFacetOption, SearchFilters, SemanticSearchPayload, SemanticSearchResult } from "@/lib/api/search.types";
 
 export const metadata: Metadata = {
-  title: "探索书库",
+  title: "书库检索",
 };
 
 type RawSearchParams = Record<string, string | string[] | undefined>;
@@ -699,7 +699,7 @@ function SemanticExplorePage({
               </dl>
             </section>
             <section className="semantic-aside-tips">
-              <h2>探索小贴士</h2>
+              <h2>检索提示</h2>
               <ul>
                 <li>把宽泛主题改写为一个明确问题。</li>
                 <li>可补充人物、年代或理论语境。</li>

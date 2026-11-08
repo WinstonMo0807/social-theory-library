@@ -55,7 +55,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
     : pathname === href || pathname.startsWith(`${href}/`);
   const navigation = [
     ["/home", config.navigation.home],
-    ["/explore", config.navigation.explore],
+    ["/explore", config.navigation.explore === "探索" ? "书库检索" : config.navigation.explore],
     ["/theories", config.navigation.theory_schools],
     ["/scholars", config.navigation.scholars],
     ["/topics", config.navigation.topics],

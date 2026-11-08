@@ -1,5 +1,5 @@
 .page, .scopeDialog, .historyDialog { --opinion-ink:var(--night-ink,#081d35); --opinion-muted:var(--night-muted,#7d8692); --opinion-line:var(--night-line,#e4e7eb); --opinion-button:var(--night-ink,#0d2c4a); --opinion-paper:var(--night-white,#fff); }
-.page { max-width:1440px; min-height:calc(100svh - 134px); padding:14px 4.1% 18px; margin:0 auto; color:var(--opinion-ink); background:var(--opinion-paper); }
+.page { max-width:none; min-height:calc(100svh - 134px); padding:14px 4.1% 18px; margin:0 auto; color:var(--opinion-ink); background:var(--opinion-paper); }
 .breadcrumb { display:flex; align-items:center; gap:9px; color:var(--opinion-muted); font:max(15px, var(--stl-readable-meta))/1.5 var(--serif); }
 .header { padding:24px 0 27px; }
 .header h1 { margin:0 0 9px; font:700 clamp(36px,4.5vw,54px)/1.3 var(--serif); letter-spacing:0; }

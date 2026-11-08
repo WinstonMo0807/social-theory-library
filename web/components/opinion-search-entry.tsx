@@ -54,7 +54,7 @@ export function OpinionSearchEntry({ initialFilters = {} }: { initialFilters?: D
     catch { setPending(false); setMessage("暂时无法进入检索结果。问题与范围已保留，请重试。"); }
   }
   return <div className={styles.page}>
-    <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/explore">探索</Link><ChevronRight size={12} /><span>观点检索</span></nav>
+    <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/explore">书库检索</Link><ChevronRight size={12} /><span>观点检索</span></nav>
     <header className={styles.header}><h1>观点检索</h1><p>输入问题，查找相关原文。</p></header>
     <form className={styles.queryForm} onSubmit={submit} action="/explore/evidence">
       <div className={styles.queryBox}><label className="sr-only" htmlFor="opinion-question">你的研究问题</label><textarea onKeyDown={submitSearchOnEnter} enterKeyHint="search" title="回车检索，Shift + 回车换行" ref={field} id="opinion-question" name="q" value={query} onChange={event => { setQuery(event.target.value); setMessage(""); }} maxLength={500} rows={1} placeholder="请输入你的问题…" aria-describedby="opinion-count" />

@@ -1,4 +1,4 @@
-.page { --detail-ink:var(--night-ink,#092a4b); --detail-muted:var(--night-muted,#667387); --detail-line:var(--night-line,#e4e5e2); --detail-paper:var(--night-paper,#f8f6f0); --detail-gold:var(--night-gold,#aa853b); background:var(--night-white,#fffefa); color:var(--detail-ink); max-width:1360px; padding-bottom:58px; }
+.page { --detail-ink:var(--night-ink,#092a4b); --detail-muted:var(--night-muted,#667387); --detail-line:var(--night-line,#e4e5e2); --detail-paper:var(--night-paper,#f8f6f0); --detail-gold:var(--night-gold,#aa853b); background:var(--night-white,#fffefa); color:var(--detail-ink); max-width:none; padding-bottom:58px; }
 .breadcrumbs { display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:max(12px, var(--stl-readable-meta)); color:var(--detail-muted); margin:0 0 28px; }
 .breadcrumbs > span:last-child { overflow-wrap:anywhere; }
 .page .hero { display:grid; grid-template-columns:minmax(160px,220px) minmax(0,1fr) minmax(240px,290px); gap:22px 30px; padding:0 0 30px; align-items:start; }
@@ -257,3 +257,6 @@
 /* B keeps the reading action intact while long edition labels wrap separately. */
 :global(html[data-typeset="B"]) .primaryAction{white-space:nowrap}
 :global(html[data-typeset="B"]) .primaryAction small{white-space:normal;min-width:0;line-height:1.6}
+
+/* Keep catalog prose readable when the page shell spans a wide display. */
+.summaryDisclosure { max-inline-size:64rem; white-space:pre-line; line-height:1.9; }

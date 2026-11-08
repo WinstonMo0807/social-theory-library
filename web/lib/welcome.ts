@@ -65,7 +65,7 @@ export const welcomeTextDefaults = {
   "invitation_body": "一本书、一段原文、一个尚未解答的问题。\n从感兴趣的地方开始，慢慢读下去。",
   "faq_title": "你可能想知道",
   "faq_read_title": "需要登录才能阅读吗？",
-  "faq_read_body": "需要。登录或注册后，即可阅读 PDF、下载和使用探索功能。",
+  "faq_read_body": "需要。登录或注册后，即可阅读 PDF、下载和使用书库检索功能。",
   "faq_cite_title": "怎样核对一段引文？",
   "faq_cite_body": "从原文节选打开对应文件，查看版本、页码与前后文；也可以在读者中心使用引文核对。",
   "faq_private_title": "我的笔记和阅读资料保存在哪里？",

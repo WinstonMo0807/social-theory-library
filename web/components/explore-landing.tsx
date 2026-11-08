@@ -42,7 +42,7 @@ export function ExploreLanding() {
 
         <section className="stl4-explore-entries" aria-labelledby="explore-entries-title">
           <div className="stl4-explore-section-heading">
-            <h2 id="explore-entries-title">探索入口</h2>
+            <h2 id="explore-entries-title">检索入口</h2>
           </div>
           <div className="stl4-explore-entry-grid">
             {entries.map((entry) => (

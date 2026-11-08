@@ -1,4 +1,4 @@
-.workspace { --line: #e4ded3; --muted: #81786c; --gold: #b48b50; color: #302b25; min-width: 0; max-width: 1600px; margin: 0 auto; padding: 26px 28px 40px; background: #faf8f3; font-size: max(13px, var(--stl-readable-meta)); }
+.workspace { --line: #e4ded3; --muted: #81786c; --gold: #b48b50; color: #302b25; min-width: 0; max-width:none; margin: 0 auto; padding: 26px 28px 40px; background: #faf8f3; font-size: max(13px, var(--stl-readable-meta)); }
 .workspace h1, .workspace h2, .workspace h3 { color: #302b25; margin: 0; }
 .workspace h1 { font-family: var(--font-serif), "Noto Serif SC", serif; font-size: clamp(22px, 2.3vw, 30px); font-weight: 600; letter-spacing: .025em; }
 .workspace h2 { font-size: max(14px, var(--stl-readable-meta)); font-weight: 600; }
