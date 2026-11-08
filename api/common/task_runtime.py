@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import timedelta
+from itertools import islice
 import uuid
 
 from django.db import connection, transaction
@@ -162,7 +163,9 @@ def executor_matches_demand(
     return True
 
 
-def _stale_demand_reason(demand: CapabilityDemand) -> str:
+def _stale_demand_reason(
+    demand: CapabilityDemand, *, active_claim_span_ids: set[str] | None = None,
+) -> str:
     """Return a reason only when the specialist source is provably obsolete."""
 
     payload = demand.payload if isinstance(demand.payload, dict) else {}
@@ -171,11 +174,16 @@ def _stale_demand_reason(demand: CapabilityDemand) -> str:
         from catalog.models import EvidenceSpan
 
         span_id = str(payload.get("evidence_span_id") or demand.owner_key or "")
-        if not EvidenceSpan.objects.filter(
-            pk=span_id,
-            is_stale=False,
-            document_revision__is_active=True,
-        ).exists():
+        active = (
+            str(span_id) in active_claim_span_ids
+            if active_claim_span_ids is not None
+            else EvidenceSpan.objects.filter(
+                pk=span_id,
+                is_stale=False,
+                document_revision__is_active=True,
+            ).exists()
+        )
+        if not active:
             return "claim evidence was superseded or removed"
     elif task_kind == "library_synthesis":
         from catalog.models import EvidencePack, EvidenceSpan
@@ -847,6 +855,27 @@ def release_demand(
     return demand
 
 
+def _reconciliation_demands(demands):
+    """Read claim provenance per batch, without retaining the whole backlog."""
+    from catalog.models import EvidenceSpan
+
+    rows = iter(demands.iterator(chunk_size=200))
+    while batch := list(islice(rows, 200)):
+        span_ids = [
+            str((demand.payload or {}).get("evidence_span_id") or demand.owner_key or "")
+            for demand in batch
+            if _demand_task_kind(demand) == "claim_extraction"
+        ]
+        active = {
+            str(value) for value in EvidenceSpan.objects.filter(
+                pk__in=span_ids, is_stale=False,
+                document_revision__is_active=True,
+            ).values_list("pk", flat=True)
+        } if span_ids else set()
+        for demand in batch:
+            yield demand, _stale_demand_reason(demand, active_claim_span_ids=active)
+
+
 @transaction.atomic
 def reconcile_capability_runtime(*, at=None) -> dict[str, int]:
     """Expire silent workers and make their unfinished work visible again."""
@@ -917,8 +946,7 @@ def reconcile_capability_runtime(*, at=None) -> dict[str, int]:
         .exclude(pk__in=reclaimed_ids)
         .order_by("created_at")
     )
-    for demand in unresolved.iterator(chunk_size=200):
-        stale_reason = _stale_demand_reason(demand)
+    for demand, stale_reason in _reconciliation_demands(unresolved):
         if stale_reason:
             demand.state = CapabilityDemand.State.CANCELED
             demand.claimed_by = None
