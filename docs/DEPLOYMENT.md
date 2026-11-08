@@ -1,3 +1,11 @@
+## 2026-11-09 menu-cover-r3 当前公网Web
+
+02:02:36+0800按用户明确授权上线。当前公网与LAN共用Web `social-theory-library-web:4.0.0-20261109-menu-cover-r3`，容器b6990f93ee58、镜像a0570b700e3e。合并阅读器/引文/品牌弹窗、菜单/帮助排版及六组默认封面；1,847运行文件含runtime-config哈希一致，16个其他服务身份/启动时间保持，API/两Host检查200。所有本轮候选已停止。
+
+活动Compose命令仍在 `/volume2/library/stl-releases/20261107-r1/public/compose-command.json`，最后为 `/volume2/library/stl-releases/20261109-menu-cover-r3/web-menu-cover.compose.json`。恢复点同release下web-recovery含完整旧配置/环境/镜像入口与带版本守卫的rollback-web-only.py，未实际回退；只恢复Web至responsive-r4，LAN继续指向正式Web，不回滚数据库或新策展资料。原件/账号/私人数据及API/OCR/任务系统保持。
+
+本机构建打包，NAS仅load。首次/tmp上传因空间不足失败，准确删除本次不完整包后改存 `/volume2/library/stl-previews/menu-layout-20261109/upload-r2`；没有删除旧恢复点。详细发布、实际浏览器范围和限制见stl4/MENU_COVERS_RELEASE_20261109.md。
+
 ## 2026-11-07 readable-r4 Web 恢复点
 
 当前正式 Web 为 social-theory-library-web:4.0.0-20261107-readable-r4，容器016743aff243，公网/18084已统一。恢复材料 `/volume2/library/stl-releases/20261107-readable-r4/web-recovery` 含发布前17层Compose、.env、Web inspect、edge模板及渲染配置；原镜像保留。按其中 compose-command.json 仅回退Web及对应edge路由，勿回滚同期策展数据库。活动镜像override为历史`/volume2/library/stl-releases/20261107-reader-refresh-r2/web-media-connection.compose.json`，不能按目录名推定当前版本。详情与证据见 READABLE_TYPE_REVIEW_20261107.md。

@@ -27,4 +27,13 @@
 
 ## 最终结果
 
-待最终候选页面检查及发布读回后填写。
+- 2026-11-09 02:02:36+0800正式上线。公网与LAN共用Web `social-theory-library-web:4.0.0-20261109-menu-cover-r3`，容器`b6990f93ee58`，镜像`a0570b700e3e`。合并源码289285f3、5c26b68e、e2f5e001。r1/r2/r3候选均已停止，最终候选未OOM。
+- 1,847个运行文件全部SHA256一致，包括runtime-config；API就绪200。两Host的/home、/admin、/theories均200，其他16个Compose服务ID及启动时间保持。
+- 公网HTTPS实际打开《规训与惩罚》详情：220px默认封面、中文题名、暖灰几何图形，标题颜色rgb(27,27,24)，简介内无折叠控件。手机65px列表与95px详情同一图形；320px视口实际内容宽305/滚动宽305，无横向溢出。
+- 公网帮助页三卡自然排版，实际点击“核对页码”和Chicago后示例内容更新；手机390px阅读/引用示例不重叠。账户隐私标记恢复小字号、阅读资料导航直接显示。
+- 公网383页真实PDF加载成功；点击全屏后h1隐藏、工具栏top=0，PDF占满剩余高度。该浏览器使用应用全屏回退（document.fullscreenElement为空），退出后紧凑书目标题恢复。截图public-reader-fullscreen-final.png；之前原生失败回退自动测试也通过。
+- 最终恢复目录 `/volume2/library/stl-releases/20261109-menu-cover-r3/web-recovery`，已保存带版本守卫的rollback-web-only.py，未执行回退。准确活动Compose入口仍为20261107-r1/public/compose-command.json，最后追加20261109-menu-cover-r3/web-menu-cover.compose.json。
+- 首次传包/tmp空间不足，755,142,656字节本次不完整文件被准确删除；随后将包写到volume2独立预览发布目录并核验哈希。未清理馆藏、备份、历史发布或其他运行数据。
+- 浏览器验证的临时视口已恢复，验证标签已关闭。14项定向检查、最终构建及隔离类型检查均退出0；没有把源码全量统计当作每个业务状态的实测验收。
+
+截图与执行日志：`tmp/stl4-menu-layout-20261109/`，包括public-cover-final.png、public-help-final.png、public-reader-fullscreen-final.png、cover-mobile-r2.png、help-mobile-r2.png、selects-mobile-r1.png，以及promote-r3.log和verify-runtime-r3.log。
