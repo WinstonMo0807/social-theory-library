@@ -1,7 +1,7 @@
 import { PublishedPlacements } from "@/components/public/published-placements";
 import type { Metadata } from "next";
 import { publicMediaMetadata } from "@/lib/public-image-metadata";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DisciplinePublicView } from "@/components/public/discipline-public-view";
 import { SiteFooter } from "@/components/site-footer";
 import { loadTheoryDisciplinePage } from "@/lib/api/knowledge.server";
@@ -24,6 +24,7 @@ export default async function TheoryDisciplinePage({
   const { slug } = await params;
   const query = await searchParams;
   const activeType = allowedTypes.has(query.type || "") ? query.type! : "theory_tradition";
+  if (activeType === "subdiscipline") redirect(`/subdisciplines?discipline=${encodeURIComponent(slug)}`);
   const payload = await loadTheoryDisciplinePage(slug, activeType);
   if (!payload) notFound();
 

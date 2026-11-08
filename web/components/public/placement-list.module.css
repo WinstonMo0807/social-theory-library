@@ -1,18 +1,24 @@
-.page { max-width:1200px; margin:0 auto; padding:32px clamp(18px,4vw,52px); color:var(--ink); }
-.group { padding:26px 0; border-top:1px solid var(--line); }
-.group h2 { margin:0 0 24px; font:600 24px/1.5 var(--serif); }
-.list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
-.item { display:grid; grid-template-columns:78px minmax(0,1fr); align-content:start; column-gap:16px; padding:12px; border:1px solid transparent; }
-.item[data-selected=true] { border-color:var(--annotation); background:var(--paper); }
-.item h3 { margin:0 0 8px; font:600 18px/1.6 var(--serif); }
-.item p { margin:5px 0; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
-.item small { color:var(--muted); line-height:1.8; }
-.cover { aspect-ratio:2/3; display:grid; place-items:center; align-self:start; background:var(--paper); font-size:max(11px, var(--stl-readable-meta)); color:var(--muted); }
+.page { box-sizing:border-box; width:100%; max-width:1200px; min-width:0; margin:0 auto; padding:0 40px 40px; background:var(--night-white,#fff); color:var(--night-ink,#282b29); font-family:var(--content-text,var(--sans)); font-size:var(--stl-readable-body); line-height:1.8; }
+.page * { box-sizing:border-box; min-width:0; }
+.group { padding:28px 0; border-top:1px solid var(--night-line,#e1e4de); }
+.group h2 { margin:0 0 20px; font:600 calc(1.2rem + var(--stl-readable-step))/1.5 var(--content-text,var(--sans)); overflow-wrap:anywhere; }
+.list { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; }
+.item { display:grid; grid-template-columns:72px minmax(0,1fr); align-content:start; column-gap:24px; padding:0; }
+.item + .item { padding-top:24px; border-top:1px solid var(--night-line,#e1e4de); }
+.item[data-selected=true] { outline:1px solid var(--annotation); outline-offset:8px; background:var(--paper); }
+.item h3 { margin:0 0 6px; font:600 var(--stl-readable-body)/1.6 var(--content-text,var(--sans)); overflow-wrap:anywhere; }
+.item :is(p,small,blockquote,a) { overflow-wrap:anywhere; word-break:normal; }
+.item p { max-width:70ch; margin:6px 0; line-height:1.8; white-space:pre-wrap; }
+.item small { color:var(--night-muted,#626762); font-size:var(--stl-readable-meta); line-height:1.8; }
+.cover { width:72px; aspect-ratio:2/3; display:grid; place-items:center; align-self:start; background:var(--night-panel,#f6f6f1); font-size:var(--stl-readable-meta); color:var(--night-muted,#626762); }
 .cover img { width:100%; height:100%; object-fit:contain; }
-.item a { font-size:max(12px, var(--stl-readable-meta)); margin-top:12px; }
-.reason { font-size:max(14px, var(--stl-readable-meta)); }
-.select { display:block; border:0; padding:0; background:transparent; font:inherit; text-align:left; color:inherit; cursor:pointer; }
-.select:focus-visible { outline:2px solid var(--annotation); outline-offset:4px; }
-.detail { grid-column:1; }
-@media(max-width:800px) {.list {grid-template-columns:1fr 1fr;}.item{grid-template-columns:60px minmax(0,1fr);}}
-@media(max-width:520px) {.list {grid-template-columns:1fr;gap:12px;}.page{padding:20px 16px;}.group h2{font-size:21px;}}
+.item > a { grid-column:2; width:fit-content; max-width:100%; font-size:var(--stl-readable-meta); margin-top:10px; color:inherit; text-underline-offset:.2em; }
+.item > a:hover { color:#8b754c; }
+.reason { margin-top:8px; font-size:var(--stl-readable-body); }
+.item blockquote { max-width:70ch; margin:16px 0; padding-left:16px; border-left:1px solid var(--night-line,#e1e4de); }
+.select { display:block; max-width:100%; border:0; padding:0; background:transparent; font:inherit; text-align:left; color:inherit; white-space:normal; cursor:pointer; }
+.page :is(a,button):focus-visible { outline:2px solid var(--annotation); outline-offset:4px; }
+.detail { grid-column:2; }
+@media(max-width:1000px) { .page { padding-inline:28px; } }
+@media(max-width:760px) { .page { padding:0 20px 28px; } .item { grid-template-columns:56px minmax(0,1fr); column-gap:16px; } .cover { width:56px; } }
+@media(max-width:380px) { .page { padding-inline:16px; } .item { grid-template-columns:44px minmax(0,1fr); column-gap:12px; } .cover { width:44px; } }

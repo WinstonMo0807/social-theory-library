@@ -30,19 +30,19 @@ export function DisciplinePublicView({ payload, activeType, slug, footer }: {
     </header>
     <nav className={styles.navigation} aria-label="学科内容分类">
       <Link aria-current={activeType === "theory_tradition" ? "page" : undefined} href={`/theories/disciplines/${slug}?type=theory_tradition`}><Network size={17} />理论传统{counts.theory_traditions ? <b>{counts.theory_traditions}</b> : null}</Link>
-      <Link aria-current={activeType === "subdiscipline" ? "page" : undefined} href={`/theories/disciplines/${slug}?type=subdiscipline`}><Layers3 size={17} />子学科{counts.subdisciplines ? <b>{counts.subdisciplines}</b> : null}</Link>
+      <Link aria-current={activeType === "subdiscipline" ? "page" : undefined} href={`/subdisciplines?discipline=${encodeURIComponent(slug)}`}><Layers3 size={17} />子学科{counts.subdisciplines ? <b>{counts.subdisciplines}</b> : null}</Link>
       <Link aria-current={activeType === "debate" ? "page" : undefined} href={`/theories/disciplines/${slug}?type=debate`}><CircleDot size={17} />关键争论{counts.debates ? <b>{counts.debates}</b> : null}</Link>
       <Link href={`/explore?discipline=${encodeURIComponent(slug)}`}><BookOpen size={17} />全部馆藏{counts.works ? <b>{counts.works}</b> : null}</Link>
     </nav>
     <div className={styles.content} data-edit-section="content">
       {payload.nodes.length ? <section className={styles.nodes} aria-label="学科条目">{payload.nodes.map((node, index) => <Link className={styles.node} href={`/theories/nodes/${node.slug}`} key={node.id}>
         <div className={styles.nodeImage}><TheoryBanner image={node.cover_url} media={node.cover_media} fallbackImage={`${photos}/${nodePhotos[index % nodePhotos.length]}.webp`} /></div>
-        <h2>{node.canonical_name_zh}<ArrowRight size={18} /></h2>
+        <div className={styles.nodeCopy}><h2>{node.canonical_name_zh}<ArrowRight size={18} /></h2>
         {node.canonical_name_en ? <small>{node.canonical_name_en}</small> : null}
         {node.period_label ? <small>{node.period_label}</small> : null}
         {node.core_questions?.[0] || node.summary ? <p>{node.core_questions?.[0] || node.summary}</p> : null}
         {node.representative_scholars?.length ? <small>{node.representative_scholars.map(person => person.name).join("、")}</small> : null}
-        {node.work_count ? <small>{node.work_count} 部关联馆藏</small> : null}
+        {node.work_count ? <small>{node.work_count} 部关联馆藏</small> : null}</div>
       </Link>)}</section> : <p className={styles.empty}>该分类尚无已审核并公开的条目。</p>}
       {payload.lineage.length ? <section className={styles.section}><header><h2>本学科脉络</h2><Link href={`/theories/timeline?discipline=${encodeURIComponent(slug)}`}>查看完整时间线<ArrowRight size={15} /></Link></header>
         <div className={styles.events}>{payload.lineage.slice(0, 8).map(event => <Link className={styles.event} href={`/theories/events/${event.id}`} key={event.id}><time>{event.date_label || event.start_year}</time><div><h3>{event.title}</h3><p>{event.description}</p></div></Link>)}</div>

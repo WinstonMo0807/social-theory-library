@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MediaPlacement } from "@/components/media-placement";
-import { ArrowRight, BookOpen, ChevronDown, Compass, ExternalLink, FileText, LayoutGrid, Network } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, ExternalLink, FileText } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { AskLibraryLink } from "@/components/ask-library-link";
 import { CollectionLink } from "@/components/collection-link";
@@ -63,8 +63,8 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
   const usages = node.public_detail?.usages || [];
   const readingPaths = paths.filter(path => path.items.some(item => item.node_id === node.id));
   const nav = tradition
-    ? [["guide", "概览"], ["scholars", "代表人物与作品"], ["debates", "主要分歧与争论"], ["paths", "入门路径"], ["relations", "相关与区别的学派"], ["works", "馆藏与知识对象"]]
-    : [["guide", "概念总览"], ["usages", "不同作者的用法"], ["history", "形成与变化"], ["debates", "争论"], ["relations", "关系与图谱"], ["works", "相关作品"], ["usages", "并列比较"], ["contexts", "语境探索"], ["research", "继续研究"]];
+    ? [["guide", "核心观点与问题"], ["scholars", "代表人物与作品"], ["debates", "主要分歧与争论"], ["paths", "入门路径"], ["relations", "相关与区别的学派"], ["history", "形成与变化"], ["works", "馆藏与知识对象"], ["sources", "原文依据"], ["research", "继续研究"]]
+    : [["guide", "概念总览"], ["usages", "不同作者的用法"], ["history", "形成与变化"], ["debates", "争论"], ["relations", "关系与图谱"], ["works", "相关作品"], ["contexts", "语境探索"], ["sources", "原文依据"], ["research", "继续研究"]];
   const base = `/theories/nodes/${encodeURIComponent(node.slug)}`;
   const collectionHref = `/explore/original?${new URLSearchParams(node.node_type === "concept" ? { concept: node.slug } : tradition ? { theory: node.slug } : { q: node.canonical_name_zh })}`;
   const firstReader = usages[0]?.source.reader_url || node.evidence.find(evidence => evidence.reader_href)?.reader_href;
@@ -90,31 +90,32 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
   </section>;
 
   return <article data-theory-kind={tradition ? "tradition" : "concept"} className={`${styles.page} ${tradition ? styles.tradition : styles.concept} ${section !== "overview" ? styles.sectionPage : ""}`}>
+    <div className={styles.utility}>
     <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><span>›</span><Link href="/theories">理论流派</Link><span>›</span><span>{node.canonical_name_zh}</span></nav>
-    <div className={styles.detailGrid}>
+      <div className={styles.heroActions}>{!tradition ? <a className={styles.primary} href={section === "overview" ? "#usages" : `${base}#usages`}>比较两个用法<ArrowRight size={15} /></a> : null}{firstReader ? <Link className={styles.secondary} href={firstReader} target="_blank" rel="noopener noreferrer">查看原文<ExternalLink size={15} /></Link> : null}{actions}</div>
+    </div>
     <header className={styles.hero} data-module-id="theory-identity" data-edit-section="identity">
       {!tradition ? <div className={styles.heroMedia}>{heroMedia}</div> : null}
-      <div className={styles.heroCopy}>{!tradition ? <span className={styles.kind}>{nodeTypeLabels[node.node_type] || "理论条目"}</span> : null}<h1>{node.canonical_name_zh}</h1>{node.canonical_name_en ? <p className={styles.foreignName}>{node.canonical_name_en}</p> : null}
+      <div className={styles.heroCopy}><h1>{node.canonical_name_zh}</h1>{node.canonical_name_en ? <p className={styles.foreignName}>{node.canonical_name_en}</p> : null}
         {node.aliases.length ? <details className={styles.aliases}><summary><span>常见译名</span><strong>{node.aliases.slice(0, 3).map(alias => alias.alias).join(" · ")}</strong><span>更多译名<ChevronDown size={13} /></span></summary><div><div className={styles.aliasTable}><table><caption>已收录的译名与别名</caption><thead><tr><th>译名</th><th>使用者与语境</th><th>原文示例</th><th>本页已确认用法</th></tr></thead><tbody>{node.aliases.map(alias => {
           const matches = usages.filter(usage => usage.term.normalize("NFKC").trim().toLocaleLowerCase() === alias.alias.normalize("NFKC").trim().toLocaleLowerCase());
           return <tr key={alias.id}><th scope="row">{alias.alias}<small>{({ "zh-CN": "中文", "zh-TW": "繁体中文", zh: "中文", en: "英语", de: "德语", fr: "法语" } as Record<string, string>)[alias.language] || alias.language || "语言未注明"} · {({ alias: "别名", translation: "译名", abbreviation: "简称", historical: "历史名称", transliteration: "音译" } as Record<string, string>)[alias.alias_type] || "别名"}</small></th><td>{matches.length ? [...new Set(matches.map(usage => [usage.author?.name, usage.context].filter(Boolean).join(" · ")).filter(Boolean))].join("；") || "已关联用法尚未注明语境" : "未收录关联原文"}</td><td>{matches.map(usage => <Link key={usage.id} href={usage.source.reader_url} target="_blank" rel="noopener noreferrer">《{usage.source.work_title}》<ExternalLink size={11} /></Link>)}</td><td>{matches.length}</td></tr>;
         })}</tbody></table></div><p>这里的数量仅为本页已公开的确认用法，不代表全馆出现频次。别名登记不表示不同语境中的含义相同。</p></div></details> : null}
         <div data-module-id="theory-definition"><NodeProse node={node} field="definition" fallback="summary" empty="本条目的说明尚待编辑，已公开关系与馆藏可继续浏览。" className={styles.heroDescription}/></div>
-        <div className={styles.tags} data-module-id="theory-disciplines">{disciplines.map(item => <Link href={`/theories/disciplines/${item.slug}`} key={item.id}>{item.name}</Link>)}{node.topic_links.map(row => <Link href={`/topics/${row.topic.slug}`} key={row.id} data-module-id={row === node.topic_links[0] ? "theory-topics" : undefined}>{row.topic.name}</Link>)}</div>
+        <div className={styles.tags} data-module-id="theory-disciplines">{!tradition ? <span className={styles.kind}>{nodeTypeLabels[node.node_type] || "理论条目"}</span> : null}{disciplines.map(item => <Link href={`/theories/disciplines/${item.slug}`} key={item.id}>{item.name}</Link>)}{node.topic_links.map(row => <Link href={`/topics/${row.topic.slug}`} key={row.id} data-module-id={row === node.topic_links[0] ? "theory-topics" : undefined}>{row.topic.name}</Link>)}</div>
       </div>
       {tradition ? <aside className={styles.heroGuide}><h2>流派导读</h2><NodeProse node={node} field="summary" fallback="definition" empty="流派导读尚待编辑。"/>{node.period_label ? <small>形成时期 · {node.period_label}</small> : null}</aside> : null}
-      <div className={styles.heroActions}>{!tradition ? <a className={styles.primary} href={section === "overview" ? "#usages" : `${base}#usages`}>比较两个用法<ArrowRight size={15} /></a> : null}{firstReader ? <Link className={styles.secondary} href={firstReader} target="_blank" rel="noopener noreferrer">查看原文<ExternalLink size={15} /></Link> : null}{actions}</div>
     </header>
+    <div className={styles.readingLayout}>
     <nav className={styles.navigation} aria-label="条目内容">{nav.map(([id, name], index) => <Link key={`${id}-${index}`} href={section === "overview" ? `#${id}` : `${base}#${id}`} aria-current={(current === "overview" && index === 0) || current === id ? "location" : undefined}>{name}</Link>)}</nav>
-    {tradition ? <aside className={`${styles.heroGuide} ${styles.mobileTraditionGuide}`}><h2>流派导读</h2><NodeProse node={node} field="summary" fallback="definition" empty="流派导读尚待编辑。"/>{node.period_label ? <small>形成时期 · {node.period_label}</small> : null}</aside> : null}
-    {!tradition ? <div className={styles.mobileIntro}><div>{heroMedia}</div><NodeProse node={node} field="definition" fallback="summary" empty="本条目的说明尚待编辑，已公开关系与馆藏可继续浏览。"/></div> : null}
+    <div className={styles.document}>
 
     {tradition ? <div className={styles.traditionGrid}>
-      {shown("scholars", "usages") ? <div className={styles.peopleArea}>{scholarSection}</div> : null}
-      {shown("guide") ? <section className={`${styles.section} ${styles.questionsArea}`} id="guide" data-module-id="theory-propositions"><header className={styles.sectionHeading}><h2>核心观点与问题</h2></header><div className={styles.propositions} data-module-id="theory-core-questions">{node.basic_propositions.map((proposition, index) => <p key={`${index}-${proposition}`}><BookOpen size={17} /><span>{proposition}</span></p>)}{node.core_questions.map((question, index) => <p key={`question-${index}`}><span className={styles.questionMark}>?</span><span>{question}</span></p>)}</div>{!node.basic_propositions.length && !node.core_questions.length ? <p className={styles.empty}>核心观点与问题尚待编辑。</p> : null}{node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><NodeProse node={node} field="theoretical_boundary"/></details> : null}</section> : null}
-      {shown("debates") ? <div className={styles.debatesArea}><DebateSection node={node} /></div> : null}
-      {shown("paths", "works") ? <div className={styles.pathsArea}>{pathSection}</div> : null}
-      {shown("relations", "usages") ? <div className={styles.relationsArea}><TheoryRelations node={node} /></div> : null}
+      {shown("guide") ? <section className={styles.section} id="guide" data-module-id="theory-propositions"><header className={styles.sectionHeading}><h2>核心观点与问题</h2></header><div className={styles.propositions} data-module-id="theory-core-questions">{node.basic_propositions.map((proposition, index) => <p key={`${index}-${proposition}`}><BookOpen size={17} /><span>{proposition}</span></p>)}{node.core_questions.map((question, index) => <p key={`question-${index}`}><span className={styles.questionMark}>?</span><span>{question}</span></p>)}</div>{!node.basic_propositions.length && !node.core_questions.length ? <p className={styles.empty}>核心观点与问题尚待编辑。</p> : null}{node.theoretical_boundary ? <details className={styles.boundary}><summary>适用范围与理论边界<ChevronDown size={15} /></summary><NodeProse node={node} field="theoretical_boundary"/></details> : null}</section> : null}
+      {shown("scholars", "usages") ? <div >{scholarSection}</div> : null}
+      {shown("debates") ? <div ><DebateSection node={node} /></div> : null}
+      {shown("paths", "works") ? <div >{pathSection}</div> : null}
+      {shown("relations", "usages") ? <div ><TheoryRelations node={node} /></div> : null}
     </div> : <div className={styles.conceptLayout}>
       <div className={styles.mainColumn}>
         {shown("usages") ? <TheoryUsageExplorer key={`${node.id}:${node.public_detail?.revision_id || ""}:${usages.map(usage => `${usage.id}:${usage.source.document_revision_id}`).join(",")}`} usages={usages} unavailableCount={node.public_detail?.unavailable_usage_count} initialCompare={initialCompare} /> : null}
@@ -132,7 +133,6 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
       </div>
       <aside className={styles.aside}><section><header className={styles.sectionHeading}><h2>相关原文</h2><Link href={`${base}/evidence`}>查看全部<ArrowRight size={14} /></Link></header>{works.slice(0, 3).map(work => <WorkRow key={work.id} work={work} compact />)}{!works.length ? <p className={styles.empty}>尚无已公开的关联馆藏。</p> : null}</section><section className={styles.libraryFacts}><h2>在本书库中</h2><dl><div><dt>相关作品</dt><dd>{node.work_count}</dd></div><div><dt>公开关联</dt><dd>{node.relation_count}</dd></div><div><dt>本页作者用法</dt><dd>{usages.length}</dd></div></dl></section></aside>
     </div>}
-    </div>
     {tradition && shown("history") ? historySection : null}
     {shown("guide", "sources") && node.curated_claims.core_viewpoint.length ? <div className={styles.coreClaims}><CuratedClaimSections groups={{ core_viewpoint: node.curated_claims.core_viewpoint }} /></div> : null}
 
@@ -140,6 +140,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
     {shown("sources") ? <section id="sources" className={styles.section} data-module-id="theory-evidence"><header className={styles.sectionHeading}><h2>原文依据</h2></header>{node.evidenceCuration?.configured ? <EvidenceCurationView items={node.evidenceCuration.items} /> : node.evidence.length ? <div className={styles.sourceList}>{node.evidence.map(evidence => <article key={evidence.id}><h3>{evidence.work_title}</h3><blockquote>{evidence.quote}</blockquote><p>{evidence.printed_page_label || `PDF 第 ${evidence.page_number}${evidence.page_end && evidence.page_end !== evidence.page_number ? `–${evidence.page_end}` : ""} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">阅读原文<ExternalLink size={14} /></Link> : null}</article>)}</div> : <p className={styles.empty}>暂未提供可公开定位的原文。书目仍可在相关作品中核对。<Link href={`/feedback?category=content&path=${encodeURIComponent(base)}`}>反馈原文线索</Link></p>}</section> : null}
     {pagination ? <div className={styles.pagination}>{pagination}</div> : null}
     {shown("research") ? <section id="research" className={`${styles.section} ${styles.research}`}><div><h2>继续研究</h2><p>从相关馆藏继续查找，保留版本、页码与原文依据。</p></div><AskLibraryLink context="theories" ids={[node.id]} label={`围绕${node.canonical_name_zh}询问书库`} className={styles.secondary} /><Link className={styles.secondary} href={collectionHref}>检索相关馆藏<ArrowRight size={15} /></Link></section> : null}
-    <nav className={styles.mobileNavigation} aria-label="详情快捷导航"><Link href={`${base}#guide`}><LayoutGrid size={17} aria-hidden="true" />{tradition ? "流派概览" : "概念总览"}</Link><Link href={`${base}#relations`}><Network size={17} aria-hidden="true" />关系图谱</Link><Link href={`${base}#works`}><BookOpen size={17} aria-hidden="true" />相关作品</Link><Link href={`${base}#research`}><Compass size={17} aria-hidden="true" />继续研究</Link></nav>
+    </div>
+    </div>
   </article>;
 }
