@@ -1,4 +1,4 @@
-﻿source,original_line,control,before,after,reason,verification
+source,original_line,control,before,after,reason,verification
 web/app/explore/page.tsx,606,details,查看和调整检索表达,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
 web/app/explore/page.tsx,640,details,<span>2</span><strong>更多候选原文</strong><small>{moreEvidence.length} 个段落</small>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
 web/app/explore/page.tsx,799,details,查看上下文,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
@@ -337,11 +337,11 @@ web/components/theory-system-admin.tsx,1888,details,学科与参与关系,conten
 web/components/theory-system-admin.tsx,1893,details,<h2>出处与证据</h2>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
 web/components/theory-system-admin.tsx,1899,details,<h2>人工确认与发布状态</h2>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
 web/components/theory-system-admin.tsx,1899,details,编辑备注与发布安排,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
-web/components/ui.tsx,102,details,"<span className=""book-summary"">{work.summary}</span><span className=""book-summary-toggle"">展开 / 收起简介</span>",collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/ui.tsx,102,details,"<span className=""book-summary"">{work.summary}</span><span className=""book-summary-toggle"">展开 / 收起简介</span>",content,简介直接显示；移除重复摘要与折叠,源码全量；真实页面代表状态另见报告
 web/components/work-detail-evidence.tsx,22,details,查看依据 <span>{claim.evidence.length} 条馆藏原文</span>,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
 web/components/work-detail-view.tsx,80,details,版本责任者,content,正文、依据、导航或常用字段，直接展示,源码全量；真实页面代表状态另见报告
 web/components/work-detail-view.tsx,110,details,{row.title}<ChevronDown size={16} />,collection,按需加载或状态联动，保留明确展开控制,源码全量；真实页面代表状态另见报告
-web/components/work-detail-view.tsx,122,details,<span>{text}</span><small>展开 / 收起<ChevronDown size={12} /></small>,collection,较长历史、预览或可选选择器，统一收纳,源码全量；真实页面代表状态另见报告
+web/components/work-detail-view.tsx,122,details,<span>{text}</span><small>展开 / 收起<ChevronDown size={12} /></small>,content-text,简介直接显示；移除重复展开文字,源码全量；真实页面代表状态另见报告
 web/components/work-detail-view.tsx,131,details,···,menu,紧凑行操作或账户操作菜单,源码全量；真实页面代表状态另见报告
 web/app/explore/page.tsx,436,select,"name=""sort"" defaultValue={sort}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告
 web/app/explore/page.tsx,579,select,"name=""sort"" defaultValue={filters.sort ?? ""relevance""}",shared-scalable-control,按字体自然增高，预留箭头与文字空间,源码全量；真实页面代表状态另见报告

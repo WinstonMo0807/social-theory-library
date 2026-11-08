@@ -101,7 +101,7 @@ export function BookCard({
           </p>
         </div>
       </div>
-      {showSummary && work.summary ? <details data-disclosure="collection" className="book-summary-expand"><summary><span className="book-summary">{work.summary}</span><span className="book-summary-toggle">展开 / 收起简介</span></summary><p>{work.summary}</p></details> : null}
+      {showSummary && work.summary ? <section data-content-section className="book-summary-expand"><p>{work.summary}</p></section> : null}
       {!dense ? (
         <div className="book-actions">
           {exploreActions ? (

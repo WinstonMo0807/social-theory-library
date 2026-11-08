@@ -1,5 +1,15 @@
 /* Night appearance extends the final atlas; light declarations keep their exact defaults. */
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+  /* Shared aliases keep older secondary pages on the current brand palette. */
+  --night-ink: var(--stl-ink-primary);
+  --night-muted: var(--stl-ink-muted);
+  --night-line: var(--stl-border-default);
+  --night-paper: var(--stl-surface-paper);
+  --night-white: var(--stl-surface-default);
+  --night-wash: var(--stl-surface-wash);
+  --night-gold: #aa854d;
+}
 :root[data-theme="dark"] {
   color-scheme: dark;
   --stl-surface-paper: #201f1d;

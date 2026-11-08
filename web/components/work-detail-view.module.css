@@ -50,13 +50,6 @@
 .tags a:hover { background:#e9e2d5; }
 .summary { grid-column:1 / 3; max-width:none; margin:0; background:#f9f6ef; padding:17px 20px; }
 .summary h2 { color:#7e6033; font-size:16px; margin-bottom:8px; }
-.summaryDisclosure { font-family:var(--serif); font-size:max(14px, var(--stl-readable-meta)); line-height:1.9; }
-.summaryDisclosure :is(summary,:where([data-section-heading])) { list-style:none; cursor:pointer; }
-.summaryDisclosure :is(summary,:where([data-section-heading]))::-webkit-details-marker { display:none; }
-.summaryDisclosure :is(summary,:where([data-section-heading])) > span { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-line; }
-.summaryDisclosure:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) > span { display:block; overflow:visible; }
-.summaryDisclosure :is(summary,:where([data-section-heading])) > small { display:flex; align-items:center; gap:5px; color:var(--detail-muted); font-size:max(11px, var(--stl-readable-meta)); margin-top:5px; }
-.summaryDisclosure:is([open],[data-content-section]) :is(summary,:where([data-section-heading])) > small svg { transform:rotate(180deg); }
 .sourceNotice { grid-column:1 / 3; display:flex; align-items:flex-start; gap:9px; color:#746548; background:#faf6eb; padding:11px 14px; }
 .sourceNotice svg { flex-shrink:0; margin-top:3px; }
 .sourceNotice p { margin:0; font-size:max(12px, var(--stl-readable-meta)); line-height:1.8; }
@@ -258,7 +251,6 @@
  .article .authorLine img { width:48px; height:48px; }
 }
 
-.article .summaryDisclosure :is(summary,:where([data-section-heading])) > span { -webkit-line-clamp:4; }
 
 .primaryList > button > svg:last-child { margin-left:auto; }
 
