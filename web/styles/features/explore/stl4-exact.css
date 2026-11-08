@@ -1,5 +1,5 @@
 /* Exact catalog page aligned to final-r2 pages 24–27. Data and actions remain those of the existing search domain. */
-.stl4-catalog-page { --catalog-line: var(--night-line,#e5e9ed); --catalog-muted: var(--night-muted,#526e9c); --catalog-ink: var(--night-ink,#08274e); --catalog-surface: var(--night-white,#fff); width: min(1440px,100%); min-height: calc(100svh - 125px); margin-inline: auto; padding: 0 30px; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--serif); }
+.stl4-catalog-page { --catalog-line: var(--night-line,#e5e9ed); --catalog-muted: var(--night-muted,#526e9c); --catalog-ink: var(--night-ink,#08274e); --catalog-surface: var(--night-white,#fff); width:100%; min-height: calc(100svh - 125px); margin-inline: auto; padding: 0 30px; background: var(--catalog-surface); color: var(--catalog-ink); font-family: var(--serif); }
 .stl4-catalog-page a { color: inherit; text-decoration: none; }
 .stl4-catalog-page :is(button, input, select, a, summary):focus-visible { outline: 2px solid #a48146; outline-offset: 3px; }
 .stl4-catalog-hero { position: relative; min-height: 244px; margin-inline: -30px; border-bottom: 1px solid var(--catalog-line); background: var(--catalog-surface); }
@@ -273,7 +273,7 @@
  .stl4-catalog-versions { margin-left:0; }
  .stl4-catalog-filter-dialog footer .stl4-catalog-apply { color:#fff; }
 }
-.stl4-explore-original-page { width: min(1440px, 100%); margin: 0 auto; padding: 0 36px 42px; background: #fff; color: #24221f; }
+.stl4-explore-original-page { width:100%; margin: 0 auto; padding: 0 36px 42px; background: #fff; color: #24221f; }
 .stl4-explore-original-page .explore-workbench-head { position: relative; display: grid; grid-template-columns: 42% 58%; min-height: 260px; gap: 0; margin: 0 -36px 18px; overflow: hidden; border-bottom: 1px solid #ded9d0; background: #f7f4ee; }
 .stl4-explore-original-page .explore-workbench-head::after { position: absolute; inset: 0 0 0 37%; z-index: 0; background: linear-gradient(90deg, #f7f4ee 0%, rgb(247 244 238 / 88%) 12%, rgb(247 244 238 / 5%) 42%), url("/editorial/stl4-reading-room.png") center / cover no-repeat; content: ""; }
 .stl4-explore-original-page .explore-workbench-title, .stl4-explore-original-page .explore-query-column, .stl4-explore-original-page > .explore-workbench-head > .search-mode-switch { position: relative; z-index: 1; }

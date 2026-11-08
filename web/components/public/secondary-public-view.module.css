@@ -1,7 +1,7 @@
 .page {
   --line: var(--night-line, #e2ded6);
   --muted: var(--night-muted, #625c53);
-  width: 100%; max-width: 1440px; min-width: 0; margin-inline: auto;
+  width: 100%; max-width:100%; min-width: 0; margin-inline: auto;
   background: var(--night-white, #fff); color: var(--night-ink, #23231f);
 }
 .content { padding: 30px 40px 44px; }

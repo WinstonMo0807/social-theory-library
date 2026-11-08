@@ -120,7 +120,7 @@
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 
 /* final-r2 PDF30–32: publication rows, source inspector and context drawer. */
-.page { max-width: 1600px; padding: 28px 38px 64px; color: var(--ink); }
+.page { max-width:100%; padding: 28px 38px 64px; color: var(--ink); }
 .evidenceHead { width: calc(100% - 340px); margin-bottom: 20px; }
 .breadcrumb { display: flex; gap: 10px; margin: 0 0 12px; color: var(--muted); font-size: max(12px, var(--stl-readable-meta)); }
 .evidenceHead h1 { margin: 0 0 20px; font: 650 clamp(30px, 3.1vw, 44px)/1.25 var(--serif); letter-spacing: -.035em; }
@@ -266,7 +266,7 @@
  --ink:var(--night-ink,#092a4b); --muted:var(--night-muted,#697889); --surface:var(--night-white,#fcfbf8); --paper:var(--night-paper,#fcfbf8); --wash:var(--night-wash,#faf8f2); --line:var(--night-line,#e2e3e1); --line-dark:var(--night-line,#d5d8d8); --gold:var(--night-gold,#b58b39);
  color:var(--ink); font-family:var(--serif);
 }
-.page { width:100%; max-width:1440px; padding:24px 26px 38px; background:var(--surface); }
+.page { width:100%; max-width:100%; min-width:0; margin-inline:auto; padding:24px clamp(20px, 3vw, 64px) 38px; background:var(--surface); }
 .evidenceHead { width:calc(100% - 319px); margin-bottom:14px; }
 .breadcrumb { margin-bottom:8px; font:max(13px, var(--stl-readable-meta))/1.5 var(--serif); }
 .evidenceHead h1 { margin-bottom:12px; font:700 44px/1.2 var(--serif); letter-spacing:0; }
@@ -408,3 +408,18 @@
 .yearRange { align-items:center; gap:5px; margin-bottom:7px; }
 :is(.page,.filterDialog) .filterGrid fieldset label { font-family:var(--font-sans); }
 :is(.page,.filterDialog) .filterGrid .yearRange input { font-size:max(12px, var(--stl-readable-ui)); }
+
+/* Fluid workspace; bound reading length inside the flexible results column. */
+@media (min-width: 1441px) {
+ .page .resultLayout { grid-template-columns:clamp(195px, 13vw, 260px) minmax(0,1fr) clamp(295px, 20vw, 400px); gap:clamp(24px, 2vw, 48px); }
+ .page .resultLayout.summaryHidden { grid-template-columns:clamp(195px, 13vw, 260px) minmax(0,1fr); }
+ .evidenceHead { width:calc(100% - clamp(295px, 20vw, 400px) - clamp(24px, 2vw, 48px)); }
+ .page > .inspector { margin-left:calc(clamp(195px, 13vw, 260px) + clamp(24px, 2vw, 48px)); }
+}
+.resultContent, .page .results, .evidenceHead { min-width:0; }
+.passageQuote p, .documentRow p { max-width:48em; }
+
+@media (max-width: 480px) {
+ .page .mobileFilters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .page .mobileFilters button:last-child { grid-column:1 / -1; }
+}

@@ -4,7 +4,7 @@
   --sand: #8b754c;
   --reading-font: var(--content-text, var(--sans));
   box-sizing: border-box;
-  width: 100%; max-width: 1200px; min-width: 0; margin-inline: auto; padding: 28px 40px 48px;
+  width: 100%; max-width:100%; min-width: 0; margin-inline: auto; padding: 28px 40px 48px;
   color: var(--night-ink, #282b29); background: var(--night-white, #fff);
   font-family: var(--reading-font); font-size: var(--stl-readable-body); line-height: 1.75;
 }

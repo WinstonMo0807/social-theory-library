@@ -1,6 +1,6 @@
 .page {
   --paper: var(--night-paper,#faf9f5); --ink: var(--night-ink,#071e39); --muted: var(--night-muted,#6e7580); --line: var(--night-line,#e8e8e3); --sand: #a48752; --selected: #f2e8d5;
-  width:100%; min-height:calc(100svh - 64px); max-width: 1440px; margin: 0 auto; color: var(--ink); background: var(--night-white,#fff);
+  width:100%; min-height:calc(100svh - 64px); max-width:100%; margin: 0 auto; color: var(--ink); background: var(--night-white,#fff);
   font: max(13px, var(--stl-readable-meta))/1.65 var(--font-sans), sans-serif;
 }
 .page *, .page *::before, .page *::after { box-sizing: border-box; }

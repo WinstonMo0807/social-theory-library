@@ -17,7 +17,7 @@
   align-items: center;
   gap: 34px;
   min-height: 70px;
-  max-width: 1440px;
+  max-width:100%;
   margin: 0 auto;
   padding: 11px 4.4%;
   background: var(--night-white, #fff);

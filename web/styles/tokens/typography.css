@@ -81,7 +81,7 @@ html[data-typeset="B"] #main-content :is([data-type-mode="expressive"], [data-ty
 }
 
 /* Home: opening spread, then distinct issue/person/topic/collection rhythms. */
-html[data-typeset="B"] #main-content .stl4-home { max-width: 1440px; padding: 0 var(--type-gutter) 48px; }
+html[data-typeset="B"] #main-content .stl4-home { max-width: 100%; padding: 0 var(--type-gutter) 48px; }
 html[data-typeset="B"] #main-content .stl4-home-hero { min-height: 410px; grid-template-columns: 46% 54%; margin: 0 calc(-1 * var(--type-gutter)) 0; }
 html[data-typeset="B"] #main-content .stl4-hero-copy { padding: 40px 0 40px var(--type-gutter); }
 html[data-typeset="B"] #main-content .stl4-hero-copy h1 { font-size: clamp(2.25rem, 4.2vw, 3.75rem); line-height: 1.3; font-weight: 600; margin-bottom: 20px; }

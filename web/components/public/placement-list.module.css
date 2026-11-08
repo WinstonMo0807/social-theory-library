@@ -1,4 +1,4 @@
-.page { box-sizing:border-box; width:100%; max-width:1200px; min-width:0; margin:0 auto; padding:0 40px 40px; background:var(--night-white,#fff); color:var(--night-ink,#282b29); font-family:var(--content-text,var(--sans)); font-size:var(--stl-readable-body); line-height:1.8; }
+.page { box-sizing:border-box; width:100%; max-width:100%; min-width:0; margin:0 auto; padding:0 40px 40px; background:var(--night-white,#fff); color:var(--night-ink,#282b29); font-family:var(--content-text,var(--sans)); font-size:var(--stl-readable-body); line-height:1.8; }
 .page * { box-sizing:border-box; min-width:0; }
 .group { padding:28px 0; border-top:1px solid var(--night-line,#e1e4de); }
 .group h2 { margin:0 0 20px; font:600 calc(1.2rem + var(--stl-readable-step))/1.5 var(--content-text,var(--sans)); overflow-wrap:anywhere; }

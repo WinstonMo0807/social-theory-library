@@ -1,5 +1,5 @@
 /* Cross-work evidence results, aligned to final-r2 page 30 while retaining live search data. */
-.stl4-evidence-page { width: min(1440px, 100%); margin: 0 auto; padding: 28px 36px 48px; color: #24221f; background: #fff; }
+.stl4-evidence-page { width:100%; margin: 0 auto; padding: 28px 36px 48px; color: #24221f; background: #fff; }
 .stl4-evidence-page a { color: inherit; text-decoration: none; }
 .stl4-evidence-page :is(a, button, input):focus-visible { outline: 2px solid #a48146; outline-offset: 4px; }
 .stl4-evidence-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 420px); gap: 34px; align-items: end; padding-bottom: 19px; border-bottom: 1px solid #ded9d0; }

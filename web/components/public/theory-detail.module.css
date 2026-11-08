@@ -53,7 +53,7 @@
   --reading-font: var(--content-text, var(--sans));
   box-sizing: border-box;
   width: 100%;
-  max-width: 1200px;
+  max-width:100%;
   min-width: 0;
   margin: 0 auto;
   padding: 28px 40px 64px;
@@ -226,4 +226,11 @@
   .heroActions :is(button, a) { padding-inline: 10px; }
   .workRow { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; }
   .workRow > img, .workPlaceholder { width: 48px; height: 68px; }
+}
+
+/* Keep the document readable while the page surface follows the viewport. */
+@media (min-width: 1441px) {
+ .hero, .readingLayout { max-width:1280px; margin-inline:auto; }
+ .readingLayout { grid-template-columns:220px minmax(0,1fr); gap:64px; }
+ .document { max-width:900px; }
 }

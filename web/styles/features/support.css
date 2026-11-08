@@ -1,5 +1,5 @@
 /* Final PDF 13–17. Controls are native HTML; illustration text is explicitly an example. */
-.stl4-support-page { --support-paper: var(--night-paper,#f7f4ee); --support-ink: var(--night-ink,#071b32); --support-muted: var(--night-muted,#4e5e77); --support-line: var(--night-line,#e5e7e8); --support-gold: var(--night-gold,#ae691e); --support-gutter: 4.4%; width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 var(--support-gutter) 16px; background: var(--night-white,#fff); color: var(--support-ink); }
+.stl4-support-page { --support-paper: var(--night-paper,#f7f4ee); --support-ink: var(--night-ink,#071b32); --support-muted: var(--night-muted,#4e5e77); --support-line: var(--night-line,#e5e7e8); --support-gold: var(--night-gold,#ae691e); --support-gutter: 4.4%; width: 100%; max-width:100%; margin: 0 auto; padding: 0 var(--support-gutter) 16px; background: var(--night-white,#fff); color: var(--support-ink); }
 .stl4-support-page :is(h1,h2,h3,p) { margin-top: 0; }
 .stl4-support-page :is(h1,h2,h3) { font-family: var(--serif); color: var(--support-ink); }
 .stl4-support-page :is(a,button,input,textarea,summary):focus-visible, .stl4-support-path-dialog :is(button,input):focus-visible { outline: 2px solid #9d743a; outline-offset: 4px; }
