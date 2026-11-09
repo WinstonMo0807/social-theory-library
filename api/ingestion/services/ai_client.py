@@ -287,13 +287,14 @@ class AIClient:
         schema: dict,
         prompt_version: str,
         model: str | None = None,
+        strict: bool = False,
     ) -> AIResult:
         if not self.config.enabled:
             raise AIServiceUnavailable("AI 功能当前已关闭。")
         selected_model = (model or self.config.model or self.config.metadata_model).strip()
         if not selected_model:
             raise AIConfigurationError("当前任务没有可用模型。")
-        input_text = document_text[: self.config.max_input_chars]
+        input_text = document_text if strict else document_text[: self.config.max_input_chars]
         if not input_text.strip():
             raise AIInvalidOutput("输入文本为空。")
         protected_system_prompt = (
@@ -308,10 +309,20 @@ class AIClient:
                 "content": f"任务：{task}\n文档摘录开始\n{input_text}\n文档摘录结束",
             },
         ]
+        if strict:
+            serialized = json.dumps({"messages": messages, "schema": schema}, ensure_ascii=False)
+            if len(serialized) > self.config.max_input_chars:
+                raise AIInvalidOutput("完整输入超过当前配置预算，请按段落切窗；未截断或发送内容。")
+            # UTF-8 bytes are a conservative upper bound for byte-level tokens.
+            # The configured context ceiling includes reserved output. No
+            # tokenizer download or guessed model-specific token ratio.
+            ceiling = int(getattr(settings, "INTELLIGENCE_CONTEXT_TOKENS", 32768))
+            if len(serialized.encode("utf-8")) + self.config.max_output_tokens > ceiling:
+                raise AIInvalidOutput("完整输入与预留输出超过上下文预算，未调用模型。")
         started = time.monotonic()
         last_error = None
         with self._semaphore:
-            for attempt in range(1, 3):
+            for attempt in range(1, 2 if strict else 3):
                 try:
                     payload, endpoint = self._request_payload(
                         model=selected_model,
@@ -328,7 +339,11 @@ class AIClient:
                             json=payload,
                         )
                         response.raise_for_status()
-                    data = self._parse_response(response.json())
+                    raw_response = response.json()
+                    if strict and (raw_response.get("choices", [{}])[0].get("finish_reason") == "length"
+                                   or raw_response.get("done_reason") == "length"):
+                        raise AIInvalidOutput("模型输出达到长度上限，本阶段未记为成功。")
+                    data = self._parse_response(raw_response)
                     _validate_schema(data, schema)
                     return AIResult(
                         data=data,

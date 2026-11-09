@@ -6613,3 +6613,10 @@ class PublicFeedback(UUIDTimeStampedModel):
 # Kept separate so short-lived reader queries do not expand editorial models.
 from .discovery_models import DiscoverySearchSession  # noqa: E402,F401
 from .discovery_index_models import DiscoveryDocument, DiscoverySourceState  # noqa: E402,F401
+from .knowledge_models import (  # noqa: E402,F401
+    RevisionPage, DocumentStructure, DocumentNode, DocumentNodeSegment,
+    DocumentNodeReference, EvidenceAnchor, EvidenceSegment, Entity, EntityAlias,
+    EntityIdentifier, Assertion, AssertionParticipant, AssertionSource,
+    AssertionEvidence, KnowledgePage, KnowledgeLegacyMapping,
+)
+from .intelligence_models import CurationRun, CurationArtifact, ChangeSet, ChangeItem, ChangeReceipt  # noqa: E402,F401

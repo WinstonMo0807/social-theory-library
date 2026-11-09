@@ -1,3 +1,11 @@
+## 2026-11-09 Knowledge Core / Intelligence 内网候选进行中
+
+- 最新 main 已核对为 2f151a8617b33886f046a7ccc3325d7a2deca3ae；独立分支 codex/stl-knowledge-intelligence，原工作区修改和暂存保持。
+- 已新增修订原文快照、DocumentNode、跨页 EvidenceAnchor、Entity、Assertion、KnowledgePage 及幂等旧ID映射；知识页复用 EditorialRevision。新增短schema迁移0091/0092，回填命令按指定修订和有界批次执行。
+- 4项隔离契约测试通过（153.29秒，包含历史迁移初始化），Django check与makemigrations --check通过。真实馆藏、阅读器、候选部署尚未验证，阶段一未计业务完成。
+- 用户选择自行接入OpenAI-compatible API；本轮接现有加密Provider配置，未启用任何模型或外呼。当前正式策展/提取配置关闭。
+- 内网18084与公网同一正式实例，不在那里试迁移。独立候选正在准备；公网/DNS/隧道未改。完整六阶段及剩余项见docs/stl4/KNOWLEDGE_INTELLIGENCE_20261109.md。
+
 ## 2026-11-09 vNext 架构与文档已归并 GitHub main
 
 - 以公网curation-publish-r1为准整合25份运行源码差异，检查点f5406339。API791份、OCR5份、Web1847项运行证据已核对；15:06镜像身份复查相同。原工作区和其暂存内容保持。

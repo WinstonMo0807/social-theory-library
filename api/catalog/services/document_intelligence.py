@@ -785,6 +785,8 @@ def synchronize_document_revision(
                 ),
             )
     evidence_spans = _sync_evidence_spans(active)
+    from catalog.services.knowledge_sources import snapshot_revision
+    snapshot_revision(active)
     if created and previous is not None and changed_page_indexes is not None:
         carried_claims, carried_curated_links = _carry_forward_unchanged_claims(
             previous,

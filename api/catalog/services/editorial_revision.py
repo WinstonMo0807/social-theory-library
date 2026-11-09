@@ -17,6 +17,7 @@ from catalog.models import (
     Edition,
     EditorialRevision,
     KnowledgeNode,
+    KnowledgePage,
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
     KnowledgeNodeSubdiscipline,
@@ -56,6 +57,7 @@ class EditorialTargetPolicy:
 
 
 TARGET_POLICIES = {
+    "knowledge_page": EditorialTargetPolicy(KnowledgePage, frozenset({"title", "scope", "body_blocks", "status"})),
     EditorialRevision.TargetType.KNOWLEDGE_RELATION: EditorialTargetPolicy(
         KnowledgeRelation, frozenset({"source_node", "target_node", "relation_type", "direction", "description", "evidence_source", "evidence_span", "source_document_revision", "confidence", "status"}),
     ),
@@ -991,6 +993,9 @@ def _validated_patch(
     if unknown:
         raise EditorialRevisionError(f"草稿包含不可编辑字段：{', '.join(unknown)}")
     clean = {key: _json_value(value) for key, value in patch.items()}
+    if isinstance(target, KnowledgePage) and "body_blocks" in clean:
+        from catalog.services.knowledge_core import normalize_page_blocks
+        clean["body_blocks"] = normalize_page_blocks(clean["body_blocks"], retained=target.body_blocks)
     _validate_special_patch(target_type, target, clean)
     return clean
 

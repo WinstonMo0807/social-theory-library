@@ -64,6 +64,7 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("api/capability-worker/", include("common.remote_worker_urls")),
     path("api/catalog/", include("catalog.urls")),
+    path("api/knowledge/", include("catalog.knowledge_core_views")),
     path("api/ingestion/", include("ingestion.urls")),
     path("api/reading/", include("reading.urls")),
     path("api/distribution/", include("distribution.urls")),

@@ -82,6 +82,21 @@ def resolve_target(raw, *, public=False):
     if not isinstance(raw, dict) or set(raw) - {"type", "id", "edition_id", "document_revision_id"}:
         raise ValidationError("引用只能包含真实来源标识。")
     kind, key = raw.get("type"), shared_curation.identifier(raw.get("id"))
+    if kind in {"anchor", "assertion", "entity", "knowledge_page"}:
+        from catalog.models import EvidenceAnchor, Assertion, Entity, KnowledgePage
+        model = {"anchor": EvidenceAnchor, "assertion": Assertion, "entity": Entity, "knowledge_page": KnowledgePage}[kind]
+        obj = get_object_or_404(model, pk=key)
+        if kind == "anchor":
+            from catalog.services.publication_eligibility import public_editions
+            revision = obj.document_revision
+            eligible = public_editions(require_fulltext=True).filter(pk=revision.asset.edition_id).exists() and revision.catalog_publication_revisions.filter(status__in=["active", "superseded"], fulltext_ready=True).exists()
+            title = revision.asset.edition.work.title
+        else:
+            eligible = obj.status == "published"
+            title = getattr(obj, "title", getattr(obj, "label", getattr(obj, "text", "")))
+        if public and not eligible:
+            raise Http404
+        return {"type": kind, "id": str(key)}, {"type": kind, "id": str(key), "title": title, "public_eligible": eligible}
     if not isinstance(kind, str):
         raise ValidationError("引用类型必须是文字标识。")
     if kind in {"work", "edition", "node", "span"}:
