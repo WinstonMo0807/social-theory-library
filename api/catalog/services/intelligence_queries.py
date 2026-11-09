@@ -25,14 +25,24 @@ def changeset_data(changeset, actor):
     require_revision_access(changeset.document_revision, actor, editorial=True)
     items = list(changeset.items.values("id", "kind", "payload", "dependencies", "decision", "decision_note", "application", "conflict", "reviewed_at"))
     for item in items:
+        applied = item["application"]
+        if applied.get("type") == "assertion":
+            item["current_status"] = m.Assertion.objects.filter(pk=applied["id"]).values_list("status", flat=True).first()
+        elif applied.get("page_id"):
+            item["current_status"] = m.KnowledgePage.objects.filter(pk=applied["page_id"]).values_list("status", flat=True).first()
         if item["kind"] == "wiki_patch" and item["payload"].get("page_id"):
             page = get_object_or_404(m.KnowledgePage, pk=item["payload"]["page_id"])
             blocks, revision = page_content(page)
             current = next((b for b in blocks if b["id"] == item["payload"].get("block_id")), None)
             item["current"] = {"block": current, "hash": digest(current) if current else None,
                 "revision_id": str(revision.pk) if revision else None}
-    return {"id": str(changeset.pk), "version": changeset.version, "status": changeset.status,
-        "document_revision_id": str(changeset.document_revision_id), "origin": changeset.origin, "items": items}
+    accepted = [i for i in items if i["decision"] == "accepted"]
+    status = "published" if accepted and all(i.get("current_status") == "published" for i in accepted) and all(i["decision"] in {"accepted", "rejected"} for i in items) else changeset.status
+    return {"id": str(changeset.pk), "version": changeset.version, "status": status,
+        "document_revision_id": str(changeset.document_revision_id), "origin": changeset.origin, "items": items,
+        "title": changeset.document_revision.asset.edition.work.title,
+        "edition_id": str(changeset.document_revision.asset.edition_id),
+        "review_url": f"/admin/intelligence?changeset={changeset.pk}"}
 
 
 def sources(actor, *, work_id=None):

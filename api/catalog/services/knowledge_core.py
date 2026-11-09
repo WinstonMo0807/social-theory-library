@@ -40,11 +40,23 @@ def entity_for_legacy(row):
         "Topic": ("topic", "topic", "name"), "Discipline": ("discipline", "discipline", "name"),
         "Subdiscipline": ("subdiscipline", "discipline", "name"), "TheorySchool": ("theory_school", "school", "name")}
     field, kind, label = types[type(row).__name__]
+    kind = {"theory_tradition": "tradition", "research_problem": "question", "subdiscipline": "discipline"}.get(kind,kind)
     if kind not in m.Entity.Kind.values:
         kind = "school" if kind in {"theory_school", "theory"} else "tradition"
     entity, created = m.Entity.objects.get_or_create(**{field: row}, defaults={"kind": kind,
         "label": getattr(row, label), "definition": getattr(row, "definition", getattr(row, "description", "")),
         "status": getattr(row, "status", getattr(row, "editorial_status", "draft"))})
+    if isinstance(row, m.Person):
+        for variant in m.PersonNameVariant.objects.filter(person=row):
+            m.EntityAlias.objects.get_or_create(entity=entity, text=variant.name, language=variant.language,
+                defaults={"review_status": "confirmed" if variant.is_verified else "legacy",
+                          "source": {"legacy_type": "catalog.personnamevariant", "legacy_id": str(variant.pk),
+                                     "kind": variant.source_kind, "note": variant.source_note}})
+    elif isinstance(row, m.KnowledgeNode):
+        for alias in m.KnowledgeNodeAlias.objects.filter(node=row):
+            m.EntityAlias.objects.get_or_create(entity=entity, text=alias.alias, language=alias.language,
+                defaults={"review_status": "confirmed" if alias.is_verified else "legacy",
+                          "source": {"legacy_type": "catalog.knowledgenodealias", "legacy_id": str(alias.pk), "kind": alias.source_kind}})
     m.KnowledgeLegacyMapping.objects.get_or_create(source_type=row._meta.label_lower, source_id=row.pk, target_type="entity",
         defaults={"target_id": entity.pk, "quality": "identity_preserved", "provenance": {"legacy_id": str(row.pk)}})
     if created and isinstance(row, m.Person):
@@ -67,15 +79,20 @@ def create_entity(payload, actor):
             raise ValidationError("所选实体类型或身份已变化。")
         return entity
     kind, label = payload.get("kind"), str(payload.get("label", "")).strip()
-    if kind not in m.Entity.Kind.values or not label or len(label) > 600:
+    if kind not in m.Entity.Kind.values or not label or len(label) > 240:
         raise ValidationError("请填写合法的实体类型和名称。")
     identity = {}
     if kind == "person":
         identity["person"] = m.Person.objects.create(preferred_name=label, authority_status="draft")
     elif kind in {"concept", "school", "tradition", "debate", "question"}:
-        node_kind = {"school": "school", "tradition": "tradition", "debate": "debate", "question": "concept", "concept": "concept"}[kind]
+        node_kind = {"school": "theory_tradition", "tradition": "theory_tradition", "debate": "debate", "question": "research_problem", "concept": "concept"}[kind]
         identity["node"] = m.KnowledgeNode.objects.create(node_type=node_kind, canonical_name_zh=label,
             slug=f"knowledge-{uuid4().hex}", definition=payload.get("definition", ""), status="draft", created_by=actor)
+    elif kind == "topic":
+        identity["topic"] = m.Topic.objects.create(name=label,slug=f"topic-{uuid4().hex}",editorial_status="draft")
+    elif kind == "discipline":
+        slug = f"discipline-{uuid4().hex}"
+        identity["discipline"] = m.Discipline.objects.create(name=label,slug=slug,code=slug,editorial_status="draft")
     return m.Entity.objects.create(kind=kind, label=label, definition=payload.get("definition", ""),
         context=payload.get("context", ""), **identity)
 
@@ -121,7 +138,11 @@ def create_assertion(payload, revision, actor):
 def page_content(page):
     latest = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk,
         status="draft").order_by("-revision").first()
-    return (deepcopy(latest.materialized_preview.get("body_blocks", [])), latest) if latest else (deepcopy(page.body_blocks), None)
+    if latest:
+        return deepcopy(latest.materialized_preview.get("body_blocks", [])), latest
+    published = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk,
+        status="published").order_by("-revision").first()
+    return deepcopy(page.body_blocks), published
 
 
 def normalize_page_blocks(blocks, *, retained=None):
@@ -144,7 +165,7 @@ def normalize_page_blocks(blocks, *, retained=None):
 
 
 @transaction.atomic
-def apply_page_patch(payload, actor, *, request_key):
+def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     require_editor(actor)
     if payload.get("page_id"):
         page = m.KnowledgePage.objects.select_for_update().get(pk=payload["page_id"])
@@ -160,7 +181,8 @@ def apply_page_patch(payload, actor, *, request_key):
     if (operation == "add" and current is not None) or (operation != "add" and (current is None or digest(current) != payload.get("base_hash"))):
         raise ValidationError({"conflict": "该区块已修改，请对照当前正文重新审核。", "block_id": key})
     if operation != "delete":
-        proposed = {**payload.get("block", {}), "id": key, "origin": "intelligence", "human_edited": False}
+        proposed = {**payload.get("block", {}), "id": key, "origin": origin,
+                    "human_edited": bool(payload.get("human_edited"))}
         value = normalize_page_blocks([proposed], retained=[current] if current else [])[0]
     if operation == "add":
         blocks.append(value)

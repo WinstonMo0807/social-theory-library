@@ -744,18 +744,22 @@ def public_outline(asset, *, access_statuses=None):
         document = asset.document_revisions.filter(is_active=True).first()
         current_navigation = revision.document_revision_id == (document.pk if document else None)
         visible = revision.nodes if fulltext_ready or revision.reviewed or current_navigation else [node for node in revision.nodes if node["source"] == "pdf_bookmark"]
-        identifiers = {node["id"] for node in visible}
-        # Source comparisons include unadopted OCR/heading observations and
-        # belong only to the private editor, even alongside a public bookmark.
-        visible = [{**{key: value for key, value in node.items() if key not in {"candidate_sources", "candidate_sources_count"}},
-                    "parent_id": node["parent_id"] if node["parent_id"] in identifiers else None} for node in visible]
-        return [{**node, "index": node["pdf_page"], "file_page_index": node["pdf_page"], "chapter_title": node["title"],
-                 "outline_revision_id": str(revision.pk)} for node in visible if node.get("pdf_page")]
+        return reader_outline_nodes(revision, visible)
     return [{"id": str(page.pk), "parent_id": None, "position": position, "level": 1,
              "index": page.index, "file_page_index": page.index, "pdf_page": page.index,
              "chapter_title": page.chapter_title, "title": page.chapter_title, "printed_label": page.printed_label,
              "source": "legacy_page_heading", "calibration_status": "unverified", "pdf_position": [], "coordinate_unit": "", "coordinate_space": "", "precision": "page"}
             for position, page in enumerate(asset.pages.exclude(chapter_title="").order_by("index"))]
+
+
+def reader_outline_nodes(revision, visible=None):
+    """Serialize an already-authorized, exact outline revision for the reader."""
+    visible = revision.nodes if visible is None else visible
+    identifiers = {node["id"] for node in visible}
+    visible = [{**{key: value for key, value in node.items() if key not in {"candidate_sources", "candidate_sources_count"}},
+                "parent_id": node.get("parent_id") if node.get("parent_id") in identifiers else None} for node in visible]
+    return [{**node, "index": node["pdf_page"], "file_page_index": node["pdf_page"], "chapter_title": node["title"],
+             "outline_revision_id": str(revision.pk)} for node in visible if node.get("pdf_page")]
 
 
 @transaction.atomic

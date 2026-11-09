@@ -1,0 +1,8 @@
+# Build on the exact STL API image already selected for the candidate.
+# API, beat and OCR retain their lighter images. No model is downloaded here.
+ARG STL_API_IMAGE
+FROM ${STL_API_IMAGE}
+USER root
+RUN pip install --no-cache-dir docetl==0.3.0 litellm==1.108.3 mcp==2.3.0 && pip check
+USER library
+CMD ["celery", "-A", "config", "worker", "--pool=solo", "--concurrency=1", "--prefetch-multiplier=1", "--queues=intelligence", "--without-gossip", "--without-mingle", "--without-heartbeat", "--loglevel=INFO"]

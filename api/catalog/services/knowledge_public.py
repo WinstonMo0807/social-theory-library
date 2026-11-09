@@ -49,12 +49,21 @@ def page_data(page, actor, *, draft=False):
     else:
         if page.status != "published" or page.work_id and not public_editions().filter(work_id=page.work_id).exists():
             raise Http404
+        if page.entity_id and page.entity.status != "published":
+            raise Http404
         blocks = page.body_blocks
         revision = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk, status="published").order_by("-revision").first()
     assertions, visible = {}, []
     for block in blocks:
         keep = True
         for ref in block.get("references", []):
+            if not draft:
+                from catalog.services.editorial_blocks import resolve_target
+                try:
+                    resolve_target(ref, public=True)
+                except Http404:
+                    keep = False
+                    break
             if ref.get("type") == "assertion":
                 statement = get_object_or_404(m.Assertion, pk=ref["id"])
                 if not draft and not assertion_public(statement):
@@ -63,9 +72,29 @@ def page_data(page, actor, *, draft=False):
                 assertions[ref["id"]] = assertion_data(statement, actor, draft=draft)
         if keep:
             visible.append(block)
-    return {"id": str(page.pk), "title": page.title, "status": "draft" if draft else page.status,
+    return {"id": str(page.pk), "title": page.title, "status": revision.status if draft and revision else page.status,
         "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()),
         "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions)}}
+
+
+def validate_page_publication(page, actor):
+    """Called inside the canonical publisher, including legacy transport routes."""
+    require_editor(actor)
+    if not has_capability(actor, Capability.PUBLISH_AUTHORITY):
+        raise PermissionDenied("当前账户不能公开发布知识。")
+    if page.work_id and not public_editions().filter(work_id=page.work_id).exists():
+        raise ValidationError("作品未公开，不能发布对应知识页。")
+    from catalog.services.editorial_blocks import block_references, resolve_target
+    for block in page.body_blocks:
+        for ref in block_references(block):
+            if ref["type"] == "assertion":
+                statement = get_object_or_404(m.Assertion,pk=ref["id"])
+                if not assertion_public(statement):
+                    raise ValidationError("知识页引用包含未发布或来源已撤回的陈述。")
+            elif ref["type"] == "anchor":
+                require_revision_access(get_object_or_404(m.EvidenceAnchor,pk=ref["id"]).document_revision, actor)
+            else:
+                resolve_target(ref,public=True)
 
 
 @transaction.atomic
@@ -77,6 +106,9 @@ def publish_page(page_id, revision_id, actor):
     from catalog.services.editorial_revision import create_editorial_revision, publish_editorial_revision
     latest = get_object_or_404(m.EditorialRevision.objects.select_for_update(), pk=revision_id,
         target_type="knowledge_page", target_id=page.pk)
+    published_before = m.EditorialRevision.objects.filter(idempotency_key=f"knowledge-publish:{latest.pk}", status="published").exists()
+    if published_before:
+        return page_data(page, actor)
     if latest.status == "published":
         return page_data(page, actor)
     blocks, current = page_content(page)

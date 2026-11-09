@@ -25,12 +25,13 @@ export function validateReaderPage(payload: PagePayload, assetId: string, revisi
 }
 
 /** Signed access refresh and canonical page payloads share the same asset scope. */
-export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: { assetId: string; workId: Work["workId"]; documentRevisionId?: string }) {
+export function useReaderDocument({ assetId, workId, documentRevisionId = "", historical = false, preview = false }: { assetId: string; workId: Work["workId"]; documentRevisionId?: string; historical?: boolean; preview?: boolean }) {
+  const versionQuery = historical ? `?revision=${encodeURIComponent(documentRevisionId)}&preview=${preview ? "1" : "0"}` : "";
   const [access, setAccess] = useState<AccessPayload | null>(null);
   const [accessError, setAccessError] = useState("");
-  const [accessRequest, setAccessRequest] = useState(0);
+  const refreshAccess = useRef<(() => Promise<void>) | null>(null);
   const sourceChanged = useRef(false);
-  const retryAccess = useCallback(() => { if (sourceChanged.current) window.location.reload(); else setAccessRequest(value => value + 1); }, []);
+  const retryAccess = useCallback(async () => { if (sourceChanged.current) window.location.reload(); else await refreshAccess.current?.(); }, []);
   const [pagePayloads, setPagePayloads] = useState<Record<number, PagePayload>>({});
   const [pageErrors, setPageErrors] = useState<Record<number, string>>({});
   const failedPageRequests = useRef(new Set<number>());
@@ -57,7 +58,7 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
       loading = true;
       if (refreshTimer) window.clearTimeout(refreshTimer);
       try {
-        const payload = await apiRequest<AccessPayload>(`/distribution/assets/${assetId}/access/`, { signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(30000)]), cache: "no-store" }, getServerSessionCredential());
+        const payload = await apiRequest<AccessPayload>(`/distribution/assets/${assetId}/access/${versionQuery}`, { signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(30000)]), cache: "no-store" }, getServerSessionCredential());
         if (cancelled || sourceChanged.current) return;
         if (payload.requested_asset_id !== assetId) throw new ApiRequestError("阅读文件身份已变化，请重新打开文献。", 409);
         const nextAccess = {
@@ -128,18 +129,20 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
       } finally { loading = false; }
     }
 
+    refreshAccess.current = loadAccess;
     void loadAccess();
     const revalidate = () => { if (document.visibilityState === "visible") void loadAccess(); };
     window.addEventListener("focus", revalidate);
     document.addEventListener("visibilitychange", revalidate);
     return () => {
       cancelled = true;
+      refreshAccess.current = null;
       lifetime.abort();
       if (refreshTimer) window.clearTimeout(refreshTimer);
       window.removeEventListener("focus", revalidate);
       document.removeEventListener("visibilitychange", revalidate);
     };
-  }, [assetId, accessRequest]);
+  }, [assetId, versionQuery]);
 
   const requestPagePayload = useCallback((targetPage: number) => {
     if (
@@ -151,7 +154,8 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
     ) return;
     pendingPageRequests.current.add(targetPage);
     const generation = pageGeneration.current;
-    void apiRequest<PagePayload>(`/catalog/assets/${assetId}/pages/${targetPage}/`, { signal: AbortSignal.timeout(30000), cache: "no-store" }, getServerSessionCredential())
+    const path = historical ? `/knowledge/revisions/${documentRevisionId}/pages/${targetPage}/?preview=${preview ? "1" : "0"}` : `/catalog/assets/${assetId}/pages/${targetPage}/`;
+    void apiRequest<PagePayload>(path, { signal: AbortSignal.timeout(30000), cache: "no-store" }, getServerSessionCredential())
       .then((payload) => {
         if (generation !== pageGeneration.current) return;
         validateReaderPage(payload, assetId, documentRevisionId, targetPage);
@@ -181,7 +185,7 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
       .finally(() => {
         if (generation === pageGeneration.current) pendingPageRequests.current.delete(targetPage);
       });
-  }, [assetId, documentRevisionId]);
+  }, [assetId, documentRevisionId, historical, preview]);
 
   const retryPagePayload = useCallback((page: number) => {
     if (sourceChanged.current) { window.location.reload(); return; }

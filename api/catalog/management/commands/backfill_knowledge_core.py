@@ -14,6 +14,7 @@ class Command(BaseCommand):
         parser.add_argument("--revision")
         parser.add_argument("--identities", action="store_true")
         parser.add_argument("--claims", action="store_true")
+        parser.add_argument("--relations", action="store_true")
         parser.add_argument("--after", default="")
         parser.add_argument("--batch-size", type=int, default=100)
 
@@ -58,3 +59,10 @@ class Command(BaseCommand):
                         target_type="assertion", defaults={"target_id": statement.pk, "quality": "manual_status_preserved",
                             "provenance": {"source_quality_independent_of_human_decision": True}})
                 self.stdout.write(f"CuratedClaim {claim.pk} -> {statement.pk}")
+        if options["relations"]:
+            from catalog.services.knowledge_migration import migrate_relation
+            for model in [m.PersonNodeRelation, m.WorkNodeRelation, m.KnowledgeRelation]:
+                mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="assertion").values("source_id")
+                rows = model.objects.filter(status__in=["confirmed", "approved", "published"]).exclude(pk__in=mapped).order_by("pk")[:size]
+                count = sum(1 for row in rows if migrate_relation(row))
+                self.stdout.write(f"{model.__name__}: {count}")

@@ -16,11 +16,11 @@ export default async function ReaderPage({
   searchParams,
 }: {
   params: Promise<{ assetId: string }>;
-  searchParams: Promise<{ mode?: string; alignment?: string; right_asset?: string; right_revision?: string; page?: string; q?: string; focus?: string; passage?: string; evidence?: string; research_project?: string; research_turn?: string; reference?: string; revision?: string; return_to?: string }>;
+  searchParams: Promise<{ anchor?: string; preview?: string; mode?: string; alignment?: string; right_asset?: string; right_revision?: string; page?: string; q?: string; focus?: string; passage?: string; evidence?: string; research_project?: string; research_turn?: string; reference?: string; revision?: string; return_to?: string }>;
 }) {
   const [{ assetId }, query] = await Promise.all([params, searchParams]);
   await requireReaderSession(`/reader/${encodeURIComponent(assetId)}`, query);
-  const [result, { config }] = await Promise.all([loadReaderManifestResult(assetId), loadSiteChromeConfig()]);
+  const [result, { config }] = await Promise.all([loadReaderManifestResult(assetId, query.revision || "", query.preview === "1"), loadSiteChromeConfig()]);
   if (query.mode === "parallel") {
     return <ParallelReader assetId={assetId} work={result.ok ? result.manifest.work : undefined} siteConfig={config}
       taskId={query.alignment} initialRevision={query.revision} initialFocus={query.focus || query.evidence}
@@ -37,6 +37,8 @@ export default async function ReaderPage({
       siteConfig={config}
       documentRevisionId={manifest.documentRevisionId || ""}
       requestedRevisionId={query.revision || ""}
+      knowledgeAnchorId={query.anchor || ""}
+      sourcePreview={query.preview === "1"}
       researchProjectId={query.research_project || ""}
       researchTurnId={query.research_turn || ""}
       researchReferenceId={query.reference || ""}

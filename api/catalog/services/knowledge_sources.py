@@ -131,6 +131,10 @@ def build_structure(revision):
     by_page = {p.page_number: p for p in pages}
     headings, gaps = [], []
     for raw in (outline.nodes if outline else []):
+        if raw.get("source") == "generated_heading" and len(raw.get("title", "")) > 35:
+            gaps.append({"outline_id": raw.get("id"), "title": raw.get("title"),
+                         "page": raw.get("pdf_page"), "reason": "generated_heading_requires_review"})
+            continue
         page = by_page.get(raw.get("pdf_page"))
         offset = _locate_title(page.text, raw.get("title", "")) if page else None
         if offset is None:
@@ -145,6 +149,8 @@ def build_structure(revision):
                 "structure_status": "mapped" if headings and not gaps else "needs_structure_review",
                 "paragraph_method": "raw_blank_lines_page_bounded",
                 "cross_page_paragraphs_inferred": False}
+    if not headings:
+        coverage["limitations"] = ["缺少已映射章节；按实际页范围读取，不代表已识别整书章节。"]
     structure = DocumentStructure.objects.create(document_revision=revision, outline_revision=outline,
         parser="existing_text_and_outline", parser_version=STRUCTURE_VERSION, input_hash=fingerprint, coverage=coverage)
     ordinal = 0
@@ -300,7 +306,7 @@ def context(node, actor, *, budget=12000, editorial=False):
 @transaction.atomic
 def migrate_span(span):
     mapping = KnowledgeLegacyMapping.objects.filter(source_type="evidence_span", source_id=span.pk, target_type="anchor").first()
-    if mapping:
+    if mapping and mapping.target_id:
         return mapping
     page = RevisionPage.objects.filter(document_revision=span.document_revision, page_number=span.page_number).first()
     target, quality = None, "historical_text_unrecoverable"
@@ -312,7 +318,13 @@ def migrate_span(span):
             quality = "verified_text"
         else:
             quality = "legacy_offsets_not_raw_text"
+    values = {"target_id": target.pk if target else None, "quality": quality,
+        "provenance": {"document_revision_id": str(span.document_revision_id), "content_hash": span.content_hash,
+                       "original_status_preserved": True}}
+    if mapping:
+        for key, value in values.items():
+            setattr(mapping, key, value)
+        mapping.save()
+        return mapping
     return KnowledgeLegacyMapping.objects.create(source_type="evidence_span", source_id=span.pk,
-        target_type="anchor", target_id=target.pk if target else None, quality=quality,
-        provenance={"document_revision_id": str(span.document_revision_id), "content_hash": span.content_hash,
-                    "original_status_preserved": True})
+        target_type="anchor", **values)

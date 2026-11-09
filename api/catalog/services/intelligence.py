@@ -27,6 +27,9 @@ ANALYSIS_SCHEMA = {"type":"object", "required":["summary","questions","entities"
     "entities":{"type":"array","items":ENTITY_SCHEMA}, "assertions":{"type":"array","items":ASSERTION_SCHEMA}}}
 SUMMARY_SCHEMA = {"type":"object", "required":["summary","development","limitations"],
     "properties": {"summary":STRING,"development":{"type":"array","items":STRING},"limitations":{"type":"array","items":STRING}}}
+MATCH_SCHEMA = {"type": "object", "required": ["comparisons"], "properties": {"comparisons": {"type": "array", "items": {
+    "type": "object", "required": ["candidate_id", "judgment", "reason"], "properties": {
+        "candidate_id": STRING, "judgment": {"type": "string", "enum": ["same_suggested", "different", "uncertain"]}, "reason": STRING}}}}}
 
 
 @transaction.atomic
@@ -138,14 +141,24 @@ def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, valid
     if lease:
         renew_demand_lease(lease.demand_id, lease.lease_token, executor_id=lease.executor_id, lease_seconds=int(config.timeout)+180)
     started = time.monotonic()
-    result = map_analysis(config, prompt, json.dumps(data, ensure_ascii=False), schema)
-    if validate:
-        validate(result.data)
+    try:
+        result = map_analysis(config, prompt, json.dumps(data, ensure_ascii=False), schema)
+        if validate:
+            validate(result.data)
+    except Exception as exc:
+        _guard(run, lease)
+        m.CurationArtifact.objects.update_or_create(run=run, stage=stage, unit=unit, defaults={
+            "cache_key": key, "schema_version": PROMPT_VERSION, "status": "failed", "input_manifest": data,
+            "output": {}, "output_hash": "", "model_identity": identity(config),
+            "usage": {"model_calls": None, "cost": None}, "elapsed_ms": round((time.monotonic()-started)*1000),
+            "error": {"code": type(exc).__name__, "message": str(exc)[:1200]}})
+        raise
     return _save_artifact(run, stage, unit, data, result.data, config=config, result=result, lease=lease,
         elapsed=round((time.monotonic()-started)*1000), cache_key=key)
 
 
 def prepare(run):
+    started = time.monotonic()
     structure = build_structure(run.document_revision)
     start = run.scope.get("start", 1)
     end = run.scope.get("end", run.document_revision.asset.page_count)
@@ -159,7 +172,8 @@ def prepare(run):
         "read_nodes":0, "total_nodes":len(nodes), "analysis_complete":False}
     m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(structure=structure, coverage=coverage)
     run.structure, run.coverage = structure, coverage
-    _save_artifact(run,1,"source",{"structure_hash":structure.input_hash,"scope":run.scope},coverage)
+    _save_artifact(run,1,"source",{"structure_hash":structure.input_hash,"scope":run.scope},coverage,
+        elapsed=round((time.monotonic()-started)*1000))
     return nodes
 
 
@@ -224,7 +238,19 @@ def execute(run, config, lease):
                 continue
             item_id = str(uuid5(run.pk,"entity:"+key))
             candidates = match_entities(raw["label"],raw["kind"])
-            entity_proposals.append({"id":item_id,"kind":"entity","payload":{**raw,"candidates":candidates},"dependencies":[]})
+            comparisons = []
+            if candidates:
+                candidate_ids = {c["id"] for c in candidates}
+                def validate_matches(output):
+                    seen = [c["candidate_id"] for c in output["comparisons"]]
+                    if set(seen) != candidate_ids or len(seen) != len(candidate_ids):
+                        raise ValidationError("身份比较没有完整覆盖限定候选，或引用了候选之外的身份。")
+                match = _model_artifact(run,4,"entity:"+key,{"proposed":raw,"bounded_candidates":candidates},
+                    "逐一比较限定候选的身份、定义、语境和来源。名称相同或译名相似不足以判定同一。仅提出同一、不同或不确定的建议；每个候选恰好一项，管理员决定归并。",
+                    MATCH_SCHEMA,config,lease,validate=validate_matches)
+                comparisons = match.output["comparisons"]
+            entity_proposals.append({"id":item_id,"kind":"entity","payload":{**raw,"candidates":candidates,
+                "comparisons":comparisons,"identity_decision":"pending_human_review"},"dependencies":[]})
             entity_items[key] = item_id
             names.setdefault(raw["label"],[]).append(item_id)
     _save_artifact(run,4,"matches",{"entities":[p["payload"] for p in entity_proposals]}, {"proposals":entity_proposals},lease=lease)

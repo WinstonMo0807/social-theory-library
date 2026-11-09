@@ -62,4 +62,3 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
             "embedding_dimensions": result.get("embedding_dimensions"),
             "reranker_artifact": str(result.get("reranker_artifact") or ""),
             "canceled": False}
-

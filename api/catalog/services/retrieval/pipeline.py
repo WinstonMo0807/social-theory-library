@@ -3,8 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from catalog.services.semantic_search import semantic_search
-
 from .profiles import get_retrieval_profile
 from .types import UnifiedRetrievalError, UnifiedRetrievalRequest
 
@@ -33,16 +31,10 @@ def _copied_filters(value) -> dict[str, Any]:
 
 
 class UnifiedRetrievalPipeline:
-    """Thin, permission-neutral adapter over Semantic Search V2.
-
-    Callers remain responsible for deriving visibility filters from the
-    authenticated request.  This adapter forwards those filters unchanged and
-    never retries with a wider scope.  The returned mapping is the original V2
-    response so existing clients keep their current contract.
-    """
+    """Compatibility response over the shared permission-scoped recall service."""
 
     def __init__(self, search_backend: SearchBackend | None = None):
-        self.search_backend = search_backend or semantic_search
+        self.search_backend = search_backend or _shared_search
 
     def retrieve(self, request: UnifiedRetrievalRequest) -> dict[str, Any]:
         query = str(request.query or "").strip()
@@ -77,8 +69,32 @@ class UnifiedRetrievalPipeline:
             rerank_top_k_override=profile.rerank_top_k_override,
         )
         if not isinstance(response, dict):
-            raise UnifiedRetrievalError("Semantic Search V2 返回了无效结果。")
+            raise UnifiedRetrievalError("统一检索返回了无效结果。")
         return response
+
+
+def _shared_search(query, *, filters, limit, max_per_work, sort="relevance", **options):
+    from .search import retrieve_channel
+    from catalog.services.semantic_search import viewer_access_statuses
+    scope = dict(filters)
+    allowed = scope.pop("_allowed_access_statuses", viewer_access_statuses())
+    result = retrieve_channel(query, "passages", scope, allowed, limit=min(300, max(100, limit * 4)))
+    rows, counts = [], {}
+    for row in result["rows"]:
+        work = str(row.get("work_id") or row.get("work", {}).get("id", ""))
+        if max_per_work and counts.get(work, 0) >= max_per_work:
+            continue
+        counts[work] = counts.get(work, 0) + 1
+        rows.append({**row, "snippet": row.get("text") or row.get("excerpt", ""),
+                     "page_index": row.get("pdf_page"), "printed_label": row.get("printed_page", ""),
+                     "_discovery_identity": True})
+        if len(rows) >= limit:
+            break
+    if sort in {"newest", "year"}:
+        rows.sort(key=lambda row: str(row.get("work", {}).get("year") or ""), reverse=True)
+    return {"results": rows, "engine": "discovery", "search_version": "unified-source-v1",
+        "index_uid": result.get("index_uid", ""), "warnings": result["warnings"],
+        "fallback_used": bool(result["warnings"]), "fallback_reason": ",".join(w.get("code", "") for w in result["warnings"])}
 
 
 def unified_retrieve(

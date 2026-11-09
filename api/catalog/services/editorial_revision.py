@@ -1765,6 +1765,9 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
             setattr(target, field_name, clean_value)
 
     next_status = getattr(target, "status", getattr(target, "editorial_status", getattr(target, "review_status", None)))
+    if isinstance(target, KnowledgePage) and next_status == "published":
+        from catalog.services.knowledge_public import validate_page_publication
+        validate_page_publication(target, actor)
     if isinstance(target, KnowledgeRelation) and next_status == "published":
         from catalog.relation_source_anchor import ensure_relation_anchor_publication
         from rest_framework.exceptions import ValidationError as DRFValidationError

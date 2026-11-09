@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "./ui";
+import { WorkKnowledge } from "./work-knowledge";
 import type { Work } from "@/lib/data";
 
 export function WorkDetailEvidence({ work, preview }: { work: Work; preview: boolean }) {
@@ -10,6 +11,7 @@ export function WorkDetailEvidence({ work, preview }: { work: Work; preview: boo
     { key: "major_response", title: "主要回应", claims: work.curatedClaims?.major_response ?? [] },
   ] as const;
   return <>
+        {!preview && work.workId ? <WorkKnowledge workId={work.workId} /> : null}
         {curatedGroups.map((group) => group.claims.length ? (
           <section className={`detail-section work-curated-claims work-curated-${group.key}`} key={group.key}>
             <SectionHeading title={group.title} />

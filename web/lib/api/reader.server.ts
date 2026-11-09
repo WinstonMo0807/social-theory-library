@@ -7,9 +7,9 @@ import { readerFailure, type ReaderFailure } from "./reader-failure";
 
 export type ReaderManifestResult = { ok: true; manifest: ReaderManifest } | { ok: false; failure: ReaderFailure };
 
-export async function loadReaderManifestResult(assetId: string): Promise<ReaderManifestResult> {
+export async function loadReaderManifestResult(assetId: string, revisionId = "", preview = false): Promise<ReaderManifestResult> {
   try {
-    const path = `/catalog/assets/${encodeURIComponent(assetId)}/manifest/`;
+    const path = revisionId ? `/knowledge/assets/${encodeURIComponent(assetId)}/manifest/?revision=${encodeURIComponent(revisionId)}&preview=${preview ? "1" : "0"}` : `/catalog/assets/${encodeURIComponent(assetId)}/manifest/`;
     const payload = await serverRequest<ReaderManifestPayload>(path, { forwardSession: true });
     const selected = payload.work.edition;
     // Never hide a mismatched source by replacing only the presentation IDs.

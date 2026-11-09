@@ -92,7 +92,7 @@ function ContinuousPdfPage({
   onRequestPage: (page: number) => void;
   onNoteSelect: (annotationId: string) => void;
   onNoteDelete: (annotationId: string) => void;
-  onRetry?: () => void;
+  onRetry?: () => void | Promise<void>;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -355,11 +355,23 @@ export function PdfContinuousViewer({
   onRequestPage: (page: number) => void;
   onNoteSelect: (annotationId: string) => void;
   onNoteDelete: (annotationId: string) => void;
-  onRetry?: () => void;
+  onRetry?: () => void | Promise<void>;
 }) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  async function retryDocument() {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      // Refresh the authenticated access request before PDF.js retries a range.
+      await onRetry?.();
+      setLoadAttempt(value => value + 1);
+    } catch { setFailure("阅读权限暂时未能刷新，请重试。"); }
+    finally { setRetrying(false); }
+  }
+
   const [availableWidth, setAvailableWidth] = useState(720);
   const [noteRailWidth, setNoteRailWidth] = useState(0);
   const hasMarginNotes = Object.values(overlays).some(overlay => overlay.notes.length > 0);
@@ -401,6 +413,7 @@ export function PdfContinuousViewer({
     async function loadDocument() {
       setFailure("");
       const pdfjs = await import("pdfjs-dist");
+      if (cancelled) return;
       pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
       loadingTask = pdfjs.getDocument({
         url,
@@ -430,7 +443,9 @@ export function PdfContinuousViewer({
 
     return () => {
       cancelled = true;
-      void loadingTask?.destroy();
+      void loadingTask?.destroy().catch((error: unknown) => {
+        if (!(error instanceof Error && error.name === "AbortError")) console.warn("PDF 旧加载任务释放失败。 ");
+      });
     };
   }, [onDocumentLoad, url, loadAttempt]);
 
@@ -541,7 +556,7 @@ export function PdfContinuousViewer({
       <div className="reader-unavailable" role="alert">
         <strong>PDF 暂时无法显示</strong>
         <p>{failure}</p>
-        <button type="button" className="button secondary" onClick={() => { onRetry?.(); setLoadAttempt(value => value + 1); }}>重试加载 PDF</button>
+        <button type="button" className="button secondary" disabled={retrying} onClick={() => void retryDocument()}>{retrying ? "正在刷新阅读权限…" : "重试加载 PDF"}</button>
         <a href={url}>直接打开 PDF</a>
       </div>
     );
@@ -565,7 +580,7 @@ export function PdfContinuousViewer({
           onRequestPage={onRequestPage}
           onNoteSelect={onNoteSelect}
           onNoteDelete={onNoteDelete}
-          onRetry={() => { onRetry?.(); setLoadAttempt(value => value + 1); }}
+          onRetry={retryDocument}
           key={pageNumber}
         />
       )) : null}

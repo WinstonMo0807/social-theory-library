@@ -93,12 +93,17 @@ def review(changeset_id, decisions, actor, *, expected_version):
         if "payload" in decision:
             if not isinstance(decision["payload"], dict):
                 raise ValidationError("修改内容必须是结构化对象。")
+            edited = decision["payload"] != item.payload
             item.payload = decision["payload"]
+            if edited and item.kind == "wiki_patch":
+                item.payload = {**item.payload, "human_edited": True}
+            item.fingerprint = digest([str(changeset.document_revision_id), item.kind, item.payload])
         item.decision, item.decision_note = decision["decision"], str(decision.get("note", ""))[:1000]
         item.reviewed_by, item.reviewed_at, item.conflict = actor, timezone.now(), {}
         item.save()
     changeset.version += 1
-    changeset.save(update_fields=["version", "updated_at"])
+    changeset.status = "reviewing"
+    changeset.save(update_fields=["version", "status", "updated_at"])
     AuditEvent.objects.create(actor=actor, action="intelligence.reviewed", object_type="changeset",
         object_id=str(changeset.pk), after={"items": [str(d["id"]) for d in decisions], "version": changeset.version})
     return changeset
@@ -181,7 +186,7 @@ def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
                             defaults={"review_status": "confirmed", "source": {"changeset": str(changeset.pk)}})
                         result = {"type": "alias", "id": str(obj.pk)}
                     else:
-                        obj = apply_page_patch(payload, actor, request_key=f"change:{item.pk}")
+                        obj = apply_page_patch(payload, actor, request_key=f"change:{item.pk}", origin=changeset.origin)
                         result = {"type": "editorial_revision", "id": str(obj.pk), "page_id": str(obj.target_id), "status": "draft"}
                     item.application, item.conflict = result, {}
                     item.save(update_fields=["application", "conflict", "updated_at"])
@@ -193,7 +198,8 @@ def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
                 blocked[str(item.pk)] = {"reason": reason}
                 m.ChangeItem.objects.filter(pk=item.pk).update(conflict={"reason": reason})
     changeset.version += 1
-    changeset.save(update_fields=["version", "updated_at"])
+    changeset.status = "applied" if all(i.application or i.decision == "rejected" for i in changeset.items.all()) else "partial"
+    changeset.save(update_fields=["version", "status", "updated_at"])
     result = {"changeset_id": str(changeset.pk), "version": changeset.version,
         "saved": {key: applications[key] for key in selected if key in applications}, "blocked": blocked,
         "publication": "drafts_only"}

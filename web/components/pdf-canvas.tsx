@@ -105,6 +105,7 @@ export function PdfCanvas({
       setFailure("");
       setStatus("正在载入 PDF……");
       const pdfjs = await import("pdfjs-dist");
+      if (cancelled) return;
       pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
       loadingTask = pdfjs.getDocument({
         url,
@@ -133,9 +134,11 @@ export function PdfCanvas({
     return () => {
       cancelled = true;
       setDocument(null);
-      void loadingTask?.destroy();
+      void loadingTask?.destroy().catch((error: unknown) => {
+        if (!(error instanceof Error && error.name === "AbortError")) console.warn("PDF 旧加载任务释放失败。 ");
+      });
       if (loadedDocument && !loadingTask) {
-        void loadedDocument.destroy();
+        void loadedDocument.destroy().catch(() => console.warn("PDF 旧文档释放失败。"));
       }
     };
   }, [onDocumentLoad, url, withCredentials]);

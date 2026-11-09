@@ -1,3 +1,11 @@
+## 2026-11-10 Intelligence 首个内网真实数据闭环
+
+- 基线 main 2f151a86；分支 codex/stl-knowledge-intelligence，原工作区保持。隔离候选 Web 192.168.5.3:5174、API 192.168.5.6:18091、克隆数据库已迁移0091/92/93。正式18084、公网、DNS、隧道本任务未切换。
+- 《以利为利》指定修订的259页快照、PDF13–14两段锚点、16项目录已返回。用户登录后实际打开PDF13和14；候选审核/幂等保存/发布/Markdown/作品页知识导读闭环通过，流程稿来源标记为开发代理，0次模型调用。
+- 模型离线样本14条关键词、0向量，两个中文查询7/10条均有锚点；不是全馆活动索引。6条有效历史关系迁移，重复新增0，原行保持。
+- OpenAI-compatible入口复用原加密Provider管理；HTTP预览不录密钥，新增可信SSH隐藏输入命令。用户自行接入；真实章分析waiting_configuration。10项定向测试及新增加密命令测试、Django/迁移漂移/类型检查通过。
+- worker依赖镜像及MCP实际协议核验正在收尾。完整Docling结构、全馆检索、真实模型覆盖恢复、远程协议、其余公开消费者和旧写入退役仍未完成。详细证据/限制/命令见 [候选交付记录](stl4/KNOWLEDGE_INTELLIGENCE_20261109.md)。原502尚无对应日志，不能宣布修复。
+
 ## 2026-11-09 vNext源码归并与文档体系
 
 运行源码整合f5406339，以公网当前4.0为依据；新版README及docs/architecture共16章、完整管理页面/组件/接口/数据清单、22张Mermaid与6张代表截图已完成。旧ARCHITECTURE、CURRENT_STATE、DEPLOYMENT改为统一当前入口，历史内容保留Git快照。验证与限制见[VALIDATION](architecture/VALIDATION.md)，未部署、未处理持续策展内容。本轮GitHub main整合在隔离工作区完成，原工作区保留。

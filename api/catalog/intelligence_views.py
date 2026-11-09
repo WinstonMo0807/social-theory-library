@@ -26,6 +26,8 @@ class Runs(APIView):
             rows = rows.filter(work_id=serializers.UUIDField().run_validation(request.query_params["work_id"]))
         config = configuration()
         return Response({"runs": [queries.run_data(r, request.user) for r in rows[:100]],
+            "drafts": [{"id": str(c.pk), "title": c.document_revision.asset.edition.work.title, "origin": c.origin}
+                for c in m.ChangeSet.objects.filter(run__isnull=True).select_related("document_revision__asset__edition__work").order_by("-created_at")[:100]],
             "stages": intelligence.STAGES, "configuration": {**identity(config), "enabled": config.enabled,
                 "settings_url": "/admin/intelligence/settings", "protocol": "openai_compatible"}})
 

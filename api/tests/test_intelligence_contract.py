@@ -104,3 +104,23 @@ def test_mcp_official_version_registers_only_bounded_tools():
     names = {tool.name for tool in tools}
     assert {"catalog_search", "knowledge_search", "original_search", "source_context", "create_run", "run_status", "submit_draft"} <= names
     assert not any(word in name for name in names for word in ("publish", "apply", "credential", "lease"))
+
+
+@pytest.mark.django_db
+def test_console_provider_uses_encrypted_existing_service(superadmin_user, settings, monkeypatch):
+    from io import StringIO
+    from django.core.management import call_command
+    from cryptography.fernet import Fernet
+    from common.ai_runtime import current_profile_document
+    from catalog.services.provider_secrets import resolve_provider_secret
+    settings.PRIVATE_DATA_ENCRYPTION_KEY = Fernet.generate_key().decode()
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("getpass.getpass", lambda _: "fixture-only-secret")
+    monkeypatch.setattr("common.ai_endpoints.public_endpoint", lambda value: (value, ["93.184.216.34"]))
+    out = StringIO()
+    call_command("configure_intelligence_provider", actor=superadmin_user.username,
+        base_url="https://example.test/v1", model="fixture-model", stdout=out)
+    profile = next(p for p in current_profile_document()["profiles"] if p["capability"] == "curation_reasoning")
+    assert profile["model"] == "fixture-model" and profile["enabled"] is False
+    assert resolve_provider_secret(profile["credential_alias"]) == "fixture-only-secret"
+    assert "fixture-only-secret" not in out.getvalue()

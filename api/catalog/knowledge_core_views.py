@@ -56,12 +56,19 @@ class RevisionPageView(APIView):
         revision = get_object_or_404(DocumentRevision, pk=revision_id)
         sources.require_revision_access(revision, request.user, editorial=request.query_params.get("preview") == "1")
         page = get_object_or_404(RevisionPage, document_revision=revision, page_number=page_number)
+        from catalog.models import Page
+        from catalog.services.page_geometry import locator_geometry
+        physical = Page.objects.filter(asset_id=revision.asset_id, index=page_number).values_list("id", flat=True).first()
+        rect = page.geometry.get("page_rect", [0, 0, 0, 0])
+        blocks = [{**block, "type": block.get("kind", "text"), "confidence": block.get("confidence", 0),
+                   "geometry": page.geometry, **locator_geometry(block.get("bbox"), page.geometry)} for block in page.blocks]
         return Response({"asset_id": str(revision.asset_id), "document_revision_id": str(revision.pk),
-            "page_id": str(page.pk), "width": page.geometry.get("width", 0), "height": page.geometry.get("height", 0),
-            "chapter_title": "", "text_available": True,
+            "page_id": str(physical) if physical else None, "snapshot_id": str(page.pk),
+            "width": rect[2] - rect[0], "height": rect[3] - rect[1],
+            "chapter_title": "", "text_available": bool(page.text),
             "page_index": page.page_number, "printed_label": page.printed_label, "text": page.text,
             "text_source": page.text_source, "content_hash": page.content_hash, "geometry": page.geometry,
-            "blocks": page.blocks, "passages": [], "offset_unit": "unicode_code_point"})
+            "blocks": blocks, "passages": [], "offset_unit": "unicode_code_point"})
 
 
 class RevisionManifestView(APIView):
@@ -79,8 +86,14 @@ class RevisionManifestView(APIView):
             raise ValidationError("该来源的版本书目信息尚不能读取。")
         data["edition"] = {**data["edition"], "readable_asset": AssetCompactSerializer(asset).data,
             "availability": "readable", "access_state": "readable"}
+        structure = revision.structures.select_related("outline_revision").order_by("-created_at").first()
+        outline_revision = structure.outline_revision if structure else revision.outline_revisions.filter(
+            is_active=True, source_checksum=asset.sha256).first()
+        from catalog.services.document_outline import reader_outline_nodes
+        outline = reader_outline_nodes(outline_revision) if outline_revision and (
+            outline_revision.document_revision_id == revision.pk and outline_revision.source_checksum == asset.sha256) else []
         return Response({"asset_id": str(asset.pk), "edition_id": str(asset.edition_id), "document_revision_id": str(revision.pk),
-            "page_count": asset.page_count, "work": data, "outline": [], "related_scholars": [], "related_theories": [], "related_topics": []},
+            "page_count": asset.page_count, "work": data, "outline": outline, "related_scholars": [], "related_theories": [], "related_topics": []},
             headers={"Cache-Control": "private, no-store"})
 
 

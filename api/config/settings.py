@@ -843,6 +843,8 @@ LIBRARY_RAG_MAX_ENTITY_BRANCHES = max(
 AI_TIMEOUT = max(3, min(int(os.getenv("AI_TIMEOUT", "60")), 600))
 AI_MAX_CONCURRENCY = max(1, min(int(os.getenv("AI_MAX_CONCURRENCY", "1")), 8))
 AI_MAX_INPUT_CHARS = max(1000, min(int(os.getenv("AI_MAX_INPUT_CHARS", "16000")), 100000))
+INTELLIGENCE_CONTEXT_TOKENS = max(1024, int(os.getenv("INTELLIGENCE_CONTEXT_TOKENS", "32768")))
+INTELLIGENCE_PROVIDER_CONCURRENCY = max(1, int(os.getenv("INTELLIGENCE_PROVIDER_CONCURRENCY", "1")))
 AI_ALLOWED_HOSTS = tuple(
     value.strip()
     for value in os.getenv("AI_ALLOWED_HOSTS", "localhost,127.0.0.1,ollama,vllm").split(",")
