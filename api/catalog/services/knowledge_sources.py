@@ -195,6 +195,58 @@ def build_structure(revision):
             start, end = base + match.start(), base + match.end()
             parent = next((r for a, b, r in reversed(chapter_ranges) if a <= start and end <= b), root)
             node("paragraph", start, end, parent=parent, source={"method": "raw_blank_lines", "continuity": "page_bounded"})
+    previous = revision.structures.filter(parser__startswith="docling").exclude(outline_revision=outline).order_by("-created_at").first()
+    if previous:
+        return _retain_parsed_leaves(previous, structure, starts)
+    return structure
+
+
+def _retain_parsed_leaves(previous, baseline, starts):
+    """Create a new hierarchy, retaining verified immutable ranges and notes."""
+    from catalog.models import DocumentNodeReference
+    leaves = list(previous.nodes.exclude(kind__in=["document", "chapter", "section", "part", "preface", "appendix"])
+        .filter(children__isnull=True).prefetch_related("segments__page"))
+    if not leaves:
+        return baseline
+    key=digest(["outline-remap-v1",baseline.input_hash,previous.input_hash])
+    existing=DocumentStructure.objects.filter(document_revision=baseline.document_revision,input_hash=key).first()
+    if existing: return existing
+    preserved = {k:v for k,v in previous.coverage.items() if k in {"parse_batches","parser_scope","docling_items",
+        "alignment_gaps","ignored_ranges","unmatched_ranges","verified_cross_page_items","paragraph_method"}}
+    coverage={**baseline.coverage,**preserved,"outline_remapped_from":str(previous.pk)}
+    if preserved.get("alignment_gaps") or preserved.get("unmatched_ranges"):
+        coverage["structure_status"]="needs_structure_review"
+    structure=DocumentStructure.objects.create(document_revision=baseline.document_revision,
+        outline_revision=baseline.outline_revision,parser="docling_outline_remap",parser_version=previous.parser_version,
+        input_hash=key,coverage=coverage)
+    headings=list(baseline.nodes.exclude(kind="paragraph").prefetch_related("segments__page"))
+    def bounds(n):
+        segments=list(n.segments.all())
+        return (min((starts[s.page.page_number]+s.start for s in segments),default=0),
+                max((starts[s.page.page_number]+s.end for s in segments),default=0))
+    positions={n.pk:bounds(n) for n in [*headings,*leaves]}
+    ordered=sorted([*headings,*leaves],key=lambda n:(positions[n.pk][0],
+        0 if n.kind=="document" else 1 if n in headings else 2,n.order))
+    order={n.pk:i for i,n in enumerate(ordered)}
+    mapping={}
+    for old in headings:
+        mapping[old.pk]=DocumentNode.objects.create(structure=structure,document_revision=baseline.document_revision,
+            parent=mapping.get(old.parent_id),kind=old.kind,order=order[old.pk],title=old.title,
+            content_hash=old.content_hash,source=old.source)
+    root=next(mapping[n.pk] for n in headings if n.kind=="document")
+    for old in leaves:
+        start,end=positions[old.pk]
+        containers=[n for n in headings if n.kind!="document" and positions[n.pk][0]<=start and end<=positions[n.pk][1]]
+        parent=mapping[min(containers,key=lambda n:positions[n.pk][1]-positions[n.pk][0]).pk] if containers else root
+        mapping[old.pk]=DocumentNode.objects.create(structure=structure,document_revision=baseline.document_revision,
+            parent=parent,kind=old.kind,order=order[old.pk],title=old.title,content_hash=old.content_hash,
+            source={**old.source,"retained_from_node":str(old.pk)})
+    for old in [*headings,*leaves]:
+        DocumentNodeSegment.objects.bulk_create([DocumentNodeSegment(node=mapping[old.pk],page=seg.page,
+            order=seg.order,start=seg.start,end=seg.end,content_hash=seg.content_hash) for seg in old.segments.all()])
+    for ref in DocumentNodeReference.objects.filter(source_id__in=mapping,target_id__in=mapping):
+        DocumentNodeReference.objects.create(source=mapping[ref.source_id],target=mapping[ref.target_id],
+            kind=ref.kind,label=ref.label,provenance=ref.provenance)
     return structure
 
 

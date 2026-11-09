@@ -699,6 +699,7 @@ def adopt_outline(asset_id, *, revision_id, expected_revision, actor, restore=Fa
     revision.is_active = True
     revision.reviewed = all(n.get("calibration_status") in {"confirmed", "native"} for n in revision.nodes)
     revision.save(update_fields=["is_active", "reviewed", "updated_at"])
+    _schedule_source_mapping(revision)
     AuditEvent.objects.create(actor=actor, action=action, object_type="Asset", object_id=str(asset.pk), request_id=identity,
                               before={"revision_id": str(previous.pk) if previous else None}, after={"revision_id": str(revision.pk), "fingerprint": fingerprint})
     from .outline_exports import queue_export
@@ -724,6 +725,7 @@ def correct_outline(asset_id, *, nodes, expected_revision, actor, request_id, ba
     revision.origin, revision.is_active = "corrected", True
     revision.reviewed = all(n.get("calibration_status") in {"confirmed", "native"} for n in revision.nodes)
     revision.save(update_fields=["origin", "is_active", "reviewed", "nodes", "updated_at"])
+    _schedule_source_mapping(revision)
     queue_export(asset.pk, revision_id=revision.pk, request_id=uuid5(asset.pk, str(revision.pk)), actor=actor)
     return revision
 
@@ -875,6 +877,7 @@ def run_outline_job(job_id, *, task_id):
                 asset.outline_revisions.filter(is_active=True).update(is_active=False, updated_at=timezone.now())
                 revision.is_active = True
                 revision.save(update_fields=["is_active", "updated_at"])
+                _schedule_source_mapping(revision)
                 from .outline_exports import queue_export
                 queue_export(asset.pk, revision_id=revision.pk, request_id=uuid5(asset.pk, str(revision.pk)), actor=job.created_by)
             current.status, current.progress, current.finished_at = "succeeded", 100, timezone.now()
@@ -894,3 +897,9 @@ def run_outline_job(job_id, *, task_id):
     finally:
         if cleanup:
             cleanup()
+
+
+def _schedule_source_mapping(outline):
+    if outline.document_revision_id:
+        from catalog.services.knowledge_source_updates import schedule_source_update
+        schedule_source_update(outline.document_revision)

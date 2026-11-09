@@ -44,13 +44,17 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
         .select_related("active_catalog_revision")}
     states = {str(s.source_id): s for s in m.DiscoverySourceState.objects.filter(generation=generation,
         source_type="edition", source_id__in=published).select_related("job")} if generation else {}
-    runs, structures, structure_jobs = {}, {}, {}
+    runs, structures, structure_jobs, sync_jobs = {}, {}, {}, {}
     keys = [r.pk for r in revisions]
+    outlines=dict(m.DocumentOutlineRevision.objects.filter(document_revision_id__in=keys,is_active=True).values_list("document_revision_id","pk"))
     for run in m.CurationRun.objects.filter(document_revision_id__in=keys).only("id", "status", "document_revision_id").order_by("-created_at"):
         runs.setdefault(run.document_revision_id, run)
-    for structure in m.DocumentStructure.objects.filter(document_revision_id__in=keys).only("id", "coverage", "document_revision_id").order_by("-created_at"):
-        structures.setdefault(structure.document_revision_id, structure)
+    for structure in m.DocumentStructure.objects.filter(document_revision_id__in=keys).only("id", "coverage", "document_revision_id","outline_revision_id").order_by("-created_at"):
+        if structure.outline_revision_id==outlines.get(structure.document_revision_id):
+            structures.setdefault(structure.document_revision_id, structure)
     from ingestion.models import ProcessingJob
+    for job in ProcessingJob.objects.filter(job_type="logical_structure",asset_id__in=[r.asset_id for r in revisions]).order_by("-created_at"):
+        sync_jobs.setdefault(job.stats.get("revision_id"),job)
     for job in ProcessingJob.objects.filter(job_type="document_structure",asset_id__in=[r.asset_id for r in revisions]).order_by("-created_at"):
         structure_jobs.setdefault(job.stats.get("input",{}).get("revision_id"),job)
     output = []
@@ -70,6 +74,7 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
             and state.completed_count == expected and count.get("keywords") == expected)
         run, structure = runs.get(revision.pk), structures.get(revision.pk)
         structure_job = structure_jobs.get(str(revision.pk))
+        sync_job=sync_jobs.get(str(revision.pk))
         output.append({"revision_id": str(revision.pk), "asset_id": str(asset.pk), "edition_id": str(edition.pk),
             "work_id": str(edition.work_id), "title": edition.work.title, "edition_label": edition.version_label,
             "revision_number": revision.revision, "pages": asset.page_count,
@@ -81,6 +86,7 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
             "curation": {"id": str(run.pk), "status": run.status} if run else None,
             "structure_id": str(structure.pk) if structure else None,
             "structure_coverage": structure.coverage if structure else {},
+            "sync_job":{"id":str(sync_job.pk),"status":sync_job.status,"error":sync_job.error_message} if sync_job else None,
             "structure_job": {"id":str(structure_job.pk),"status":structure_job.status,"error":structure_job.error_message,
                 "pages":structure_job.stats.get("input",{}).get("pages")} if structure_job else None,
             "reader_url": f"/reader/{asset.pk}?revision={revision.pk}&preview=1",

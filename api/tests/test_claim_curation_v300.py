@@ -20,7 +20,6 @@ from catalog.models import (
     Work,
 )
 from catalog.services.claims.curation import (
-    _publishable_draft_claims_queryset,
     decide_claim_curation_candidate,
     high_value_claim_candidates,
     publish_work_curated_claims,
@@ -84,6 +83,10 @@ def _source():
         quality=0.92,
         is_stale=False,
     )
+    from catalog.services.document_intelligence import document_text_checksum
+    from catalog.services.knowledge_sources import digest
+    revision.source_checksum=normalized.sha256;revision.text_checksum=document_text_checksum(normalized);revision.save()
+    evidence.start_offset=0;evidence.end_offset=len(page.text);evidence.content_hash=digest(page.text);evidence.save()
     return work, edition, revision, evidence
 
 
@@ -113,7 +116,7 @@ def _claim(*, work, edition, revision, evidence, index, cluster, claim_type, pol
 
 
 @pytest.mark.django_db
-def test_claim_volume_is_compressed_to_five_decisions_then_human_adoption_publishes():
+def test_legacy_claim_adoption_uses_reviewed_changeset_and_separate_publication():
     work, edition, revision, evidence = _source()
     claims = []
     types = [
@@ -161,30 +164,28 @@ def test_claim_volume_is_compressed_to_five_decisions_then_human_adoption_publis
         proposition="经编辑确认，制度会在特定条件下塑造行动策略。",
     )
 
-    assert curated is not None
-    assert curated.status == CuratedClaim.Status.DRAFT
-    assert curated.evidence_links.get().evidence_span_id == evidence.id
-    chosen.refresh_from_db()
-    assert chosen.status == DerivedClaim.Status.ACTIVE
-    assert IntelligenceFeedback.objects.get(candidate_id=str(chosen.id)).decision == "accept_with_edit"
-
-    assert not ProjectionState.objects.filter(object_type="curated_claim", object_id=curated.pk).exists()
+    from catalog import models as m
+    assert curated is not None and curated["status"]=="draft"
+    assert not CuratedClaim.objects.exists()
+    changeset=m.ChangeSet.objects.get(pk=curated["changeset_id"])
+    statement=m.Assertion.objects.get(pk=changeset.items.get(kind="assertion").application["id"])
+    assert statement.status=="draft" and statement.evidence.get().anchor.document_revision==revision
+    assert IntelligenceFeedback.objects.get(candidate_id=str(chosen.id)).decision=="accept_with_edit"
+    repeat=decide_claim_curation_candidate(work=work,claim=chosen,decision="accept_with_edit",actor=editor,
+        proposition="经编辑确认，制度会在特定条件下塑造行动策略。")
+    assert repeat["changeset_id"]==curated["changeset_id"] and m.Assertion.objects.count()==1
+    with pytest.raises(ValueError,match="不能重复采用覆盖"):
+        decide_claim_curation_candidate(work=work,claim=chosen,decision="accept_with_edit",actor=editor,proposition="另一项修改")
+    edition.state=PublicationState.DRAFT;edition.save()
     confirm_book_identity(edition, editor)
     publish_edition(edition, actor=editor, confirm_warnings=True)
-    curated.refresh_from_db()
-    assert curated.status == CuratedClaim.Status.PUBLISHED
-    assert curated.published_by_id == editor.id
-    projection = ProjectionState.objects.get(
-        object_type="curated_claim",
-        object_id=curated.id,
-        projection_type=ProjectionState.ProjectionType.PUBLIC,
-    )
-    assert projection.source_revision == 1  # Adoption is a draft, publication is the first formal change.
-    assert projection.projected_revision < projection.source_revision
+    statement.refresh_from_db()
+    assert statement.status=="draft"  # Catalogue publication cannot publish knowledge implicitly.
+    assert m.KnowledgePage.objects.get(work=work).status=="draft"
 
 
 @pytest.mark.django_db
-def test_publish_query_locks_claim_rows_without_postgres_distinct_conflict():
+def test_legacy_work_publisher_preserves_human_drafts_without_implicit_publication():
     work, _edition, _revision, evidence = _source()
     editor = User.objects.create_user(
         username="claim-publish-lock-editor@example.test",
@@ -211,18 +212,8 @@ def test_publish_query_locks_claim_rows_without_postgres_distinct_conflict():
         created_by=editor,
     )
 
-    queryset = _publishable_draft_claims_queryset(work)
-    sql = str(queryset.query).upper()
-
-    assert queryset.query.select_for_update is True
-    assert queryset.query.distinct is False
-    assert "EXISTS" in sql
-    assert "SELECT DISTINCT" not in sql
-
     published = publish_work_curated_claims(work=work, actor=editor)
-
-    assert [claim.id for claim in published] == [publishable.id]
-    publishable.refresh_from_db()
-    without_evidence.refresh_from_db()
-    assert publishable.status == CuratedClaim.Status.PUBLISHED
-    assert without_evidence.status == CuratedClaim.Status.DRAFT
+    assert published == []
+    publishable.refresh_from_db();without_evidence.refresh_from_db()
+    assert publishable.status == without_evidence.status == CuratedClaim.Status.DRAFT
+    assert ClaimEvidence.objects.filter(curated_claim=publishable).count()==1

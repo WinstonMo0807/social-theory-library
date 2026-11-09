@@ -5,8 +5,7 @@ import re
 from typing import Any
 
 from django.db import transaction
-from django.db.models import Count, Exists, OuterRef
-from django.utils import timezone
+from django.db.models import Count
 
 from catalog.models import (
     ClaimEvidence,
@@ -15,7 +14,6 @@ from catalog.models import (
     IntelligenceFeedback,
     Work,
 )
-from catalog.services.dependency_engine import record_canonical_change
 from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.research.feedback import record_intelligence_feedback
 from catalog.services.candidate_decision_protocol import (
@@ -233,19 +231,6 @@ def high_value_claim_candidates(
     return output[:bounded_limit]
 
 
-def _publishable_draft_claims_queryset(work: Work):
-    valid_evidence = ClaimEvidence.objects.filter(
-        curated_claim_id=OuterRef("pk"),
-        evidence_span__is_stale=False,
-        evidence_span__document_revision__is_active=True,
-    )
-    return (
-        CuratedClaim.objects.select_for_update()
-        .filter(work=work, status=CuratedClaim.Status.DRAFT)
-        .filter(Exists(valid_evidence))
-    )
-
-
 @transaction.atomic
 def decide_claim_curation_candidate(
     *,
@@ -256,7 +241,7 @@ def decide_claim_curation_candidate(
     proposition: str = "",
     editorial_note: str = "",
     kind: str = "",
-) -> CuratedClaim | None:
+) -> dict | None:
     if not actor or not getattr(actor, "is_authenticated", False):
         raise PermissionError("观点审核必须记录当前管理员，请先登录。")
     if decision not in IntelligenceFeedback.Decision.values:
@@ -273,51 +258,44 @@ def decide_claim_curation_candidate(
         or claim.primary_evidence.is_stale
     ):
         raise ValueError("该观点的原文依据已变化，请重新查找建议。")
-    curated = None
+    from uuid import uuid5
+    from catalog import models as m
+    from catalog.services.knowledge_sources import migrate_span, locator_payload, snapshot_revision
+    from catalog.services.knowledge_workspace import submit_assertion_draft
+    from catalog.services.intelligence_changes import review, apply
+    from catalog.services.knowledge_core import require_editor
+    require_editor(actor)
+    result = None
     edited_proposition = str(proposition or claim.proposition).strip()
     curated_kind = str(kind or _candidate_kind(claim)).strip()
-    allowed_kinds = {
-        CuratedClaim.Kind.CORE_VIEWPOINT,
-        CuratedClaim.Kind.MAJOR_CRITICISM,
-        CuratedClaim.Kind.MAJOR_RESPONSE,
-    }
-    if curated_kind not in allowed_kinds:
+    if curated_kind not in {CuratedClaim.Kind.CORE_VIEWPOINT,CuratedClaim.Kind.MAJOR_CRITICISM,CuratedClaim.Kind.MAJOR_RESPONSE}:
         raise ValueError("当前作品支持核心观点、主要批评和主要回应。")
-    if decision in {IntelligenceFeedback.Decision.ACCEPT, IntelligenceFeedback.Decision.ACCEPT_WITH_EDIT}:
-        if not edited_proposition:
-            raise ValueError("采用前请确认观点内容。")
-        if CuratedClaim.objects.filter(
-            work=work, adopted_from=claim, status=CuratedClaim.Status.PUBLISHED,
-        ).exists():
-            raise ValueError("该观点已经正式发布，不能通过重复采用覆盖。请在正式策展编辑中建立修改草稿。")
-        curated, _ = CuratedClaim.objects.update_or_create(
-            work=work,
-            adopted_from=claim,
-            status=CuratedClaim.Status.DRAFT,
-            defaults={
-                "kind": curated_kind,
-                "proposition": edited_proposition,
-                "editorial_note": str(editorial_note or "").strip(),
-                "qualifiers": claim.qualifiers,
-                "status": CuratedClaim.Status.DRAFT,
-                "created_by": actor,
-            },
-        )
-        ClaimEvidence.objects.get_or_create(
-            curated_claim=curated,
-            evidence_span=claim.primary_evidence,
-            role=ClaimEvidence.Role.PRIMARY,
-            defaults={
-                "confidence": max(claim.quality_score, claim.primary_evidence.quality),
-                "validation": {
-                    "document_revision_id": str(claim.document_revision_id),
-                    "document_revision_active": True,
-                    "content_hash": claim.primary_evidence.content_hash,
-                },
-            },
-        )
-        # The existing CuratedClaim draft is the editorial storage. Adoption
-        # records feedback below but cannot start shared knowledge projections.
+    if decision in {IntelligenceFeedback.Decision.ACCEPT,IntelligenceFeedback.Decision.ACCEPT_WITH_EDIT}:
+        request_id=uuid5(claim.pk,"knowledge-adoption-v1")
+        previous=m.ChangeSet.objects.filter(request_id=request_id).first()
+        if previous:
+            original=previous.items.get(kind="assertion").payload
+            if original.get("text") != edited_proposition or original.get("category") != curated_kind:
+                raise ValueError("这条候选已保存到知识工作区，请在那里建立新的局部修订，不能重复采用覆盖。")
+            result={"changeset_id":str(previous.pk),"review_url":f"/admin/intelligence?changeset={previous.pk}","status":previous.status}
+            return result
+        snapshot_revision(claim.document_revision)
+        mapping=migrate_span(claim.primary_evidence)
+        if not mapping.target_id:
+            raise ValueError("这条历史证据缺少可恢复的修订定位。请在原文工作区核验后提交陈述，原候选保留。")
+        anchor=m.EvidenceAnchor.objects.get(pk=mapping.target_id)
+        expression={"author_claim":"author_claim","direct_quote":"direct_quote","paraphrase":"paraphrase",
+            "criticized_claim":"criticized_claim"}.get(claim.attribution,"editorial_judgment")
+        conditions={"other":"；".join(str(v) for v in claim.qualifiers)} if claim.qualifiers else {}
+        payload={"text":edited_proposition,"category":curated_kind,"predicate":claim.predicate,"expression":expression,
+            "conditions":conditions,"participants":[],"legacy_candidate_id":str(claim.pk),
+            "editorial_note":str(editorial_note or ""),"evidence":[{"stance":"context","segments":locator_payload(anchor)["segments"]}]}
+        changeset=submit_assertion_draft(claim.document_revision,payload,actor,request_id=request_id,origin="human")
+        ids=list(map(str,changeset.items.values_list("pk",flat=True)))
+        changeset=review(changeset.pk,[{"id":key,"decision":"accepted","note":editorial_note} for key in ids],actor,expected_version=changeset.version)
+        saved=apply(changeset.pk,ids,actor,request_id=uuid5(claim.pk,"knowledge-adoption-apply-v1"),expected_version=changeset.version)
+        result={"changeset_id":str(changeset.pk),"review_url":f"/admin/intelligence?changeset={changeset.pk}",
+            "status":"draft" if not saved["blocked"] else "conflict","saved":saved["saved"],"blocked":saved["blocked"]}
     record_intelligence_feedback(
         reviewer=actor,
         task_profile_key={
@@ -337,29 +315,12 @@ def decide_claim_curation_candidate(
             "proposition": edited_proposition,
             "kind": curated_kind,
             "editorial_note": editorial_note,
-            "curated_claim_id": str(curated.id) if curated else "",
+            "knowledge_draft": result,
         },
     )
-    return curated
+    return result
 
 
-@transaction.atomic
 def publish_work_curated_claims(*, work: Work, actor) -> list[CuratedClaim]:
-    """Publish only evidence-backed human drafts during an explicit Work publish."""
-
-    now = timezone.now()
-    claims = list(_publishable_draft_claims_queryset(work))
-    for claim in claims:
-        claim.status = CuratedClaim.Status.PUBLISHED
-        claim.published_by = actor
-        claim.published_at = now
-        claim.save(update_fields=["status", "published_by", "published_at", "updated_at"])
-        record_canonical_change(
-            object_type="curated_claim",
-            object_id=claim.id,
-            change_kind="publish",
-            changed_fields=["status", "published_at"],
-            actor=actor,
-            idempotency_key=f"curated-claim-publish:{claim.id}:{now.isoformat()}",
-        )
-    return claims
+    """Read compatibility only. Knowledge drafts have their own explicit publish."""
+    return []

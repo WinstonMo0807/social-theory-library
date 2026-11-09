@@ -14,6 +14,7 @@ export type SourceLocator = { anchor_id: string; asset_id: string; document_revi
 export type LibrarySource = { revision_id: string; asset_id: string; edition_id: string; work_id: string; title: string; edition_label?: string; revision_number: number; pages: number;
   readable: boolean; published: boolean; keywords: string; semantic: string; structure_id: string | null; structure_coverage: { structure_status?: string; unmapped_headings?: { title?: string; page?: number }[]; alignment_gaps?: unknown[]; unmatched_ranges?: unknown[] };
   structure_job?: { id: string; status: string; error: string; pages: number[] } | null;
+  sync_job?: { id: string; status: string; error: string } | null;
   index_counts: { total?: number; keywords?: number; vectors?: number; expected?: number }; index_error: string; index_job: { id: string; status: string } | null;
   curation: { id: string; status: string } | null; catalog_url: string; outline_url: string; ocr_url: string; work_url?: string; reader_url: string };
 

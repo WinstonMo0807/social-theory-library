@@ -134,6 +134,7 @@ export function CurationFieldAssistant({
   const [showMore, setShowMore] = useState(false);
   const [message, setMessage] = useContextState(contextKey, "");
   const [outcome, setOutcome] = useContextState(objectKey, "");
+  const [knowledgeUrl,setKnowledgeUrl]=useContextState(objectKey, "");
   const [refreshFailed, setRefreshFailed] = useContextState(objectKey, false);
   const [stopping,setStopping]=useContextState(objectKey,false);
   const [review, setReview] = useContextState<AssistantCandidate | null>(objectKey, null);
@@ -236,11 +237,12 @@ export function CurationFieldAssistant({
       if(!saved){setOutcome("尚未执行的操作已取消，请刷新建议。");return;}
       reviewField.mark(action==="reject"?"已记录忽略":"已保存采用决定");
       setReview(null);setEditingClaim(null);
-      setOutcome(action==="reject"?`已记录不采用：${reason}。原有资料未改变。`:`已保存${label}建议。尚未正式发布，请在本页核对草稿与公开预览。`);
+      setKnowledgeUrl(result.next_url || "");
+      setOutcome(action==="reject"?`已记录不采用：${reason}。原有资料未改变。`:result.next_url ? (result.result.status === "conflict" ? "审核决定已保留，请进入知识工作区处理这项冲突。" : "陈述与知识页草稿已保存，请进入知识工作区预览并发布。") : `已保存${label}建议。尚未正式发布，请在本页核对草稿与公开预览。`);
       setResults(current=>current.filter(row=>row.key!==candidate.key));
       if(action!=="reject"){
         if(context!==contextRef.current){setRefreshFailed(true);setOutcome("决定已保存。等待期间填写已经变化，请先保留当前输入再读取结果，不会用旧响应替换新填写。");return;}
-        onApply?.(candidate.enrichment?.proposed_value??candidate.label);
+        if (!result.next_url) onApply?.(candidate.enrichment?.proposed_value??candidate.label);
         await onAccepted?.();
         setRefreshFailed(false);setOpen(false);
       }
@@ -254,7 +256,7 @@ export function CurationFieldAssistant({
     const scope=objectKey;
     const result=retry?await command.send():await command.lookup(cancel);
     if(!result||scope!==objectRef.current)return;
-    expected.current=null;setStopping(false);setReview(null);setResults([]);
+    expected.current=null;setStopping(false);setReview(null);setResults([]);setKnowledgeUrl(result.next_url || "");
     setOutcome(result.state==="cancelled"?"已取消尚未执行的操作。已保存内容保留。":"已查看处理结果，没有重复保存。请核对当前资料，候选不会自动填入后来修改的表单。");
     if(result.state==="applied"&&result.action!=="reject")setRefreshFailed(true);
     await lookup(false);
@@ -270,6 +272,7 @@ export function CurationFieldAssistant({
     </button>
     {!open?recoveryNotice:null}
     {outcome ? <p role="status" aria-live="polite" className="curation-assistant-outcome">{outcome}</p> : null}
+    {knowledgeUrl && <a href={knowledgeUrl}>打开知识草稿与发布预览 →</a>}
     {refreshFailed ? <button type="button" disabled={blocked} onClick={async () => {
       if (busyRef.current||blocked) return;
       busyRef.current = true;

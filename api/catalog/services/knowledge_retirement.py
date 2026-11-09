@@ -32,3 +32,15 @@ def cancel_legacy_demand(demand_id):
     demand.payload={**demand.payload,"retirement":{"at":timezone.now().isoformat(),"history_retained":True}}
     demand.save()
     return True
+
+
+@transaction.atomic
+def cancel_legacy_batch(size=100):
+    """Lock a bounded batch; release live leases individually, idle rows in bulk."""
+    rows=list(CapabilityDemand.objects.select_for_update().filter(payload__task_kind__in=RETIRED_TASKS)
+        .exclude(state__in=["completed","canceled"]).order_by("id")[:size])
+    idle=[row.pk for row in rows if row.state!="claimed"]
+    count=sum(cancel_legacy_demand(row.pk) for row in rows if row.state=="claimed")
+    count+=CapabilityDemand.objects.filter(pk__in=idle).update(state="canceled",claimed_by=None,lease_token=None,
+        lease_expires_at=None,last_error_code="knowledge_producer_retired",last_error_message=MESSAGE,updated_at=timezone.now())
+    return count

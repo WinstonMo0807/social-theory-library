@@ -113,6 +113,10 @@ def complete_structure(demand, parsed, *, elapsed_ms=0, executor_id=""):
         job.stats={**job.stats,"structure_id":str(structure.pk),"coverage":structure.coverage,
             "elapsed_ms":elapsed_ms,"executor_id":executor_id,"model_calls":0}
         job.save()
+        from catalog.services.knowledge_workspace import invalidate_source
+        invalidate_source("document_revision", revision.pk)
+        from catalog.services.knowledge_source_updates import schedule_source_update
+        schedule_source_update(revision,structure=structure)
         return structure
 
 

@@ -16,7 +16,6 @@ from catalog.models import (
 )
 from catalog.services.document_intelligence import synchronize_native_extraction
 from catalog.services.front_matter_intelligence import run_front_matter_intelligence
-from catalog.services.research.library_synthesis import persist_library_synthesis_candidate
 from catalog.services.workflow_suggestions import WorkflowSuggestionAggregator
 from catalog.services.work_editor import save_workflow_section
 from ingestion.models import (
@@ -315,14 +314,16 @@ def test_abstract_reports_no_reliable_candidate_without_source_evidence():
 
     assert result["abstract"] == {
         "kind": "no_reliable_candidate",
-        "reason": "insufficient_collection_evidence_for_library_synthesis",
+        "reason": "curation_run_required",
+        "message": "原文没有可直接采用的摘要；需要论证综合时，请在 Intelligence 选择版本和分析范围。",
+        "next_url": f"/admin/intelligence?work_id={item.edition.work_id}",
         "evidence_available": True,
         "publication_blocking": False,
     }
     assert result["publication_blocking"] is False
 
 
-def test_abstract_library_synthesis_waits_for_capability_and_persists_evidence_candidate():
+def test_front_matter_never_dispatches_retired_synthesis_even_if_legacy_flag_is_set():
     user, _batch, item, _original, normalized = _library_document(
         [
             "导论\n本书从社会结构与个人经验的关系出发，讨论研究问题、概念边界与分析方法。"
@@ -334,45 +335,17 @@ def test_abstract_library_synthesis_waits_for_capability_and_persists_evidence_c
         ]
     )
 
-    default_result = run_front_matter_intelligence(normalized, upload_item=item, actor=user)
-    assert default_result["abstract"]["reason"] == "explicit_free_generation_required"
+    for allow_synthesis in (False, True):
+        result = run_front_matter_intelligence(
+            normalized, upload_item=item, actor=user, allow_synthesis=allow_synthesis,
+        )
+        assert result["abstract"]["reason"] == "curation_run_required"
+        assert result["abstract"]["kind"] == "no_reliable_candidate"
+        assert result["abstract"]["next_url"] == f"/admin/intelligence?work_id={item.edition.work_id}"
+        assert result["abstract"]["publication_blocking"] is False
     assert not CapabilityDemand.objects.filter(capability="llm_large").exists()
-
-    result = run_front_matter_intelligence(
-        normalized,
-        upload_item=item,
-        actor=user,
-        allow_synthesis=True,
-    )
-
-    assert result["abstract"]["kind"] == "library_synthesis"
-    assert result["abstract"]["status"] == CapabilityDemand.State.WAITING_FOR_CAPABILITY
-    assert result["abstract"]["reason"] == "waiting_for_ai_capability"
-    assert result["abstract"]["publication_blocking"] is False
-    demand = CapabilityDemand.objects.get(pk=result["abstract"]["demand_id"])
-    pack = EvidencePack.objects.get(pk=result["abstract"]["evidence_pack_id"])
-    evidence_ids = [row["id"] for row in pack.envelope_snapshot[:2]]
-
-    persisted = persist_library_synthesis_candidate(
-        demand,
-        {
-            "candidate": {
-                "value": "馆藏综合候选仅依据导论、正文与结论，概括社会结构和个人经验之间的论证。",
-                "evidence_span_ids": evidence_ids,
-                "rationale": "两处馆藏原文共同支持这一概括。",
-            }
-        },
-        provider="test-provider",
-        model="test-model",
-        model_revision="test-revision",
-    )
-
-    candidate = MetadataCandidate.objects.get(pk=persisted["candidate_id"])
-    assert candidate.lifecycle == MetadataCandidate.Lifecycle.PROPOSED
-    assert candidate.source == "ai_library_synthesis_v1"
-    assert candidate.evidence["kind"] == "library_synthesis"
-    assert candidate.evidence["label"] == "馆藏综合"
-    assert set(candidate.evidence["evidence_span_ids"]) == set(evidence_ids)
-    assert candidate.evidence_records.filter(page_number__isnull=False).count() >= 2
+    assert EvidencePack.objects.exists()
+    assert not EvidencePack.objects.exclude(task_profile_key="bibliographic_identity").exists()
+    assert not MetadataCandidate.objects.filter(source="ai_library_synthesis_v1").exists()
     item.edition.work.refresh_from_db()
     assert item.edition.work.abstract == ""

@@ -5,6 +5,12 @@ from catalog.models import CurationRun
 from common.task_runtime import register_executor_heartbeat, claim_specific_demand, complete_demand, release_demand
 
 
+@shared_task(name="catalog.intelligence.refresh_source", ignore_result=True, queue="intelligence")
+def refresh_source(job_id, task_id):
+    from catalog.services.knowledge_source_updates import execute_source_update
+    execute_source_update(job_id, task_id)
+
+
 @shared_task(name="catalog.intelligence.structure", ignore_result=True, queue="structure")
 def execute_structure(job_id):
     import os,time

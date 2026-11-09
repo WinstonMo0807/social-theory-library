@@ -64,7 +64,7 @@ def output(row):
         "target_type": row.after["target_type"], "target_id": row.object_id,
         "field_name": row.after.get("field_name", ""), "source_id": row.after.get("source_id", ""),
         "state": row.after["state"], "action": row.after.get("action", ""),
-        "next_url": "", "result": row.after.get("result", {})}
+        "next_url": row.after.get("result", {}).get("review_url", ""), "result": row.after.get("result", {})}
 
 
 def existing(actor, request_id):
@@ -129,7 +129,7 @@ class CurationDecisionView(CurationDecisionBase):
                     raise ValidationError("观点候选不属于当前字段，请重新核对。")
                 curated = decide_claim_curation_candidate(work=target, claim=claim, decision=data["action"], actor=actor,
                     proposition=data["proposition"], editorial_note=data["reason"], kind=data["field_name"])
-                result = {"curated_claim_id": str(curated.pk) if curated else ""}
+                result = curated or {}
             else:
                 if data["action"] == "reject":
                     reject_enrichment_candidate(candidate, actor=actor, reason=data["reason"])

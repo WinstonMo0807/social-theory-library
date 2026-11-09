@@ -177,27 +177,11 @@ class WorkClaimCandidateDecisionView(APIView):
         except (DerivedClaim.DoesNotExist, ValueError) as error:
             return Response({"detail": str(error)}, status=400)
 
-        curated_payload = None
-        if curated is not None:
-            curated_payload = {
-                "id": str(curated.id),
-                "kind": curated.kind,
-                "proposition": curated.proposition,
-                "editorial_note": curated.editorial_note,
-                "status": curated.status,
-                "adopted_from": str(curated.adopted_from_id),
-                "evidence": [
-                    evidence_span_envelope(link.evidence_span).as_dict()
-                    for link in curated.evidence_links.select_related(
-                        "evidence_span__page",
-                        "evidence_span__document_revision__asset__edition__work",
-                    ).order_by("sort_order", "created_at")
-                ],
-            }
         return Response(
             {
                 "decision": action,
-                "curated_claim": curated_payload,
+                "curated_claim": None,
+                "knowledge_draft": curated,
                 "remaining_candidates": high_value_claim_candidates(
                     work,
                     reviewer=request.user,

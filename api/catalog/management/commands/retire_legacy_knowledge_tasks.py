@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 from catalog.models import CapabilityDemand, CuratedClaim, KnowledgeLegacyMapping
-from catalog.services.knowledge_retirement import RETIRED_TASKS, cancel_legacy_demand
+from catalog.services.knowledge_retirement import RETIRED_TASKS, cancel_legacy_batch
 
 
 class Command(BaseCommand):
@@ -21,5 +21,5 @@ class Command(BaseCommand):
         rows=CapabilityDemand.objects.filter(payload__task_kind__in=RETIRED_TASKS).exclude(state__in=["completed","canceled"])
         self.stdout.write(str({"eligible":rows.count(),"unmigrated_human_claims":missing,"apply":options["apply"]}))
         if options["apply"]:
-            count=sum(cancel_legacy_demand(key) for key in list(rows.order_by("id").values_list("id",flat=True)[:size]))
+            count=cancel_legacy_batch(size)
             self.stdout.write(str({"canceled":count,"remaining":rows.count(),"history_retained":True}))

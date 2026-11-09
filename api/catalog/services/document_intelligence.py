@@ -622,6 +622,12 @@ def synchronize_document_revision(
     evidence_spans = _sync_evidence_spans(active)
     from catalog.services.knowledge_sources import snapshot_revision
     snapshot_revision(active)
+    if created:
+        from catalog.services.knowledge_source_updates import schedule_source_update
+        from catalog.services.knowledge_workspace import invalidate_source
+        if previous:
+            invalidate_source("document_revision", previous.pk)
+        schedule_source_update(active)
     assessment = _ensure_quality_assessment(
         active,
         pending_ocr_pages=pending_ocr_pages,

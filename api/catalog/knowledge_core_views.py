@@ -26,8 +26,10 @@ class RevisionStructureView(APIView):
         if not CanEditMetadata().has_permission(request, self):
             self.permission_denied(request)
         revision = get_object_or_404(DocumentRevision, pk=revision_id)
-        structure = sources.build_structure(revision)
-        return Response({"structure_id": str(structure.pk), "coverage": structure.coverage})
+        sources.require_revision_access(revision,request.user,editorial=True)
+        from catalog.services.knowledge_source_updates import schedule_source_update
+        job=schedule_source_update(revision)
+        return Response({"job_id":str(job.pk),"status":job.status},status=202)
 
 
 class AnchorView(APIView):
@@ -36,6 +38,17 @@ class AnchorView(APIView):
     def get(self, request, anchor_id):
         anchor = get_object_or_404(EvidenceAnchor.objects.select_related("document_revision__asset__edition"), pk=anchor_id)
         return Response(sources.locator(anchor, request.user, editorial=request.query_params.get("preview") == "1"))
+
+
+class AssertionDraftView(APIView):
+    permission_classes=[CanEditMetadata]
+
+    def post(self,request,revision_id):
+        from catalog.services.knowledge_workspace import submit_assertion_draft
+        from catalog.services.intelligence_queries import changeset_data
+        revision=get_object_or_404(DocumentRevision,pk=revision_id)
+        changeset=submit_assertion_draft(revision,request.data.get("assertion"),request.user,request_id=request.data.get("request_id"))
+        return Response(changeset_data(changeset,request.user),status=201)
 
 
 class ParseStructureView(APIView):
@@ -263,6 +276,7 @@ urlpatterns = [
     path("revisions/<uuid:revision_id>/reindex/",RevisionReindexView.as_view()),
     path("assets/<uuid:asset_id>/manifest/", RevisionManifestView.as_view()),
     path("revisions/<uuid:revision_id>/structure/", RevisionStructureView.as_view()),
+    path("revisions/<uuid:revision_id>/assertions/draft/", AssertionDraftView.as_view()),
     path("revisions/<uuid:revision_id>/structure/parse/", ParseStructureView.as_view()),
     path("revisions/<uuid:revision_id>/pages/<int:page_number>/", RevisionPageView.as_view()),
     path("anchors/<uuid:anchor_id>/", AnchorView.as_view()),

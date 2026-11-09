@@ -55,6 +55,10 @@ def source_value(kind, key):
                 .order_by("id").values("id", "text_checksum"))
     elif kind == "document_revision":
         row = m.DocumentRevision.objects.filter(pk=key).values("text_checksum", "is_active").first()
+        if row is not None:
+            from catalog.services.knowledge_sources import current_structure
+            structure=current_structure(m.DocumentRevision.objects.get(pk=key))
+            row["structure_hash"]=structure.input_hash if structure else None
     elif kind == "anchor":
         row = m.EvidenceAnchor.objects.filter(pk=key).values("content_hash", "validation").first()
     else:
@@ -267,3 +271,29 @@ def submit_page_changes(page, revision, patches, actor, *, request_id):
         payload.update(page_id=str(page.pk), block_id=block_id, human_edited=True)
         proposals.append({"id": str(uuid5(request_id, str(i))), "kind": "wiki_patch", "payload": payload, "dependencies": []})
     return submit_draft(revision, proposals, actor, request_id=request_id, origin="human")
+
+
+def submit_assertion_draft(revision, payload, actor, *, request_id, origin="human"):
+    """Manual and legacy editors propose through the same review/application path."""
+    from catalog.services.intelligence_changes import submit_draft, uuid_value
+    from catalog.services.knowledge_sources import require_revision_access, create_anchor
+    require_editor(actor)
+    require_revision_access(revision,actor,editorial=True)
+    key=uuid_value(request_id)
+    if not isinstance(payload,dict) or not isinstance(payload.get("text"),str) or not payload["text"].strip():
+        raise ValidationError("请填写陈述内容。")
+    evidence=payload.get("evidence")
+    if not isinstance(evidence,list) or not 1<=len(evidence)<=50:
+        raise ValidationError("请选择并校验1至50条原文依据。")
+    for value in evidence:
+        if not isinstance(value,dict) or value.get("stance") not in {"supports","opposes","qualifies","context"}:
+            raise ValidationError("请说明每条原文的证据作用。")
+        create_anchor(revision,value.get("segments"))
+    statement_id,patch_id,block_id=[str(uuid5(key,name)) for name in ["assertion","wiki-patch","block"]]
+    items=[{"id":statement_id,"kind":"assertion","payload":payload,"dependencies":[]},
+        {"id":patch_id,"kind":"wiki_patch","dependencies":[statement_id],"payload":{
+            "work_id":str(revision.asset.edition.work_id),"operation":"add","block_id":block_id,
+            "human_edited":origin=="human","reason":"将审核后的陈述加入此作品知识页",
+            "block":{"id":block_id,"type":"analysis","text":payload["text"],
+                "references":[{"type":"assertion","id":{"change_item":statement_id}}]}}}]
+    return submit_draft(revision,items,actor,request_id=key,origin=origin)

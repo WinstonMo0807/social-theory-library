@@ -29,12 +29,14 @@ export function KnowledgePageContent({ page, renderBlock }: {
   return <section className="detail-section work-curated-claims"><SectionHeading title="知识导读" />
     {page.blocks.map(block => {
       const anchors = (page.anchors || []).filter(a => block.references?.some(r => r.type === "anchor" && r.id === a.anchor_id));
-      const content = <div key={block.id}><IssueBlockView block={{ ...block, type: block.type || "analysis", text: block.text || "", references: undefined }} />
+      const assertions = page.assertions.filter(a => block.references?.some(r => r.type === "assertion" && r.id === a.id));
+      const repeated = assertions.length === 1 && block.text?.trim() === assertions[0].text.trim();
+      const content = <div key={block.id}>{!repeated && <IssueBlockView block={{ ...block, type: block.type || "analysis", text: block.text || "", references: undefined }} />}
+        {!!assertions.length && <div className="work-curated-claim-list">{assertions.map(assertion => <KnowledgeAssertionContent key={assertion.id} assertion={assertion} />)}</div>}
         {!!anchors.length && <details className="work-curated-evidence"><summary>原文依据 · {anchors.length} 处</summary>{anchors.map(a => a.locator ? <blockquote key={a.anchor_id}><p style={{ whiteSpace: "pre-wrap" }}>{a.locator.segments.map(v => v.exact).join("\n")}</p><footer><span>{a.locator.segments.map(v => v.printed_label ? `${v.printed_label} · PDF ${v.page_number}` : `PDF ${v.page_number}`).join("、")}</span> <Link href={a.locator.reader_url}>查看原文 <ArrowRight size={14} /></Link></footer></blockquote> : <p key={a.anchor_id}><Link href={`/login?next=${encodeURIComponent(typeof window === "undefined" ? "/home" : window.location.pathname)}`}>登录后查看原文依据</Link></p>)}</details>}
       </div>;
       return renderBlock ? renderBlock(block, content) : content;
     })}
-    <div className="work-curated-claim-list">{page.assertions.map(assertion => <KnowledgeAssertionContent key={assertion.id} assertion={assertion} />)}</div>
   </section>;
 }
 
