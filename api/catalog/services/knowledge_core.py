@@ -85,6 +85,8 @@ def create_assertion(payload, revision, actor):
     require_editor(actor)
     require_revision_access(revision, actor, editorial=True)
     text = payload.get("text")
+    if payload.get("unresolved_names"):
+        raise ValidationError("请先在审核中解决主张者或参与者身份。")
     evidence = payload.get("evidence", [])
     if not isinstance(text, str) or not text.strip() or len(text) > 20000 or not evidence:
         raise ValidationError("学术陈述须包含正文和经原文核对的证据。")
@@ -144,7 +146,11 @@ def normalize_page_blocks(blocks, *, retained=None):
 @transaction.atomic
 def apply_page_patch(payload, actor, *, request_key):
     require_editor(actor)
-    page = m.KnowledgePage.objects.select_for_update().get(pk=payload["page_id"])
+    if payload.get("page_id"):
+        page = m.KnowledgePage.objects.select_for_update().get(pk=payload["page_id"])
+    else:
+        work = m.Work.objects.select_for_update().get(pk=payload["work_id"])
+        page, _ = m.KnowledgePage.objects.get_or_create(work=work, defaults={"slug":f"work-{work.pk}","title":work.title})
     blocks, _ = page_content(page)
     by_id = {b["id"]: b for b in blocks}
     operation, key = payload.get("operation"), payload.get("block_id")
@@ -173,9 +179,8 @@ def export_page(page, actor, *, draft=False):
         require_editor(actor)
         blocks, revision = page_content(page)
     else:
-        if page.status != "published":
-            raise Http404
-        blocks = page.body_blocks
+        from catalog.services.knowledge_public import page_data
+        blocks = page_data(page, actor)["blocks"]
         revision = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk, status="published").order_by("-revision").first()
     lines = [f"# {page.title}", "", f"<!-- STL knowledge_page={page.pk} editorial_revision={revision.pk if revision else 'legacy'}; database is authoritative -->", ""]
     for block in blocks:

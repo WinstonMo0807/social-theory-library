@@ -23,7 +23,8 @@ from catalog.services.publication_eligibility import (
 from catalog.services.query_lexicon.normalization import normalize_term
 from catalog.services.semantic_indexing import active_semantic_index_uid
 from catalog.services.semantic_search import viewer_access_statuses
-from catalog.services.discovery_sessions import PIPELINE_VERSION, retrieve_discovery_channel
+from catalog.services.discovery_sessions import PIPELINE_VERSION
+from catalog.services.retrieval.search import retrieve_channel as retrieve_discovery_channel
 
 from .library_query import (
     LibraryQuery,

@@ -231,16 +231,16 @@ class AssertionEvidence(UUIDTimeStampedModel):
 
 
 class KnowledgePage(UUIDTimeStampedModel):
-    work = models.OneToOneField("catalog.Work", null=True, on_delete=models.PROTECT, related_name="knowledge_page")
-    entity = models.OneToOneField(Entity, null=True, on_delete=models.PROTECT, related_name="knowledge_page")
+    work = models.OneToOneField("catalog.Work", null=True, blank=True, on_delete=models.PROTECT, related_name="knowledge_page")
+    entity = models.OneToOneField(Entity, null=True, blank=True, on_delete=models.PROTECT, related_name="knowledge_page")
     slug = models.SlugField(max_length=240, allow_unicode=True, unique=True)
     title = models.CharField(max_length=600)
     scope = models.TextField(blank=True)
     # Published materialization only; drafts reside exclusively in EditorialRevision.
-    body_blocks = models.JSONField(default=list)
+    body_blocks = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, default="draft")
     legacy_target_type = models.CharField(max_length=32, blank=True)
-    legacy_target_id = models.UUIDField(null=True)
+    legacy_target_id = models.UUIDField(null=True, blank=True)
 
     class Meta:
         constraints = [models.CheckConstraint(condition=~models.Q(work__isnull=False, entity__isnull=False), name="knowledge_page_one_subject")]

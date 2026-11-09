@@ -5,7 +5,7 @@ from django.urls import path
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from catalog.models import DocumentRevision, DocumentNode, EvidenceAnchor, RevisionPage
+from catalog.models import DocumentRevision, DocumentNode, EvidenceAnchor, RevisionPage, KnowledgePage, Entity, Assertion
 from catalog.services import knowledge_sources as sources
 from common.permissions import CanReadLibrary, CanEditMetadata
 
@@ -57,12 +57,102 @@ class RevisionPageView(APIView):
         sources.require_revision_access(revision, request.user, editorial=request.query_params.get("preview") == "1")
         page = get_object_or_404(RevisionPage, document_revision=revision, page_number=page_number)
         return Response({"asset_id": str(revision.asset_id), "document_revision_id": str(revision.pk),
+            "page_id": str(page.pk), "width": page.geometry.get("width", 0), "height": page.geometry.get("height", 0),
+            "chapter_title": "", "text_available": True,
             "page_index": page.page_number, "printed_label": page.printed_label, "text": page.text,
             "text_source": page.text_source, "content_hash": page.content_hash, "geometry": page.geometry,
             "blocks": page.blocks, "passages": [], "offset_unit": "unicode_code_point"})
 
 
+class RevisionManifestView(APIView):
+    permission_classes = [CanReadLibrary]
+
+    def get(self, request, asset_id):
+        from catalog.public_work_detail import PublicReaderWorkSerializer
+        from catalog.serializers import AssetCompactSerializer
+        revision = sources.requested_revision(request, asset_id)
+        asset = revision.asset
+        data = PublicReaderWorkSerializer(asset.edition.work, context={"request": request,
+            "selected_edition": asset.edition, "reader_asset": asset}).data
+        if not data.get("edition") or str(data["edition"].get("id")) != str(asset.edition_id):
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("该来源的版本书目信息尚不能读取。")
+        data["edition"] = {**data["edition"], "readable_asset": AssetCompactSerializer(asset).data,
+            "availability": "readable", "access_state": "readable"}
+        return Response({"asset_id": str(asset.pk), "edition_id": str(asset.edition_id), "document_revision_id": str(revision.pk),
+            "page_count": asset.page_count, "work": data, "outline": [], "related_scholars": [], "related_theories": [], "related_topics": []},
+            headers={"Cache-Control": "private, no-store"})
+
+
+class KnowledgePageView(APIView):
+    from rest_framework.permissions import AllowAny
+    permission_classes = [AllowAny]
+
+    def get(self, request, page_id):
+        from catalog.services.knowledge_public import page_data
+        page = get_object_or_404(KnowledgePage, pk=page_id)
+        return Response(page_data(page, request.user, draft=request.query_params.get("preview") == "1"))
+
+    def post(self, request, page_id):
+        from catalog.services.knowledge_public import publish_page
+        from rest_framework import serializers
+        revision = serializers.UUIDField().run_validation(request.data.get("revision_id"))
+        return Response(publish_page(page_id, revision, request.user))
+
+
+class KnowledgeExportView(APIView):
+    permission_classes = [CanReadLibrary]
+
+    def get(self, request, page_id):
+        from catalog.services.knowledge_core import export_page
+        from catalog.services.knowledge_public import page_data
+        page = get_object_or_404(KnowledgePage, pk=page_id)
+        draft = request.query_params.get("preview") == "1"
+        page_data(page, request.user, draft=draft)
+        return HttpResponse(export_page(page, request.user, draft=draft), content_type="text/markdown; charset=utf-8")
+
+
+class WorkKnowledgeView(APIView):
+    from rest_framework.permissions import AllowAny
+    permission_classes = [AllowAny]
+
+    def get(self, request, work_id):
+        from catalog.services.knowledge_public import page_data
+        page = KnowledgePage.objects.filter(work_id=work_id, status="published").first()
+        return Response({"page": page_data(page, request.user) if page else None})
+
+
+class EntitiesView(APIView):
+    permission_classes = [CanReadLibrary]
+
+    def get(self, request):
+        from catalog.services.knowledge_core import entity_data, require_editor
+        rows = Entity.objects.filter(merged_into__isnull=True)
+        if request.query_params.get("preview") == "1":
+            require_editor(request.user)
+        else:
+            rows = rows.filter(status="published")
+        query = request.query_params.get("q", "")[:300]
+        if query:
+            rows = rows.filter(label__icontains=query)
+        return Response({"entities": [entity_data(row) for row in rows.order_by("label")[:50]]})
+
+
+class AssertionView(APIView):
+    permission_classes = [CanReadLibrary]
+
+    def get(self, request, assertion_id):
+        from catalog.services.knowledge_public import assertion_data
+        return Response(assertion_data(get_object_or_404(Assertion, pk=assertion_id), request.user, draft=request.query_params.get("preview") == "1"))
+
+
 urlpatterns = [
+    path("entities/", EntitiesView.as_view()),
+    path("assertions/<uuid:assertion_id>/", AssertionView.as_view()),
+    path("pages/<uuid:page_id>/", KnowledgePageView.as_view()),
+    path("pages/<uuid:page_id>/export/", KnowledgeExportView.as_view()),
+    path("works/<uuid:work_id>/", WorkKnowledgeView.as_view()),
+    path("assets/<uuid:asset_id>/manifest/", RevisionManifestView.as_view()),
     path("revisions/<uuid:revision_id>/structure/", RevisionStructureView.as_view()),
     path("revisions/<uuid:revision_id>/pages/<int:page_number>/", RevisionPageView.as_view()),
     path("anchors/<uuid:anchor_id>/", AnchorView.as_view()),

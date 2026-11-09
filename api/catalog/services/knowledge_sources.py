@@ -25,6 +25,18 @@ STRUCTURE_VERSION = "stl-raw-structure-v1"
 LOCATOR_VERSION = "stl-locator-v1"
 
 
+def requested_revision(request, asset_id):
+    """Resolve an explicit historical source without relaxing active filters elsewhere."""
+    from django.shortcuts import get_object_or_404
+    from rest_framework import serializers
+    key = serializers.UUIDField().run_validation(request.query_params.get("revision"))
+    revision = get_object_or_404(DocumentRevision.objects.select_related("asset__edition__work"), pk=key, asset_id=asset_id)
+    require_revision_access(revision, request.user, editorial=request.query_params.get("preview") == "1")
+    if revision.source_checksum != revision.asset.sha256:
+        raise ValidationError("此修订的文件摘要与保留来源不一致，暂不能打开PDF。")
+    return revision
+
+
 def digest(value):
     if not isinstance(value, str):
         value = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
@@ -224,7 +236,13 @@ def create_anchor(revision, segments):
 
 
 def locator(anchor, actor, *, editorial=False):
-    revision = require_revision_access(anchor.document_revision, actor, editorial=editorial)
+    require_revision_access(anchor.document_revision, actor, editorial=editorial)
+    return locator_payload(anchor, editorial=editorial)
+
+
+def locator_payload(anchor, *, editorial=False):
+    """Internal serializer. Caller must establish source access before calling."""
+    revision = anchor.document_revision
     asset = revision.asset
     result = []
     path = []

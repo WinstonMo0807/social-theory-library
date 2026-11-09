@@ -168,11 +168,12 @@ def _prepare_generation(job):
     existing_id = job.stats.get("generation_id")
     if existing_id:
         return SemanticIndexVersion.discovery_objects.get(pk=existing_id)
-    health = inference_health()
+    try:
+        health = inference_health()
+    except DiscoveryInferenceError:
+        health = {}
     models = health.get("models", {})
     embedding, reranker = models.get("embedding", {}), models.get("reranker", {})
-    if not health.get("manifest_ready") or not embedding.get("artifact_id") or not reranker.get("artifact_id"):
-        raise DiscoveryInferenceError("model_missing", "本地模型文件尚未准备完整。")
     with transaction.atomic():
         current = ProcessingJob.objects.select_for_update().filter(pk=job.pk, task_id=job.task_id, status="running").first()
         if not current:
@@ -182,9 +183,9 @@ def _prepare_generation(job):
             raise DiscoveryInferenceError("invalid_response", "向量模型维度不在允许范围内。")
         generation = SemanticIndexVersion.discovery_objects.create(index_family="discovery",
             uid="discovery_v308_" + uuid4().hex, provider="local_onnx_user_provided",
-            model_repo_id=embedding["model"], model_revision=embedding["revision"], dimensions=embedding_dimensions,
+            model_repo_id=embedding.get("model", "keyword-only"), model_revision=embedding.get("revision", "unconfigured"), dimensions=embedding_dimensions,
             pooling="masked_mean_l2", document_template="passage: {title}\n{normalized_text}",
-            config_snapshot={"embedding_artifact": embedding["artifact_id"], "reranker_artifact": reranker["artifact_id"],
+            config_snapshot={"embedding_artifact": embedding.get("artifact_id", ""), "reranker_artifact": reranker.get("artifact_id", ""),
                 "pipeline": health.get("pipeline"), "normalization": health.get("normalization"), "index_configured": False,
                 "chunk_tokens": 320, "overlap_tokens": 40, "dimensions": embedding_dimensions, "scope_fields_version": 1,
                 "activate": job.stats.get("activate", True)})
@@ -255,6 +256,7 @@ def schedule_sources(generation, *, max_queued=8):
                     # chunks via _write_chunk's idempotent completion check.
                     job.attempt = 0
                     job.stats = {**job.stats, "completed_units": 0}
+                    job.stats.pop("semantic_waiting", None)
                     job.save(update_fields=["attempt", "stats"])
                 _enqueue_job(job)
                 state.job = job
@@ -308,6 +310,19 @@ def _is_current(job, generation, header):
     return bool(fresh and fresh["source_revision"] == header["source_revision"])
 
 
+def raw_keyword_slices(text, title=""):
+    """Raw code-point windows, independent of model/tokenizer availability."""
+    for start in range(0, len(text), 200):
+        end = min(len(text), start + 240)
+        raw = text[start:end]
+        if raw.strip():
+            yield {"start": start, "end": end, "text": raw, "normalized_text": raw,
+                "embedding_text": f"passage: {title}\n{raw}", "token_count": 0,
+                "quality_flags": ["raw_codepoint_window", "token_count_unknown"]}
+        if end == len(text):
+            break
+
+
 def _write_chunk(job, generation, header, unit, child, *, contributions=None):
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料或任务已更新，旧任务已停止。")
@@ -319,24 +334,6 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
     _guard_job(job, stats={**job.stats, "active_unit": {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"),
         "start_offset": child["start"], "end_offset": child["end"]}})
     input_hash = fingerprint([generation.config_snapshot["embedding_artifact"], child["embedding_text"]])
-    vector = None
-    previous = DiscoveryDocument.objects.filter(generation=generation, input_hash=input_hash, vector_ready=True).first()
-    if previous:
-        stored = meili("POST", f"/indexes/{generation.uid}/documents/fetch", {"ids": [str(previous.pk)], "retrieveVectors": True})
-        results = stored.get("results", [])
-        raw = results[0].get("_vectors", {}).get("discovery") if results else None
-        if isinstance(raw, dict):
-            raw = (raw.get("embeddings") or [None])[0]
-        dimensions = int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384)
-        if (isinstance(raw, list) and len(raw) == dimensions and all(isinstance(v, (int, float)) and math.isfinite(v) for v in raw)
-                and .995 < sum(v * v for v in raw) < 1.005):
-            vector = raw
-    if vector is None:
-        vector = embed_texts(
-            [child["embedding_text"]],
-            expected_artifact=generation.config_snapshot["embedding_artifact"],
-            expected_dimensions=int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384),
-        )["vectors"][0]
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务已停止；新版本会重新排队。")
     payload = {**{key: value for key, value in header.items() if key != "text"}, **unit["metadata"], "unit_id": unit["unit_id"],
@@ -355,7 +352,7 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
         "access_status": header["access_status"], "input_hash": input_hash, "title": header["title"],
         "aliases": header.get("aliases", []), "authors": payload.get("authors", []),
         "normalized_text": child["normalized_text"], "language": payload.get("language") or header.get("language", "unknown"),
-        "_vectors": {"discovery": vector}}
+        "_vectors": {"discovery": []}}
     if generation.config_snapshot.get("scope_fields_version") == 1:
         from catalog.services.discovery_scope import chunk_fields
         search_doc.update(chunk_fields(header, unit, child))
@@ -365,9 +362,42 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
         ProcessingJob.objects.select_for_update().get(pk=job.pk)
         if not _is_current(job, generation, header):
             raise DiscoveryIndexError("superseded", "资料或任务已更新，旧写入不会标记为完成。")
-        DiscoveryDocument.objects.filter(pk=document.pk).update(keyword_ready=True, vector_ready=True, indexed_at=timezone.now())
+        DiscoveryDocument.objects.filter(pk=document.pk).update(keyword_ready=True, indexed_at=timezone.now())
     document.keyword_ready = True
-    _write_deep_projection(job, document)
+    # Keyword commit precedes every model call. Model outages do not undo it.
+    if not generation.config_snapshot.get("embedding_artifact") or job.stats.get("semantic_waiting"):
+        return
+    try:
+        vector = None
+        previous = DiscoveryDocument.objects.filter(generation=generation, input_hash=input_hash, vector_ready=True).first()
+        if previous:
+            stored = meili("POST", f"/indexes/{generation.uid}/documents/fetch", {"ids": [str(previous.pk)], "retrieveVectors": True})
+            results = stored.get("results", [])
+            raw = results[0].get("_vectors", {}).get("discovery") if results else None
+            if isinstance(raw, dict):
+                raw = (raw.get("embeddings") or [None])[0]
+            dimensions = int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384)
+            if (isinstance(raw, list) and len(raw) == dimensions and all(isinstance(v, (int, float)) and math.isfinite(v) for v in raw)
+                    and .995 < sum(v * v for v in raw) < 1.005):
+                vector = raw
+        if vector is None:
+            vector = embed_texts(
+                [child["embedding_text"]],
+                expected_artifact=generation.config_snapshot["embedding_artifact"],
+                expected_dimensions=int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384),
+            )["vectors"][0]
+        if not _is_current(job, generation, header):
+            raise DiscoveryIndexError("superseded", "来源已变化，旧向量不再写入。")
+        wait_index_task(meili("PUT", f"/indexes/{generation.uid}/documents", [{"id": str(identifier), "_vectors": {"discovery": vector}}]))
+        with transaction.atomic():
+            ProcessingJob.objects.select_for_update().get(pk=job.pk)
+            if not _is_current(job, generation, header):
+                raise DiscoveryIndexError("superseded", "来源已变化，旧向量不再标记就绪。")
+            DiscoveryDocument.objects.filter(pk=document.pk).update(vector_ready=True)
+        _write_deep_projection(job, document)
+    except DiscoveryInferenceError as exc:
+        _guard_job(job, stats={**job.stats, "semantic_waiting": {"code": exc.code,
+            "message": "关键词已可用，语义索引等待模型。"}})
 
 
 def _write_deep_projection(job, document):
@@ -403,9 +433,7 @@ def process_source(job, generation):
         # into exact original windows before tokenizer requests, with offsets kept.
         for base in range(0, len(unit["text"]), 60000):
             original = unit["text"][base:base + 60000]
-            children = chunk_text(original, title=header["title"])
-            if children.get("artifact_id") != generation.config_snapshot["embedding_artifact"]:
-                raise DiscoveryInferenceError("artifact_mismatch", "分块模型与索引版本不一致。")
+            children = {"chunks": raw_keyword_slices(original, header["title"])}
             for child in children["chunks"]:
                 child = {**child, "start": child["start"] + base, "end": child["end"] + base}
                 _write_chunk(job, generation, header, unit, child, contributions=contributions)
@@ -417,7 +445,7 @@ def process_source(job, generation):
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")
     docs = DiscoveryDocument.objects.filter(generation=generation, source_type=kind, source_id=source_id, source_revision=header["source_revision"])
-    expected, completed = docs.count(), docs.filter(keyword_ready=True, vector_ready=True).count()
+    expected, completed = docs.count(), docs.filter(keyword_ready=True).count()
     if kind == "edition" and not expected:
         raise DiscoveryIndexError("text_missing", "该文件尚无可用原文文字，请检查文字处理结果后重试。")
     if expected != completed:
@@ -487,7 +515,7 @@ def _activate_generation(generation):
         raise DiscoveryIndexError("not_ready", "该索引版本尚未准备好。")
     verify_current_sources(generation)
     stats = meili("GET", f"/indexes/{generation.uid}/stats")
-    actual_count = DiscoveryDocument.objects.filter(generation=generation, keyword_ready=True, vector_ready=True).count()
+    actual_count = DiscoveryDocument.objects.filter(generation=generation, keyword_ready=True).count()
     if stats.get("isIndexing") or stats.get("numberOfDocuments") != actual_count:
         raise DiscoveryIndexError("count_mismatch", "索引写入数量未核对完成，保留当前版本。")
     SemanticIndexVersion.discovery_objects.filter(status="active").exclude(pk=generation.pk).update(status="retired")
@@ -518,7 +546,7 @@ def finish_builds():
                     stats={**coordinator.stats, "pending_sources": pending, "blocked_sources": failed},
                     error_message="部分来源多次失败，请重试对应任务后继续。" if failed else "", updated_at=timezone.now())
             continue
-        count = DiscoveryDocument.objects.filter(generation=generation, keyword_ready=True, vector_ready=True).count()
+        count = DiscoveryDocument.objects.filter(generation=generation, keyword_ready=True).count()
         stats = meili("GET", f"/indexes/{generation.uid}/stats")
         if stats.get("isIndexing") or stats.get("numberOfDocuments") != count:
             continue

@@ -41,6 +41,9 @@ def _public_asset(asset_id, request=None):
     passages and reader notes already reference it.  The file selected for the
     visual layer is resolved separately and can safely fall back.
     """
+    if request and request.query_params.get("revision"):
+        from catalog.services.knowledge_sources import requested_revision
+        return requested_revision(request, asset_id).asset
     asset = get_object_or_404(
         Asset.objects.filter(active_asset_q(asset_prefix="")),
         pk=asset_id,
@@ -198,6 +201,25 @@ class AssetAccessView(APIView):
     )
     def get(self, request, asset_id):
         anchor = _public_asset(asset_id, request)
+        if request.query_params.get("revision"):
+            # Historical locators use the exact preserved file, never a newer rendition.
+            from urllib.parse import urlencode
+            revision = request.query_params["revision"]
+            query = urlencode({"revision": revision, "preview": request.query_params.get("preview", "0")})
+            if settings.ALLOW_LOCAL_PUBLIC_ASSET_ACCESS and not settings.REQUIRE_CLOUD_FOR_PUBLICATION:
+                url = request.build_absolute_uri(reverse("asset-file", kwargs={"asset_id": anchor.pk})) + "?" + query
+                return Response({**_access_metadata(anchor, anchor, ""), "url": url, "download_url": url + "&download=original",
+                    "original_download_url": url + "&download=original", "source": "local-nas", "expires_in": None,
+                    "supports_range": True, "download_filename": anchor.edition.canonical_filename,
+                    "edition_id": str(anchor.edition_id), "document_revision_id": revision})
+            cloud = anchor.cloud_objects.filter(status=CloudObject.Status.READY).select_related("provider").first()
+            if cloud:
+                url = signed_read_url(cloud, expires_in=settings.S3_SIGNED_URL_TTL_SECONDS,
+                    download_filename=anchor.edition.canonical_filename, attachment=False)
+                return Response({**_access_metadata(anchor, anchor, ""), "url": url, "download_url": url,
+                    "source": "cloud", "expires_in": settings.S3_SIGNED_URL_TTL_SECONDS, "supports_range": True,
+                    "download_filename": anchor.edition.canonical_filename, "edition_id": str(anchor.edition_id), "document_revision_id": revision})
+            return Response({"detail": "该历史修订没有可访问的文件副本。"}, status=503)
         download_mode = _download_mode(request)
         downloading = bool(download_mode)
         if download_mode == "original":
@@ -314,6 +336,8 @@ class AssetFileView(APIView):
     def _resolve_file_assets(self, request, asset_id) -> tuple[Asset, Asset, str]:
         anchor = _public_asset(asset_id, request)
         download_mode = _download_mode(request)
+        if request.query_params.get("revision"):
+            return anchor, anchor, download_mode
         asset, _fallback_reason = (
             (anchor, "")
             if download_mode == "original"

@@ -1,4 +1,5 @@
 import uuid
+from catalog.intelligence_tasks import execute_curation  # noqa: F401
 
 from catalog.discovery_tasks import run_discovery_deep, run_discovery_search, expire_discovery_sessions  # noqa: F401
 from catalog.discovery_index_tasks import process_discovery_index_job, reconcile_discovery_index  # noqa: F401

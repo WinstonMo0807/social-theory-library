@@ -1,3 +1,12 @@
+## 2026-11-09 Intelligence 任务、审核与内网候选继续实现
+
+- 第一检查点 d52c9f94 保留。新增八阶段运行、严格输入预算的 DocETL 0.3.0 map 适配、章节产物缓存、ChangeSet 审核/依赖组事务/幂等回执及任务租约。未配置模型时保留 waiting_configuration，不作外部调用。
+- 新增 /admin/intelligence 与模型配置入口，复用 AdminShell、品牌和现有加密 OpenAI-compatible Provider 管理；新增 /api/intelligence/ 与 /api/knowledge/ 领域接口。读者的显式 revision 开始走历史快照和原文件权限检查，需真实馆藏验收。
+- DocETL 0.3.0、LiteLLM 1.108.3、MCP 2.3.0 已安装于忽略目录中的独立 worker 环境。实际 DocETL 算子经测试传递完整输入且单次调用 STL transport；使用确定性传输夹具，未声称真实章节推理。MCP 官方 2.3 工具注册检查通过，暂无公开发布工具。
+- 本批9项来源/审核测试通过（6.42秒，模型建表隔离数据库）；新增MCP后的6项Intelligence测试通过（13.29秒）。此前包含完整迁移的4项来源测试通过；本批第一次完整迁移测试8/9通过，1项重复候选夹具已区分语境并补上显式重复输入错误。Django check、迁移漂移检查、TypeScript检查通过。
+- 前端开发候选已在本机内网 192.168.5.3:5174 启动，/admin/intelligence 返回200。NAS独立候选的数据库快照/恢复正在进行，API尚未就绪，不能计demo已交付。正式数据库约995MB，首次SSH等待240秒超时，NAS只读pg_dump仍在运行，未重复发起快照。
+- 正式18084、books.winstonmo.com、DNS/隧道未切换。所有正式文件给候选只读挂载。尚缺真实来源/跨页/PDF/发布端到端、关键词模型离线、模型真实分析、完整旧成果迁移/退役、Docling结构解析与远程协议扩展等，详下述交付说明。
+
 ## 2026-11-09 Knowledge Core / Intelligence 内网候选进行中
 
 - 最新 main 已核对为 2f151a8617b33886f046a7ccc3325d7a2deca3ae；独立分支 codex/stl-knowledge-intelligence，原工作区修改和暂存保持。

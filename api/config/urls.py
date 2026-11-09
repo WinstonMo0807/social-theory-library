@@ -57,6 +57,7 @@ def ready(request):
 
 
 urlpatterns = [
+    path("api/intelligence/", include("catalog.intelligence_views")),
     path("api/admin/schema/", AdminSchemaView.as_view(urlconf="config.schema_urls", permission_classes=[CanAccessBackOffice]), name="api-schema"),
     path("admin/", admin.site.urls),
     path("api/health/", health),
@@ -65,6 +66,7 @@ urlpatterns = [
     path("api/capability-worker/", include("common.remote_worker_urls")),
     path("api/catalog/", include("catalog.urls")),
     path("api/knowledge/", include("catalog.knowledge_core_views")),
+    path("api/search/", include("catalog.search_core_views")),
     path("api/ingestion/", include("ingestion.urls")),
     path("api/reading/", include("reading.urls")),
     path("api/distribution/", include("distribution.urls")),

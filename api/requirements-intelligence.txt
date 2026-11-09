@@ -1,0 +1,6 @@
+# Dedicated computation worker only. API/beat/OCR workers do not import these.
+# Verified install on Python 3.14; all three upstream packages are MIT licensed.
+-r requirements.txt
+docetl==0.3.0
+litellm==1.108.3
+mcp==2.3.0

@@ -107,6 +107,11 @@ class DiscoveryAttributionSerializer(serializers.Serializer):
 
 
 class DiscoveryPassageSerializer(serializers.Serializer):
+    locator = serializers.DictField(required=False)
+    anchor_id = serializers.UUIDField(required=False, allow_null=True)
+    node_id = serializers.UUIDField(required=False, allow_null=True)
+    source_type = serializers.CharField(required=False)
+    coverage = serializers.CharField(required=False)
     id = serializers.UUIDField()
     is_new = serializers.BooleanField(required=False)
     excerpt = serializers.CharField()

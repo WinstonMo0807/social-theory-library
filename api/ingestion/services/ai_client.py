@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import contextmanager
+from hashlib import sha256
 import json
 import threading
 import time
@@ -228,6 +230,17 @@ class AIClient:
         self._semaphore = threading.BoundedSemaphore(self.config.max_concurrency)
         self.last_usage: dict = {}
 
+    @contextmanager
+    def _provider_slot(self):
+        from common.concurrency import capacity_slot
+        key = sha256(self.config.base_url.encode()).hexdigest()[:32]
+        with capacity_slot(f"ai-provider:{key}", limit=int(getattr(settings,"AI_PROVIDER_GLOBAL_CONCURRENCY",1)),
+                           timeout=int(self.config.timeout*3)+30) as acquired:
+            if not acquired:
+                raise AIProviderRateLimited("模型正在处理其他任务，请稍后恢复。")
+            with self._semaphore:
+                yield
+
     def _http_client(self, **kwargs):
         from common.ai_endpoints import PublicAITransport
         transport = self._transport
@@ -321,7 +334,7 @@ class AIClient:
                 raise AIInvalidOutput("完整输入与预留输出超过上下文预算，未调用模型。")
         started = time.monotonic()
         last_error = None
-        with self._semaphore:
+        with self._provider_slot():
             for attempt in range(1, 2 if strict else 3):
                 try:
                     payload, endpoint = self._request_payload(
@@ -432,7 +445,7 @@ class AIClient:
             }
         started = time.monotonic()
         try:
-            with self._semaphore:
+            with self._provider_slot():
                 with self._http_client(
                     timeout=self.config.timeout,
                     follow_redirects=False,
@@ -508,7 +521,7 @@ class AIClient:
         started = time.monotonic()
         emitted = False
         try:
-            with self._semaphore:
+            with self._provider_slot():
                 with self._http_client(
                     timeout=self.config.timeout,
                     follow_redirects=False,

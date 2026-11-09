@@ -3727,6 +3727,7 @@ class ClaimEvidence(UUIDTimeStampedModel):
 
 class EditorialRevision(UUIDTimeStampedModel):
     class TargetType(models.TextChoices):
+        KNOWLEDGE_PAGE = "knowledge_page", "知识页"
         WORK = "work", "作品"
         EDITION = "edition", "版本"
         KNOWLEDGE_NODE = "knowledge_node", "知识节点"
