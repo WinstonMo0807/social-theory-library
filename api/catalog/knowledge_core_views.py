@@ -279,7 +279,49 @@ class PageAssertionDraftView(APIView):
         return Response(changeset_data(result, request.user), status=201)
 
 
+class AcademicRelationDirectoryView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def get(self, request):
+        from rest_framework import serializers
+        from catalog.services.academic_relations import relation_directory
+        params = request.query_params
+        identities = {name: serializers.UUIDField().run_validation(params[name]) for name in ("entity_id", "work_id") if params.get(name)}
+        return Response(relation_directory(request.user, **identities, query=params.get("q", "")[:300],
+            state=params.get("state", ""), offset=serializers.IntegerField(min_value=0).run_validation(params.get("offset", 0))))
+
+    def post(self, request):
+        from rest_framework.exceptions import ValidationError
+        from rest_framework import serializers
+        from catalog import models as m
+        from catalog.services.knowledge_core import entity_for_legacy
+        from catalog.services.knowledge_workspace import open_page
+        kind = request.data.get("legacy_type")
+        key = serializers.UUIDField().run_validation(request.data.get("legacy_id"))
+        if kind == "work":
+            return Response(open_page(request.user, work_id=key))
+        types = {"node": m.KnowledgeNode, "scholar": m.ScholarProfile, "person": m.Person, "topic": m.Topic}
+        if kind not in types:
+            raise ValidationError("请选择已有的作品或知识身份。")
+        row = get_object_or_404(types[kind], pk=key)
+        entity = entity_for_legacy(row.person if kind == "scholar" else row)
+        return Response(open_page(request.user, entity_id=entity.pk))
+
+
+class AssertionWithdrawalView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def post(self, request, assertion_id):
+        from catalog.services.academic_relations import submit_withdrawal
+        from catalog.services.intelligence_queries import changeset_data
+        changeset = submit_withdrawal(get_object_or_404(Assertion, pk=assertion_id), request.user,
+            request_id=request.data.get("request_id"), base_hash=request.data.get("base_hash"), reason=request.data.get("reason", ""))
+        return Response(changeset_data(changeset, request.user), status=201)
+
+
 urlpatterns = [
+    path("relations/", AcademicRelationDirectoryView.as_view()),
+    path("assertions/<uuid:assertion_id>/withdrawal/", AssertionWithdrawalView.as_view()),
     path("anchors/verify/", VerifyAnchorView.as_view()),
     path("workspace/", KnowledgeDirectoryView.as_view()),
     path("pages/<uuid:page_id>/workspace/", KnowledgeWorkspaceView.as_view()),

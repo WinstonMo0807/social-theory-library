@@ -1,4 +1,5 @@
 "use client";
+import { AcademicRelations } from "../academic-relations";
 
 import { confirmAction } from "@/lib/ui-dialog";
 
@@ -374,12 +375,13 @@ function CoverField(props: BodyProps) {
 
 function KnowledgeFields(props: BodyProps) {
   const { knowledgeDraft, canEdit, update } = props;
-  const nodes = entities(knowledgeDraft.nodes);
   const topics = entities(knowledgeDraft.topics);
-  return <fieldset className="workflow-field-grid" disabled={!canEdit}>
-    <div><div className="workflow-field-assistant-row"><strong>理论传统与理论节点</strong><WorkflowFieldAssistant {...props} fieldName="theory" /></div><EntityPicker label="搜索馆内理论与概念" endpoint="/catalog/admin/theory-system/nodes/" queryParam="q" nameField="canonical_name_zh" values={nodes} onChange={(next) => update("knowledge", "nodes", next.map((item) => ({ role: "general_mention", strength: "medium", ...item })))} /></div>
-    <div><div className="workflow-field-assistant-row"><strong>主题</strong><WorkflowFieldAssistant {...props} fieldName="topic" /></div><EntityPicker label="搜索馆内主题" endpoint="/catalog/admin/topics/" values={topics} onChange={(next) => update("knowledge", "topics", next)} /></div>
-  </fieldset>;
+  return <>
+    <fieldset className="workflow-field-grid" disabled={!canEdit}>
+      <div><div className="workflow-field-assistant-row"><strong>主题</strong><WorkflowFieldAssistant {...props} fieldName="topic" /></div><EntityPicker label="搜索馆内主题" endpoint="/catalog/admin/topics/" values={topics} onChange={(next) => update("knowledge", "topics", next)} /></div>
+    </fieldset>
+    <AcademicRelations legacyType="work" legacyId={asString(props.context.work_id)} blocked={!canEdit} />
+  </>;
 }
 
 function WorkBody(props: BodyProps) {

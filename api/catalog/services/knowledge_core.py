@@ -283,4 +283,7 @@ def json_reference(ref, actor, draft):
     if ref.get("type") == "anchor":
         anchor = m.EvidenceAnchor.objects.get(pk=ref["id"])
         return json.dumps(locator(anchor, actor, editorial=draft), ensure_ascii=False)
+    if ref.get("type") == "assertion":
+        from catalog.services.knowledge_public import assertion_data
+        return json.dumps(assertion_data(m.Assertion.objects.get(pk=ref["id"]), actor, draft=draft), ensure_ascii=False, default=str)
     return json.dumps(ref, ensure_ascii=False)

@@ -31,7 +31,9 @@ def changeset_data(changeset, actor):
             item["evidence_context"] = [locator(anchor, actor, editorial=True) for anchor in m.EvidenceAnchor.objects.filter(
                 pk__in=[v["anchor_id"] for v in item["payload"].get("evidence", []) if v.get("anchor_id")])]
         applied = item["application"]
-        if applied.get("type") == "assertion":
+        if applied.get("type") == "assertion_withdrawal":
+            item["current_status"] = applied.get("status", "draft")
+        elif applied.get("type") == "assertion":
             item["current_status"] = m.Assertion.objects.filter(pk=applied["id"]).values_list("status", flat=True).first()
         elif applied.get("page_id"):
             page = m.KnowledgePage.objects.get(pk=applied["page_id"])

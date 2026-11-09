@@ -14,6 +14,7 @@ class Command(BaseCommand):
         parser.add_argument("--identities", action="store_true")
         parser.add_argument("--claims", action="store_true")
         parser.add_argument("--relations", action="store_true")
+        parser.add_argument("--human-pages", action="store_true")
         parser.add_argument("--page-dependencies", action="store_true")
         parser.add_argument("--retrieval", action="store_true")
         parser.add_argument("--review-fingerprints", action="store_true")
@@ -25,6 +26,22 @@ class Command(BaseCommand):
         size = options["batch_size"]
         if not 1 <= size <= 500:
             raise CommandError("batch-size须为1至500")
+        if options["human_pages"]:
+            from rest_framework.exceptions import ValidationError
+            from catalog.services.knowledge_migration import migrate_assertion_page
+            mapped = m.KnowledgeLegacyMapping.objects.filter(source_type="catalog.assertion", target_type="knowledge_block").values("source_id")
+            rows = m.Assertion.objects.filter(origin__human_confirmation_preserved=True).exclude(pk__in=mapped).order_by("id")
+            if options["after"]:
+                rows = rows.filter(pk__gt=options["after"])
+            count, deferred, last = 0, [], None
+            for statement in rows[:size]:
+                try:
+                    migrate_assertion_page(statement)
+                    count += 1
+                except ValidationError as exc:
+                    deferred.append({"id": str(statement.pk), "reason": str(exc.detail)})
+                last = str(statement.pk)
+            self.stdout.write(str({"human_pages": count, "deferred": deferred, "next_after": last}))
         if options["review_fingerprints"]:
             from catalog.services.intelligence_changes import refresh_fingerprints
             rows=m.ChangeSet.objects.order_by("id")
@@ -97,7 +114,7 @@ class Command(BaseCommand):
         if options["relations"]:
             from catalog.services.knowledge_migration import migrate_relation
             for model in [m.PersonNodeRelation, m.WorkNodeRelation, m.KnowledgeRelation]:
-                mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="assertion", provenance__migration_version=2).values("source_id")
+                mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="assertion", provenance__migration_version=4).values("source_id")
                 rows = model.objects.filter(status__in=["confirmed", "approved", "published"]).exclude(pk__in=mapped).order_by("pk")[:size]
                 count = sum(1 for row in rows if migrate_relation(row))
                 self.stdout.write(f"{model.__name__}: {count}")

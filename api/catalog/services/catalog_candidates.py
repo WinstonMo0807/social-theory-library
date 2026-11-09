@@ -889,6 +889,10 @@ def _link_entity(edition, policy: AssistantFieldPolicy, entity, *, actor, source
         formal = getattr(entity, "editorial_status", "draft") == "published"
     if not formal:
         _bundle_created_entity(ensure_publication_bundle(edition, actor=actor), entity, label=str(entity))
+    if policy.key == "theory" and isinstance(entity, KnowledgeNode):
+        from catalog.services.academic_relations import propose_work_relations
+        propose_work_relations(edition.work, [{"node": entity, "role": "general_mention"}], actor)
+        return
     if _requires_editorial_revision(edition):
         _stage_entity(edition, policy, entity, actor=actor)
         return
@@ -929,24 +933,6 @@ def _link_entity(edition, policy: AssistantFieldPolicy, entity, *, actor, source
                 "source": source,
                 "confidence": 1,
                 "review_status": RelationReviewStatus.APPROVED,
-                "reviewed_by": actor,
-                "reviewed_at": now,
-            },
-        )
-        return
-    if policy.key == "theory" and isinstance(entity, KnowledgeNode):
-        WorkNodeRelation.objects.update_or_create(
-            work=edition.work,
-            node=entity,
-            role=WorkNodeRelation.Role.GENERAL_MENTION,
-            defaults={
-                "source": source,
-                "confidence": 1,
-                "status": (
-                    KnowledgePublicationStatus.PUBLISHED
-                    if entity.status == KnowledgePublicationStatus.PUBLISHED
-                    else KnowledgePublicationStatus.PENDING
-                ),
                 "reviewed_by": actor,
                 "reviewed_at": now,
             },

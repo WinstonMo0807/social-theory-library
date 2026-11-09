@@ -1,4 +1,6 @@
 from __future__ import annotations
+from catalog.academic_relation_views import AcademicRelationCommandMixin
+from catalog.path_editor_views import PathCommandMixin
 
 from catalog.node_editor_views import NodeCommandMixin, KnowledgeRelationCommandMixin
 from catalog.relation_editorial_views import relations_for_node
@@ -890,7 +892,7 @@ class AdminKnowledgeNodeVersionListView(AdminPrivateResponseMixin, TheorySystemF
 
 
 @extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("node", str, description="当前正式或草稿关联的节点编号。")]))
-class AdminKnowledgeRelationListView(KnowledgeRelationCommandMixin, StagedRelationEditorMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminKnowledgeRelationListView(AcademicRelationCommandMixin, StagedRelationEditorMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
     editorial_target_type = "knowledge_relation"
     permission_classes = [IsKnowledgeEditor]
@@ -919,7 +921,7 @@ class AdminKnowledgeRelationListView(KnowledgeRelationCommandMixin, StagedRelati
 
 @extend_schema_view(get=extend_schema(parameters=[OpenApiParameter("node", str, description="可选节点范围，包含正式及草稿端点。")]))
 class AdminKnowledgeRelationDetailView(
-    KnowledgeRelationCommandMixin,
+    AcademicRelationCommandMixin,
     StagedRelationEditorMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
@@ -934,17 +936,6 @@ class AdminKnowledgeRelationDetailView(
         node = self.request.query_params.get("node")
         return relations_for_node(rows, node) if node else rows
 
-    def destroy(self, request, *args, **kwargs):
-        relation = self.get_object()
-        if relation.status == "published":
-            return Response(
-                {
-                    "detail": "已公开的关系不能删除。请选择下线，保存后再确认发布。",
-                    "code": "published_relation_requires_withdrawal",
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-        return super().destroy(request, *args, **kwargs)
 
 
 class AdminKnowledgeRelationVersionListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListAPIView):
@@ -959,7 +950,7 @@ class AdminKnowledgeRelationVersionListView(AdminPrivateResponseMixin, TheorySys
         ).select_related("created_by")
 
 
-class AdminWorkNodeRelationListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
+class AdminWorkNodeRelationListView(AcademicRelationCommandMixin, AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
     permission_classes = [IsKnowledgeEditor]
     serializer_class = AdminWorkNodeRelationSerializer
 
@@ -981,22 +972,11 @@ class AdminWorkNodeRelationListView(AdminPrivateResponseMixin, TheorySystemFeatu
             )
         return queryset.distinct().order_by("-updated_at")
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        work = serializer.validated_data["work"]
-        if work.editions.filter(state=PublicationState.PUBLISHED).exists():
-            return _published_work_node_relation_requires_revision(work)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED,
-            headers=headers,
-        )
+    relation_kind = "work"
 
 
 class AdminWorkNodeRelationDetailView(
+    AcademicRelationCommandMixin,
     AdminPrivateResponseMixin,
     TheorySystemFeatureMixin,
     generics.RetrieveUpdateDestroyAPIView,
@@ -1007,45 +987,7 @@ class AdminWorkNodeRelationDetailView(
         "evidence__file"
     )
 
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop("partial", False)
-        instance = self.get_object()
-        serializer = self.get_serializer(
-            instance,
-            data=request.data,
-            partial=partial,
-        )
-        serializer.is_valid(raise_exception=True)
-        requested_work = serializer.validated_data.get("work", instance.work)
-        if (
-            instance.work.editions.filter(
-                state=PublicationState.PUBLISHED
-            ).exists()
-            or requested_work.editions.filter(
-                state=PublicationState.PUBLISHED
-            ).exists()
-        ):
-            blocked_work = (
-                instance.work
-                if instance.work.editions.filter(
-                    state=PublicationState.PUBLISHED
-                ).exists()
-                else requested_work
-            )
-            return _published_work_node_relation_requires_revision(blocked_work)
-        self.perform_update(serializer)
-        if getattr(instance, "_prefetched_objects_cache", None):
-            instance._prefetched_objects_cache = {}
-        return Response(serializer.data)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance.work.editions.filter(
-            state=PublicationState.PUBLISHED
-        ).exists():
-            return _published_work_node_relation_requires_revision(instance.work)
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    relation_kind = "work"
 
 
 class AdminEvidenceListView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):
@@ -1140,265 +1082,14 @@ class AdminTheoryReviewTaskDetailView(AdminPrivateResponseMixin, TheorySystemFea
     queryset = TheoryReviewTask.objects.select_related("work", "file", "candidate_node", "assigned_to")
 
 
-class AdminTheoryReviewActionView(TheoryReviewCommandMixin, AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
-    permission_classes = [IsKnowledgeReviewer]
+class AdminTheoryReviewActionView(AdminPrivateResponseMixin, TheorySystemFeatureMixin, APIView):
+    permission_classes = [IsKnowledgeEditor]
 
-    @staticmethod
-    def _unique_slug(name: str) -> str:
-        base = slugify(name, allow_unicode=False) or f"node-{uuid4().hex[:8]}"
-        value = base[:180]
-        suffix = 2
-        while KnowledgeNode.objects.filter(slug=value).exists():
-            marker = f"-{suffix}"
-            value = f"{base[: 180 - len(marker)]}{marker}"
-            suffix += 1
-        return value
-
-    @staticmethod
-    def _create_work_followup(task, node, relation_type, actor):
-        """Keep a new-node decision separate from the later work-relation review."""
-
-        if not task.work_id:
-            return
-        get_object_or_404(Work.objects.select_for_update(), pk=task.work_id)
-        allowed_roles = {value for value, _label in WorkNodeRelation.Role.choices}
-        if relation_type not in allowed_roles:
-            relation_type = WorkNodeRelation.Role.GENERAL_MENTION
-        relation, _created = WorkNodeRelation.objects.get_or_create(
-            work=task.work,
-            node=node,
-            role=relation_type,
-            defaults={
-                "confidence": task.confidence,
-                "status": "pending",
-                "source": "theory_review_new_node",
-                "created_by": actor,
-            },
-        )
-        pages = [int(value) for value in task.evidence_pages or [] if str(value).isdigit()]
-        if task.file_id and pages and task.evidence_text:
-            EvidenceSnippet.objects.get_or_create(
-                work=task.work,
-                file=task.file,
-                node=node,
-                work_node_relation=relation,
-                page_number=min(pages),
-                defaults={
-                    "page_end": max(pages),
-                    "quote": task.evidence_text,
-                    "extraction_method": (
-                        EvidenceSnippet.ExtractionMethod.OCR
-                        if task.file.extraction_method == "ocr"
-                        else EvidenceSnippet.ExtractionMethod.TEXT_LAYER
-                    ),
-                    "semantic_confidence": task.confidence,
-                    "review_status": RelationReviewStatus.SUGGESTED,
-                },
-            )
-        # An alias decision must not reset an existing human review or evidence.
-        if not TheoryReviewTask.objects.filter(task_type=TheoryReviewTask.TaskType.WORK_NODE,
-                work=task.work, file=task.file, candidate_node=node).exists():
-            TheoryReviewTask.objects.create(task_type=TheoryReviewTask.TaskType.WORK_NODE,
-                work=task.work, file=task.file, candidate_node=node,
-                suggested_relation_type=relation_type, confidence=task.confidence,
-                evidence_pages=task.evidence_pages, evidence_text=task.evidence_text,
-                status=TheoryReviewTask.TaskStatus.PENDING, submitted_at=timezone.now())
-
-    @extend_schema(request=TheoryReviewInput, responses=TheoryReviewResultSerializer)
     def post(self, request, pk):
-        return self.review_command(request, pk, lambda: self._apply_decision(request, pk))
-
-    @transaction.atomic
-    def _apply_decision(self, request, pk):
-        task = get_object_or_404(TheoryReviewTask.objects.select_for_update(), pk=pk)
-        pending_revision = None
-        action = request.data.get("action", "").strip()
-        status_map = {
-            "reject": TheoryReviewTask.TaskStatus.REJECTED,
-            "defer": TheoryReviewTask.TaskStatus.DEFERRED,
-            "insufficient": TheoryReviewTask.TaskStatus.INSUFFICIENT_EVIDENCE,
-            "needs_changes": TheoryReviewTask.TaskStatus.NEEDS_CHANGES,
-        }
-        if action in status_map:
-            task.status = status_map[action]
-        elif action == "create_node":
-            if task.task_type != TheoryReviewTask.TaskType.NEW_NODE:
-                return Response({"action": ["只有新增节点建议可以创建草稿节点。"]}, status=400)
-            name = (request.data.get("canonical_name_zh") or task.suggested_node_name).strip()
-            if not name:
-                return Response({"canonical_name_zh": ["请填写规范中文名。"]}, status=400)
-            node_type = request.data.get("node_type") or KnowledgeNode.NodeType.THEORY_TRADITION
-            allowed_types = {value for value, _label in KnowledgeNode.NodeType.choices}
-            if node_type not in allowed_types:
-                return Response({"node_type": ["请选择受控的节点类型。"]}, status=400)
-            if KnowledgeNode.objects.filter(canonical_name_zh__iexact=name).exists():
-                return Response(
-                    {"canonical_name_zh": ["已经存在同名规范节点，请改为已有节点别名。"]},
-                    status=400,
-                )
-            primary_discipline = None
-            if request.data.get("primary_discipline"):
-                primary_discipline = get_object_or_404(
-                    Discipline,
-                    pk=request.data["primary_discipline"],
-                )
-            node = KnowledgeNode.objects.create(
-                node_type=node_type,
-                canonical_name_zh=name,
-                canonical_name_en=(request.data.get("canonical_name_en") or "").strip(),
-                slug=self._unique_slug(name),
-                primary_discipline=primary_discipline,
-                status="draft",
-                created_by=request.user,
-            )
-            if primary_discipline:
-                KnowledgeNodeDiscipline.objects.create(
-                    node=node,
-                    discipline=primary_discipline,
-                    relation_type=KnowledgeNodeDiscipline.RelationType.PRIMARY,
-                    status="pending",
-                )
-            record_node_version(node, request.user, "从 PDF 新理论候选创建草稿")
-            task.candidate_node = node
-            self._create_work_followup(
-                task,
-                node,
-                request.data.get("relation_type") or WorkNodeRelation.Role.GENERAL_MENTION,
-                request.user,
-            )
-            task.status = TheoryReviewTask.TaskStatus.CONFIRMED
-        elif action in {"alias_existing", "merge_existing"}:
-            if task.task_type != TheoryReviewTask.TaskType.NEW_NODE:
-                return Response({"action": ["只有新增节点建议可以归并为已有节点别名。"]}, status=400)
-            if not request.data.get("candidate_node"):
-                return Response({"candidate_node": ["请选择已有规范节点。"]}, status=400)
-            node = get_object_or_404(KnowledgeNode.objects.select_for_update(), pk=request.data["candidate_node"])
-            if node.status == "archived":
-                return Response({"candidate_node": ["该理论节点已经下线，请选择其他节点。"]}, status=409)
-            alias = task.suggested_node_name.strip()
-            if alias and alias.casefold() != node.canonical_name_zh.casefold():
-                normalized = " ".join(alias.casefold().split())
-                conflict = KnowledgeNodeAlias.objects.filter(normalized_alias=normalized).exclude(
-                    node=node
-                ).select_related("node").first()
-                if conflict:
-                    return Response(
-                        {"candidate_node": [f"该别名已属于“{conflict.node.canonical_name_zh}”。"]},
-                        status=400,
-                    )
-                if node.status == "published":
-                    try:
-                        pending_revision = _node_alias_revision_from_review_task(task, node, alias, request.user)
-                    except ValueError as exc:
-                        return Response({"detail": str(exc), "code": "editorial_revision_error"}, status=409)
-                else:
-                    KnowledgeNodeAlias.objects.get_or_create(
-                        node=node, normalized_alias=normalized,
-                        defaults={"alias": alias, "language": "zh-CN",
-                                  "alias_type": KnowledgeNodeAlias.AliasType.ALIAS,
-                                  "source_kind": KnowledgeNodeAlias.SourceKind.PDF_EVIDENCE,
-                                  "is_verified": True, "created_by": request.user},
-                    )
-                    record_node_version(node, request.user, f"确认 PDF 候选别名 {alias}")
-            task.candidate_node = node
-            self._create_work_followup(
-                task,
-                node,
-                request.data.get("relation_type") or WorkNodeRelation.Role.GENERAL_MENTION,
-                request.user,
-            )
-            task.status = TheoryReviewTask.TaskStatus.CONFIRMED
-        elif action in {"confirm", "modify_confirm"}:
-            node = task.candidate_node
-            if request.data.get("candidate_node"):
-                node = get_object_or_404(KnowledgeNode, pk=request.data["candidate_node"])
-            if node is None:
-                return Response({"candidate_node": ["确认前必须选择规范节点。"]}, status=400)
-            task.candidate_node = node
-            relation_type = request.data.get("relation_type") or task.suggested_relation_type
-            if task.task_type == TheoryReviewTask.TaskType.WORK_NODE:
-                allowed_roles = {value for value, _label in WorkNodeRelation.Role.choices}
-                if relation_type not in allowed_roles:
-                    return Response({"relation_type": ["请选择受控的文献关系类型。"]}, status=400)
-                if not task.work_id:
-                    return Response({"work": ["审核任务缺少馆藏文献。"]}, status=400)
-                pages = [int(value) for value in task.evidence_pages or [] if str(value).isdigit()]
-                if task.work.editions.filter(
-                    state=PublicationState.PUBLISHED
-                ).exists():
-                    try:
-                        pending_revision = _work_relation_revision_from_review_task(
-                            task,
-                            node,
-                            relation_type,
-                            request.user,
-                        )
-                    except ValueError as exc:
-                        return Response(
-                            {
-                                "detail": str(exc),
-                                "code": "editorial_revision_error",
-                            },
-                            status=status.HTTP_409_CONFLICT,
-                        )
-                else:
-                    relation, _created = WorkNodeRelation.objects.update_or_create(
-                        work=task.work,
-                        node=node,
-                        role=relation_type,
-                        defaults={
-                            "confidence": task.confidence,
-                            "status": "published",
-                            "source": "theory_review_task",
-                            "reviewed_by": request.user,
-                            "reviewed_at": timezone.now(),
-                        },
-                    )
-                    if task.file_id and pages and task.evidence_text:
-                        EvidenceSnippet.objects.update_or_create(
-                            work=task.work,
-                            file=task.file,
-                            node=node,
-                            work_node_relation=relation,
-                            page_number=min(pages),
-                            defaults={
-                                "page_end": max(pages),
-                                "quote": task.evidence_text,
-                                "extraction_method": (
-                                    EvidenceSnippet.ExtractionMethod.OCR
-                                    if task.file.extraction_method == "ocr"
-                                    else EvidenceSnippet.ExtractionMethod.TEXT_LAYER
-                                ),
-                                "semantic_confidence": task.confidence,
-                                "review_status": RelationReviewStatus.APPROVED,
-                                "reviewed_by": request.user,
-                                "reviewed_at": timezone.now(),
-                            },
-                        )
-            task.status = TheoryReviewTask.TaskStatus.CONFIRMED
-        else:
-            return Response({"action": ["未知审核操作。"]}, status=400)
-
-        task.review_note = request.data.get("review_note", task.review_note)
-        if request.data.get("assigned_to"):
-            task.assigned_to_id = request.data["assigned_to"]
-        task.reviewed_at = timezone.now()
-        task.save()
-        payload = dict(
-            TheoryReviewTaskSerializer(task, context={"request": request}).data
-        )
-        if pending_revision is not None:
-            from catalog.services.editorial_revision import (
-                serialize_editorial_revision,
-            )
-
-            payload["editorial_revision"] = serialize_editorial_revision(
-                pending_revision
-            )
-        return Response(payload)
-
-
-from catalog.path_editor_views import PathCommandMixin
+        task = get_object_or_404(TheoryReviewTask, pk=pk)
+        return Response({"code": "legacy_academic_candidate_retired",
+            "detail": "原学术候选已保留为历史记录。请在 Intelligence 对指定正文修订生成和审核建议。",
+            "workspace_url": f"/admin/intelligence?work_id={task.work_id or ''}"}, status=409)
 
 
 class AdminReadingPathListView(PathCommandMixin, AdminEditorialDraftReadMixin, TheorySystemFeatureMixin, generics.ListCreateAPIView):

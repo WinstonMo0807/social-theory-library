@@ -1518,6 +1518,8 @@ def create_editorial_revision(
 ) -> EditorialRevision:
     if actor is None or not getattr(actor, "is_authenticated", False):
         raise EditorialRevisionError("编辑草稿必须记录实际操作人。")
+    if target_type == "knowledge_relation":
+        raise EditorialRevisionError("学术关系已迁入知识编纂 ChangeSet；原关系与草稿保留，请从学术陈述工作区修改。")
     policy = _policy(target_type)
     target = policy.model.objects.select_for_update().filter(pk=target_id).first()
     if target is None:
@@ -1703,6 +1705,8 @@ def publish_editorial_revision(revision_id, *, actor, preserve_catalog_snapshot=
     revision = EditorialRevision.objects.select_for_update().filter(pk=revision_id).first()
     if revision is None:
         raise EditorialRevisionError("编辑草稿不存在。")
+    if revision.target_type == "knowledge_relation":
+        raise EditorialRevisionError("旧关系草稿不能再写入正式关系表，请将其内容迁入知识编纂审核。")
     if revision.status == EditorialRevision.Status.PUBLISHED:
         return revision
     if revision.status != EditorialRevision.Status.DRAFT:

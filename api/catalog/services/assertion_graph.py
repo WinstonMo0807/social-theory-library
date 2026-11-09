@@ -3,9 +3,7 @@ from django.db.models import Q
 from catalog import models as m
 from catalog.services.knowledge_public import assertion_public, assertion_data
 
-PREDICATES = {"uses":"使用", "criticizes":"批评", "inherits":"继承", "develops":"发展", "cites":"引用",
-    "responds_to":"回应", "mentions":"提及", "proposes":"提出", "defines":"定义", "interprets":"解释",
-    "influences":"影响", **dict(m.WorkNodeRelation.Role.choices), **dict(m.KnowledgeRelation.RelationType.choices)}
+from catalog.services.academic_vocabulary import PREDICATES, legacy_citation
 
 
 def entity_endpoint(entity, entities):
@@ -33,7 +31,7 @@ def project_statement(statement, entities, actor=None):
         return None
     value = assertion_data(statement, actor)
     legacy_record = statement.origin.get("record", {})
-    citation = "；".join(v["citation"] for v in value["sources"] if v["citation"]) or str(legacy_record.get("source") or legacy_record.get("evidence_source") or "")
+    citation = "；".join(v["citation"] for v in value["sources"] if v["citation"]) or legacy_citation(legacy_record.get("source") or legacy_record.get("evidence_source"))
     evidence = []
     for link in value["evidence"]:
         location = link.get("locator")

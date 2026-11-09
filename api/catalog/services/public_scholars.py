@@ -25,6 +25,7 @@ from catalog.models import (Contribution, EditorialRevision, EvidenceCurationRef
 from catalog.services.publication_eligibility import public_editions
 from catalog.services.scoped_search import public_scholar_queryset
 from catalog.services.query_lexicon.registry import FORMAL_PERSON_VARIANT_SOURCES
+from catalog.services.academic_projection import person_node_links
 from common.capabilities import Capability, has_capability
 
 SECTIONS = ("overview", "works", "concepts", "questions", "timeline", "relations", "topics", "paths", "sources", "evidence")
@@ -181,8 +182,10 @@ def _cards(rows, query=""):
         fields.setdefault(relation.person_id, []).append(_link(relation.topic, "topic"))
     for relation in PersonSubdisciplineRelation.objects.filter(person_id__in=identifiers, review_status="approved", subdiscipline__editorial_status="published").select_related("subdiscipline"):
         fields.setdefault(relation.person_id, []).append(_link(relation.subdiscipline, "subdiscipline"))
-    for relation in PersonNodeRelation.objects.filter(person_id__in=identifiers, status="published", node__status="published", node__node_type="theory_tradition").select_related("node"):
-        schools.setdefault(relation.person_id, []).append(_link(relation.node, "school"))
+    for relation in person_node_links(person_ids=identifiers, tradition_only=True):
+        entries = schools.setdefault(relation.person_id, [])
+        if not any(v["id"] == str(relation.node_id) for v in entries):
+            entries.append(_link(relation.node, "school"))
     result = []
     for profile in rows:
         profile = _formal_profile(profile, getattr(profile, "public_snapshot", None) or {})
@@ -273,8 +276,7 @@ def scholar_directory(params, *, request=None):
     if schools:
         if any(not _uuid(value) for value in schools):
             raise ValidationError({"school": "理论流派标识无效。"})
-        rows = rows.filter(person__node_relations__status="published", person__node_relations__node__status="published",
-            person__node_relations__node__node_type="theory_tradition", person__node_relations__node_id__in=schools)
+        rows = rows.filter(person_id__in={v.person_id for v in person_node_links(node_ids=schools, tradition_only=True)})
     rows = rows.distinct()
     order = {"name": ("public_name", "pk"), "birth": ("period_start", "public_name", "pk"),
         "works": ("-public_work_count", "public_name", "pk"), "relevance": (("search_rank",) if query else ()) + ("public_name", "pk")}[sort]
@@ -284,7 +286,12 @@ def scholar_directory(params, *, request=None):
     for model, kind in ((PersonTopicRelation, "topic"), (PersonSubdisciplineRelation, "subdiscipline")):
         facets = model.objects.filter(person_id__in=people, review_status="approved", **{kind + "__editorial_status": "published"}).values(kind + "_id", kind + "__name").annotate(count=Count("person_id", distinct=True)).order_by(kind + "__name")
         field_facets.extend({"value": f"{kind}:{row[kind + '_id']}", "label": row[kind + "__name"], "count": row["count"]} for row in facets)
-    school_facets = PersonNodeRelation.objects.filter(person_id__in=people, status="published", node__status="published", node__node_type="theory_tradition").values("node_id", "node__canonical_name_zh").annotate(count=Count("person_id", distinct=True)).order_by("node__canonical_name_zh")
+    school_members, school_names = {}, {}
+    for relation in person_node_links(person_ids=people, tradition_only=True):
+        school_members.setdefault(relation.node_id, set()).add(relation.person_id)
+        school_names[relation.node_id] = relation.node.canonical_name_zh
+    school_facets = [{"node_id": key, "node__canonical_name_zh": school_names[key], "count": len(members)}
+        for key, members in sorted(school_members.items(), key=lambda row: school_names[row[0]])]
     result.update(query=query, filters={"field": fields, "period": periods, "school": schools, "sort": sort}, period_notice=PERIOD_NOTICE,
         facets={"fields": field_facets, "periods": [{"value": key, "label": values[0], "count": rows.filter(_period_q(key)).count()} for key, values in PERIODS.items()],
                 "schools": [{"value": str(row["node_id"]), "label": row["node__canonical_name_zh"], "count": row["count"]} for row in school_facets]},
@@ -368,10 +375,10 @@ def _work_rows(editions, profile):
 
 def _knowledge(profile, editions):
     from catalog.services.theory_graph import _SnapshotEntity
-    direct = PersonNodeRelation.objects.filter(person_id=profile.person_id, status="published", node__status="published")
+    direct = {v.node_id for v in person_node_links(person_ids=[profile.person_id])}
     # Work associations are material links, never a claim that this person coined a concept.
     authored = scholar_editions(profile.person_id, ("author",), whole_only=True).filter(_SnapshotEntity("knowledge_node", OuterRef("pk")))
-    return KnowledgeNode.objects.filter(status="published").alias(in_authored_material=Exists(authored)).filter(Q(pk__in=direct.values("node_id")) | Q(in_authored_material=True)).distinct()
+    return KnowledgeNode.objects.filter(status="published").alias(in_authored_material=Exists(authored)).filter(Q(pk__in=direct) | Q(in_authored_material=True)).distinct()
 
 
 class SnapshotPathMember(Func):
@@ -440,7 +447,9 @@ def _knowledge_rows(nodes, profile):
     from catalog.theory_serializers import _public_evidence_queryset
     nodes = list(nodes)
     ids = [row.pk for row in nodes]
-    links = {row.node_id: row for row in PersonNodeRelation.objects.filter(person_id=profile.person_id, node_id__in=ids, status="published")}
+    links = {}
+    for row in person_node_links(person_ids=[profile.person_id], node_ids=ids):
+        links.setdefault(row.node_id, []).append(row)
     page = Page.objects.filter(asset_id=OuterRef("file_id"), index=OuterRef("page_number")).alias(
         quote_position=StrIndex("text", OuterRef("quote"))).filter(quote_position__gt=0)
     evidence = _public_evidence_queryset({}).filter(Exists(page),
@@ -448,9 +457,13 @@ def _knowledge_rows(nodes, profile):
         file__edition__active_catalog_revision__document_revision__source_checksum=F("file__sha256"),
     ).exclude(file__sha256="").exclude(quote__regex=r"^\s*$").annotate(source_node=Coalesce("node_id", "work_node_relation__node_id")).filter(source_node__in=ids)
     sources = dict(evidence.values("source_node").annotate(n=Count("pk", distinct=True)).values_list("source_node", "n"))
-    people = dict(PersonNodeRelation.objects.filter(node_id__in=ids, status="published", person_id__in=public_scholar_queryset().values("person_id")).values("node_id").annotate(n=Count("person_id", distinct=True)).values_list("node_id", "n"))
+    members = {}
+    for row in person_node_links(node_ids=ids, person_ids=public_scholar_queryset().values("person_id")):
+        members.setdefault(row.node_id, set()).add(row.person_id)
+    people = {key: len(values) for key, values in members.items()}
     return [{**_link(row, "school"), "node_type": row.node_type, "summary": row.summary,
-        "relation_label": links[row.pk].relation_label if row.pk in links else "相关著作中的知识条目",
+        "relation_label": "；".join(dict.fromkeys(v.relation_label for v in links[row.pk])) if row.pk in links else "相关著作中的知识条目",
+        "assertion_ids": [str(v.assertion_id) for v in links.get(row.pk, []) if getattr(v, "assertion_id", None)],
         "relation_source": "person_relation" if row.pk in links else "published_work_relation",
         "source_count": sources.get(row.pk, 0), "scholar_count": people.get(row.pk, 0)} for row in nodes]
 

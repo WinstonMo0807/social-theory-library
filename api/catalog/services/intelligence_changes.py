@@ -60,7 +60,7 @@ def submit_draft(revision, proposals, actor, *, request_id, origin="external", r
     require_editor(actor)
     if revision:
         require_revision_access(revision, actor, editorial=True)
-    elif origin != "human" or not (subject_work or subject_entity) or run:
+    elif origin not in {"human", "legacy_candidate"} or not (subject_work or subject_entity) or run:
         raise ValidationError("自动分析和外部代理草稿必须指定可核验的正文修订。")
     scope_key = str(revision.pk) if revision else f"work:{subject_work.pk}" if subject_work else f"entity:{subject_entity.pk}"
     request_id = uuid_value(request_id)
@@ -159,11 +159,12 @@ def review(changeset_id, decisions, actor, *, expected_version):
                 raise ValidationError("修改内容必须是结构化对象。")
             edited = decision["payload"] != item.payload
             block_edited = decision["payload"].get("block") != item.payload.get("block")
+            explicit_dependencies = set(item.dependencies) - candidate_references(item.payload)
             item.payload = decision["payload"]
             references=candidate_references(item.payload)
             if references-set(map(str,changeset.items.values_list("pk",flat=True))) or str(item.pk) in references:
                 raise ValidationError("修改后的身份引用不属于当前变更集。")
-            item.dependencies=sorted(references)
+            item.dependencies=sorted(explicit_dependencies | references)
             if edited and block_edited and item.kind == "wiki_patch":
                 item.payload = {**item.payload, "human_edited": True}
         item.decision, item.decision_note = decision["decision"], str(decision.get("note", ""))[:1000]
@@ -245,9 +246,15 @@ def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
                         obj = create_entity(payload, actor)
                         result = {"type": "entity", "id": str(obj.pk), "status": obj.status}
                     elif item.kind == "assertion":
-                        obj = create_assertion(payload, changeset.document_revision, actor,
-                            allow_citation=changeset.origin == "human", subject_work=changeset.subject_work)
-                        result = {"type": "assertion", "id": str(obj.pk), "status": obj.status}
+                        if payload.get("operation") == "withdraw":
+                            if changeset.origin != "human":
+                                raise ValidationError("自动建议不能撤回人工陈述。")
+                            from catalog.services.academic_relations import stage_withdrawal
+                            result = stage_withdrawal(payload, actor)
+                        else:
+                            obj = create_assertion(payload, changeset.document_revision, actor,
+                                allow_citation=changeset.origin == "human", subject_work=changeset.subject_work)
+                            result = {"type": "assertion", "id": str(obj.pk), "status": obj.status}
                     elif item.kind == "alias":
                         entity = m.Entity.objects.get(pk=payload["entity_id"])
                         text = str(payload.get("text", "")).strip()

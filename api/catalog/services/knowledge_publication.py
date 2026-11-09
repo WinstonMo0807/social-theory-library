@@ -49,6 +49,7 @@ from catalog.services.dependency_engine import (
     record_canonical_change,
 )
 from catalog.services.field_decisions import ensure_publication_bundle
+from catalog.services.academic_projection import work_node_links
 
 
 FULLTEXT_QUALITY_THRESHOLD = 0.55
@@ -269,9 +270,7 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "role": row.role,
             "is_primary": row.is_primary,
         }
-        for row in work.node_relations.filter(status="published", node__status="published")
-        .select_related("node")
-        .order_by("-is_primary", "node_id", "role")
+        for row in work_node_links(work_ids=[work.pk])
     ]
     asset, document_revision, quality_ready = _current_document(edition, content_asset_id=content_asset_id)
     decisions = [
@@ -591,17 +590,10 @@ def _publish_bundle_entities(
                     update_fields=["status", "reviewed_by", "published_at", "updated_at"]
                 )
             if bundle.edition_id:
-                WorkNodeRelation.objects.select_for_update().filter(
-                    work_id=bundle.edition.work_id,
-                    node=entity,
-                    status=KnowledgePublicationStatus.PENDING,
-                    id__in=confirmed_links[(object_type, str(item.object_id))],
-                ).update(
-                    status=KnowledgePublicationStatus.PUBLISHED,
-                    reviewed_by=actor,
-                    reviewed_at=now,
-                    updated_at=now,
-                )
+                from catalog.services.academic_relations import propose_work_relations
+                pending = WorkNodeRelation.objects.filter(work_id=bundle.edition.work_id, node=entity, status="pending",
+                    id__in=confirmed_links[(object_type, str(item.object_id))])
+                propose_work_relations(bundle.edition.work, [{"node": entity, "role": row.role} for row in pending], actor)
         elif object_type == "theory_school":
             # Compatibility for draft items created before normalized theory
             # nodes became the only new-write target.

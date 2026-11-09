@@ -727,39 +727,23 @@ def _knowledge_node_subdiscipline(*, target, value, candidate, actor):
 
 @FIELD_MUTATIONS.register("knowledge_relation")
 def _knowledge_relation(*, target, value, candidate, actor):
+    from uuid import uuid5
+    from catalog import models as m
+    from catalog.services.knowledge_core import entity_for_legacy
+    from catalog.services.knowledge_workspace import submit_page_assertion
     other = KnowledgeNode.objects.get(pk=value["target_node_id"])
-    if other.pk == target.pk:
-        raise ValueError("理论关系不能指向自身。")
-    policy = relation_policy(value["relation_type"])
-    if target.node_type not in policy.allowed_subject_types or other.node_type not in policy.allowed_object_types:
-        raise ValueError("该 relation type 不允许当前节点类型组合。")
-    if relation_would_create_cycle(
-        source_node_id=target.pk,
-        target_node_id=other.pk,
-        predicate=value["relation_type"],
-    ):
-        raise ValueError("该关系会形成循环。")
-    source_url = candidate.evidence_records.filter(is_current=True).order_by("-confidence").values_list("canonical_url", flat=True).first() or ""
-    relation, created = KnowledgeRelation.objects.get_or_create(
-        source_node=target,
-        target_node=other,
-        relation_type=value["relation_type"],
-        defaults={
-            "direction": (
-                KnowledgeRelation.Direction.DIRECTED
-                if policy.directed
-                else KnowledgeRelation.Direction.UNDIRECTED
-            ),
-            "description": value.get("description", ""),
-            "evidence_source": source_url[:300],
-            "confidence": candidate.confidence,
-            "status": "pending",
-            "created_by": actor,
-        },
-    )
-    if created:
-        record_relation_version(relation, actor, "接受联网理论关系候选")
-    return MutationResult("catalog.KnowledgeRelation", relation.id, created, created)
+    left, right = entity_for_legacy(target), entity_for_legacy(other)
+    page, _ = m.KnowledgePage.objects.get_or_create(entity=left,
+        defaults={"slug": f"entity-{left.pk}", "title": left.label})
+    citations = list(candidate.evidence_records.filter(is_current=True).order_by("canonical_url").values_list("canonical_url", flat=True))
+    draft = submit_page_assertion(page, {"text": value.get("description", ""), "predicate": value["relation_type"],
+        "direction": "directed" if relation_policy(value["relation_type"]).directed else "undirected",
+        "expression": "editorial_judgment", "participants": [{"role":"subject", "entity_id":str(left.pk)},
+            {"role":"object", "entity_id":str(right.pk)}], "source_citation": "；".join(citations), "evidence": [],
+        "source_candidate": str(candidate.pk)}, actor, request_id=uuid5(candidate.pk, "knowledge-changeset"), origin="legacy_candidate")
+    # This is a candidate transfer, not scholarly acceptance. Exact evidence is
+    # still required by ChangeSet application; metadata citations cannot waive it.
+    return MutationResult("catalog.ChangeSet", draft.pk, True, False)
 
 
 def _timeline_mutation(*, target, value, candidate, actor):

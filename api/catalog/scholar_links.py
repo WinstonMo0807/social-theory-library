@@ -168,6 +168,13 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
 
     @extend_schema(request=ScholarLinkInput, responses=AdminScholarLinkSerializer)
     def post(self, request, scholar_id, kind):
+        if kind == "node":
+            from catalog.academic_relation_views import relation_response
+            scholar = get_object_or_404(ScholarProfile, pk=scholar_id)
+            values = {**request.data, "person": scholar.person, "node": request.data.get("target_id")}
+            if request.data.get("action") == "withdraw":
+                values["operation"] = "withdraw"
+            return relation_response(request, "person", values=values, legacy_id=request.data.get("id"))
         self.configure(kind)
         if not request.headers.get("Idempotency-Key"):
             raise ValidationError("请使用固定请求编号，以便查回关联操作。")

@@ -8,6 +8,7 @@ from catalog.services.knowledge_core import require_editor, page_content
 from catalog.services.knowledge_sources import require_revision_access, locator
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
+from catalog.services.academic_vocabulary import PREDICATES
 
 
 def public_entities():
@@ -39,7 +40,7 @@ def assertion_public(statement):
             return False
         if not source.document_revision_id and source.work_id and not public_editions().filter(work_id=source.work_id).exists():
             return False
-        if not source.document_revision_id and not source.work_id and not source.citation.strip():
+        if not source.document_revision_id and not source.work_id and not source.citation.strip() and not statement.origin.get("human_confirmation_preserved"):
             return False
     for participant in statement.participants.select_related("entity"):
         if participant.work_id and not public_editions().filter(work_id=participant.work_id).exists():
@@ -64,7 +65,8 @@ def assertion_data(statement, actor, *, draft=False):
             value["locator"] = locator(link.anchor, actor, editorial=draft)
         evidence.append(value)
     return {"id": str(statement.pk), "text": statement.text, "category": statement.category,
-        "predicate": statement.predicate, "direction": statement.direction, "expression": statement.expression, "conditions": statement.conditions,
+        "predicate": statement.predicate, "predicate_label": PREDICATES.get(statement.predicate, statement.predicate),
+        "direction": statement.direction, "expression": statement.expression, "conditions": statement.conditions,
         "source_quality": statement.source_quality, "supersedes_id": str(statement.supersedes_id) if statement.supersedes_id else None,
         "status": statement.status, "evidence": evidence,
         "participants": list(statement.participants.values("role", "entity_id", "entity__label", "work_id", "edition_id")),
@@ -87,7 +89,7 @@ def publish_reviewed_identity(entity, actor):
     from catalog.services.editorial_revision import create_editorial_revision, publish_editorial_revision
     target, kind, patch = None, None, None
     if entity.person_id:
-        target = m.ScholarProfile.objects.get(person_id=entity.person_id)
+        target, _ = m.ScholarProfile.objects.get_or_create(person_id=entity.person_id, defaults={"slug": f"scholar-{entity.person_id}"})
         kind, patch = "scholar_profile", {"editorial_status":"published"}
     else:
         for field, target_kind, status_field in (("node","knowledge_node","status"), ("topic","topic","editorial_status"),
@@ -145,9 +147,12 @@ def page_data(page, actor, *, draft=False):
             visible.append(block)
             assertions.update(block_assertions)
             anchors.update(block_anchors)
+    from catalog.services.academic_relations import pending_withdrawals
+    withdrawals = pending_withdrawals(page, blocks) if draft else []
     return {"id": str(page.pk), "title": page.title, "status": revision.status if draft and revision else page.status,
         "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()), "anchors": list(anchors.values()),
         "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions),
+            "withdrawals": [{"id": v.application["id"], "text": v.payload["text"], "reason": v.payload["reason"]} for v in withdrawals],
             "entities": [{"id":str(v.pk), "label":v.label, "kind":v.kind} for v in publication_entities(page, assertions)] if draft else []}}
 
 
@@ -189,6 +194,8 @@ def publish_page(page_id, revision_id, actor):
     if not current or current.pk != latest.pk:
         raise ValidationError("知识页草稿已变化，请重新预览再发布。")
     statement_ids = [ref["id"] for block in blocks for ref in block.get("references", []) if ref.get("type") == "assertion"]
+    from catalog.services.academic_relations import publish_withdrawals
+    publish_withdrawals(page, blocks, actor)
     for entity in publication_entities(page, statement_ids):
         publish_reviewed_identity(entity, actor)
     for block in blocks:

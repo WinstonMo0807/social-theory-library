@@ -1,4 +1,5 @@
 "use client";
+import { AcademicRelations } from "./admin/academic-relations";
 
 import { confirmAction } from "@/lib/ui-dialog";
 
@@ -977,15 +978,13 @@ const knowledgeRelationOptions = [
 ] as const;
 
 export function TheoryRelationsAdmin() {
-  const account = useEditorAccountKey();
   const search = useSearchParams();
-  return <TheoryRelationsEditor key={`${account}:${search.get("relation") || "list"}:${search.get("node") || "all"}:${search.get("review_work") || "all"}:${search.get("review_file") || "all"}:${search.get("review_task") || "none"}`} requestedId={search.get("relation") || ""} />;
+  return <AcademicRelations legacyType={search.get("node") ? "node" : undefined} legacyId={search.get("node") || undefined} />;
 }
 
 type InlineRelation = RelationSourceRequest & {nodeId:string;onGuardChange:(value:{dirty:boolean;pending:boolean;composing:boolean})=>void;onSaved:()=>void};
-export function NodeRelationEditor({nodeId,requestedId="",onGuardChange,onSaved,sourceRequest,onSourceOpened}:{requestedId?:string} & InlineRelation) {
-  const account=useEditorAccountKey();
-  return <TheoryRelationsEditor key={`${account}:${nodeId}:${requestedId}`} requestedId={requestedId} embedded={{nodeId,onGuardChange,onSaved,sourceRequest,onSourceOpened}}/>;
+export function NodeRelationEditor({nodeId}:{requestedId?:string} & InlineRelation) {
+  return <AcademicRelations legacyType="node" legacyId={nodeId} />;
 }
 function TheoryRelationsEditor({ requestedId, embedded }: { requestedId: string; embedded?: InlineRelation }) {
   const opened = useRef(false);

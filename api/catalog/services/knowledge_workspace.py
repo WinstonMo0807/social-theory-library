@@ -276,7 +276,7 @@ def submit_page_changes(page, revision, patches, actor, *, request_id):
         subject_work=page.work, subject_entity=page.entity)
 
 
-def submit_page_assertion(page, payload, actor, *, request_id, revision=None):
+def submit_page_assertion(page, payload, actor, *, request_id, revision=None, origin="human"):
     """Human citation edits stay drafts and use the identical ChangeSet path.
 
     A citation is explicitly distinct from a verified passage. Automated and
@@ -321,7 +321,7 @@ def submit_page_assertion(page, payload, actor, *, request_id, revision=None):
             "page_id": str(page.pk), "operation": "replace" if previous_block else "add", "block_id": block_id,
             "base_hash": digest(previous_block) if previous_block else None, "human_edited": True,
             "reason": "人工编辑有来源的学术陈述", "block": block}}]
-    return submit_draft(revision, items, actor, request_id=key, origin="human", subject_work=page.work, subject_entity=page.entity)
+    return submit_draft(revision, items, actor, request_id=key, origin=origin, subject_work=page.work, subject_entity=page.entity)
 
 
 def submit_assertion_draft(revision, payload, actor, *, request_id, origin="human"):

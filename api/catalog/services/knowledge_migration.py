@@ -6,6 +6,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from catalog import models as m
 from .knowledge_core import entity_for_legacy
 from .knowledge_sources import migrate_span
+from .academic_vocabulary import legacy_citation
 
 
 def record_snapshot(row):
@@ -89,7 +90,7 @@ def migrate_relation(row):
     """Do not infer missing editions, fine-grained predicates or claimants."""
     label = row._meta.label_lower
     mapping = m.KnowledgeLegacyMapping.objects.filter(source_type=label, source_id=row.pk, target_type="assertion").first()
-    if mapping and mapping.provenance.get("migration_version") == 2:
+    if mapping and mapping.provenance.get("migration_version") == 4:
         return mapping
     if row.status not in {"confirmed", "approved", "published"}:
         raise ValueError("Only confirmed historical records enter canonical knowledge")
@@ -146,6 +147,65 @@ def migrate_relation(row):
                 defaults={"note":"历史关系证据；原记录未细分支持或反对，不推断立场。"})
             statement.source_quality = "verified_legacy_text"
             statement.save(update_fields=["source_quality", "updated_at"])
+    raw_source = str(getattr(row, "source", getattr(row, "evidence_source", "")) or "").strip()
+    citation = legacy_citation(raw_source)
+    if raw_source and not citation:
+        # Repair only the exact v3 import. Preserve genuine citations and the
+        # original source code in origin/provenance, including manual edits.
+        statement.sources.filter(citation=raw_source).update(citation="")
+    if citation:
+        if statement.sources.exists():
+            statement.sources.filter(citation="").update(citation=citation)
+        else:
+            m.AssertionSource.objects.create(assertion=statement, expression="editorial_judgment", citation=citation,
+                provenance={"legacy_type": label, "legacy_id": str(row.pk), "revision_gap": True})
     return m.KnowledgeLegacyMapping.objects.update_or_create(source_type=label,source_id=row.pk,target_type="assertion",
         defaults={"target_id":statement.pk,"quality":"manual_status_preserved",
-            "provenance":{"migration_version":2,"source_quality":statement.source_quality}})[0]
+            "provenance":{"migration_version":4,"source_quality":statement.source_quality}})[0]
+
+
+@transaction.atomic
+def migrate_assertion_page(statement):
+    """Materialize already confirmed history, without inventing a new review.
+
+    The source row and all earlier revisions remain available. A conflicting
+    live editorial draft is deferred rather than overwritten by backfill.
+    """
+    from django.db.models import Max
+    from rest_framework.exceptions import ValidationError
+    from catalog.services.academic_relations import assertion_page
+    from catalog.services.knowledge_core import normalize_page_blocks
+    from catalog.services.knowledge_workspace import sync_dependencies
+    mapping = m.KnowledgeLegacyMapping.objects.filter(source_type="catalog.assertion", source_id=statement.pk,
+        target_type="knowledge_block").first()
+    if mapping:
+        return mapping
+    if not statement.origin.get("human_confirmation_preserved"):
+        raise ValidationError("只有有原人工确认记录的陈述可进入历史页迁移。")
+    page = assertion_page(statement)
+    page = m.KnowledgePage.objects.select_for_update().get(pk=page.pk)
+    revisions = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk)
+    if revisions.filter(status="draft").exists():
+        raise ValidationError("知识页有未发布编辑稿，历史回填已暂缓，原内容保持。")
+    block_id = uuid5(statement.pk, "legacy-assertion-block")
+    block = {"id": str(block_id), "type": "analysis", "text": statement.text,
+        "origin": "legacy_human", "human_edited": True,
+        "references": [{"type": "assertion", "id": str(statement.pk)}]}
+    blocks = normalize_page_blocks([*page.body_blocks, block], retained=page.body_blocks)
+    number = (revisions.aggregate(value=Max("revision"))["value"] or 0) + 1
+    status = "published" if statement.status == "published" else "draft"
+    snapshot = {"title": page.title, "scope": page.scope, "body_blocks": blocks, "status": status}
+    record = statement.origin.get("record", {})
+    revision = m.EditorialRevision.objects.create(target_type="knowledge_page", target_id=page.pk,
+        base_revision=number-1, revision=number, patch={"body_blocks": blocks}, materialized_preview=snapshot,
+        changed_fields=["body_blocks"], status=status, idempotency_key=f"legacy-assertion-page:{statement.pk}",
+        created_by=statement.created_by, published_by_id=record.get("reviewed_by_id") if status == "published" else None,
+        published_at=record.get("reviewed_at") if status == "published" else None,
+        change_note="迁移原人工确认陈述；原审核时间与定位缺口分别保留，不作为新审核")
+    if status == "published":
+        page.body_blocks, page.status = blocks, "published"
+        page.save(update_fields=["body_blocks", "status", "updated_at"])
+    sync_dependencies(page, blocks)
+    return m.KnowledgeLegacyMapping.objects.create(source_type="catalog.assertion", source_id=statement.pk,
+        target_type="knowledge_block", target_id=block_id, quality="human_history_preserved",
+        provenance={"page_id": str(page.pk), "editorial_revision_id": str(revision.pk), "origin": statement.origin.get("legacy_type")})

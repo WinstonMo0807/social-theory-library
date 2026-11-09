@@ -69,6 +69,14 @@
 .pdf { height: 62vh; min-height: 360px; overflow: auto; background: #e8e3d9; }
 .preview { padding: 25px; background: var(--paper, #f7f4ee); margin-top: 25px; }
 .preview h3 { margin-top: 0; }
+.relationEntry { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 30px; padding: 32px 0; border-bottom: 1px solid var(--line, #d9d2c6); }
+.relationMeta { display: flex; flex-direction: column; align-items: start; gap: 12px; font-size: .8125rem; color: var(--muted, #686257); }
+.relationMeta strong { color: var(--ink, #292822); font-size: 1rem; font-weight: 500; }
+.relationMeta a { color: inherit; }
+.relationBody { min-width: 0; max-width: 78ch; }
+.relationBody > button { margin-top: 20px; }
+.relationBody :global(.work-curated-evidence) { margin-top: 18px; }
+@media (max-width: 620px) { .relationEntry { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 26px 0; } .relationMeta { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 16px; } .relationMeta a { margin-left: auto; } }
 .selectedBlock { outline: 1px solid #a08660; outline-offset: 10px; cursor: pointer; }
 .selectedBlock:focus-visible { outline: 2px solid #947547; }
 .blockList { list-style: none; padding: 0; margin: 0; }

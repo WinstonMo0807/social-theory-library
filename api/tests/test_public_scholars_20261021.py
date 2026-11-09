@@ -77,7 +77,9 @@ def test_draft_preview_and_follow_summary_keep_formal_identity(admin_user, api_c
     assert preview["person"]["preferred_name"] == "Unpublished identity" and preview["public_revision"]["token"] == "preview"
     with pytest.raises(PermissionDenied):
         preview_scholar(scholar, snapshot=draft.materialized_preview)
-    Person.objects.filter(pk=scholar.person_id).update(preferred_name="Live unpublished identity", portrait="private/draft-portrait.jpg")
+    person = Person.objects.get(pk=scholar.person_id)
+    person.preferred_name, person.portrait = "Live unpublished identity", "private/draft-portrait.jpg"
+    person.save(update_fields=["preferred_name", "portrait"])
     formal = public_scholar_detail(scholar.slug)
     assert formal["person"]["preferred_name"] == "Synthetic scholar" and formal["person"]["portrait"] == ""
     assert scholar_follow_summary(scholar.pk)["portrait_url"] == ""
@@ -117,6 +119,7 @@ def test_reading_paths_follow_formal_items_and_current_exact_edition(admin_user)
     path, _, items, material = path_with_items()
     scholar = profile()
     Contribution.objects.create(edition=material, person=scholar.person, role="editor", approved=True)
+    material.catalog_revisions.filter(status="active").update(status="superseded")
     activate_catalog_revision(material, reader_asset=items[0].asset, document_revision=items[0].document_revision)
     capture_reading_path_publication(path, actor=admin_user)
     path.items.all().delete()  # Simulate an unpublished editor change; published membership survives.
@@ -132,11 +135,10 @@ def test_work_cover_and_reader_keep_exact_version_and_source_checksum():
     _, material, asset, initial = source()
     scholar = profile()
     Contribution.objects.create(edition=material, person=scholar.person, role="author", approved=True)
+    material.work.cover = "public/synthetic-cover.jpg"
+    material.work.save(update_fields=["cover"])
+    material.catalog_revisions.filter(status="active").update(status="superseded")
     revision = activate_catalog_revision(material, reader_asset=asset, document_revision=initial.document_revision)
-    snapshot = revision.snapshot
-    snapshot["work"]["cover"] = "public/synthetic-cover.jpg"
-    revision.snapshot = snapshot
-    revision.save(update_fields=["snapshot"])
     row = public_scholar_detail(scholar.slug)["works"]["results"][0]
     assert f"edition_id={material.pk}" in row["cover_url"] and row["reader_href"]
     document = revision.document_revision
