@@ -28,7 +28,9 @@ export function readStyleSource(file = globalStylesPath, { exclude = [], seen = 
 
 /** Ignore formatting/comments, but preserve selectors, declarations and at-rule order. */
 export function styleSemanticSnapshot(css, { resolveTokens = false } = {}) {
-  const root = postcss.parse(css);
+  // Git objects use LF even when the Windows checkout uses CRLF. Line endings
+  // inside multi-selector rules are formatting, not a different cascade.
+  const root = postcss.parse(css.replaceAll("\r\n", "\n"));
   const tokens = new Map();
   if (resolveTokens) {
     root.walkDecls(/^--stl-/, (decl) => {

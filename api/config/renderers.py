@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from rest_framework.renderers import JSONRenderer
 
 
-def error_contract(data, status):
+def error_contract(data, status, request_id=None):
     legacy = dict(data) if isinstance(data, Mapping) else {"detail": data}
     nested = legacy.get("error") if isinstance(legacy.get("error"), Mapping) else {}
     detail = legacy.get("detail", nested.get("detail", "请求未能完成。"))
@@ -13,14 +13,23 @@ def error_contract(data, status):
         404: "resource.not_found", 409: "request.conflict", 429: "request.throttled",
     }.get(status, "server.error" if status >= 500 else "request.failed")
     details = legacy.get("details") or (detail if isinstance(detail, Mapping) else {})
-    return {**legacy, "code": code, "message": message, "field": legacy.get("field"),
-            "severity": legacy.get("severity", "blocking"), "details": details}
+    payload = {**legacy, "code": code, "message": message, "field": legacy.get("field"),
+               "severity": legacy.get("severity", "blocking"), "details": details}
+    trace = request_id or nested.get("request_id")
+    if trace:
+        payload["trace_id"] = trace
+        payload.setdefault("request_id", trace)
+    return payload
 
 
 class ContractJSONRenderer(JSONRenderer):
     def render(self, data, accepted_media_type=None, renderer_context=None):
-        response = (renderer_context or {}).get("response")
+        context = renderer_context or {}
+        response = context.get("response")
         if response is not None and response.status_code >= 400:
-            data = error_contract(data, response.status_code)
+            # Django renders DRF responses before outer response middleware
+            # attaches headers; the request is the authoritative trace source.
+            request_id = getattr(context.get("request"), "stl_request_id", "") or response.headers.get("X-Request-ID")
+            data = error_contract(data, response.status_code, request_id)
             response.data = data
         return super().render(data, accepted_media_type, renderer_context)

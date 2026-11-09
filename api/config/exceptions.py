@@ -10,6 +10,8 @@ logger = logging.getLogger("library.api")
 
 def api_exception_handler(exc, context):
     response = exception_handler(exc, context)
+    request = context.get("request")
+    request_id = str(getattr(request, "stl_request_id", "") or "")
     if response is None:
         error_id = uuid4().hex[:12]
         logger.exception(
@@ -23,13 +25,13 @@ def api_exception_handler(exc, context):
                     "status": 500,
                     "code": "internal_error",
                     "detail": f"服务器处理失败。错误编号 {error_id}",
+                    "request_id": request_id or None,
                 }
             },
             status=500,
         )
 
     if response.status_code in {401, 403}:
-        request = context.get("request")
         reason = getattr(request, "library_auth_failure_reason", "")
         if not reason:
             reason = "permission_denied" if response.status_code == 403 else "invalid_session"
@@ -45,6 +47,7 @@ def api_exception_handler(exc, context):
         "error": {
             "status": response.status_code,
             "detail": detail,
+            "request_id": request_id or None,
         }
     }
     return response

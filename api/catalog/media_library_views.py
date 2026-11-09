@@ -31,10 +31,10 @@ class LibraryMediaMetadata(MediaRevisionMetadataSerializer):
     focal_x = serializers.FloatField(min_value=0, max_value=1)
     focal_y = serializers.FloatField(min_value=0, max_value=1)
 
-    def validate(self, value):
-        if set(self.initial_data) != set(FIELDS):
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and set(data) != set(FIELDS):
             raise ValidationError("请完整填写图片来源资料；原文件及图片身份不能修改。")
-        return value
+        return super().to_internal_value(data)
 
 
 class LibraryMediaCommand(serializers.Serializer):

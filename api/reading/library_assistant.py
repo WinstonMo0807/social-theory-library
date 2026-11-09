@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
+from dataclasses import replace
 from hashlib import sha256
 import json
 import logging
@@ -241,10 +242,13 @@ def _valid_uuid(value: object) -> str:
         return ""
 
 
-def validated_source_rows(rows: list[dict]) -> list[dict]:
+def validated_source_rows(rows: list[dict], *, viewer=None) -> list[dict]:
     """Discard stale or cross-linked search rows before they reach the model."""
 
     asset_ids = {_valid_uuid(row.get("asset_id")) for row in rows}
+    from types import SimpleNamespace
+    from catalog.services.discovery_sessions import request_access
+    allowed_access = request_access(SimpleNamespace(user=viewer))
     asset_ids.discard("")
     assets = {
         str(asset.id): asset
@@ -253,6 +257,7 @@ def validated_source_rows(rows: list[dict]) -> list[dict]:
             edition__is_primary=True,
             kind=Asset.Kind.NORMALIZED,
             status=Asset.Status.READY,
+            access_status__in=allowed_access,
         ).filter(active_document_q(asset_prefix=""))
     }
     page_ids = {_valid_uuid(row.get("page_id")) for row in rows}
@@ -269,6 +274,9 @@ def validated_source_rows(rows: list[dict]) -> list[dict]:
         if _valid_uuid(row.get("edition_id")) != str(asset.edition_id):
             continue
         if _valid_uuid(row.get("work_id")) != str(asset.edition.work_id):
+            continue
+        revision_id = (row.get("retrieval_provenance") or {}).get("document_revision_id")
+        if revision_id and str(revision_id) != str(asset.edition.active_catalog_revision.document_revision_id):
             continue
         page_id = _valid_uuid(row.get("page_id"))
         if page_id:
@@ -779,6 +787,10 @@ def _stream_conversation_answer(
             scope=scope,
             admin_visibility=bool(is_admin and debug),
         )
+        from types import SimpleNamespace
+        from catalog.services.discovery_sessions import request_access
+        resolved_scope = replace(resolved_scope, semantic_filters={**resolved_scope.semantic_filters,
+            "_allowed_access_statuses": request_access(SimpleNamespace(user=conversation.user))})
     except (ValueError, LibraryScopeError) as exc:
         yield sse_event("error", {"code": "invalid_scope", "detail": str(exc)})
         return
@@ -827,7 +839,7 @@ def _stream_conversation_answer(
         {**row.source_row(), "source_key": f"S{index}"}
         for index, row in enumerate(retrieval_result.evidence, start=1)
     ]
-    sources = validated_source_rows(sources)
+    sources = validated_source_rows(sources, viewer=conversation.user)
     sources = [
         {**source, "source_key": f"S{index}"}
         for index, source in enumerate(sources, start=1)
@@ -1138,8 +1150,12 @@ def _stream_conversation_answer(
         )
 
 
-def source_is_available(source: LibraryMessageSource) -> bool:
+def source_is_available(source: LibraryMessageSource, *, viewer=None) -> bool:
+    from catalog.services.discovery_sessions import request_access
+    from types import SimpleNamespace
+    allowed_access = request_access(SimpleNamespace(user=viewer))
     snapshot = active_catalog_snapshot(source.edition, require_fulltext=True)
+    captured_revision = (source.retrieval_provenance or {}).get("document_revision_id")
     return bool(
         source.work_id
         and source.asset_id
@@ -1151,8 +1167,10 @@ def source_is_available(source: LibraryMessageSource) -> bool:
         and source.asset
         and source.asset.edition_id == source.edition_id
         and source.edition.active_catalog_revision.reader_asset_id == source.asset_id
+        and (not captured_revision or str(captured_revision) == str(source.edition.active_catalog_revision.document_revision_id))
         and source.asset.kind == Asset.Kind.NORMALIZED
         and source.asset.status == Asset.Status.READY
+        and source.asset.access_status in allowed_access
         and (not source.page_id or source.page.asset_id == source.asset_id)
     )
 

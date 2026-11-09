@@ -61,6 +61,7 @@ export function CanonicalField({
   onInspect,
   error,
 }: CanonicalFieldProps) {
+  const pickerRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
   const helpId = useId();
   const errorId = useId();

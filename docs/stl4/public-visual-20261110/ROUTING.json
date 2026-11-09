@@ -1,0 +1,29 @@
+{
+  "routing_lines": [
+    "default web:3000;",
+    "\"1:192.168.5.6:18084\" web:3000;",
+    "server_name _;",
+    "add_header Permissions-Policy \"camera=(), microphone=(), geolocation=(), payment=(), usb=()\" always;",
+    "location = /api/auth/login/ {",
+    "proxy_pass http://api:8000;",
+    "location ~ ^/api/auth/(register|password/request|password/confirm)/$ {",
+    "proxy_pass http://api:8000;",
+    "location ^~ /api/ingestion/ {",
+    "proxy_pass http://api:8000;",
+    "location ^~ /api/catalog/admin/media/ {",
+    "proxy_pass http://api:8000;",
+    "location ~ ^/api/catalog/admin/editions/[0-9a-fA-F-]+/cover/$ {",
+    "proxy_pass http://api:8000;",
+    "location ^~ /api/distribution/assets/ {",
+    "proxy_pass http://api:8000;",
+    "location ^~ /__protected_assets/ {",
+    "location ^~ /api/catalog/semantic-search/ {",
+    "proxy_pass http://api:8000;",
+    "location = /api/catalog/search/ {",
+    "proxy_pass http://api:8000;",
+    "location /api/ {",
+    "proxy_pass http://api:8000;",
+    "location / {",
+    "proxy_pass http://$stl_web_upstream;"
+  ]
+}

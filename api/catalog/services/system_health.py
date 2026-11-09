@@ -221,6 +221,28 @@ def _ocr_probe() -> ProbeResult:
 
 
 def _semantic_probe() -> ProbeResult:
+    if getattr(settings, "DISCOVERY_ENABLED", False):
+        from catalog.services.discovery_projection import active_generation, discovery_coverage, meili, DiscoveryIndexError
+        from catalog.services.semantic_search import viewer_access_statuses
+        active = active_generation()
+        if active is None:
+            return ProbeResult(True, None, False, False, "当前观点索引尚未建立。",
+                               {"index_family": "discovery"}, "discovery_index_missing")
+        try:
+            remote = meili("GET", f"/indexes/{active.uid}/stats", timeout=4)
+        except DiscoveryIndexError as exc:
+            return ProbeResult(True, False, False, False, "当前观点索引暂不可读取。",
+                               {"index_family": "discovery", "uid": active.uid}, exc.code)
+        coverage = discovery_coverage(viewer_access_statuses(authenticated=True, staff=True))
+        productive = bool(remote.get("numberOfEmbeddedDocuments") and coverage.get("vector_editions"))
+        complete = productive and not coverage.get("partial")
+        return ProbeResult(True, True, True, complete,
+            "当前观点索引已完成公开修订覆盖。" if complete else "当前观点索引覆盖尚未完整，请查看索引任务。",
+            {"index_family": "discovery", "uid": active.uid, "coverage": coverage,
+             "document_count": remote.get("numberOfDocuments"),
+             "embedded_document_count": remote.get("numberOfEmbeddedDocuments"),
+             "is_indexing": remote.get("isIndexing")},
+            "" if complete else "discovery_coverage_pending")
     live = http_service_health(settings.MEILISEARCH_URL, "/health", timeout=4)
     reachable = bool(live.get("reachable"))
     active = SemanticIndexVersion.objects.filter(status=SemanticIndexVersion.Status.ACTIVE).order_by("-activated_at", "-created_at").first()
@@ -1296,9 +1318,12 @@ def execute_recovery(recovery_id: str, *, task_id: str = "") -> RecoveryAction:
 
             details = recover_ingestion_queue.run()
         elif recovery.action == "recover_semantic_queue":
-            from catalog.services.semantic_indexing import recover_semantic_index_jobs
-
-            details = recover_semantic_index_jobs()
+            if getattr(settings, "DISCOVERY_ENABLED", False):
+                from catalog.services.discovery_indexing import reconcile
+                details = reconcile()
+            else:
+                from catalog.services.semantic_indexing import recover_semantic_index_jobs
+                details = recover_semantic_index_jobs()
         elif recovery.action == "recover_query_lexicon":
             from catalog.tasks import recover_query_lexicon_events
 

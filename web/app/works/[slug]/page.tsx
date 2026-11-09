@@ -11,7 +11,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const work = await loadWork(slug);
+  const work = await loadWork(slug, true);
   return { title: work?.title ?? "文献详情", ...await publicImageMetadata(work?.shareImage, work?.shareImageAlt || work?.title || "") };
 }
 
@@ -21,7 +21,7 @@ export default async function WorkDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const work = await loadWork(slug);
+  const work = await loadWork(slug, true);
   if (!work) notFound();
   return <WorkDetailView key={work.editionId || work.slug} work={work} footer={work.kind === "期刊论文" || work.readerHref ? <SiteFooter reference={work.kind === "期刊论文" ? "journal" : "work"} /> : null} />;
 }

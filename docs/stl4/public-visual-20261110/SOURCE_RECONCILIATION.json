@@ -1,0 +1,357 @@
+{
+  "candidate_git_base": "b6fbcc65",
+  "web_source_root": "F:\\agent skills\\书库开发3\\tmp\\work-session-refresh-20261109\\build\\web",
+  "web_changed": [
+    {
+      "path": "web/app/works/[slug]/page.tsx",
+      "sha256": "e6eeaf532f756d3c7253d364f8e9dc1f5d484b0dac9fac34d43db086dedf6bc7"
+    },
+    {
+      "path": "web/components/admin/curation/inline-media-picker.tsx",
+      "sha256": "d7cc126ed23d58bcd84d35c3880f4f2053a5ae8fb3fa1745661a742e94c9770b"
+    },
+    {
+      "path": "web/components/admin/forms/workflow-fields.tsx",
+      "sha256": "0b61461a7ebf8b3cf748990955cb9cf7d5dd0ec4a9b94354919be374915d884c"
+    },
+    {
+      "path": "web/components/admin/media/media-requests.ts",
+      "sha256": "51f0e6710dbf776b4267bce25762ac4a1c88ddd990f11226fb798b39c95a8b3d"
+    },
+    {
+      "path": "web/components/public/legacy-theory-public-view.tsx",
+      "sha256": "5c58042627d3345a3462e71049ba2dd1ea07fbc331976a70fd2b47e7db90c23d"
+    },
+    {
+      "path": "web/components/public/theory-detail-public-view.tsx",
+      "sha256": "2383eb8499656101bdaf547041638649d8621860f25447cd52d928c0bfde0f6a"
+    },
+    {
+      "path": "web/components/public/theory-detail.module.css",
+      "sha256": "970cb18ef294f2595df7d06609c4a57b60b07b7aaef2edac9223bd2d03599eaf"
+    },
+    {
+      "path": "web/components/reader/use-reader-document.ts",
+      "sha256": "6232c3fb74e53fb862abe805f9d69eb3a335fc92108d55a70de270bb9a10563a"
+    },
+    {
+      "path": "web/components/system-status-center.tsx",
+      "sha256": "af32f5de60343452b5c38a8ff1804d0de7bd12975d9127044defa5ee105c62ca"
+    },
+    {
+      "path": "web/lib/api.ts",
+      "sha256": "2e32534817d569b62770c8802e4f8de9379cb5ed80937388baac7dc21793e1d0"
+    },
+    {
+      "path": "web/lib/api/catalog.server.ts",
+      "sha256": "4f8922d663a081e9fd297335c833993b56722cc04dea3d0f351ca6430c7fb8eb"
+    },
+    {
+      "path": "web/scripts/style-source.mjs",
+      "sha256": "79a5581cba847372d3839ef4827377ca745473d40f888a52abc586ed9c5af44f"
+    },
+    {
+      "path": "web/styles/features/admin/workspace-v307.css",
+      "sha256": "8e5155d19d13380693a705be9c306e7fd1182f2d7d56e1951ad75232e925bd07"
+    },
+    {
+      "path": "web/styles/tokens/design.css",
+      "sha256": "13a80a1af58b752da3e8c8302f906e2da7e7c0e0e0b32de77b2936e775b80d08"
+    }
+  ],
+  "web_tracked_missing_from_build_source": [
+    "web/.dockerignore",
+    "web/.gitignore",
+    "web/Dockerfile",
+    "web/README.md",
+    "web/architecture-showcase/.dockerignore",
+    "web/architecture-showcase/.gitignore",
+    "web/architecture-showcase/DOMAIN_SETUP.md",
+    "web/architecture-showcase/Dockerfile.public",
+    "web/architecture-showcase/README.md",
+    "web/architecture-showcase/app.tsx",
+    "web/architecture-showcase/architecture.json",
+    "web/architecture-showcase/audit.py",
+    "web/architecture-showcase/build.mjs",
+    "web/architecture-showcase/capture-site.mjs",
+    "web/architecture-showcase/compose.public.yaml",
+    "web/architecture-showcase/copy-review.json",
+    "web/architecture-showcase/copy-snapshot.py",
+    "web/architecture-showcase/evidence-index.csv",
+    "web/architecture-showcase/export-assets.mjs",
+    "web/architecture-showcase/export.ts",
+    "web/architecture-showcase/index.html",
+    "web/architecture-showcase/journey-scene.tsx",
+    "web/architecture-showcase/journey.css",
+    "web/architecture-showcase/journeys.json",
+    "web/architecture-showcase/mode.ts",
+    "web/architecture-showcase/module-facts.json",
+    "web/architecture-showcase/overview-tour.json",
+    "web/architecture-showcase/package.py",
+    "web/architecture-showcase/record.mjs",
+    "web/architecture-showcase/responsive.css",
+    "web/architecture-showcase/runtime-evidence.json",
+    "web/architecture-showcase/scenes.ts",
+    "web/architecture-showcase/serve.mjs",
+    "web/architecture-showcase/start.ps1",
+    "web/architecture-showcase/style.css",
+    "web/architecture-showcase/verify-auto.mjs",
+    "web/architecture-showcase/verify-journeys.mjs",
+    "web/architecture-showcase/verify-responsive.mjs",
+    "web/architecture-showcase/verify.mjs",
+    "web/db/index.ts",
+    "web/db/schema.ts",
+    "web/drizzle/meta/_journal.json",
+    "web/examples/d1/app/api/notes/route.ts",
+    "web/examples/d1/db/schema.ts",
+    "web/policy-preview/index.html",
+    "web/policy-preview/main.tsx",
+    "web/policy-preview/preview.css",
+    "web/policy-preview/server.mjs",
+    "web/tests/admin-collections-v306-live.spec.ts",
+    "web/tests/admin-collections-v306.spec.ts",
+    "web/tests/admin-collections-v306.test.mjs",
+    "web/tests/admin-feedback.spec.ts",
+    "web/tests/admin-module-matrix-v306-live.spec.ts",
+    "web/tests/admin-preview-v292.test.mjs",
+    "web/tests/admin-route-layout-v306-live.spec.ts",
+    "web/tests/admin-session-v305.test.mjs",
+    "web/tests/admin-usability-v306.spec.ts",
+    "web/tests/admin-workflow-v280.spec.ts",
+    "web/tests/admin-workflow-v280.test.mjs",
+    "web/tests/api-domain-boundaries-v305.test.mjs",
+    "web/tests/assistance-v306-live.spec.ts",
+    "web/tests/assisted-save-v306-live.spec.ts",
+    "web/tests/auth-bootstrap.spec.ts",
+    "web/tests/auth-session.test.mjs",
+    "web/tests/brand-config-20261027.test.mjs",
+    "web/tests/candidate-integration-wave-a.test.mjs",
+    "web/tests/candidate-review.test.mjs",
+    "web/tests/catalog-search.spec.ts",
+    "web/tests/cataloging-services-acceptance.spec.ts",
+    "web/tests/cataloging-session-v305.spec.ts",
+    "web/tests/citation-audit-parsing.spec.ts",
+    "web/tests/citation-audit-upload.spec.ts",
+    "web/tests/citation-audit-versions.spec.ts",
+    "web/tests/citation-audit-workspace.spec.ts",
+    "web/tests/citation-docx-preview.spec.ts",
+    "web/tests/compact-editorial-density.spec.ts",
+    "web/tests/confirmed-notes-workspace.spec.ts",
+    "web/tests/context-state-v305.test.mjs",
+    "web/tests/contributor-state-v3081.test.mjs",
+    "web/tests/counter-evidence.spec.ts",
+    "web/tests/discovery-evidence.spec.ts",
+    "web/tests/document-outline-workspace.spec.ts",
+    "web/tests/editorial-concurrency-v306-live.spec.ts",
+    "web/tests/editorial-v306.spec.ts",
+    "web/tests/evidence-curation-v307.test.mjs",
+    "web/tests/explore-redesign.test.mjs",
+    "web/tests/field-enrichment.test.mjs",
+    "web/tests/file-presentation-v306.test.mjs",
+    "web/tests/fixtures/global-styles-baseline.json",
+    "web/tests/graph-saved-views-v306.spec.ts",
+    "web/tests/guest-records.test.mjs",
+    "web/tests/interaction-feedback-v292.test.mjs",
+    "web/tests/issue-editor-atlas.spec.ts",
+    "web/tests/issue-publication-atlas.spec.ts",
+    "web/tests/issue-selection-atlas.spec.ts",
+    "web/tests/knowledge-history-atlas.spec.ts",
+    "web/tests/knowledge-media-v305.spec.ts",
+    "web/tests/knowledge-media-v305.test.mjs",
+    "web/tests/knowledge-publication-atlas.spec.ts",
+    "web/tests/knowledge-studio-v300.test.mjs",
+    "web/tests/library-rag.test.mjs",
+    "web/tests/media-display-uses-20261024.test.mjs",
+    "web/tests/media-storage-v305.test.mjs",
+    "web/tests/metadata-inline-candidates.test.mjs",
+    "web/tests/ocr-workspace.spec.ts",
+    "web/tests/opinion-search-entry.spec.ts",
+    "web/tests/page-mapping-workspace.spec.ts",
+    "web/tests/parallel-calibration-admin.spec.ts",
+    "web/tests/parallel-navigation-20261025.test.mjs",
+    "web/tests/parallel-reader.spec.ts",
+    "web/tests/person-resolution-v305.spec.ts",
+    "web/tests/person-resolution-v305.test.mjs",
+    "web/tests/policy-demo.test.ts",
+    "web/tests/primary-edition-v306.test.mjs",
+    "web/tests/privacy-workspace.spec.ts",
+    "web/tests/private-pagination.test.mjs",
+    "web/tests/processing-center-v300.test.mjs",
+    "web/tests/processing-functional-health-v292.test.mjs",
+    "web/tests/public-knowledge-core-v301.test.mjs",
+    "web/tests/public-layout-v306.spec.ts",
+    "web/tests/public-management-v306.spec.ts",
+    "web/tests/public-management-v306.test.mjs",
+    "web/tests/public-navigation.spec.ts",
+    "web/tests/public-page-control-v303.test.mjs",
+    "web/tests/public-secondary-geometry-v306.spec.ts",
+    "web/tests/public-surface.spec.ts",
+    "web/tests/public-visual-coverage-20261108.test.mjs",
+    "web/tests/publication-ledger-atlas.spec.ts",
+    "web/tests/publication-review-atlas.spec.ts",
+    "web/tests/r2-staging-handoff.test.mjs",
+    "web/tests/r2-upload-recovery-20261107.test.mjs",
+    "web/tests/reader-failure-v306.test.mjs",
+    "web/tests/reader-fullscreen-20261109.test.mjs",
+    "web/tests/reader-layout-v306.spec.ts",
+    "web/tests/reader-live-layout-audit.spec.ts",
+    "web/tests/reader-loading-states.test.mjs",
+    "web/tests/reader-modules-v305.test.mjs",
+    "web/tests/reader-ocr-v306.spec.ts",
+    "web/tests/reader-upload-layout.test.mjs",
+    "web/tests/reader-view-rotation.test.mjs",
+    "web/tests/reading-path-private-v306.spec.ts",
+    "web/tests/reading-path-v306.spec.ts",
+    "web/tests/reading-plan-workspace.spec.ts",
+    "web/tests/recommendation-media-v305.test.mjs",
+    "web/tests/recovery-batch-state-20261025.test.mjs",
+    "web/tests/relation-timeline-v306-live.spec.ts",
+    "web/tests/rendered-html.test.mjs",
+    "web/tests/request-key-v306.test.mjs",
+    "web/tests/research-cross-layer-20261014.test.mjs",
+    "web/tests/research-frontend-20261014.test.mjs",
+    "web/tests/research-notes-export-20261026.test.mjs",
+    "web/tests/research-orchestrator-v292.test.mjs",
+    "web/tests/research-pending-turn-20261025.test.mjs",
+    "web/tests/research-prompt-recovery-20261025.test.mjs",
+    "web/tests/research-selection-draft-20261025.test.mjs",
+    "web/tests/research-tab-draft-20261025.test.mjs",
+    "web/tests/runtime-api.test.mjs",
+    "web/tests/scholar-follows-v306.spec.ts",
+    "web/tests/scholar-media-v305.test.mjs",
+    "web/tests/scholar-portrait-v305.spec.ts",
+    "web/tests/scholar-relations-v307.test.mjs",
+    "web/tests/scholars-v306.spec.ts",
+    "web/tests/scoped-search.test.mjs",
+    "web/tests/search-submit-key.test.mjs",
+    "web/tests/settings-controls.test.mjs",
+    "web/tests/shared-citation.spec.ts",
+    "web/tests/source-text.test.mjs",
+    "web/tests/source-updates.spec.ts",
+    "web/tests/stl4-path-stage-order-20261024.test.mjs",
+    "web/tests/style-convergence-v305.test.mjs",
+    "web/tests/subdiscipline-v306.spec.ts",
+    "web/tests/theory-directory-v306.spec.ts",
+    "web/tests/theory-graph-v306.spec.ts",
+    "web/tests/theory-overview-v306.spec.ts",
+    "web/tests/theory-timeline-v306.spec.ts",
+    "web/tests/timeline-editing-v306.spec.ts",
+    "web/tests/timeline-evidence-v306-live.spec.ts",
+    "web/tests/today-work-atlas.spec.ts",
+    "web/tests/topics-v306.spec.ts",
+    "web/tests/typeface-preference.test.mjs",
+    "web/tests/ui-dialog-20261109.test.mjs",
+    "web/tests/upload-metrics.test.mjs",
+    "web/tests/upload-processing-state-20261024.test.mjs",
+    "web/tests/upload-publication-v306.test.mjs",
+    "web/tests/viewpoint-search-v300.test.mjs",
+    "web/tests/work-curated-claims-v300.test.mjs",
+    "web/tests/work-detail-adapter.test.mjs",
+    "web/tests/work-files.spec.ts",
+    "web/tests/workflow-research-candidates-v290.test.mjs",
+    "web/workspace-preview/index.html",
+    "web/workspace-preview/main.tsx",
+    "web/workspace-preview/preview.css",
+    "web/workspace-preview/vite.config.ts"
+  ],
+  "api_changed": [
+    {
+      "path": "api/catalog/catalog_search_serializers.py",
+      "sha256": "6425d7e62cba3dd313e87b5b1f4fcd823c05d81a5b09dfab2cf0f629bf15cf8c"
+    },
+    {
+      "path": "api/catalog/discovery_index_views.py",
+      "sha256": "f9722322bde8090979860fa54f5d3a60d58e2dc5e0c8cc1ba4d23563b2ee76dd"
+    },
+    {
+      "path": "api/catalog/management/commands/benchmark_discovery_search.py",
+      "sha256": "cb5e63ae638bc039857ed91f479ffe2dfeae5e67aa8177921e5ecc3389cc589e",
+      "untracked_in_base": true
+    },
+    {
+      "path": "api/catalog/media_library_views.py",
+      "sha256": "0a94d4975ab610ca06c83775982a38b87d545203653947e3fe03b16517409053"
+    },
+    {
+      "path": "api/catalog/migrations/0090_scholar_slug_unicode.py",
+      "sha256": "002c677198ad2d1a076cc693157ec4644a6744a8189b743ff2645c230bd68ac5",
+      "untracked_in_base": true
+    },
+    {
+      "path": "api/catalog/models.py",
+      "sha256": "a45b627a848baeca6841923674aa70506fe9ac7e2ec58dbbc18cb73012c3c8c9"
+    },
+    {
+      "path": "api/catalog/public_work_detail.py",
+      "sha256": "fdd469ef08de77d0ba910e26449768c5d0562e09998adaae092bc95a1d771982"
+    },
+    {
+      "path": "api/catalog/serializers.py",
+      "sha256": "f5bedadfb7d51a91c8b0ad66ceeadfb382faa9995458b26a76c1c6a15a7f3fee"
+    },
+    {
+      "path": "api/catalog/services/backoffice.py",
+      "sha256": "8f00b7caa3e9b28f6dc62292f687fd85952acfeec937a3cf46c803fd12798d6d"
+    },
+    {
+      "path": "api/catalog/services/discovery_evaluation.py",
+      "sha256": "7ea7e7f5b81590bfae3c513baae805e59336879ff0ab1257336d4cdd9a4ac566",
+      "untracked_in_base": true
+    },
+    {
+      "path": "api/catalog/services/semantic_chunks.py",
+      "sha256": "af53d3c7e42fc7af04a5c210b195bd963fe8773590e957be1c4277bd6d3742ea"
+    },
+    {
+      "path": "api/catalog/services/semantic_search_benchmark.py",
+      "sha256": "9a0f4dfcfc5bcdd1866880cf773252de0f0892947c20b6f5f86ba275705d0999"
+    },
+    {
+      "path": "api/catalog/services/system_health.py",
+      "sha256": "0713b3caea0b8e16f6b6ebd54848a80623072bc0c7c5ba0fe28f7734d9e145bf"
+    },
+    {
+      "path": "api/catalog/services/viewpoint_evidence_experiment.py",
+      "sha256": "f501805b55b30b35bbe311c6611cf92d5428a4cb74f7d257db38052a9b06c301",
+      "untracked_in_base": true
+    },
+    {
+      "path": "api/catalog/urls.py",
+      "sha256": "f6fc9d71c35cb997efa517ba204407fa48e0ecae782482f9047a0f9b193c721b"
+    },
+    {
+      "path": "api/config/exceptions.py",
+      "sha256": "955c92ca29214f7d0c52bedb195d86bfb6ae2f9e73f1cb0cb9b18c805cf72de3"
+    },
+    {
+      "path": "api/config/renderers.py",
+      "sha256": "503cde580bda23ce5ae30c7847167cb970131d51c58f771890959c1b59a8a7bc"
+    },
+    {
+      "path": "api/ingestion/services/system_health.py",
+      "sha256": "03f6b9b2d3138c9fd62b88752b4c9cfc8f8bacb1c02b0c01348dec02e3ecfc71"
+    },
+    {
+      "path": "api/reading/library_assistant.py",
+      "sha256": "41ff5b712dbbe91e49c35865031b9f284663e39c48f2a7cfe9eca198b393fd79"
+    },
+    {
+      "path": "api/reading/library_serializers.py",
+      "sha256": "99ac2ac77d1bdda5e1da359ada649fd960d625d1402d8ffdfd90521893878a68"
+    },
+    {
+      "path": "api/catalog/services/discovery_health.py",
+      "sha256": "ea76e29f728a8548db55608e04535f1ccd93acfed18ad76a6b58af7e60a46852",
+      "untracked_in_base": true
+    }
+  ],
+  "api_archive_vs_live_mismatches": [],
+  "api_archive_verified_files": 788,
+  "api_live_not_in_archive": [],
+  "additional_web_source_files": [
+    {
+      "path": "web/styles/features/admin/design-v2.css",
+      "sha256": "b91c8f3cb7a2d63945d8bccb3f9eabf3c0e906095098fbddf51e0c63bbdfa711"
+    }
+  ]
+}
