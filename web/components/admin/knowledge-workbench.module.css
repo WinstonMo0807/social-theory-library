@@ -61,8 +61,8 @@
 .segmented button { background: transparent; border: 0; min-height: 32px; padding: 7px 10px; }
 .segmented button[aria-pressed=true] { background: var(--surface, #fff); font-weight: 600; }
 .pageNav { gap: 5px; margin: 18px 0; font-size: .8125rem; }
-.pageNav label { display: flex; align-items: center; gap: 5px; }
-.pageNav input { width: 66px; padding: 6px; }
+.evidence .pageNav label { display: flex; align-items: center; gap: 5px; margin: 0; }
+.evidence .pageNav input { width: 60px; min-height: 32px; padding: 6px; }
 .pageNav button { min-height: 32px; padding: 6px; }
 .sourceText { font-family: var(--font-serif); font-size: .9375rem; white-space: pre-wrap; line-height: 1.95; overflow-wrap: anywhere; max-height: 65vh; overflow: auto; padding: 16px 12px; background: var(--surface, #fff); scrollbar-width: thin; scrollbar-color: #b6a68c transparent; }
 .quote { padding: 17px; margin: 14px 0; background: var(--wash, #f1ece2); line-height: 1.9; white-space: pre-wrap; font-family: var(--font-serif); }

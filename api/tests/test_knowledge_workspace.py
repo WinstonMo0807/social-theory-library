@@ -53,6 +53,22 @@ def test_human_page_edit_uses_review_and_idempotent_draft_boundary(source, admin
 
 
 @pytest.mark.django_db
+def test_new_draft_on_published_page_is_not_reported_as_published(source,admin_user):
+    from catalog.services.intelligence_queries import changeset_data
+    page=m.KnowledgePage.objects.create(work=source.asset.edition.work,slug="already-public",title="已有发布版",status="published")
+    key=str(uuid4())
+    patch={"operation":"add","block_id":key,"block":{"type":"analysis","text":"尚未发布的新增段落",
+        "references":[{"type":"work","id":str(page.work_id),"edition_id":str(source.asset.edition_id)}]}}
+    draft=submit_page_changes(page,source,[patch],admin_user,request_id=uuid4())
+    item=draft.items.get()
+    draft=changes.review(draft.pk,[{"id":str(item.pk),"decision":"accepted"}],admin_user,expected_version=1)
+    changes.apply(draft.pk,[str(item.pk)],admin_user,request_id=uuid4(),expected_version=draft.version)
+    draft.refresh_from_db()
+    assert changeset_data(draft,admin_user)["items"][0]["current_status"]=="draft"
+    assert page.body_blocks==[]
+
+
+@pytest.mark.django_db
 def test_entity_page_uses_existing_identity_and_editorial_revision(admin_user):
     entity = m.Entity.objects.create(kind="concept", label="有语境的概念")
     key = str(uuid4())

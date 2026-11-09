@@ -44,12 +44,15 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
         .select_related("active_catalog_revision")}
     states = {str(s.source_id): s for s in m.DiscoverySourceState.objects.filter(generation=generation,
         source_type="edition", source_id__in=published).select_related("job")} if generation else {}
-    runs, structures = {}, {}
+    runs, structures, structure_jobs = {}, {}, {}
     keys = [r.pk for r in revisions]
     for run in m.CurationRun.objects.filter(document_revision_id__in=keys).only("id", "status", "document_revision_id").order_by("-created_at"):
         runs.setdefault(run.document_revision_id, run)
     for structure in m.DocumentStructure.objects.filter(document_revision_id__in=keys).only("id", "coverage", "document_revision_id").order_by("-created_at"):
         structures.setdefault(structure.document_revision_id, structure)
+    from ingestion.models import ProcessingJob
+    for job in ProcessingJob.objects.filter(job_type="document_structure",asset_id__in=[r.asset_id for r in revisions]).order_by("-created_at"):
+        structure_jobs.setdefault(job.stats.get("input",{}).get("revision_id"),job)
     output = []
     for revision in revisions:
         asset = revision.asset
@@ -66,6 +69,7 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
         indexed = bool(active and state and state.source_revision == current_hash and state.indexed_at and not state.error and expected > 0
             and state.completed_count == expected and count.get("keywords") == expected)
         run, structure = runs.get(revision.pk), structures.get(revision.pk)
+        structure_job = structure_jobs.get(str(revision.pk))
         output.append({"revision_id": str(revision.pk), "asset_id": str(asset.pk), "edition_id": str(edition.pk),
             "work_id": str(edition.work_id), "title": edition.work.title, "edition_label": edition.version_label,
             "revision_number": revision.revision, "pages": asset.page_count,
@@ -77,6 +81,8 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
             "curation": {"id": str(run.pk), "status": run.status} if run else None,
             "structure_id": str(structure.pk) if structure else None,
             "structure_coverage": structure.coverage if structure else {},
+            "structure_job": {"id":str(structure_job.pk),"status":structure_job.status,"error":structure_job.error_message,
+                "pages":structure_job.stats.get("input",{}).get("pages")} if structure_job else None,
             "reader_url": f"/reader/{asset.pk}?revision={revision.pk}&preview=1",
             "work_url": f"/works/{public.public_slug}" if public and public.public_slug else None,
             "catalog_url": f"/admin/library/works/{edition.work_id}?edition={edition.pk}",

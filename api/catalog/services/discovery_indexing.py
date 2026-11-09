@@ -349,6 +349,9 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
         "normalized_text": child["normalized_text"], "token_count": child["token_count"],
         "start_offset": child["start"], "end_offset": child["end"], "payload": payload}
     document, _ = DiscoveryDocument.objects.update_or_create(pk=identifier, defaults=defaults)
+    if document.channel == "passages":
+        from catalog.services.retrieval.locators import index_anchor
+        index_anchor(document)
     search_doc = {"id": str(identifier), "channel": header["channel"], "source_type": header["source_type"],
         "source_id": header["source_id"], "source_revision": header["source_revision"], "scope_token": header["scope_token"],
         "access_status": header["access_status"], "input_hash": input_hash, "title": header["title"],

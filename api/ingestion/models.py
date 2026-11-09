@@ -286,6 +286,7 @@ class ProcessingJob(UUIDTimeStampedModel):
         OCR = "ocr", "OCR"
         EXTERNAL_ENRICHMENT = "external_enrichment", "联网补充"
         TEXT_EXTRACTION = "text_extraction", "文本提取"
+        DOCUMENT_STRUCTURE = "document_structure", "正文结构解析"
         PAGE_LABELS = "page_labels", "页码识别"
         SEMANTIC_INDEX = "semantic_index", "语义索引"
         DISCOVERY_INDEX = "discovery_index", "观点检索索引"

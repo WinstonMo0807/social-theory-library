@@ -16,7 +16,7 @@ class RevisionStructureView(APIView):
     def get(self, request, revision_id):
         revision = get_object_or_404(DocumentRevision.objects.select_related("asset__edition"), pk=revision_id)
         sources.require_revision_access(revision, request.user, editorial=request.query_params.get("preview") == "1")
-        structure = revision.structures.order_by("-created_at").first()
+        structure = sources.current_structure(revision)
         return Response({"document_revision_id": str(revision.pk), "structure_id": str(structure.pk) if structure else None,
             "coverage": structure.coverage if structure else {"structure_status": "not_prepared"},
             "nodes": list(structure.nodes.exclude(kind="paragraph").values("id", "parent_id", "kind", "order", "title", "content_hash")) if structure else []})
@@ -36,6 +36,16 @@ class AnchorView(APIView):
     def get(self, request, anchor_id):
         anchor = get_object_or_404(EvidenceAnchor.objects.select_related("document_revision__asset__edition"), pk=anchor_id)
         return Response(sources.locator(anchor, request.user, editorial=request.query_params.get("preview") == "1"))
+
+
+class ParseStructureView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def post(self,request,revision_id):
+        from catalog.services.document_structure import request_structure
+        revision=get_object_or_404(DocumentRevision,pk=revision_id)
+        job=request_structure(revision,request.user,pages=request.data.get("pages"),request_id=request.data.get("request_id"))
+        return Response({"job_id":str(job.pk),"status":job.status,"pages":job.stats["input"]["pages"]},status=202)
 
 
 class VerifyAnchorView(APIView):
@@ -235,6 +245,7 @@ urlpatterns = [
     path("works/<uuid:work_id>/", WorkKnowledgeView.as_view()),
     path("assets/<uuid:asset_id>/manifest/", RevisionManifestView.as_view()),
     path("revisions/<uuid:revision_id>/structure/", RevisionStructureView.as_view()),
+    path("revisions/<uuid:revision_id>/structure/parse/", ParseStructureView.as_view()),
     path("revisions/<uuid:revision_id>/pages/<int:page_number>/", RevisionPageView.as_view()),
     path("anchors/<uuid:anchor_id>/", AnchorView.as_view()),
     path("nodes/<uuid:node_id>/context/", NodeContextView.as_view()),

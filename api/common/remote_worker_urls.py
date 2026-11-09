@@ -6,12 +6,14 @@ from common.remote_worker_views import (
     RemoteWorkerHeartbeatView,
     RemoteWorkerReleaseView,
     RemoteWorkerRenewView,
+    RemoteWorkerSourceView,
 )
 
 
 urlpatterns = [
     path("heartbeat/", RemoteWorkerHeartbeatView.as_view(), name="remote-worker-heartbeat"),
     path("claim/", RemoteWorkerClaimView.as_view(), name="remote-worker-claim"),
+    path("demands/<uuid:demand_id>/source/",RemoteWorkerSourceView.as_view(),name="remote-worker-source"),
     path(
         "demands/<uuid:demand_id>/renew/",
         RemoteWorkerRenewView.as_view(),

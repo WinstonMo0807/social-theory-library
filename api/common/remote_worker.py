@@ -6,7 +6,7 @@ for demand state, evidence provenance and persisted claim candidates.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 import json
 from typing import Any
@@ -30,7 +30,7 @@ from common.task_runtime import DemandLease, complete_demand
 from ingestion.models import UploadItem
 
 
-REMOTE_TASK_KINDS = frozenset({"claim_extraction", "library_synthesis"})
+REMOTE_TASK_KINDS = frozenset({"claim_extraction", "library_synthesis", "document_structure"})
 AI_CAPABILITIES = frozenset({"embedding", "rerank", "llm_small", "llm_large"})
 COMPLETION_MARKER_KEY = "_remote_completion"
 LEASE_CONTEXT_KEY = "_remote_lease_context"
@@ -54,6 +54,7 @@ class RemoteCompletion:
     candidate_ids: list[str]
     idempotent_replay: bool
     publication_blocking: bool = False
+    artifact_ids: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -66,6 +67,7 @@ class RemoteCompletion:
             "candidate_ids": self.candidate_ids,
             "idempotent_replay": self.idempotent_replay,
             "publication_blocking": self.publication_blocking,
+            "artifact_ids":self.artifact_ids,
         }
 
 
@@ -338,6 +340,15 @@ def _library_synthesis_pack(demand: CapabilityDemand) -> EvidencePack:
 def build_remote_job(lease: DemandLease) -> dict[str, Any]:
     demand = CapabilityDemand.objects.get(pk=lease.demand_id)
     payload = dict(demand.payload or {})
+    if payload.get("task_kind") == "document_structure":
+        from catalog.services.document_structure import structure_job,DOCLING_VERSION
+        from rest_framework.exceptions import APIException
+        try: job,revision=structure_job(demand)
+        except APIException as exc: raise RemoteWorkerProtocolError("structure_source_changed",str(exc),status_code=409) from exc
+        job.status="running";job.started_at=timezone.now();job.save(update_fields=["status","started_at","updated_at"])
+        return {"task_kind":"document_structure","input":{"source_checksum":revision.source_checksum,
+            "pages":job.stats["input"]["pages"],"revision_id":str(revision.pk)},
+            "parser_version":DOCLING_VERSION,"source_path":f"demands/{demand.pk}/source/"}
     prompt = _immutable_prompt(payload)
     runtime = payload.get(LEASE_CONTEXT_KEY)
     if not isinstance(runtime, dict):
@@ -431,7 +442,11 @@ def bind_remote_lease_context(lease: DemandLease) -> dict[str, str]:
             "The remote demand lease is no longer active.",
             status_code=409,
         )
-    declared = (demand.claimed_by.model_revisions or {}).get(demand.capability)
+    if demand.payload.get("task_kind") == "document_structure":
+        from catalog.services.document_structure import DOCLING_VERSION
+        declared={"provider":"docling","model":"layout","revision":DOCLING_VERSION}
+    else:
+        declared = (demand.claimed_by.model_revisions or {}).get(demand.capability)
     if not isinstance(declared, dict):
         raise RemoteWorkerProtocolError(
             "model_revision_not_declared",
@@ -513,6 +528,7 @@ def _completion_from_marker(demand: CapabilityDemand, marker: dict[str, Any]) ->
         claim_ids=[str(value) for value in (summary.get("claim_ids") or [])][:MAX_CLAIMS_PER_SPAN],
         candidate_ids=[str(value) for value in (summary.get("candidate_ids") or [])][:12],
         idempotent_replay=True,
+        artifact_ids=[str(value) for value in summary.get("artifact_ids",[])],
     )
 
 
@@ -558,9 +574,10 @@ def complete_remote_demand(
             "The demand lease has expired.",
             status_code=409,
         )
-    prompt = _immutable_prompt(payload)
-    provider, model, model_revision = _model_identity(demand.claimed_by, demand, result)
     task_kind = str(payload.get("task_kind") or "")
+    prompt = _immutable_prompt(payload) if task_kind != "document_structure" else {}
+    provider, model, model_revision = _model_identity(demand.claimed_by, demand, result)
+    artifact_ids=[]
     if task_kind == "claim_extraction":
         span = _claim_span(demand)
         claims = result.get("claims")
@@ -609,6 +626,20 @@ def complete_remote_demand(
             ) from exc
         claim_ids = []
         candidate_ids = [str(persisted["candidate_id"])]
+    elif task_kind == "document_structure":
+        from catalog.services.document_structure import complete_structure
+        from rest_framework.exceptions import APIException
+        try:
+            parsed=result.get("parsed")
+            if not isinstance(parsed,dict):
+                raise RemoteWorkerProtocolError("invalid_structure_result","Missing parsed structure.")
+            elapsed=result.get("elapsed_ms",0)
+            if type(elapsed) is not int or elapsed < 0:
+                raise RemoteWorkerProtocolError("invalid_structure_result","Invalid execution duration.")
+            structure=complete_structure(demand,parsed,elapsed_ms=elapsed,executor_id=executor_id)
+        except APIException as exc:
+            raise RemoteWorkerProtocolError("invalid_structure_result",str(exc),status_code=409) from exc
+        persisted={"created":1};claim_ids=[];candidate_ids=[];artifact_ids=[str(structure.pk)]
     else:
         raise RemoteWorkerProtocolError(
             "unsupported_task_kind",
@@ -626,6 +657,7 @@ def complete_remote_demand(
         "invalid": int(persisted.get("invalid") or 0),
         "claim_ids": claim_ids,
         "candidate_ids": candidate_ids,
+        "artifact_ids":artifact_ids,
     }
     completed_payload = dict(completed.payload or {})
     completed_payload[COMPLETION_MARKER_KEY] = {
@@ -646,4 +678,5 @@ def complete_remote_demand(
         claim_ids=summary["claim_ids"],
         candidate_ids=summary["candidate_ids"],
         idempotent_replay=False,
+        artifact_ids=artifact_ids,
     )

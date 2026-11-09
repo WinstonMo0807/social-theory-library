@@ -25,11 +25,12 @@ import httpx
 
 WORKER_VERSION = "3.0.4"
 SUPPORTED_PROVIDERS = {"ollama", "openai_compatible", "vllm"}
-SUPPORTED_CAPABILITIES = {"llm_small", "llm_large"}
-SUPPORTED_TASK_KINDS = {"claim_extraction", "library_synthesis"}
+SUPPORTED_CAPABILITIES = {"llm_small", "llm_large", "document_parse"}
+SUPPORTED_TASK_KINDS = {"claim_extraction", "library_synthesis", "document_structure"}
 TASK_CAPABILITY = {
     "claim_extraction": "llm_small",
     "library_synthesis": "llm_large",
+    "document_structure":"document_parse",
 }
 
 
@@ -122,7 +123,7 @@ class RemoteWorkerClientConfig:
         model_parsed = urlsplit(model_url)
         if model_parsed.scheme not in {"http", "https"} or not model_parsed.hostname:
             raise RemoteWorkerClientError("invalid_model_url", "STL_WORKER_MODEL_URL 必须是完整 URL。", retryable=False)
-        if not str(self.model or "").strip() or not str(self.model_revision or "").strip():
+        if any(k != "document_structure" for k in self.task_kinds) and (not str(self.model or "").strip() or not str(self.model_revision or "").strip()):
             raise RemoteWorkerClientError("model_identity_missing", "模型名称与不可变 revision 都必须配置。", retryable=False)
         capabilities = tuple(dict.fromkeys(str(value or "").strip().casefold() for value in self.capabilities))
         task_kinds = tuple(dict.fromkeys(str(value or "").strip().casefold() for value in self.task_kinds))
@@ -491,6 +492,33 @@ class RemoteAIWorkerClient:
             },
         }
 
+    def run_structure(self,job,lease):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        from catalog.services.document_structure import parse_pdf,DOCLING_VERSION
+        if "document_structure" not in self.config.task_kinds or job.get("parser_version") != DOCLING_VERSION:
+            raise RemoteWorkerClientError("structure_version_mismatch","结构执行器或解析版本未声明。",retryable=False)
+        source=job["input"]
+        start=time.monotonic()
+        try:
+            with TemporaryDirectory(prefix="stl-structure-") as directory:
+                path=Path(directory)/"source.pdf"
+                with self.server_client.stream("POST",f"{self.config.server_url}/demands/{lease['demand_id']}/source/",
+                        json={"executor_id":self.config.executor_id,"lease_token":lease["lease_token"]},timeout=180) as response:
+                    response.raise_for_status()
+                    size=0
+                    with path.open("wb") as stream:
+                        for chunk in response.iter_bytes(1024*1024):
+                            size+=len(chunk)
+                            if size > 1024*1024*1024:
+                                raise RemoteWorkerClientError("source_too_large","结构工作节点单文件上限为1GiB。",retryable=False)
+                            stream.write(chunk)
+                parsed=parse_pdf(path,checksum=source["source_checksum"],pages=source["pages"],artifacts_path=os.getenv("STL_DOCLING_ARTIFACTS",""))
+            return {"parsed":parsed,"elapsed_ms":round((time.monotonic()-start)*1000),"provider":"docling","model":"layout","model_revision":DOCLING_VERSION}
+        except RemoteWorkerClientError: raise
+        except Exception as exc:
+            raise RemoteWorkerClientError("structure_failed",str(exc)[:1000],retryable=False) from exc
+
     def run_once(self) -> str:
         if (
             self._last_heartbeat_at <= 0
@@ -528,7 +556,7 @@ class RemoteAIWorkerClient:
                 daemon=True,
             )
             keepalive_thread.start()
-            result = self.run_model(job)
+            result = self.run_structure(job,lease) if job.get("task_kind") == "document_structure" else self.run_model(job)
             keepalive_stop.set()
             keepalive_thread.join(timeout=5)
             if keepalive_errors:

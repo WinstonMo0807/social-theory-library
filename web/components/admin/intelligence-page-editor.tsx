@@ -9,8 +9,8 @@ import styles from "./intelligence-workspace.module.css";
 
 type Patch = { page_id?: string; block_id?: string; operation?: string; reason?: string; block?: Partial<KnowledgeBlock> };
 
-export function IntelligencePageEditor({ patch, title, version, applied, onBlock }: {
-  patch: Patch; title: string; version: number; applied: boolean; onBlock: (block: Partial<KnowledgeBlock>) => void;
+export function IntelligencePageEditor({ patch, title, version, applied, onBlock, anchors = [] }: {
+  patch: Patch; title: string; version: number; applied: boolean; onBlock: (block: Partial<KnowledgeBlock>) => void; anchors?: KnowledgePageData["anchors"];
 }) {
   const [current, setCurrent] = useState<KnowledgePageData | null>(null);
   const [error, setError] = useState(""), [attempt, setAttempt] = useState(0);
@@ -51,7 +51,7 @@ export function IntelligencePageEditor({ patch, title, version, applied, onBlock
         : missingTarget ? <p role="alert" className={styles.error}>目标区块已不存在，请刷新审核内容后处理冲突。</p>
         : <div className={styles.previewPaper} data-ui-scope="stl4" data-type-mode="expressive">
           <h3>{current?.title || title}</h3>
-          <KnowledgePageContent page={{ blocks: shown, assertions: [] }} renderBlock={(block, content) =>
+          <KnowledgePageContent page={{ blocks: shown, assertions: current?.assertions || [], anchors: [...(current?.anchors || []), ...anchors] }} renderBlock={(block, content) =>
             block.id === key && !applied && perspective === "proposed" && patch.operation !== "delete"
               ? <div key={block.id} className={styles.activeBlock} role="button" tabIndex={0} aria-label="返回编辑这个区块"
                   onClick={focusField} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); focusField(); } }}>

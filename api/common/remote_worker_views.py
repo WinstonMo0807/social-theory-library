@@ -261,6 +261,26 @@ class RemoteWorkerRenewView(RemoteWorkerAPIView):
         )
 
 
+class RemoteWorkerSourceView(RemoteWorkerAPIView):
+    """A source file is available only to its current structure lease."""
+    def post(self,request,demand_id):
+        from django.http import FileResponse
+        from catalog.services.document_structure import structure_job
+        from rest_framework.exceptions import ValidationError,PermissionDenied
+        serializer=LeaseSerializer(data=request.data);serializer.is_valid(raise_exception=True)
+        data=serializer.validated_data
+        demand=CapabilityDemand.objects.filter(pk=demand_id,state="claimed",lease_token=data["lease_token"],
+            claimed_by__executor_id=data["executor_id"],lease_expires_at__gt=timezone.now(),payload__task_kind="document_structure").first()
+        if not demand or not _remote_executor(data["executor_id"]):
+            return _lease_error(ValueError("The source lease is no longer active."))
+        job,revision=structure_job(demand)
+        if not revision.asset.file:
+            raise ValidationError("此修订没有可读取的PDF文件。")
+        response=FileResponse(revision.asset.file.open("rb"),content_type="application/pdf")
+        response["Cache-Control"]="private, no-store"
+        return response
+
+
 class RemoteWorkerCompleteView(RemoteWorkerAPIView):
     def post(self, request, demand_id):
         serializer = CompletionSerializer(data=request.data)

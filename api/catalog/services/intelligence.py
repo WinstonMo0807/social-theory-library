@@ -6,10 +6,10 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from catalog import models as m
-from catalog.services.knowledge_sources import build_structure, digest, require_revision_access
+from catalog.services.knowledge_sources import current_structure, digest, require_revision_access
 from catalog.services.knowledge_core import require_editor, match_entities, page_content
 from catalog.services.intelligence_provider import configuration, identity, map_analysis, PROMPT_VERSION
-from catalog.services.intelligence_changes import submit_draft, uuid_value
+from catalog.services.intelligence_changes import submit_draft, uuid_value, proposal_fingerprint
 from common.task_runtime import queue_or_wait, renew_demand_lease
 
 STAGES = ["文献读取", "章节分析", "全书综合", "实体匹配", "学术陈述", "知识页编纂", "变更集", "管理员审核"]
@@ -30,6 +30,8 @@ SUMMARY_SCHEMA = {"type":"object", "required":["summary","development","limitati
 MATCH_SCHEMA = {"type": "object", "required": ["comparisons"], "properties": {"comparisons": {"type": "array", "items": {
     "type": "object", "required": ["candidate_id", "judgment", "reason"], "properties": {
         "candidate_id": STRING, "judgment": {"type": "string", "enum": ["same_suggested", "different", "uncertain"]}, "reason": STRING}}}}}
+WIKI_SCHEMA = {"type":"object", "required":["text","reason","assertion_ids"], "properties": {
+    "text":STRING,"reason":STRING,"assertion_ids":{"type":"array","items":STRING}}}
 
 
 @transaction.atomic
@@ -159,14 +161,14 @@ def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, valid
 
 def prepare(run):
     started = time.monotonic()
-    structure = build_structure(run.document_revision)
+    structure = current_structure(run.document_revision, prepare=True)
     start = run.scope.get("start", 1)
     end = run.scope.get("end", run.document_revision.asset.page_count)
-    nodes = list(structure.nodes.filter(kind="paragraph", segments__page__page_number__gte=start,
+    nodes = list(structure.nodes.filter(kind__in=["paragraph","footnote","table","references","unresolved"], segments__page__page_number__gte=start,
         segments__page__page_number__lte=end).distinct().order_by("order").prefetch_related("segments__page"))
     manifest = [{"node_id":str(n.pk),"chapter_id":str(n.parent_id),"content_hash":n.content_hash,
         "segments":[{"page_number":s.page.page_number,"start":s.start,"end":s.end,"content_hash":s.content_hash}
-                    for s in n.segments.all()]} for n in nodes]
+                    for s in n.segments.all() if start <= s.page.page_number <= end]} for n in nodes]
     coverage = {**structure.coverage, "scope":run.scope, "included_nodes":manifest,
         "excluded_pages": list(range(1,start))+list(range(end+1,run.document_revision.asset.page_count+1)),
         "read_nodes":0, "total_nodes":len(nodes), "analysis_complete":False}
@@ -177,28 +179,43 @@ def prepare(run):
     return nodes
 
 
-def windows(nodes, config):
-    # Reserve prompt/schema/output space; no partial paragraph goes unnoticed.
-    budget = min(config.max_input_chars - 6500, 6000)
+def windows(nodes, config, scope=None):
+    from django.conf import settings
+    # Reserve prompt/schema and output, using the strict transport's byte ceiling.
+    budget = min(config.max_input_chars-6500, (int(getattr(settings,"INTELLIGENCE_CONTEXT_TOKENS",32768))-config.max_output_tokens-6500)//4)
     if budget < 300:
         raise ValidationError("当前模型输入预算过小，请在模型管理中调整。")
     pending, size, chapter = [], 0, None
+    scope = scope or {}
     for node in nodes:
-        for segment in node.segments.select_related("page").all():
-            raw = {"node_id":str(node.pk), "page_number":segment.page.page_number, "start":segment.start,"end":segment.end,
-                   "text":segment.page.text[segment.start:segment.end]}
-            length = len(json.dumps(raw,ensure_ascii=False))
-            if length > budget:
-                raise ValidationError({"oversized_paragraph":str(node.pk),"characters":length,"budget":budget,
-                    "message":"段落超过窗口预算，尚未发送模型；请提高已确认的模型预算或补全小节结构。"})
-            if pending and (size+length > budget or chapter != str(node.parent_id)):
-                yield chapter, pending
-                pending, size = [], 0
-            chapter = str(node.parent_id)
-            pending.append(raw)
-            size += length
+        parts = [s for s in node.segments.select_related("page").all() if scope.get("start",1) <= s.page.page_number <= scope.get("end",10**9)]
+        for part_index,segment in enumerate(parts):
+            cursor = segment.start
+            while cursor < segment.end:
+                raw = {"node_id":str(node.pk),"kind":node.kind,"page_number":segment.page.page_number,"start":cursor,
+                    "end":segment.end,"text":segment.page.text[cursor:segment.end],"node_complete":part_index == len(parts)-1}
+                if len(json.dumps(raw,ensure_ascii=False))+2 > budget:
+                    # Oversized paragraphs are explicit contiguous windows, never truncation.
+                    low,high = cursor+1,segment.end
+                    while low < high:
+                        mid = (low+high+1)//2
+                        if len(json.dumps({**raw,"end":mid,"text":segment.page.text[cursor:mid]},ensure_ascii=False))+2 <= budget:
+                            low = mid
+                        else: high = mid-1
+                    boundary = low
+                    for index in range(low-1, cursor+(low-cursor)//2, -1):
+                        if segment.page.text[index] in "。！？.!?\n": boundary = index+1; break
+                    raw.update(end=boundary,text=segment.page.text[cursor:boundary],node_complete=False)
+                length = len(json.dumps(raw,ensure_ascii=False))+2
+                if length > budget:
+                    raise ValidationError("单个原文字符和必要来源字段超出输入预算，未调用模型。")
+                if pending and (size+length > budget or chapter != str(node.parent_id)):
+                    yield chapter,pending
+                    pending,size = [],0
+                chapter = str(node.parent_id)
+                pending.append(raw);size += length;cursor = raw["end"]
     if pending:
-        yield chapter, pending
+        yield chapter,pending
 
 
 def validate_analysis(output, source_rows):
@@ -210,6 +227,92 @@ def validate_analysis(output, source_rows):
                 raise ValidationError("模型引文未通过指定窗口原文回查。")
 
 
+def compile_wiki(run, proposals, config, lease):
+    """Bounded, evidence-backed additions to work and affected identity pages.
+
+    Entity destinations remain dependencies until an editor resolves identity.
+    Existing pages provide editorial context, never new primary evidence.
+    """
+    assertions = [p for p in proposals if p["kind"] == "assertion"]
+    proposal_map = {p["id"]:p for p in proposals}
+    def source_value(value):
+        if isinstance(value,dict):
+            if set(value) == {"change_item"}:
+                entity = proposal_map[value["change_item"]]["payload"]
+                return {k:entity.get(k,"") for k in ("label","kind","definition","context")}
+            return {k:source_value(v) for k,v in value.items()}
+        if isinstance(value,list): return [source_value(v) for v in value]
+        return value
+    source_assertions = {a["id"]:{"id":proposal_fingerprint(run.document_revision_id,"assertion",a["payload"],proposal_map),
+        **source_value(a["payload"])} for a in assertions}
+    targets = [{"key":"work", "title":run.work.title, "work_id":str(run.work_id),
+        "pages":list(m.KnowledgePage.objects.filter(work=run.work)), "assertions":assertions}]
+    for entity in (p for p in proposals if p["kind"] == "entity"):
+        related = [a for a in assertions if entity["id"] in a["dependencies"]]
+        if related:
+            ids = [c["id"] for c in entity["payload"].get("candidates",[])]
+            targets.append({"key":entity["id"],"title":entity["payload"]["label"],"entity_id":{"change_item":entity["id"]},
+                "pages":list(m.KnowledgePage.objects.filter(entity_id__in=ids)),"assertions":related})
+    results = []
+    budget = min(config.max_input_chars-6500, 6500)
+    for target in targets:
+        if not target["assertions"]: continue
+        contexts = []
+        for page in target["pages"]:
+            blocks, revision = page_content(page)
+            contexts += [{"page_id":str(page.pk),"entity_id":str(page.entity_id) if page.entity_id else None,
+                "revision_id":str(revision.pk) if revision else None,"block":b} for b in blocks]
+        batches, batch = [], []
+        # Partition at whole assertions; no sampling or truncating source claims.
+        for assertion in target["assertions"]:
+            source = source_assertions[assertion["id"]]
+            if batch and len(json.dumps([*batch,source],ensure_ascii=False)) > budget:
+                batches.append(batch);batch=[]
+            if len(json.dumps(source,ensure_ascii=False)) > budget:
+                raise ValidationError("单条学术陈述超过编纂输入预算，请扩大明确预算或缩小上游陈述范围。")
+            batch.append(source)
+        if batch: batches.append(batch)
+        for position, batch in enumerate(batches):
+            data = {"destination":{"title":target["title"],"identity_pending":target["key"] != "work"},
+                "source_revision":str(run.document_revision_id),"assertions":batch,"existing_blocks":[],"omitted_context_blocks":[]}
+            for context in contexts:
+                if len(json.dumps({**data,"existing_blocks":[*data["existing_blocks"],context]},ensure_ascii=False)) <= budget:
+                    data["existing_blocks"].append(context)
+                else:
+                    data["omitted_context_blocks"].append(context["block"]["id"])
+            allowed = {a["id"] for a in batch}
+            current_ids = {source_assertions[a["id"]]["id"]:a["id"] for a in target["assertions"]}
+            def validate_wiki(output):
+                refs = output.get("assertion_ids",[])
+                if set(refs)-allowed or (output.get("text","").strip() and not refs):
+                    raise ValidationError("知识页建议缺少本批原文陈述来源，或引用了未提供的陈述。")
+            artifact = _model_artifact(run,6,f"page:{target['key']}:{position}",data,
+                "为目标知识页提出一个局部新增区块。仅用本批有原文证据的陈述，说明与其他来源可能不同的用法或解释。"
+                "已有区块仅供避免重复，不能作为新增事实证据；省略的区块未读取，不能声称审阅整页。人物同名候选尚未合并。"
+                "不改写人工正文；无实质新增时text和assertion_ids均为空。返回实际使用的assertion_ids。",
+                WIKI_SCHEMA,config,lease,validate=validate_wiki)
+            output = artifact.output
+            if not output["text"].strip(): continue
+            refs = [current_ids[key] for key in output["assertion_ids"]]
+            block_id = str(uuid5(run.pk,f"wiki:{target['key']}:{position}"))
+            payload = {"operation":"add","block_id":block_id,"reason":output["reason"],
+                "block":{"id":block_id,"type":"analysis","text":output["text"],
+                    "references":[{"type":"assertion","id":{"change_item":key}} for key in refs]}}
+            dependencies = list(refs)
+            if target["key"] == "work":
+                payload["work_id"] = target["work_id"]
+                if target["pages"]:
+                    page=target["pages"][0];_,revision=page_content(page)
+                    payload.update(page_id=str(page.pk),base_revision=str(revision.pk) if revision else None)
+            else:
+                payload["entity_id"] = target["entity_id"]
+                dependencies.append(target["key"])
+            results.append({"id":str(uuid5(run.pk,"wiki:"+digest(payload))),"kind":"wiki_patch","payload":payload,
+                "dependencies":sorted(set(dependencies)),"source_artifact_id":str(artifact.pk)})
+    _save_artifact(run,6,"wiki",{"source_revision":str(run.document_revision_id)}, {"proposals":results},lease=lease)
+    return results
+
+
 def execute(run, config, lease):
     nodes = prepare(run)
     if not config.enabled:
@@ -218,16 +321,23 @@ def execute(run, config, lease):
     m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="running",started_at=timezone.now(),model_identity=identity(config))
     analyses = []
     read_nodes = set()
-    for index, (chapter, rows) in enumerate(windows(nodes, config)):
-        artifact = _model_artifact(run,2,f"window:{index}",{"chapter_id":chapter,"ranges":rows},
+    for index, (chapter, rows) in enumerate(windows(nodes, config, run.scope)):
+        chapter_node = m.DocumentNode.objects.get(pk=chapter)
+        chapter_path, parent = [], chapter_node
+        while parent:
+            if parent.title: chapter_path.insert(0,parent.title)
+            parent = parent.parent
+        source_rows = [{k:v for k,v in row.items() if k not in {"node_id","node_complete"}} for row in rows]
+        artifact = _model_artifact(run,2,f"window:{index}",{"revision":str(run.document_revision_id),
+            "parser_version":run.structure.parser_version,"chapter_path":chapter_path,"ranges":source_rows},
             "按文献顺序分析全部输入段落。引文偏移采用各段给定的原始页面起点，Unicode code point，结束不含。列出研究问题、概念和有直接证据的陈述。", ANALYSIS_SCHEMA,config,lease,
             validate=lambda output: validate_analysis(output, rows))
         analyses.append(artifact)
-        read_nodes.update(row["node_id"] for row in rows)
+        read_nodes.update(row["node_id"] for row in rows if row["node_complete"])
         m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(coverage={**run.coverage,"read_nodes":len(read_nodes)})
     synthesis = {"summary":"","development":[],"limitations":[]}
     for i, artifact in enumerate(analyses):
-        data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_id":str(artifact.pk),"position":i}
+        data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_hash":artifact.output_hash,"position":i}
         summary = _model_artifact(run,3,f"fold:{i}",data,"按真实文献次序继续综合。保留论证发展和概念变化、相反解释及覆盖限制，不按多数意见归并。",SUMMARY_SCHEMA,config,lease)
         synthesis = summary.output
     entity_proposals, entity_items, names = [], {}, {}
@@ -249,7 +359,7 @@ def execute(run, config, lease):
                     "逐一比较限定候选的身份、定义、语境和来源。名称相同或译名相似不足以判定同一。仅提出同一、不同或不确定的建议；每个候选恰好一项，管理员决定归并。",
                     MATCH_SCHEMA,config,lease,validate=validate_matches)
                 comparisons = match.output["comparisons"]
-            entity_proposals.append({"id":item_id,"kind":"entity","payload":{**raw,"candidates":candidates,
+            entity_proposals.append({"id":item_id,"kind":"entity","source_artifact_id":str(artifact.pk),"payload":{**raw,"candidates":candidates,
                 "comparisons":comparisons,"identity_decision":"pending_human_review"},"dependencies":[]})
             entity_items[key] = item_id
             names.setdefault(raw["label"],[]).append(item_id)
@@ -267,23 +377,10 @@ def execute(run, config, lease):
                 "evidence":[{"stance":e["stance"],"segments":[{k:v for k,v in e.items() if k != "stance"}]} for e in raw["evidence"]]}
             claimant = names.get(raw.get("claimant"),[])
             if len(claimant)==1: payload["attribution_id"]={"change_item":claimant[0]}
-            proposals.append({"id":str(uuid5(run.pk,"assertion:"+digest(payload))),"kind":"assertion","payload":payload,"dependencies":sorted(set(dependencies))})
+            proposals.append({"id":str(uuid5(run.pk,"assertion:"+digest(payload))),"kind":"assertion","payload":payload,
+                "source_artifact_id":str(artifact.pk),"dependencies":sorted(set(dependencies))})
     _save_artifact(run,5,"assertions",{"analysis_hashes":[a.output_hash for a in analyses]}, {"proposals":proposals[len(entity_proposals):]},lease=lease)
-    page = m.KnowledgePage.objects.filter(work=run.work).first()
-    blocks, revision = page_content(page) if page else ([],None)
-    # One evidence-backed local addition. Existing human blocks are protected.
-    anchors = []
-    for a in proposals:
-        if a["kind"]=="assertion": anchors.append({"type":"assertion","id":{"change_item":a["id"]}})
-    if anchors and synthesis["summary"]:
-        block_id=str(uuid5(run.pk,"wiki-summary"))
-        payload={"page_id":str(page.pk) if page else None,"work_id":str(run.work_id),"block_id":block_id,"operation":"add",
-            "base_revision":str(revision.pk) if revision else None,"reason":"新增文献范围综合；现有人工区块保留。",
-            "block":{"id":block_id,"type":"analysis","text":synthesis["summary"],"references":anchors[:40]}}
-        proposals.append({"id":str(uuid5(run.pk,"wiki:"+digest(payload))),"kind":"wiki_patch","payload":payload,
-            "dependencies":[a["id"]["change_item"] for a in anchors[:40]]})
-    _save_artifact(run,6,"wiki",{"page_id":str(page.pk) if page else None,"blocks":blocks,"synthesis":synthesis},
-        {"proposals":[p for p in proposals if p["kind"]=="wiki_patch"]},lease=lease)
+    proposals += compile_wiki(run, proposals, config, lease)
     # Repeated mentions may yield identical proposals; their evidence identity
     # remains in the fingerprint rather than a subject/predicate unique key.
     proposals = list({p["id"]:p for p in proposals}.values())

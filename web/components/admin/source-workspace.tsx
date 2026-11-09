@@ -22,6 +22,7 @@ export function SourceWorkspace() {
   const [results, setResults] = useState<Results | null>(null), [locator, setLocator] = useState<SourceLocator | null>(null), [page, setPage] = useState(1);
   const [selection, setSelection] = useState<SourceSegment[]>([]), [verified, setVerified] = useState<SourceLocator | null>(null), [evidenceOpen, setEvidenceOpen] = useState(false);
   const [error, setError] = useState(""), [contextError, setContextError] = useState(""), [busy, setBusy] = useState(false), [loaded, setLoaded] = useState(false), [attempt, setAttempt] = useState(0);
+  const [parseStart,setParseStart] = useState(1), [parseEnd,setParseEnd] = useState(2), [parseNotice,setParseNotice] = useState("");
   const source = rows.find(v => v.revision_id === revision);
   useEffect(() => {
     const controller = new AbortController(); setError(""); setLoaded(false); setRows([]);
@@ -73,7 +74,7 @@ export function SourceWorkspace() {
       {source && <><span className={s.muted}>关键词 {ready[source.keywords]} · 语义 {ready[source.semantic]} · {source.published ? "已公开" : "内部修订"}</span><Link href={source.outline_url}>目录校准</Link></>}
       <button className={s.mobileOnly} onClick={() => setEvidenceOpen(true)}><PanelRightOpen size={16} />核对原文</button></div>}
     {(revision || view === "search") && <div className={s.workspace}>
-      <aside className={s.rail}><h2>{view === "text" ? "正文目录" : "检索范围"}</h2>{view === "text" ? nodes.filter(n => n.kind !== "paragraph").map(n => <button key={n.id} aria-current={nodeId === n.id} onClick={() => { setNodeId(n.id); setOffset(0); }}>{n.kind === "document" ? "全部正文" : n.title || "未命名章节"}</button>) : <p className={s.muted}>{source?.title || "全部已发布馆藏"}<br />与登录读者使用相同权限和检索服务。</p>}</aside>
+      <aside className={s.rail}><h2>{view === "text" ? "正文目录" : "检索范围"}</h2>{view === "text" ? nodes.filter(n => ["document","part","chapter","section","preface","appendix","references"].includes(n.kind) && (n.title || n.kind === "document")).map(n => <button key={n.id} aria-current={nodeId === n.id} onClick={() => { setNodeId(n.id); setOffset(0); }}>{n.kind === "document" ? "全部正文" : n.title}</button>) : <p className={s.muted}>{source?.title || "全部已发布馆藏"}<br />与登录读者使用相同权限和检索服务。</p>}</aside>
       <main className={s.main}>
         {view === "search" ? <><h2>让结果回到原文</h2><form onSubmit={e => { e.preventDefault(); void searchText(); }}>
           <label>检索问题<input value={q} onChange={e => setQ(e.target.value)} minLength={2} maxLength={1200} required placeholder="输入一个问题、术语或原文短语" /></label>
@@ -86,6 +87,12 @@ export function SourceWorkspace() {
         </> : <><h2>{context?.title || nodes.find(v => v.id === nodeId)?.title || "正文结构"}</h2>
           {source?.structure_coverage.structure_status === "needs_structure_review" && <details className={s.notice}><summary>部分目录尚未对应到正文</summary><p>以下标题尚未找到唯一原文位置，可进入目录校准核对。“全部正文”仍可读取完整修订。</p><ul>{(source.structure_coverage.unmapped_headings || []).map((gap, i) => <li key={i}>{gap.title || "未命名标题"} · PDF {gap.page || "未确定"}</li>)}</ul><Link href={source.outline_url}>打开目录校准</Link></details>}
           {!nodes.length && source && <><p>此修订尚未准备可引用的正文结构。已有正文和目录将用于建立映射。</p><button disabled={busy} onClick={() => void action(async () => { await knowledgeCall(`/knowledge/revisions/${revision}/structure/`, {}); setAttempt(v => v + 1); })}>准备正文结构</button></>}
+          {source && <details className={s.notice}><summary>补充段落与脚注结构</summary><p>选择结构缺失或不准确的范围。计算节点只解析所选页，保留已有原文与人工目录；不能核对的片段会留待校准。</p>
+            <form onSubmit={e => { e.preventDefault(); void action(async () => { const result = await knowledgeCall<{ job_id: string; status: string }>(`/knowledge/revisions/${revision}/structure/parse/`, { pages: [parseStart,parseEnd], request_id: crypto.randomUUID() }); setParseNotice(`解析任务已保存，等待计算节点执行。`); setAttempt(v => v + 1); }); }}>
+              <div className={s.toolbar}><label>PDF 起页<input type="number" min={1} max={source.pages} value={parseStart} onChange={e => setParseStart(Number(e.target.value))} required /></label><label>PDF 止页<input type="number" min={parseStart} max={Math.min(source.pages,parseStart+49)} value={parseEnd} onChange={e => setParseEnd(Number(e.target.value))} required /></label><button disabled={busy || ["pending","running"].includes(source.structure_job?.status || "")}>解析所选范围</button></div>
+            </form>{parseNotice && <p role="status">{parseNotice}</p>}{source.structure_job && <p>最近范围 PDF {source.structure_job.pages.join("—")} · {{pending:"等待计算节点",running:"正在解析",succeeded:"结构已保存",failed:"解析失败",canceled:"已取消"}[source.structure_job.status] || source.structure_job.status}{source.structure_job.error && ` · ${source.structure_job.error}`} <button onClick={() => setAttempt(v => v + 1)}>刷新结果</button></p>}
+            {!!source.structure_coverage.alignment_gaps?.length && <p>有 {source.structure_coverage.alignment_gaps.length} 个解析片段尚不能与原文唯一对应，相关原文已保留。</p>}
+          </details>}
           {contextError && <p className={s.error} role="alert">{contextError}</p>}
           {nodeId && <div className={s.toolbar}><select aria-label="上下文范围" value={scope} onChange={e => { setScope(e.target.value); setOffset(0); }}><option value="node">所选正文节点</option><option value="section">所在小节</option><option value="chapter">所在章节</option></select><span className={s.muted}>{context ? `已展示 ${context.offset + 1}—${context.offset + context.returned_characters} / ${context.total_characters} 字符` : "正在读取…"}</span></div>}
           {context?.segments.map((part, i) => <article key={`${part.page_number}-${part.start}-${i}`}><p className={s.muted}>PDF {part.page_number}{part.printed_label ? ` · 书页 ${part.printed_label}` : ""}</p><div className={s.paragraph}>{part.exact}</div><div className={s.toolbar}><button onClick={() => { setPage(part.page_number); setLocator(null); setEvidenceOpen(true); }}>核对这一页</button><button onClick={() => addSegment(part)}>选用这段原文</button></div></article>)}

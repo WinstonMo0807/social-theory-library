@@ -2874,6 +2874,10 @@ class ProcessingCenterView(EditorialErrorMixin, AdminPrivateResponseMixin, APIVi
             ProcessingJob.objects.select_related("asset", "upload_item"),
             pk=job_id,
         )
+        if job.job_type == "document_structure":
+            from catalog.services.document_structure import control_structure
+            job=control_structure(job.pk,request.user,action)
+            return Response({"job_id":str(job.pk),"status":job.status},status=202)
         if job.job_type == "editorial_assistance":
             from catalog.services.editorial_assistance import assistance_action
             try:

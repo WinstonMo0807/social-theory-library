@@ -112,6 +112,12 @@ def _heading_kind(title, level):
     return "chapter" if level == 1 else "section"
 
 
+def current_structure(revision, *, prepare=False):
+    outline = DocumentOutlineRevision.objects.filter(document_revision=revision, is_active=True).first()
+    result = revision.structures.filter(outline_revision=outline).order_by("-created_at").first()
+    return result or (build_structure(revision) if prepare else None)
+
+
 @transaction.atomic
 def build_structure(revision):
     revision = DocumentRevision.objects.select_for_update().get(pk=revision.pk)
@@ -220,6 +226,14 @@ def create_anchor(revision, segments):
                 segments__page=page, segments__start__lte=start, segments__end__gte=end).first()
             if not node:
                 raise ValidationError("片段不在所声明的正文节点内。")
+        else:
+            # Choose an actual containing node; never infer continuity at a page break.
+            structure = revision.structures.order_by("-created_at").first()
+            if structure:
+                from django.db.models import F
+                containing = DocumentNodeSegment.objects.filter(node__structure=structure, page=page,
+                    start__lte=start, end__gte=end).annotate(length=F("end")-F("start")).order_by("length", "node__order").select_related("node").first()
+                node = containing.node if containing else None
         geometry = {}
         # Never trust geometry supplied by a model/client. Use only exact stored
         # block matches with validated extraction coordinates.
@@ -317,12 +331,20 @@ def context(node, actor, *, budget=12000, editorial=False, offset=0, scope="node
         if parent.title:
             path.insert(0, parent.title)
         parent = parent.parent
+    # Include explicit footnote links from the returned chapter/section ranges.
+    # This does not concatenate all footnotes on a physical page into the body.
+    from django.db.models import Q
+    from catalog.models import DocumentNodeReference
+    included = Q(pk__in=[])
+    for part in texts:
+        included |= Q(source__segments__page__page_number=part["page_number"],source__segments__start__lt=part["end"],source__segments__end__gt=part["start"])
+    references = list(DocumentNodeReference.objects.filter(included,source__structure=node.structure).distinct().values("target_id","kind","label")[:100])
     return {"node_id": str(node.pk), "document_revision_id": str(node.document_revision_id), "segments": texts,
             "requested_node_id": str(requested.pk), "chapter_path": path, "scope": node.kind,
             "asset_id": str(node.document_revision.asset_id), "offset_unit": "unicode_code_point",
             "returned_characters": read, "total_characters": total, "complete": offset == 0 and read == total,
             "offset": offset, "next_offset": offset + read if offset + read < total else None,
-            "budget": budget, "references": list(node.outgoing_references.values("target_id", "kind", "label"))}
+            "budget": budget, "references": references}
 
 
 @transaction.atomic

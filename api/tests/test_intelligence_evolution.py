@@ -1,0 +1,125 @@
+"""Source alignment, durable rejections and complete long-window coverage."""
+from types import SimpleNamespace
+from uuid import uuid4
+import pytest
+from tests.test_knowledge_core import source
+from catalog import models as m
+from catalog.services.knowledge_sources import build_structure, locator_payload
+from catalog.services.document_structure import align_text, install_structure, ADAPTER_VERSION, DOCLING_VERSION
+from catalog.services.intelligence_changes import submit_draft, review
+
+
+@pytest.mark.django_db
+def test_rejection_follows_candidate_meaning_across_run_ids(source, admin_user):
+    def proposals():
+        entity, assertion = str(uuid4()),str(uuid4())
+        return [{"id":entity,"kind":"entity","payload":{"kind":"person","label":"同名人物","context":"同一来源语境"},"dependencies":[]},
+            {"id":assertion,"kind":"assertion","payload":{"text":"同一建议","participants":[{"role":"claimant","entity_id":{"change_item":entity}}]},"dependencies":[entity]}]
+    first = submit_draft(source,proposals(),admin_user,request_id=uuid4())
+    review(first.pk,[{"id":str(first.items.get(kind="assertion").pk),"decision":"rejected","note":"缺乏归属证据"}],admin_user,expected_version=1)
+    second = submit_draft(source,proposals(),admin_user,request_id=uuid4())
+    assert second.items.get(kind="assertion").decision == "rejected"
+    assert second.items.get(kind="entity").decision == "pending"
+
+
+@pytest.mark.django_db
+def test_docling_alignment_keeps_cross_page_provenance_and_raw_fallback(source):
+    original = build_structure(source)
+    text = "跨页引文前半跨页引文后半"
+    parsed = {"schema":ADAPTER_VERSION,"parser_version":DOCLING_VERSION,"source_checksum":source.source_checksum,
+        "heading_hierarchy_enabled":True,"ocr_performed":False,"status":"success","pages":[1,2],"items":[
+            {"ref":"#/texts/0","label":"text","text":text,"prov":[{"page_no":1,"charspan":[0,6]}, {"page_no":2,"charspan":[6,12]}]}]}
+    structure = install_structure(source,parsed)
+    paragraph = structure.nodes.get(source__docling_ref="#/texts/0")
+    assert paragraph.segments.count() == 2
+    assert structure.coverage["verified_cross_page_items"] == 1
+    assert structure.coverage["unmatched_ranges"]
+    assert structure.coverage["structure_status"] == "needs_structure_review"
+    assert install_structure(source,parsed).pk == structure.pk
+    assert original.nodes.exists()
+    assert align_text("甲 \n😀乙","甲😀乙") == (0,5)
+    assert align_text("甲甲","甲") is None
+    assert align_text('甲 “原文” 乙','"原文"') == (2,6)
+    assert align_text('“原文”以及"原文"','"原文"') is None
+
+
+@pytest.mark.django_db
+def test_long_paragraph_windows_cover_all_codepoints_without_model_cutting(source):
+    from catalog.services.intelligence import windows
+    build_structure(source)
+    page = SimpleNamespace(page_number=1,text=("长段落😀。"*1800))
+    part = SimpleNamespace(page=page,start=0,end=len(page.text))
+    class Segments:
+        def select_related(self,*a): return self
+        def all(self): return [part]
+    node = SimpleNamespace(pk=uuid4(),parent_id=uuid4(),kind="paragraph",segments=Segments())
+    rows = [row for _,window in windows([node],SimpleNamespace(max_input_chars=16000,max_output_tokens=4096)) for row in window]
+    assert len(rows) > 1 and "".join(v["text"] for v in rows) == page.text
+    assert all(left["end"] == right["start"] for left,right in zip(rows,rows[1:]))
+    assert sum(v["node_complete"] for v in rows) == 1 and rows[-1]["node_complete"]
+
+
+@pytest.mark.django_db
+def test_search_slice_anchor_uses_its_own_exact_range(source):
+    from catalog.services.retrieval.locators import index_anchor, attach_locators
+    build_structure(source)
+    page = source.page_snapshots.first();start = page.text.index("😀")
+    generation = m.SemanticIndexVersion.discovery_objects.create(index_family="discovery",uid="locator-evolution")
+    doc = m.DiscoveryDocument.objects.create(generation=generation,channel="passages",source_type="edition",source_id=source.asset.edition_id,
+        document_revision=source,source_revision="fixture",scope_token="fixture",text="😀",start_offset=start,end_offset=start+1,payload={"pdf_page":1})
+    mapping = index_anchor(doc)
+    row = attach_locators([{"id":str(doc.pk),"asset_id":str(source.asset_id),"document_revision_id":str(source.pk)}])[0]
+    assert row["anchor_id"] == str(mapping.target_id)
+    assert row["locator"]["exact"] == "😀" and row["node_id"]
+    assert index_anchor(doc).pk == mapping.pk
+
+
+@pytest.mark.django_db
+def test_structure_remote_completion_is_versioned_and_idempotent(source,admin_user,monkeypatch):
+    from catalog.intelligence_tasks import execute_structure
+    from catalog.services.document_structure import request_structure
+    from common.task_runtime import register_executor_heartbeat,claim_specific_demand
+    from common.remote_worker import bind_remote_lease_context,build_remote_job,complete_remote_demand,RemoteWorkerProtocolError
+    monkeypatch.setattr(execute_structure,"apply_async",lambda **kwargs:None)
+    source.asset.sha256=source.source_checksum;source.asset.save()
+    job=request_structure(source,admin_user,pages=[1,2],request_id=uuid4())
+    register_executor_heartbeat(executor_id="structure-test",capabilities=["document_parse"],kind="remote_gpu",concurrency=1,
+        metadata={"task_kinds":["document_structure"]})
+    lease=claim_specific_demand(demand_id=job.stats["demand_id"],executor_id="structure-test",lease_seconds=300)
+    assert lease
+    bind_remote_lease_context(lease)
+    assert build_remote_job(lease)["input"]["revision_id"] == str(source.pk)
+    parsed={"schema":ADAPTER_VERSION,"parser_version":DOCLING_VERSION,"source_checksum":source.source_checksum,
+        "heading_hierarchy_enabled":True,"ocr_performed":False,"status":"success","pages":[1,2],"items":[
+        {"ref":"#/texts/0","label":"text","text":"跨页引文前半跨页引文后半","prov":[{"page_no":1,"charspan":[0,6]},{"page_no":2,"charspan":[6,12]}]}]}
+    result={"parsed":parsed,"elapsed_ms":1}
+    args={"executor_id":"structure-test","lease_token":lease.lease_token,"completion_id":"structure-result","result":result}
+    completed=complete_remote_demand(lease.demand_id,**args)
+    assert len(completed.artifact_ids)==1
+    assert complete_remote_demand(lease.demand_id,**args).idempotent_replay
+    job.refresh_from_db();assert job.status=="succeeded"
+    with pytest.raises(RemoteWorkerProtocolError):
+        complete_remote_demand(lease.demand_id,**{**args,"completion_id":"different"})
+
+
+@pytest.mark.django_db
+def test_wiki_targets_work_and_identity_without_overwriting_human_blocks(source,admin_user,monkeypatch):
+    from catalog.services import intelligence
+    entity_id,assertion_id=str(uuid4()),str(uuid4())
+    run=m.CurationRun.objects.create(work=source.asset.edition.work,edition=source.asset.edition,document_revision=source,
+        request_id=uuid4(),created_by=admin_user)
+    proposals=[{"id":entity_id,"kind":"entity","payload":{"label":"概念甲","kind":"concept","context":"本书用法","candidates":[]},"dependencies":[]},
+        {"id":assertion_id,"kind":"assertion","payload":{"text":"有证据的用法","predicate":"uses","participants":[{"role":"subject","entity_id":{"change_item":entity_id}}],"evidence":[]},"dependencies":[entity_id]}]
+    destinations=[]
+    def model(run,stage,unit,data,*args,**kwargs):
+        destinations.append(data["destination"])
+        output={"text":"来源限定的局部说明","reason":"新增来源","assertion_ids":[data["assertions"][0]["id"]]}
+        kwargs["validate"](output)
+        return SimpleNamespace(pk=uuid4(),output=output)
+    monkeypatch.setattr(intelligence,"_model_artifact",model)
+    patches=intelligence.compile_wiki(run,proposals,SimpleNamespace(max_input_chars=16000),None)
+    assert len(patches)==2 and destinations[1]["identity_pending"]
+    assert all(p["payload"]["operation"]=="add" for p in patches)
+    assert patches[1]["payload"]["entity_id"]=={"change_item":entity_id}
+    assert patches[1]["payload"]["block"]["references"][0]["id"]=={"change_item":assertion_id}
+    assert not m.KnowledgePage.objects.exists()

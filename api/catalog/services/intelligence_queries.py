@@ -30,7 +30,13 @@ def changeset_data(changeset, actor):
         if applied.get("type") == "assertion":
             item["current_status"] = m.Assertion.objects.filter(pk=applied["id"]).values_list("status", flat=True).first()
         elif applied.get("page_id"):
-            item["current_status"] = m.KnowledgePage.objects.filter(pk=applied["page_id"]).values_list("status", flat=True).first()
+            page = m.KnowledgePage.objects.get(pk=applied["page_id"])
+            saved = m.EditorialRevision.objects.get(pk=applied["id"])
+            published = m.EditorialRevision.objects.filter(target_type="knowledge_page",target_id=page.pk,status="published",revision__gte=saved.revision).exists()
+            key = item["payload"].get("block_id")
+            saved_block = next((b for b in saved.materialized_preview.get("body_blocks",[]) if b.get("id") == key),None)
+            public_block = next((b for b in page.body_blocks if b.get("id") == key),None)
+            item["current_status"] = "published" if published and page.status == "published" and saved_block == public_block else "draft"
         if item["kind"] == "wiki_patch" and item["payload"].get("page_id"):
             page = get_object_or_404(m.KnowledgePage, pk=item["payload"]["page_id"])
             blocks, revision = page_content(page)

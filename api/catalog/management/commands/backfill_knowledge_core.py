@@ -16,6 +16,9 @@ class Command(BaseCommand):
         parser.add_argument("--claims", action="store_true")
         parser.add_argument("--relations", action="store_true")
         parser.add_argument("--page-dependencies", action="store_true")
+        parser.add_argument("--retrieval", action="store_true")
+        parser.add_argument("--review-fingerprints", action="store_true")
+        parser.add_argument("--generation")
         parser.add_argument("--after", default="")
         parser.add_argument("--batch-size", type=int, default=100)
 
@@ -23,6 +26,34 @@ class Command(BaseCommand):
         size = options["batch_size"]
         if not 1 <= size <= 500:
             raise CommandError("batch-size须为1至500")
+        if options["review_fingerprints"]:
+            from catalog.services.intelligence_changes import refresh_fingerprints
+            rows=m.ChangeSet.objects.order_by("id")
+            if options["after"]: rows=rows.filter(id__gt=options["after"])
+            count,last=0,None
+            for changeset in rows[:size]:
+                with transaction.atomic():
+                    changeset=m.ChangeSet.objects.select_for_update().get(pk=changeset.pk)
+                    refresh_fingerprints(changeset)
+                count+=1;last=str(changeset.pk)
+            self.stdout.write(str({"changesets":count,"next_after":last}))
+        if options["retrieval"]:
+            from catalog.services.retrieval.locators import index_anchor
+            from catalog.services.discovery_projection import active_generation, validate_discovery_results
+            generation = m.SemanticIndexVersion.discovery_objects.get(pk=options["generation"]) if options["generation"] else active_generation()
+            if not generation:
+                raise CommandError("没有可迁移的检索generation")
+            rows = m.DiscoveryDocument.objects.filter(generation=generation, channel="passages", keyword_ready=True).order_by("id")
+            if options["after"]:
+                rows = rows.filter(id__gt=options["after"])
+            batch = list(rows.select_related("document_revision")[:size])
+            valid = {r["id"] for r in validate_discovery_results("passages", [{"id":str(r.pk)} for r in batch], list({r.access_status for r in batch}))}
+            counts = {}
+            for row in batch:
+                mapping = index_anchor(row) if str(row.pk) in valid else None
+                quality = mapping.quality if mapping else "source_not_current_public"
+                counts[quality] = counts.get(quality, 0) + 1
+            self.stdout.write(str({"retrieval":counts,"next_after":str(batch[-1].pk) if batch else None}))
         if options["page_dependencies"]:
             from catalog.services.knowledge_workspace import sync_dependencies
             rows = m.KnowledgePage.objects.order_by("id")

@@ -14,6 +14,24 @@ from ingestion.models import AuditEvent
 KINDS = {"entity", "alias", "assertion", "wiki_patch"}
 
 
+def proposal_fingerprint(revision_id, kind, payload, proposals, trail=()):
+    """Stable across runs, while preserving source, context and opposing evidence."""
+    def normalize(value, path=()):
+        if isinstance(value, dict):
+            if set(value) == {"change_item"}:
+                key = str(value["change_item"])
+                if key in trail or key not in proposals:
+                    raise ValidationError("建议引用缺少依赖项或形成循环。")
+                item = proposals[key]
+                return {"candidate_fingerprint": proposal_fingerprint(revision_id, item["kind"], item["payload"], proposals, (*trail, key))}
+            return {k:normalize(v, (*path, k)) for k,v in value.items() if not (not path and k in {"candidates", "comparisons", "reason", "base_revision"})
+                and not (kind == "wiki_patch" and ((not path and k == "block_id") or (path == ("block",) and k == "id")))}
+        if isinstance(value, list):
+            return [normalize(v, path) for v in value]
+        return value
+    return digest([str(revision_id), kind, normalize(payload)])
+
+
 def uuid_value(raw):
     try:
         return UUID(str(raw))
@@ -39,6 +57,7 @@ def submit_draft(revision, proposals, actor, *, request_id, origin="external", r
     keys = [str(uuid_value(item.get("id"))) for item in proposals]
     if len(keys) != len(set(keys)) or m.ChangeItem.objects.filter(pk__in=keys).exists():
         raise ValidationError("建议ID重复。")
+    proposal_map = dict(zip(keys, proposals))
     seen = set()
     for key, item in zip(keys, proposals):
         kind = item.get("kind")
@@ -46,13 +65,18 @@ def submit_draft(revision, proposals, actor, *, request_id, origin="external", r
         if kind not in KINDS or not isinstance(item.get("payload"), dict) or set(dependencies) - set(keys) or key in dependencies:
             raise ValidationError("建议类型、内容或依赖无效。")
         payload = item["payload"]
-        item_hash = digest([str(revision.pk), kind, payload])
+        item_hash = proposal_fingerprint(revision.pk, kind, payload, proposal_map)
         if item_hash in seen:
             raise ValidationError("变更集中存在内容和来源完全相同的建议，请保留一项并调整依赖。")
         seen.add(item_hash)
         rejected = m.ChangeItem.objects.filter(fingerprint=item_hash, decision="rejected").order_by("-reviewed_at").first()
+        artifact = None
+        if item.get("source_artifact_id"):
+            artifact = m.CurationArtifact.objects.filter(pk=uuid_value(item["source_artifact_id"]),run=run).first() if run else None
+            if not artifact:
+                raise ValidationError("建议来源产物不属于此策展任务。")
         m.ChangeItem.objects.create(id=key, changeset=changeset, kind=kind, payload=payload,
-            dependencies=dependencies, fingerprint=item_hash, decision="rejected" if rejected else "pending",
+            dependencies=dependencies, fingerprint=item_hash, source_artifact=artifact, decision="rejected" if rejected else "pending",
             decision_note=rejected.decision_note if rejected else "", reviewed_by=rejected.reviewed_by if rejected else None,
             reviewed_at=rejected.reviewed_at if rejected else None)
     _ordered(list(changeset.items.all()))
@@ -73,6 +97,20 @@ def _ordered(items):
             done.add(str(item.pk))
             del remaining[str(item.pk)]
     return output
+
+
+def refresh_fingerprints(changeset):
+    """Also updates dependent meanings after an editor changes an identity."""
+    items = list(changeset.items.select_for_update().all())
+    proposals = {str(v.pk):{"kind":v.kind,"payload":v.payload} for v in items}
+    values = {v.pk:proposal_fingerprint(changeset.document_revision_id,v.kind,v.payload,proposals) for v in items}
+    if len(set(values.values())) != len(values):
+        raise ValidationError("修改后出现内容和来源完全重复的建议，请保留其中一项。")
+    # Temporary, transaction-local keys permit exchanging two valid meanings.
+    for item in items:
+        m.ChangeItem.objects.filter(pk=item.pk).update(fingerprint=digest(["rehash",str(uuid4()),str(item.pk)]))
+    for item in items:
+        m.ChangeItem.objects.filter(pk=item.pk).update(fingerprint=values[item.pk])
 
 
 @transaction.atomic
@@ -97,10 +135,10 @@ def review(changeset_id, decisions, actor, *, expected_version):
             item.payload = decision["payload"]
             if edited and item.kind == "wiki_patch":
                 item.payload = {**item.payload, "human_edited": True}
-            item.fingerprint = digest([str(changeset.document_revision_id), item.kind, item.payload])
         item.decision, item.decision_note = decision["decision"], str(decision.get("note", ""))[:1000]
         item.reviewed_by, item.reviewed_at, item.conflict = actor, timezone.now(), {}
         item.save()
+    refresh_fingerprints(changeset)
     changeset.version += 1
     changeset.status = "reviewing"
     changeset.save(update_fields=["version", "status", "updated_at"])

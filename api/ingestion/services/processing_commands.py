@@ -62,6 +62,8 @@ def task_actions(job, actor):
         if job.operation not in {"build", "rebuild"}: return []
         return (["pause"] if job.status in {"queued", "running"} and not job.pause_requested_at else []) + (["resume"] if job.status == "paused" else []) + (["cancel"] if job.status in {"queued", "paused"} else []) + (["retry"] if job.status in {"failed", "partial"} and job.asset_id else [])
     kind, state = job.job_type, job.status
+    if kind == "document_structure":
+        return (["cancel"] if state in {"pending","running","failed"} else []) + (["retry"] if state in {"failed","canceled"} else [])
     from .processing_recovery import recovery_state
     recover = ["recover"] if has_capability(actor, Capability.VIEW_SYSTEM_STATUS) and recovery_state(job)["can_recover"] else []
     if kind == "discovery_index":
