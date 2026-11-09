@@ -67,8 +67,11 @@
 .stl4-issue-byline img, .stl4-issue-byline > div > span { width: 48px; height: 48px; flex: none; border-radius: 50%; object-fit: cover; }
 .stl4-scholar-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
 .stl4-scholar-card, .stl4-topic-card { border: 1px solid var(--line); border-radius: 3px; overflow: hidden; min-width: 0; display: block; }
-.stl4-home .stl4-scholar-card .scholar-portrait { width: 100%; height: auto; aspect-ratio: 1.38; min-height: 0; border-radius: 0; background-size: cover; background-position: center 18%; }
-.stl4-scholar-card .scholar-portrait img { object-position: center 18%; }
+.stl4-scholar-card { display: flex; flex-direction: column; }
+.stl4-home .stl4-scholar-card .scholar-portrait { width: 100%; height: auto; aspect-ratio: 1.38; min-height: 0; flex: none; border-radius: 0; background-size: contain; background-position: center; }
+.stl4-scholar-card .scholar-portrait img { object-position: center; }
+.stl4-scholar-card > div:last-child { flex: 1; }
+.stl4-scholar-card p { min-height: 1.6em; }
 .stl4-scholar-card > div:last-child, .stl4-topic-card > div:last-child { position: relative; padding: 11px 14px; }
 .stl4-home .stl4-scholar-card h3, .stl4-home .stl4-topic-card h3 { font-size: 19px; line-height: 1.4; margin: 0 0 4px; }
 .stl4-scholar-card p, .stl4-topic-card p { font: max(13px, var(--stl-readable-body))/1.6 var(--serif); color: var(--muted); margin: 0; padding-right: 14px; }

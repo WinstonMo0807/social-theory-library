@@ -1,3 +1,3 @@
-.section{min-width:0}.scholar>img,.scholar>:global(.stl4-image-missing){width:100%;aspect-ratio:4/5;object-fit:cover}.topic>img,.topic>:global(.stl4-image-missing){width:100%;aspect-ratio:4/3;object-fit:cover}.copy{min-width:0}.copy p{overflow-wrap:anywhere}.copy h3{overflow-wrap:anywhere}
+.section{min-width:0}.scholar>img,.scholar>:global(.stl4-image-missing){width:100%;aspect-ratio:1.38;object-fit:contain;background:var(--night-wash,#eeebe5)}.topic>img,.topic>:global(.stl4-image-missing){width:100%;aspect-ratio:4/3;object-fit:cover}.copy{min-width:0}.copy p{overflow-wrap:anywhere}.copy h3{overflow-wrap:anywhere}
 .section :global(.stl4-issue-card){display:flex}
 @media(max-width:760px){.section :global(.stl4-issue-grid){display:flex;overflow-x:auto;scroll-snap-type:x proximity;gap:14px;padding-bottom:9px}.section :global(.stl4-issue-card){flex:0 0 100%;scroll-snap-align:start}.section :global(.stl4-issue-lead){min-height:220px}}

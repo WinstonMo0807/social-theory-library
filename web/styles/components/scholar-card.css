@@ -30,9 +30,14 @@
 }
 
 .scholar-portrait.has-image {
-  background-position: center 18%;
-  background-size: cover;
+  background-color: var(--night-wash, #eeebe5);
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
 }
+
+.scholar-portrait.has-image > picture { position: absolute; inset: 0; }
+.scholar-portrait.has-image img { display: block; object-position: center; }
 
 .scholar-portrait.has-image::after {
   display: none;
