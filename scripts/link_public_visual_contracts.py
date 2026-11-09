@@ -39,7 +39,9 @@ def matches(left, right):
 rows = []
 routes = web["routes"] if isinstance(web, dict) else web
 for page in routes:
-    for request in page["requests"]:
+    expanded = [{**request, "path": value} for request in page["requests"]
+                for value in (request.get("path_alternatives") or [request.get("path")])]
+    for request in expanded:
         if not request.get("path") or not request["path"].startswith("/"):
             continue
         shape = abstract_path(request["path"])

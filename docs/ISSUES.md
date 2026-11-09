@@ -1,5 +1,7 @@
 ## 2026-11-10 公网视觉候选盘点
 
+- A / PV-FILTER-01（既有问题，尚未修复）：理论管理选择理论传统仍返回概念/争论。隔离浏览器实际复现；`web/components/theory-system-admin.tsx:455` API发送node_type，`api/catalog/theory_system_views.py:162`读取type。最小修复保留页面URL的node_type，将API查询转换为type；设计覆盖后实施，验证四分类、分页与返回。
+
 - D / PV-LOCAL-01：本机Workers开发环境不接受fetch redirect:error，导致SSR首页失败；server-request改manual，既有非2xx分支拒绝跳转并保留凭据边界。定向302/404/503/网络失败检查通过，隔离首页/PDF读回。不是公网Node运行故障。
 - 待核实 / PV-TEST-01：旧api-domain-boundaries第2项断言public-data-adapters只能有type导入，但已部署基线存在纯媒体函数mediaAllows导入；本轮运行整组2通过1失败。未修改此断言，后续按当前实际纯模块边界定位，不列作新视觉缺陷。
 

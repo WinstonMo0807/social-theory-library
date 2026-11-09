@@ -24,21 +24,76 @@ const transports = new Set(['apiRequest','serverRequest','apiBlob','apiUpload','
 const wrapperPathIndex = new Map([
   ['privateRequest',0],['parallelRequest',0],['booklistRequest',1],['notebookRequest',1],
   ['sharingRequest',1],['accountRequest',1],['authorityRequest',1],['replayRequest',1],
-  ['useApiResource',0],['usePersistentWorkspace',0],
+  ['useApiResource',0],['usePersistentWorkspace',0],['useAdminData',0],
 ]);
+// Source-verified path builders. Resolve only strings and local constant
+// composition, never execute code or assume a conditional branch was rendered.
+function pathText(node, depth=0) {
+  if(!node||depth>8)return null;
+  if(ts.isStringLiteralLike(node))return node.text;
+  if(ts.isTemplateExpression(node))return node.head.text+node.templateSpans.map(span=>(pathText(span.expression,depth+1)??'${'+span.expression.getText()+'}')+span.literal.text).join('');
+  if(ts.isParenthesizedExpression(node))return pathText(node.expression,depth+1);
+  if(ts.isBinaryExpression(node)&&node.operatorToken.kind===ts.SyntaxKind.PlusToken){const a=pathText(node.left,depth+1),b=pathText(node.right,depth+1);return a!==null&&b!==null?a+b:null;}
+  if(ts.isIdentifier(node)){
+    let symbol=checker.getSymbolAtLocation(node);if(symbol?.flags&ts.SymbolFlags.Alias)symbol=checker.getAliasedSymbol(symbol);
+    const decl=symbol?.declarations?.find(ts.isVariableDeclaration);
+    if(decl?.initializer&&decl.initializer!==node)return pathText(decl.initializer,depth+1);
+  }
+  if(ts.isCallExpression(node)){
+    const name=node.expression.getText().split('.').at(-1),args=node.arguments;
+    const value=i=>pathText(args[i],depth+1)??'${'+(args[i]?.getText()||'id')+'}';
+    if(name==='encodeURIComponent'||name==='segment')return value(0);
+    if(name==='apiEndpoint')return value(0);
+    if(name==='researchRecordPath')return '/reading/'+value(0)+'/'+(args.length>1?value(1)+'/':'');
+    if(name==='privateCitationSourcePath')return '/reading/citation-sources/'+(args.length?value(0)+'/':'');
+    if(name==='citationPreviewPath')return '/reading/'+value(0)+'/'+value(1)+'/preview/';
+    if(name==='replayPath')return '/reading/research-projects/'+value(0)+'/replay/';
+    if(name==='notebookRecordPath')return '/reading/notebook/${category}/${id}/';
+    if(name==='operationPath')return '/reading/privacy/operations/'+(args.length?value(0)+'/':'');
+    if(name==='outlinePath')return '/catalog/admin/assets/'+value(0)+'/outline/';
+    if(name==='mappingPath')return '/catalog/admin/assets/'+value(0)+'/page-mapping/';
+    if(name==='readerOcrPath')return '/distribution/assets/'+value(0)+'/ocr-status/';
+    if(name==='workFilesPath')return '/catalog/admin/works/'+value(0)+'/files/?${params}';
+    if(node.expression.getText().startsWith('personApi.')){
+      const suffix={search:'?search=${query}&limit=20',duplicates:value(0)+'/duplicates/?limit=20',preview:value(0)+'/merge-preview/?target_person='+value(1),history:'merge-records/?source_person='+value(0),record:'merge-records/'+value(0)+'/'}[name];
+      if(suffix)return '/catalog/admin/people/'+suffix;
+    }
+  }
+  return null;
+}
+function pathVariants(node, depth=0) {
+  if(!node||depth>8)return [];
+  if(ts.isConditionalExpression(node))return [...new Set([...pathVariants(node.whenTrue,depth+1),...pathVariants(node.whenFalse,depth+1)])].filter(Boolean);
+  if(ts.isTemplateExpression(node)){
+    let result=[node.head.text];
+    for(const span of node.templateSpans){const values=pathVariants(span.expression,depth+1);result=result.flatMap(start=>(values.length?values:['${'+span.expression.getText()+'}']).map(value=>start+value+span.literal.text)).slice(0,16);}
+    return result;
+  }
+  if(ts.isBinaryExpression(node)&&node.operatorToken.kind===ts.SyntaxKind.PlusToken){const a=pathVariants(node.left,depth+1),b=pathVariants(node.right,depth+1);if(a.length&&b.length)return a.flatMap(x=>b.map(y=>x+y)).slice(0,16);}
+  if(ts.isIdentifier(node)){
+    let symbol=checker.getSymbolAtLocation(node);if(symbol?.flags&ts.SymbolFlags.Alias)symbol=checker.getAliasedSymbol(symbol);
+    const decl=symbol?.declarations?.find(ts.isVariableDeclaration);
+    if(decl?.initializer&&decl.initializer!==node)return pathVariants(decl.initializer,depth+1);
+  }
+  const value=pathText(node,depth);return value===null?[]:[value];
+}
 function requestInfo(n) {
   if(!ts.isCallExpression(n)) return null;
   const called = n.expression.getText().split('.').at(-1);
-  if(!transports.has(called)&&!wrapperPathIndex.has(called)) return null;
+  const researchWrite=called==='write'&&rel(n.getSourceFile().fileName)==='web/lib/api/research.client.ts';
+  if(!transports.has(called)&&!wrapperPathIndex.has(called)&&!researchWrite) return null;
   const pathIndex=wrapperPathIndex.get(called)||0;
   const arg=n.arguments[pathIndex]; if(!arg)return null;
   const text=arg.getText();
-  let requestPath=ts.isStringLiteralLike(arg)?arg.text:ts.isTemplateExpression(arg)?text.slice(1,-1):null;
+  let alternatives=pathVariants(arg);
+  if(called==='accountRequest')alternatives=alternatives.map(value=>'/auth/users/'+value);
+  if(called==='authorityRequest')alternatives=alternatives.map(value=>'/catalog/admin/people/'+value);
+  const requestPath=alternatives[0]??null;
   if(called==='fetch' && requestPath && !/api|catalog|reading|ingestion|auth|distribution/.test(requestPath))return null;
-  const resourceHook=called==='useApiResource'||called==='usePersistentWorkspace';
+  const resourceHook=called==='useApiResource'||called==='usePersistentWorkspace'||called==='useAdminData';
   const opts=resourceHook?undefined:n.arguments[pathIndex+1];
   const method=opts&&ts.isObjectLiteralExpression(opts)?opts.properties.find(p=>p.name?.getText()==='method')?.initializer?.getText().replaceAll(/["']/g,''):null;
-  return {...position(n),transport:called,path:requestPath,expression:requestPath?null:text,method:method||((called==='apiUpload')?'POST':'GET'),
+  return {...position(n),transport:called,path:requestPath,path_alternatives:alternatives,expression:requestPath?null:text,method:researchWrite?(pathText(n.arguments[2])||'POST'):method||((called==='apiUpload')?'POST':'GET'),
     options:opts?.getText().slice(0,1600)||'',requires_review:!requestPath||resourceHook||Boolean(opts&&!ts.isObjectLiteralExpression(opts))};
 }
 function inspectNode(entry) {
@@ -62,7 +117,7 @@ function inspectNode(entry) {
       if(/^[A-Z]/.test(tag))result.components.add(tag);
       if(['input','select','textarea','button','dialog','details','form'].includes(tag)) {
         const attributes={};
-        for(const attr of n.attributes.properties)if(ts.isJsxAttribute(attr)&&['name','type','required','min','max','minLength','maxLength','pattern','aria-label','placeholder','role','disabled','onSubmit','onClick','onChange'].includes(attr.name.getText()))attributes[attr.name.getText()]=attr.initializer?.getText()||true;
+        for(const attr of n.attributes.properties)if(ts.isJsxAttribute(attr)&&['name','type','required','min','max','minLength','maxLength','pattern','aria-label','placeholder','role','disabled','readOnly','accept','multiple','value','defaultValue','checked','onSubmit','onClick','onChange'].includes(attr.name.getText()))attributes[attr.name.getText()]=attr.initializer?.getText()||true;
         result.controls.push({...position(n),tag,attributes});
       }
     }

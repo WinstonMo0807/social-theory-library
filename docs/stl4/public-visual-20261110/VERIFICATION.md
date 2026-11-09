@@ -31,3 +31,11 @@
 预览兼容修复：Workers拒绝fetch redirect:error导致首页SSR异常；改manual后非2xx仍抛ServerApiError，不跟随跳转、不转发凭据。既有api-domain-boundaries测试加302拒绝与单次请求断言。整文件实际执行3项：2通过1失败（旧纯适配器断言不允许任何运行时导入，而基线已有mediaAllows），退出1；仅相关split catalog requests运行1项通过退出0。失败未删除或改弱。
 
 `node scripts/prepare-pdfjs-assets.mjs`退出0，补本地worker/CMaps/fonts/WASM后PDF实际可读。开发用Vite仅在显式STL_ISOLATED_API_ORIGIN且值为127.0.0.1端口时代理/api；生产edge设置不变。未把本机预览作为生产部署。
+
+追加：`scripts/check_public_visual_fixture_roles.py`退出0。五角色各28个GET入口：访客5成功/23未登录，读者16成功/12无权限，编辑20成功/8无权限，管理员与馆长均28成功。只有合成账户登录POST，业务均GET；结果仅记录响应字段名。首次脚本缺少X-Reader-Owner/X-Editor-Owner产生额外403，按实际客户端补齐后重跑，未修改权限。
+
+`scripts/enrich_public_visual_contracts.py`退出0，1067方法路径中914条解析到相关serializer；补继承权限来源、查询字段、直接请求键、分页参数、两层服务调用与校验来源。来源解析包含同类其他HTTP方法，已明确标注范围，不宣称运行覆盖。字段定义见API_FIELD_CONTRACTS，业务摘要与单独运行证据仍分开。
+
+前端路径发现脚本补源码已核实的researchRecordPath/privateCitationSourcePath/citationPreviewPath/replayPath及人物/账号前缀，750个请求位置，256处动态表达式保留待对应。页面/API候选映射4619条、131页面；不能将候选数量当作完整业务完成率。
+
+Edge追加实际观察/account空资料及继续阅读、/account/citation-audits能力限制、/admin/theories列表与编辑预览。合成理论解释对象未保存改文，在实际公开组件预览读到相同文字；切回保持内容，最后恢复原输入未保存/发布。实际截图见output/public-visual-20261110/screenshots/baseline-theory-draft-preview.jpg。
