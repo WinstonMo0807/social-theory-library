@@ -21,6 +21,10 @@ EVIDENCE_SCHEMA = {"type": "object", "required": ["page_number", "start", "end",
     "stance": {"type":"string", "enum":["supports","opposes","qualifies","context"]}}}
 ASSERTION_SCHEMA = {"type":"object", "required":["text","predicate","expression","claimant","subject","object","evidence"], "properties": {
     **{k:STRING for k in ["text","predicate","expression","claimant","subject","object"]},
+    "category":STRING, "direction":{"type":"string","enum":["directed","undirected"]},
+    "conditions":{"type":"object","properties":{k:STRING for k in ["time","region","population","research_object","concept_usage","other"]}},
+    "participants":{"type":"array","items":{"type":"object","required":["role","label"],"properties":{
+        "role":{"type":"string","enum":["subject","object","claimant","quoted","criticized","context"]},"label":STRING}}},
     "evidence":{"type":"array","items":EVIDENCE_SCHEMA}}}
 ANALYSIS_SCHEMA = {"type":"object", "required":["summary","questions","entities","assertions"], "properties": {
     "summary": STRING, "questions":{"type":"array","items":STRING},
@@ -31,7 +35,22 @@ MATCH_SCHEMA = {"type": "object", "required": ["comparisons"], "properties": {"c
     "type": "object", "required": ["candidate_id", "judgment", "reason"], "properties": {
         "candidate_id": STRING, "judgment": {"type": "string", "enum": ["same_suggested", "different", "uncertain"]}, "reason": STRING}}}}}
 WIKI_SCHEMA = {"type":"object", "required":["text","reason","assertion_ids"], "properties": {
+    "operation":{"type":"string","enum":["add","replace","delete","none"]},"block_id":STRING,
     "text":STRING,"reason":STRING,"assertion_ids":{"type":"array","items":STRING}}}
+
+
+def validate_wiki_patch(output, data):
+    operation=output.get("operation","add")
+    refs=output.get("assertion_ids",[])
+    changed=operation in {"replace","delete"} or bool(output.get("text","").strip())
+    if operation not in {"add","replace","delete","none"} or set(refs)-{a["id"] for a in data["assertions"]} or (changed and not refs):
+        raise ValidationError("知识页建议缺少本批原文陈述来源，或操作类型无效。")
+    if operation in {"replace","delete"}:
+        blocks=[c for c in data["existing_blocks"] if c["block"]["id"]==output.get("block_id")]
+        if len(blocks)!=1 or blocks[0]["block"].get("type") not in {"analysis","paragraph","heading"}:
+            raise ValidationError("修改目标必须是本次实际读取的唯一文字区块。")
+        if not output.get("reason","").strip() or operation=="replace" and not output.get("text","").strip():
+            raise ValidationError("区块修改须说明理由并填写替换正文。")
 
 
 @transaction.atomic
@@ -244,7 +263,7 @@ def validate_analysis(output, source_rows):
 
 
 def compile_wiki(run, proposals, config, lease):
-    """Bounded, evidence-backed additions to work and affected identity pages.
+    """Bounded, evidence-backed patches to work and affected identity pages.
 
     Entity destinations remain dependencies until an editor resolves identity.
     Existing pages provide editorial context, never new primary evidence.
@@ -296,24 +315,27 @@ def compile_wiki(run, proposals, config, lease):
                     data["existing_blocks"].append(context)
                 else:
                     data["omitted_context_blocks"].append(context["block"]["id"])
-            allowed = {a["id"] for a in batch}
             current_ids = {source_assertions[a["id"]]["id"]:a["id"] for a in target["assertions"]}
-            def validate_wiki(output):
-                refs = output.get("assertion_ids",[])
-                if set(refs)-allowed or (output.get("text","").strip() and not refs):
-                    raise ValidationError("知识页建议缺少本批原文陈述来源，或引用了未提供的陈述。")
             artifact = _model_artifact(run,6,f"page:{target['key']}:{position}",data,
-                "为目标知识页提出一个局部新增区块。仅用本批有原文证据的陈述，说明与其他来源可能不同的用法或解释。"
+                "为目标知识页提出一个局部patch。operation为add、replace、delete或none；replace/delete须给出已读block_id及具体理由。"
+                "仅用本批有原文证据的陈述，说明与其他来源可能不同的用法或解释。"
                 "已有区块仅供避免重复，不能作为新增事实证据；省略的区块未读取，不能声称审阅整页。人物同名候选尚未合并。"
-                "不改写人工正文；无实质新增时text和assertion_ids均为空。返回实际使用的assertion_ids。",
-                WIKI_SCHEMA,config,lease,validate=validate_wiki)
+                "人工区块默认受保护，只有新原文确实要求修订时才能提出待人工处理的修改，不直接覆盖。无实质变化时operation为none。返回实际使用的assertion_ids。",
+                WIKI_SCHEMA,config,lease,validate=lambda output:validate_wiki_patch(output,data))
             output = artifact.output
-            if not output["text"].strip(): continue
+            operation=output.get("operation","add")
+            if operation=="none" or operation=="add" and not output["text"].strip(): continue
             refs = [current_ids[key] for key in output["assertion_ids"]]
-            block_id = str(uuid5(run.pk,f"wiki:{target['key']}:{position}"))
-            payload = {"operation":"add","block_id":block_id,"reason":output["reason"],
+            current = next((c for c in contexts if c["block"]["id"]==output.get("block_id")),None) if operation!="add" else None
+            block_id = current["block"]["id"] if current else str(uuid5(run.pk,f"wiki:{target['key']}:{position}"))
+            payload = {"operation":operation,"block_id":block_id,"reason":output["reason"],
                 "block":{"id":block_id,"type":"analysis","text":output["text"],
                     "references":[{"type":"assertion","id":{"change_item":key}} for key in refs]}}
+            if current:
+                payload.update(page_id=current["page_id"],base_hash=digest(current["block"]),base_revision=current["revision_id"],
+                    base_value=current["block"],human_protected=bool(current["block"].get("human_edited") or current["block"].get("origin") in {"human","manual","migration"}))
+                if operation=="replace":
+                    payload["block"]["references"]=[*current["block"].get("references",[]),*payload["block"]["references"]]
             dependencies = list(refs)
             if target["key"] == "work":
                 payload["work_id"] = target["work_id"]
@@ -346,7 +368,8 @@ def execute(run, config, lease):
         source_rows = [{k:v for k,v in row.items() if k not in {"node_id","node_complete"}} for row in rows]
         artifact = _model_artifact(run,2,f"window:{index}",{"revision":str(run.document_revision_id),
             "parser_version":run.structure.parser_version,"chapter_path":chapter_path,"ranges":source_rows},
-            "按文献顺序分析全部输入段落。引文偏移采用各段给定的原始页面起点，Unicode code point，结束不含。列出研究问题、概念和有直接证据的陈述。", ANALYSIS_SCHEMA,config,lease,
+            "按文献顺序分析全部输入段落。引文偏移采用各段给定的原始页面起点，Unicode code point，结束不含。列出研究问题、概念、方法及有直接证据的陈述。"
+            "主张者不等于书籍作者；额外参与者在participants标明quoted/criticized等角色，并在entities逐一列出。conditions只填写原文支持的时间、地区、人群、研究对象和概念用法，未知留空。", ANALYSIS_SCHEMA,config,lease,
             validate=lambda output: validate_analysis(output, rows))
         analyses.append(artifact)
         read_nodes.update(row["node_id"] for row in rows if row["node_complete"])
@@ -384,12 +407,16 @@ def execute(run, config, lease):
     for artifact in analyses:
         for raw in artifact.output.get("assertions",[]):
             participants, dependencies = [], []
-            for role, label in [("subject",raw.get("subject")),("object",raw.get("object")),("claimant",raw.get("claimant"))]:
+            roles=list(dict.fromkeys([(role,raw.get(role)) for role in ("subject","object","claimant")]+[
+                (p["role"],p["label"]) for p in raw.get("participants",[])]))
+            for role, label in roles:
                 candidates = names.get(label,[])
                 if label and len(candidates)==1:
                     dependencies.append(candidates[0]);participants.append({"role":role,"entity_id":{"change_item":candidates[0]}})
             payload = {"text":raw["text"],"predicate":raw["predicate"],"expression":raw["expression"],"participants":participants,
-                "unresolved_names":[raw.get(k) for k in ["subject","object","claimant"] if raw.get(k) and len(names.get(raw[k],[])) != 1],
+                "category":raw.get("category","proposition"),"direction":raw.get("direction","directed"),"conditions":raw.get("conditions",{}),
+                "unresolved_names":list(dict.fromkeys(label for _,label in roles if label and len(names.get(label,[])) != 1)),
+                "unresolved_participants":[{"role":role,"label":label} for role,label in roles if label and len(names.get(label,[]))!=1],
                 "evidence":[{"stance":e["stance"],"segments":[{k:v for k,v in e.items() if k != "stance"}]} for e in raw["evidence"]]}
             claimant = names.get(raw.get("claimant"),[])
             if len(claimant)==1: payload["attribution_id"]={"change_item":claimant[0]}

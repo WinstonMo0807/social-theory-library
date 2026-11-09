@@ -48,7 +48,7 @@ class Command(BaseCommand):
         batch_size = max(1, min(int(options["batch_size"]), 50))
         if options["phase"] == "document":
             return self._documents(options, batch_size)
-        return self._claims(options, batch_size)
+        raise CommandError("旧主张生成已退役；正文回填仍可用，模型分析请使用 CurationRun。")
 
     def _documents(self, options, batch_size):
         queryset = self._assets(options).exclude(

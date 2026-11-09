@@ -123,3 +123,31 @@ def test_wiki_targets_work_and_identity_without_overwriting_human_blocks(source,
     assert patches[1]["payload"]["entity_id"]=={"change_item":entity_id}
     assert patches[1]["payload"]["block"]["references"][0]["id"]=={"change_item":assertion_id}
     assert not m.KnowledgePage.objects.exists()
+
+
+@pytest.mark.django_db
+def test_wiki_patch_reads_exact_target_and_requires_manual_protection(source,admin_user,monkeypatch):
+    from rest_framework.exceptions import ValidationError
+    from catalog.services import intelligence
+    from catalog.services.knowledge_core import apply_page_patch,page_content
+    from catalog.services.knowledge_sources import digest
+    page=m.KnowledgePage.objects.create(work=source.asset.edition.work,slug="protected",title="已有人工内容")
+    key=str(uuid4())
+    entity=m.Entity.objects.create(kind="concept",label="已有概念")
+    block={"id":key,"type":"analysis","text":"人工旧文","origin":"human","human_edited":True,"references":[{"type":"entity","id":str(entity.pk)}]}
+    from catalog.services.editorial_revision import create_editorial_revision
+    create_editorial_revision(target_type="knowledge_page",target_id=page.pk,patch={"body_blocks":[block]},actor=admin_user,idempotency_key="protected-base")
+    run=m.CurationRun.objects.create(work=source.asset.edition.work,edition=source.asset.edition,document_revision=source,request_id=uuid4(),created_by=admin_user)
+    statement={"id":str(uuid4()),"kind":"assertion","payload":{"text":"新证据限定旧结论","evidence":[]},"dependencies":[]}
+    def model(run,stage,unit,data,*args,**kwargs):
+        output={"operation":"delete","block_id":key,"text":"","reason":"新证据不支持该段解释","assertion_ids":[data["assertions"][0]["id"]]}
+        kwargs["validate"](output)
+        with pytest.raises(ValidationError):kwargs["validate"]({**output,"block_id":str(uuid4())})
+        return SimpleNamespace(pk=uuid4(),output=output)
+    monkeypatch.setattr(intelligence,"_model_artifact",model)
+    patch=intelligence.compile_wiki(run,[statement],SimpleNamespace(max_input_chars=16000),None)[0]["payload"]
+    assert patch["base_hash"]==digest(page_content(page)[0][0]) and patch["human_protected"]
+    with pytest.raises(ValidationError,match="人工正文"):
+        apply_page_patch(patch,admin_user,request_key="no-human-consent")
+    apply_page_patch({**patch,"human_edited":True},admin_user,request_key="explicit-human-review")
+    assert page_content(page)[0]==[]

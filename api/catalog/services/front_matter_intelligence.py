@@ -17,10 +17,6 @@ from catalog.models import (
 )
 from catalog.services.evidence_envelope import evidence_span_envelope
 from catalog.services.research.evidence_pack import create_evidence_pack
-from catalog.services.research.library_synthesis import (
-    build_library_synthesis_evidence_pack,
-    schedule_library_synthesis,
-)
 from catalog.services.research.task_profiles import resolve_task_profile
 from ingestion.models import UploadBatch, UploadItem
 from ingestion.services.candidate_store import persist_metadata_candidates
@@ -717,38 +713,10 @@ def run_front_matter_intelligence(
             "reason": "canonical_abstract_already_present",
         }
     else:
-        synthesis_pack = build_library_synthesis_evidence_pack(
-            revision,
-            field_name="abstract",
-            actor=actor,
-        )
-        if allow_synthesis and synthesis_pack is not None and upload_item is not None:
-            synthesis = schedule_library_synthesis(
-                synthesis_pack,
-                upload_item=upload_item,
-                field_name="abstract",
-            )
-            abstract_status = {
-                "kind": "library_synthesis",
-                "label": "馆藏综合",
-                "reason": (
-                    "waiting_for_ai_capability"
-                    if synthesis["status"] == "waiting_for_capability"
-                    else "library_synthesis_scheduled"
-                ),
-                **synthesis,
-            }
-        else:
-            abstract_status = {
-                "kind": "no_reliable_candidate",
-                "reason": (
-                    "explicit_free_generation_required"
-                    if synthesis_pack is not None
-                    else "insufficient_collection_evidence_for_library_synthesis"
-                ),
-                "evidence_available": bool(synthesis_pack or evidence_pack),
-                "publication_blocking": False,
-            }
+        abstract_status = {"kind":"no_reliable_candidate","reason":"curation_run_required",
+            "message":"原文没有可直接采用的摘要；需要论证综合时，请在 Intelligence 选择版本和分析范围。",
+            "next_url":f"/admin/intelligence?work_id={revision.asset.edition.work_id}",
+            "evidence_available":bool(evidence_pack),"publication_blocking":False}
     result = {
         "status": "ready" if candidates else "no_reliable_candidate",
         "reason": "front_matter_candidates_found" if candidates else "front_matter_evidence_did_not_support_fields",

@@ -615,7 +615,7 @@ def _register_confirmed_draft_entities(edition, *, actor, reviewed_fields, value
     if not getattr(actor, "pk", None):
         return
     from catalog.models import ScholarProfile
-    from catalog.services.field_assistant.service import _bundle_created_entity, _unique_named_slug
+    from catalog.services.catalog_candidates import _bundle_created_entity, _unique_named_slug
     from catalog.services.field_decisions import ensure_publication_bundle
     from catalog.services.knowledge_publication import confirmed_bundle_links
 

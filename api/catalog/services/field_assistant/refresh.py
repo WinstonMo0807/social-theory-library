@@ -37,7 +37,7 @@ for _field in FIELDS:
 
 
 def field_research_context(edition, policy, query="", form_context=None, *, version=2):
-    from .service import _edition_section_values
+    from catalog.services.catalog_candidates import _edition_section_values
     from catalog.models import Person
 
     values, _confirmed = formal_field_values(edition, include_editorial_draft=True)
@@ -185,7 +185,7 @@ def refresh_state(run, *, reused=False):
 
 
 def current_field_refresh(request):
-    from .service import _edition_for_request
+    from catalog.services.catalog_candidates import _edition_for_request
 
     policy = get_field_policy(request.field_name)
     edition = _edition_for_request(request)
@@ -198,7 +198,7 @@ def current_field_refresh(request):
 
 
 def request_field_refresh(request, *, actor):
-    from .service import _edition_for_request, _upload_item
+    from catalog.services.catalog_candidates import _edition_for_request, _upload_item
 
     policy = get_field_policy(request.field_name)
     if not request.allow_external or not (policy.allow_authority or policy.allow_web):

@@ -161,6 +161,7 @@ class Entity(UUIDTimeStampedModel):
     discipline = models.OneToOneField("catalog.Discipline", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
     subdiscipline = models.OneToOneField("catalog.Subdiscipline", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
     theory_school = models.OneToOneField("catalog.TheorySchool", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
+    concept = models.OneToOneField("catalog.Concept", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
     merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="merged_identities")
 
 

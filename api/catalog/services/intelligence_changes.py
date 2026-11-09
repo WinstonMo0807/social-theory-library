@@ -14,6 +14,16 @@ from ingestion.models import AuditEvent
 KINDS = {"entity", "alias", "assertion", "wiki_patch"}
 
 
+def candidate_references(value):
+    if isinstance(value,dict):
+        if set(value)=={"change_item"}:
+            return {str(uuid_value(value["change_item"]))}
+        return set().union(*(candidate_references(v) for v in value.values()))
+    if isinstance(value,list):
+        return set().union(*(candidate_references(v) for v in value))
+    return set()
+
+
 def proposal_fingerprint(revision_id, kind, payload, proposals, trail=()):
     """Stable across runs, while preserving source, context and opposing evidence."""
     def normalize(value, path=()):
@@ -65,6 +75,10 @@ def submit_draft(revision, proposals, actor, *, request_id, origin="external", r
         if kind not in KINDS or not isinstance(item.get("payload"), dict) or set(dependencies) - set(keys) or key in dependencies:
             raise ValidationError("建议类型、内容或依赖无效。")
         payload = item["payload"]
+        references=candidate_references(payload)
+        if references-set(keys) or key in references:
+            raise ValidationError("建议中的身份引用不属于当前变更集。")
+        dependencies=sorted(set(dependencies)|references)
         item_hash = proposal_fingerprint(revision.pk, kind, payload, proposal_map)
         if item_hash in seen:
             raise ValidationError("变更集中存在内容和来源完全相同的建议，请保留一项并调整依赖。")
@@ -132,12 +146,18 @@ def review(changeset_id, decisions, actor, *, expected_version):
             if not isinstance(decision["payload"], dict):
                 raise ValidationError("修改内容必须是结构化对象。")
             edited = decision["payload"] != item.payload
+            block_edited = decision["payload"].get("block") != item.payload.get("block")
             item.payload = decision["payload"]
-            if edited and item.kind == "wiki_patch":
+            references=candidate_references(item.payload)
+            if references-set(map(str,changeset.items.values_list("pk",flat=True))) or str(item.pk) in references:
+                raise ValidationError("修改后的身份引用不属于当前变更集。")
+            item.dependencies=sorted(references)
+            if edited and block_edited and item.kind == "wiki_patch":
                 item.payload = {**item.payload, "human_edited": True}
         item.decision, item.decision_note = decision["decision"], str(decision.get("note", ""))[:1000]
         item.reviewed_by, item.reviewed_at, item.conflict = actor, timezone.now(), {}
         item.save()
+    _ordered(list(changeset.items.all()))
     refresh_fingerprints(changeset)
     changeset.version += 1
     changeset.status = "reviewing"

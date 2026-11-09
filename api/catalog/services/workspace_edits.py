@@ -95,7 +95,7 @@ def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, s
     # Existing enrichment mutations lock a research run before the Edition.
     # Respect that order, including requests containing several suggestions.
     from catalog.models import EnrichmentCandidate, ResearchRun
-    from catalog.services.field_assistant import FieldAssistantService
+    from catalog.services.catalog_candidates import CatalogCandidateService
 
     enrichment_ids = [row["source_id"] for row in suggestions if row["source_type"] == "enrichment"]
     run_ids = {str(ctx["research_run_id"]) for ctx in EnrichmentCandidate.objects.filter(pk__in=enrichment_ids).values_list("request_context", flat=True) if ctx and ctx.get("research_run_id")}
@@ -148,7 +148,7 @@ def save_workspace_edits(*, work_id, edition_id, expected_version, request_id, s
         seen.add(key)
         if not _prefill_is_present(row, sections):
             continue
-        result = FieldAssistantService().adopt(edition_id=edition.pk, actor=actor, lookup_context=lookup_context, **row)
+        result = CatalogCandidateService().adopt(edition_id=edition.pk, actor=actor, lookup_context=lookup_context, **row)
         decision = CatalogFieldDecision.objects.get(pk=result["decision_id"])
         edition.refresh_from_db()
         proposed, _ = formal_field_values(edition)

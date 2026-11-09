@@ -170,46 +170,8 @@ def _stale_demand_reason(
 
     payload = demand.payload if isinstance(demand.payload, dict) else {}
     task_kind = _demand_task_kind(payload)
-    if task_kind == "claim_extraction":
-        from catalog.models import EvidenceSpan
-
-        span_id = str(payload.get("evidence_span_id") or demand.owner_key or "")
-        active = (
-            str(span_id) in active_claim_span_ids
-            if active_claim_span_ids is not None
-            else EvidenceSpan.objects.filter(
-                pk=span_id,
-                is_stale=False,
-                document_revision__is_active=True,
-            ).exists()
-        )
-        if not active:
-            return "claim evidence was superseded or removed"
-    elif task_kind == "library_synthesis":
-        from catalog.models import EvidencePack, EvidenceSpan
-
-        pack_id = str(payload.get("evidence_pack_id") or demand.owner_key or "")
-        pack = EvidencePack.objects.filter(pk=pack_id).select_related("research_run").only(
-            "envelope_snapshot",
-            "research_run_id",
-            "research_run__is_current",
-        ).first()
-        if pack is None:
-            return "library synthesis evidence pack no longer exists"
-        if pack.research_run_id and not pack.research_run.is_current:
-            return "library synthesis draft research context was superseded"
-        span_ids = {
-            str(row.get("id") or "")
-            for row in (pack.envelope_snapshot or [])
-            if isinstance(row, dict) and str(row.get("id") or "")
-        }
-        current_count = EvidenceSpan.objects.filter(
-            pk__in=span_ids,
-            is_stale=False,
-            document_revision__is_active=True,
-        ).count()
-        if not span_ids or current_count != len(span_ids):
-            return "library synthesis evidence was superseded"
+    if task_kind in {"claim_extraction","library_synthesis"}:
+        return "knowledge producer retired; historical candidates retained"
     elif task_kind == "curation_stage":
         from catalog.models import CurationArtifact
         artifact=CurationArtifact.objects.select_related("run").filter(pk=demand.owner_key).first()

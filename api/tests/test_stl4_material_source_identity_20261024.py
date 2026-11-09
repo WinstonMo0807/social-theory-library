@@ -2,7 +2,7 @@
 from hashlib import sha256
 import pytest
 from catalog.models import Work, Edition, Asset, CatalogingSession
-from catalog.services.field_assistant.service import _metadata_evidence
+from catalog.services.catalog_candidates import _metadata_evidence
 from catalog.services.edition_file_workspace import state
 from catalog.services.edition_files import EditionFileError
 from ingestion.models import MetadataCandidate, CandidateEvidence

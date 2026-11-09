@@ -196,7 +196,7 @@ class AdminFieldAssistantCreateView(_FieldAssistantView):
             from django.db import transaction
             from django.shortcuts import get_object_or_404
             from catalog.models import Discipline, Edition, Subdiscipline
-            from catalog.services.field_assistant.service import _unique_named_slug
+            from catalog.services.catalog_candidates import _unique_named_slug
             from ingestion.models import AuditEvent
             values = serializer.validated_data
             get_object_or_404(Edition, pk=values["edition_id"])

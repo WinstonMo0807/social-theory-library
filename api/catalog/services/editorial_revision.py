@@ -1527,6 +1527,11 @@ def create_editorial_revision(
         target=target,
         patch=patch,
     )
+    if isinstance(target, KnowledgePage):
+        # A page patch replaces the cumulative draft body. Deleting its final
+        # unpublished block may equal the public body and is still a real edit.
+        # Retain the explicit replacement in its revision and replay receipt.
+        clean_patch = _validated_patch(target_type, target, policy, dict(patch or {}))
     if not clean_patch:
         raise EditorialRevisionError("草稿没有实际变更。")
     idempotency_key = str(idempotency_key or "").strip()

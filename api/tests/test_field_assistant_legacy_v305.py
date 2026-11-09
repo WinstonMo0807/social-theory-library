@@ -5,7 +5,7 @@ from catalog.models import (
     LegacyKnowledgeMapping, PublicationBundleItem, TheorySchool, Work, WorkKnowledgeRelation, WorkNodeRelation,
 )
 from catalog.services.field_assistant import FieldAssistantService
-from catalog.services.field_assistant.service import FieldAssistantError
+from catalog.services.catalog_candidates import CatalogCandidateError as FieldAssistantError
 from .test_publication_invariants_v305 import published_edition
 
 
@@ -98,7 +98,7 @@ def test_canonical_adoption_rolls_back_if_recording_the_human_decision_fails(adm
     def fail(*args, **kwargs):
         raise RuntimeError("decision unavailable")
 
-    monkeypatch.setattr("catalog.services.field_assistant.service.record_edition_field_decision", fail)
+    monkeypatch.setattr("catalog.services.catalog_candidates.record_edition_field_decision", fail)
     with pytest.raises(RuntimeError, match="decision unavailable"):
         adopt(edition, legacy, admin_user)
     assert not WorkNodeRelation.objects.exists()

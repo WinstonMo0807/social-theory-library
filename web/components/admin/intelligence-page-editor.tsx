@@ -7,10 +7,10 @@ import { KnowledgePageContent, type KnowledgePageData, type KnowledgeBlock } fro
 import { IssueTextEditor } from "./curation/issue-text-editor";
 import styles from "./intelligence-workspace.module.css";
 
-type Patch = { page_id?: string; block_id?: string; operation?: string; reason?: string; block?: Partial<KnowledgeBlock> };
+type Patch = { page_id?: string; block_id?: string; operation?: string; reason?: string; human_protected?: boolean; human_edited?: boolean; block?: Partial<KnowledgeBlock> };
 
-export function IntelligencePageEditor({ patch, title, version, applied, onBlock, anchors = [] }: {
-  patch: Patch; title: string; version: number; applied: boolean; onBlock: (block: Partial<KnowledgeBlock>) => void; anchors?: KnowledgePageData["anchors"];
+export function IntelligencePageEditor({ patch, title, version, applied, onBlock, onHumanReview, anchors = [] }: {
+  patch: Patch; title: string; version: number; applied: boolean; onBlock: (block: Partial<KnowledgeBlock>) => void; onHumanReview?: (confirmed: boolean) => void; anchors?: KnowledgePageData["anchors"];
 }) {
   const [current, setCurrent] = useState<KnowledgePageData | null>(null);
   const [error, setError] = useState(""), [attempt, setAttempt] = useState(0);
@@ -39,6 +39,7 @@ export function IntelligencePageEditor({ patch, title, version, applied, onBlock
       <div className={styles.fieldHeading}><h4>{patch.operation === "delete" ? "删除区块" : patch.operation === "replace" ? "修改区块" : "新增区块"}</h4><span>{applied ? "已保存" : "审核后保存为草稿"}</span></div>
       {patch.reason && <p className={styles.reason}>{patch.reason}</p>}
       {patch.operation === "delete" ? <p>确认并保存后，将移除此区块。其他区块保持原样。</p> : <div ref={field}><IssueTextEditor label="区块正文" block={{ ...patch.block, type: patch.block?.type || "analysis", text: patch.block?.text || "", references: undefined }} disabled={applied} onChange={value => onBlock({ ...patch.block, ...value, references: patch.block?.references })} maxLength={6000} /></div>}
+      {patch.human_protected && !applied && <label className={styles.notice}><span>此处包含受保护的人工正文。</span><span><input type="checkbox" checked={!!patch.human_edited} onChange={e => onHumanReview?.(e.target.checked)} /> 已对照当前内容与原文，允许本次局部修改</span></label>}
     </div>
     <section className={styles.livePreview} aria-label="知识页实时预览">
       <div className={styles.previewToolbar}><h4>展示效果</h4><div className={styles.segmented} aria-label="预览版本">

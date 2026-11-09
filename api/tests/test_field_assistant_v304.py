@@ -143,7 +143,7 @@ def test_adoption_is_atomic_when_field_decision_fails(
         raise RuntimeError("forced field decision failure")
 
     monkeypatch.setattr(
-        "catalog.services.field_assistant.service.record_edition_field_decision",
+        "catalog.services.catalog_candidates.record_edition_field_decision",
         fail_decision,
     )
     with pytest.raises(RuntimeError, match="forced field decision failure"):

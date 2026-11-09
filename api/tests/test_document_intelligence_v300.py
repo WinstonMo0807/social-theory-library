@@ -204,7 +204,7 @@ def test_selective_ocr_preserves_page_identity_and_only_stales_affected_evidence
     assert native_evidence[1].is_stale is True
     assert native_evidence[2].is_stale is False
     assert changed_claim.status == DerivedClaim.Status.STALE
-    assert unchanged_claim.status == DerivedClaim.Status.SUPERSEDED
+    assert unchanged_claim.status == DerivedClaim.Status.ACTIVE
     ocr_revision = DocumentRevision.objects.get(asset=asset, is_active=True)
     assert ocr_revision.revision == 2
     assert ocr_revision.ocr_provider == "paddleocr_nas"
@@ -213,49 +213,25 @@ def test_selective_ocr_preserves_page_identity_and_only_stales_affected_evidence
         passage__isnull=False,
         is_stale=False,
     ).count() == 2
-    carried = DerivedClaim.objects.get(
-        document_revision=ocr_revision,
-        fingerprint="unchanged-page-claim",
-    )
-    assert carried.status == DerivedClaim.Status.ACTIVE
-    assert carried.primary_evidence.page_number == 2
-    assert not DerivedClaim.objects.filter(
-        document_revision=ocr_revision,
-        fingerprint="changed-page-claim",
-    ).exists()
-    assert result["carried_forward_claims"] == 1
-    assert result["carried_forward_curated_evidence"] == 1
-    assert ClaimEvidence.objects.filter(
-        curated_claim=curated,
-        evidence_span__document_revision=ocr_revision,
-        evidence_span__page_number=2,
-    ).exists()
-
+    # Historical interpretation keeps its actual revision. OCR must neither
+    # reattribute it to the new revision nor create old model candidates.
+    assert not DerivedClaim.objects.filter(document_revision=ocr_revision).exists()
+    assert result["carried_forward_claims"] == 0
+    assert result["carried_forward_curated_evidence"] == 0
+    assert ClaimEvidence.objects.filter(curated_claim=curated).count() == 1
+    assert ClaimEvidence.objects.get(curated_claim=curated).evidence_span_id == native_evidence[2].pk
+    old_page = native_revision.page_snapshots.get(page_number=1)
+    assert old_page.text != ocr_text
+    assert ocr_revision.page_snapshots.get(page_number=1).text == ocr_text
     edition.state = "published"
     edition.save(update_fields=["state", "updated_at"])
-    assert not visible_claim_queryset({"work_ids": [str(work.id)]}).filter(pk=carried.pk).exists()
     activate_catalog_revision(edition, reader_asset=asset, document_revision=ocr_revision)
-    assert visible_claim_queryset({"work_ids": [str(work.id)]}).filter(
-        pk=carried.pk
-    ).exists()
     assert not visible_claim_queryset({"work_ids": [str(work.id)]}).filter(
         pk__in=[changed_claim.pk, unchanged_claim.pk],
     ).exists()
-
-    scheduled = schedule_document_claim_extraction(
-        ocr_revision,
-        page_indexes=[1],
-    )
-    assert scheduled["evidence_spans"] == 1
-    assert scheduled["scheduled"] == 1
-    demand = CapabilityDemand.objects.get(pk=scheduled["demand_ids"][0])
-    assert demand.owner_key == str(
-        EvidenceSpan.objects.get(
-            document_revision=ocr_revision,
-            page_number=1,
-            is_stale=False,
-        ).id
-    )
+    scheduled = schedule_document_claim_extraction(ocr_revision, page_indexes=[1])
+    assert scheduled["status"] == "retired"
+    assert CapabilityDemand.objects.count() == 0
 
 
 def test_best_effort_document_intelligence_failure_is_non_blocking():
@@ -325,22 +301,15 @@ def test_evidence_and_claim_writers_reject_cross_document_identity():
         )
 
 
-def test_claim_shadow_is_scheduled_only_after_revision_evidence_commit(
-    django_capture_on_commit_callbacks,
-):
-    _work, _edition, asset, _pages = _document(title="提交后命题调度")
-
-    with patch(
-        "catalog.services.document_intelligence._schedule_claim_shadow"
-    ) as schedule:
-        with django_capture_on_commit_callbacks(execute=True) as callbacks:
+def test_document_sync_no_longer_dispatches_retired_claims(django_capture_on_commit_callbacks):
+    _work, _edition, asset, _pages = _document(title="提交后仅保留正文与目录任务")
+    with patch("catalog.services.claims.pipeline.schedule_document_claim_extraction") as schedule:
+        with django_capture_on_commit_callbacks(execute=True):
             result = synchronize_native_extraction(asset)
-            assert schedule.called is False
-
-    assert len(callbacks) == 1
-    schedule.assert_called_once_with(result["revision_id"], page_indexes=None)
+    schedule.assert_not_called()
     revision = DocumentRevision.objects.get(pk=result["revision_id"])
     assert revision.evidence_spans.filter(is_stale=False).count() == 2
+    assert CapabilityDemand.objects.count() == 0
 
 
 def test_backfill_command_builds_evidence_without_eager_claim_fanout():

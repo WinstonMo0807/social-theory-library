@@ -58,3 +58,28 @@ def test_failed_new_projection_keeps_previous_ready_rows(monkeypatch):
     with pytest.raises(projection.DiscoveryIndexError):
         indexing.process_source(job,generation)
     assert m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in old],keyword_ready=True).count() == 2
+    assert not m.DiscoveryDocument.objects.exclude(pk__in=[d.pk for d in old]).filter(keyword_ready=True).exists()
+    job.refresh_from_db()
+    assert not job.stats.get("completed_units")
+
+
+def test_keyword_batches_wait_for_external_success(monkeypatch):
+    _,asset,_,generation,job,_ = indexing_source()
+    # More than one window per paragraph must share a bounded external task.
+    m.Page.objects.filter(asset=asset).update(text="连续原文" * 400)
+    revision = asset.document_revisions.get(is_active=True)
+    revision.text_checksum = document_text_checksum(asset); revision.save()
+    from catalog.services.discovery_sources import get_source
+    header = get_source("edition", asset.edition_id)[1]
+    job.stats["source_revision"] = header["source_revision"]; job.save()
+    batches=[]
+    def meili(method,path,data=None,**kw):
+        if path.endswith("/search"): return {"hits":[]}
+        if path.endswith("/documents"): batches.append(list(data))
+        return {"taskUid":len(batches)}
+    monkeypatch.setattr(indexing,"meili",meili)
+    monkeypatch.setattr(indexing,"wait_index_task",lambda *a,**kw:None)
+    assert indexing.process_source(job,generation)
+    assert batches and all(1 <= len(batch) <= 20 for batch in batches)
+    assert any(len(batch)>1 for batch in batches)
+    assert all(m.DiscoveryDocument.objects.get(pk=row["id"]).keyword_ready for batch in batches for row in batch)

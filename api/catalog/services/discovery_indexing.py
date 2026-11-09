@@ -325,13 +325,29 @@ def raw_keyword_slices(text, title=""):
             break
 
 
-def _write_chunk(job, generation, header, unit, child, *, contributions=None):
+def _commit_keyword_batch(job, generation, header, batch):
+    if not batch:
+        return
+    if not _is_current(job, generation, header):
+        raise DiscoveryIndexError("superseded", "来源已变化，停止旧批次写入。")
+    wait_index_task(meili("POST", f"/indexes/{generation.uid}/documents", batch))
+    with transaction.atomic():
+        ProcessingJob.objects.select_for_update().get(pk=job.pk)
+        if not _is_current(job, generation, header):
+            raise DiscoveryIndexError("superseded", "来源已变化，旧批次不标记就绪。")
+        DiscoveryDocument.objects.filter(pk__in=[row["id"] for row in batch]).update(keyword_ready=True, indexed_at=timezone.now())
+    batch.clear()
+
+
+def _write_chunk(job, generation, header, unit, child, *, contributions=None, keyword_batch=None):
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料或任务已更新，旧任务已停止。")
     identifier = uuid5(generation.pk, f"{header['source_type']}:{header['source_id']}:{header['source_revision']}:{unit['unit_id']}:{child['start']}:{child['end']}")
-    existing = DiscoveryDocument.objects.filter(pk=identifier, vector_ready=True, keyword_ready=True).first()
-    if existing and (header["channel"] != "passages" or existing.payload.get("responsibility_projection") == 1):
-        _write_deep_projection(job, existing)
+    existing = DiscoveryDocument.objects.filter(pk=identifier, keyword_ready=True).first()
+    if existing and (existing.vector_ready or not generation.config_snapshot.get("embedding_artifact") or job.stats.get("semantic_waiting")) and (
+            header["channel"] != "passages" or existing.payload.get("responsibility_projection") == 1):
+        if existing.vector_ready:
+            _write_deep_projection(job, existing)
         return
     _guard_job(job, stats={**job.stats, "active_unit": {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"),
         "start_offset": child["start"], "end_offset": child["end"]}})
@@ -361,6 +377,13 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None):
     if generation.config_snapshot.get("scope_fields_version") == 1:
         from catalog.services.discovery_scope import chunk_fields
         search_doc.update(chunk_fields(header, unit, child))
+    if keyword_batch is not None:
+        # Bounded keyword-only writes amortize the external indexing task. SQL
+        # readiness is committed only after Meilisearch confirms the whole batch.
+        keyword_batch.append(search_doc)
+        if len(keyword_batch) >= 20:
+            _commit_keyword_batch(job, generation, header, keyword_batch)
+        return
     wait_index_task(meili("POST", f"/indexes/{generation.uid}/documents", [search_doc]))
     # Ready is evidence of a successful external task, never merely a dispatched write.
     with transaction.atomic():
@@ -458,6 +481,7 @@ def process_source(job, generation):
         structure_id = str(structure.pk)
         _guard_job(job,stats={**job.stats,"structure_id":structure_id,"completed_units":0})
     completed_units = int(job.stats.get("completed_units", 0))
+    keyword_batch = [] if not generation.config_snapshot.get("embedding_artifact") or job.stats.get("semantic_waiting") else None
     for unit_index, unit in enumerate(source_units(kind, source, header,structure_id=structure_id)):
         if unit_index < completed_units:
             continue
@@ -470,11 +494,14 @@ def process_source(job, generation):
             children = {"chunks": raw_keyword_slices(original, header["title"])}
             for child in children["chunks"]:
                 child = {**child, "start": child["start"] + base, "end": child["end"] + base}
-                _write_chunk(job, generation, header, unit, child, contributions=contributions)
+                _write_chunk(job, generation, header, unit, child, contributions=contributions, keyword_batch=keyword_batch)
                 if time.monotonic() > deadline:
+                    _commit_keyword_batch(job, generation, header, keyword_batch)
                     # Completed children are durable; replay only the current unit.
                     _guard_job(job, stats={**job.stats, "completed_units": unit_index})
                     return False
+        # A checkpoint never advances over an unacknowledged keyword write.
+        _commit_keyword_batch(job, generation, header, keyword_batch)
         _guard_job(job, stats={**job.stats, "completed_units": unit_index + 1, "active_unit": None})
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")

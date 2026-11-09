@@ -36,9 +36,27 @@ def match_entities(label, kind, *, limit=12):
 
 @transaction.atomic
 def entity_for_legacy(row):
+    mapping = m.KnowledgeLegacyMapping.objects.filter(source_type=row._meta.label_lower, source_id=row.pk, target_type="entity").first()
+    if mapping and mapping.target_id:
+        return m.Entity.objects.get(pk=mapping.target_id)
+    if isinstance(row, (m.Concept, m.TheorySchool)):
+        # Only an existing reviewed identity mapping can connect the old profile
+        # to a node. Equal labels alone are never a migration merge rule.
+        from catalog.services.canonical_identity import mapped_node_for_legacy, CanonicalIdentityError
+        try:
+            node = mapped_node_for_legacy(type(row).__name__, row.pk)
+        except CanonicalIdentityError:
+            node = None
+        if node:
+            entity = entity_for_legacy(node)
+            m.KnowledgeLegacyMapping.objects.create(source_type=row._meta.label_lower, source_id=row.pk,
+                target_type="entity", target_id=entity.pk, quality="reviewed_identity_mapping",
+                provenance={"node_id":str(node.pk), "legacy_profile_retained":True})
+            return entity
     types = {"Person": ("person", "person", "preferred_name"), "KnowledgeNode": ("node", row.node_type if isinstance(row, m.KnowledgeNode) else "concept", "canonical_name_zh"),
         "Topic": ("topic", "topic", "name"), "Discipline": ("discipline", "discipline", "name"),
-        "Subdiscipline": ("subdiscipline", "discipline", "name"), "TheorySchool": ("theory_school", "school", "name")}
+        "Subdiscipline": ("subdiscipline", "discipline", "name"), "TheorySchool": ("theory_school", "school", "name"),
+        "Concept": ("concept", "concept", "name")}
     field, kind, label = types[type(row).__name__]
     kind = {"theory_tradition": "tradition", "research_problem": "question", "subdiscipline": "discipline"}.get(kind,kind)
     if kind not in m.Entity.Kind.values:
@@ -57,6 +75,10 @@ def entity_for_legacy(row):
             m.EntityAlias.objects.get_or_create(entity=entity, text=alias.alias, language=alias.language,
                 defaults={"review_status": "confirmed" if alias.is_verified else "legacy",
                           "source": {"legacy_type": "catalog.knowledgenodealias", "legacy_id": str(alias.pk), "kind": alias.source_kind}})
+    for alias in getattr(row, "search_aliases", []):
+        if isinstance(alias, str) and alias and alias != entity.label:
+            m.EntityAlias.objects.get_or_create(entity=entity, text=alias,
+                defaults={"review_status":"legacy", "source":{"legacy_type":row._meta.label_lower,"legacy_id":str(row.pk)}})
     m.KnowledgeLegacyMapping.objects.get_or_create(source_type=row._meta.label_lower, source_id=row.pk, target_type="entity",
         defaults={"target_id": entity.pk, "quality": "identity_preserved", "provenance": {"legacy_id": str(row.pk)}})
     if created and isinstance(row, m.Person):
@@ -102,7 +124,7 @@ def create_assertion(payload, revision, actor):
     require_editor(actor)
     require_revision_access(revision, actor, editorial=True)
     text = payload.get("text")
-    if payload.get("unresolved_names"):
+    if payload.get("unresolved_names") or payload.get("unresolved_participants"):
         raise ValidationError("请先在审核中解决主张者或参与者身份。")
     evidence = payload.get("evidence", [])
     if not isinstance(text, str) or not text.strip() or len(text) > 20000 or not evidence:
@@ -110,6 +132,11 @@ def create_assertion(payload, revision, actor):
     expression = payload.get("expression", "author_claim")
     if expression not in {"author_claim", "direct_quote", "paraphrase", "criticized_claim", "editorial_judgment"}:
         raise ValidationError("论述身份无效。")
+    conditions=payload.get("conditions",{})
+    if not isinstance(conditions,dict) or any(not isinstance(v,str) or len(v)>4000 for v in conditions.values()):
+        raise ValidationError("适用条件须按时间、地区、人群或概念用法填写文字。")
+    if payload.get("direction","directed") not in {"directed","undirected"}:
+        raise ValidationError("陈述方向无效。")
     statement = m.Assertion.objects.create(text=text, predicate=payload.get("predicate", ""),
         category=payload.get("category", "proposition"), direction=payload.get("direction", "directed"),
         expression=expression, conditions=payload.get("conditions", {}), source_quality="verified_text", created_by=actor)
@@ -169,6 +196,8 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     require_editor(actor)
     if payload.get("page_id"):
         page = m.KnowledgePage.objects.select_for_update().get(pk=payload["page_id"])
+        if payload.get("entity_id") and str(page.entity_id) != str(payload["entity_id"]):
+            raise ValidationError({"conflict":"此修改对应的旧页面与审核选定身份不同，请保留原页面并重新编纂。"})
     elif payload.get("entity_id"):
         entity = m.Entity.objects.select_for_update().get(pk=payload["entity_id"], merged_into__isnull=True)
         page, _ = m.KnowledgePage.objects.get_or_create(entity=entity, defaults={"slug": f"entity-{entity.pk}", "title": entity.label})
@@ -186,7 +215,7 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     if (operation == "add" and current is not None) or (operation != "add" and (current is None or digest(current) != payload.get("base_hash"))):
         raise ValidationError({"conflict": "该区块已修改，请对照当前正文重新审核。", "block_id": key})
     if operation != "add" and origin == "intelligence" and current and (
-            current.get("human_edited") or current.get("origin") in {"manual","migration"}) and not payload.get("human_edited"):
+            current.get("human_edited") or current.get("origin") in {"human","manual","migration"}) and not payload.get("human_edited"):
         raise ValidationError({"conflict":"此区块包含人工正文，请在可视化编辑器中审阅并明确修改后再保存。","block_id":key})
     if operation != "delete":
         proposed = {**payload.get("block", {}), "id": key, "origin": origin,

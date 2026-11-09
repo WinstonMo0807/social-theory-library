@@ -1,5 +1,4 @@
 """Bounded, repeatable backfill. Never calls models or alters old records."""
-from uuid import uuid5
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from catalog import models as m
@@ -79,33 +78,26 @@ class Command(BaseCommand):
                 last = str(span.pk)
             self.stdout.write(str({"structure_id": str(structure.pk), "evidence": counts, "next_after": last}))
         if options["identities"]:
-            for model in [m.Person, m.KnowledgeNode, m.Topic, m.Discipline, m.Subdiscipline, m.TheorySchool]:
+            for model in [m.Person, m.KnowledgeNode, m.Topic, m.Discipline, m.Subdiscipline, m.TheorySchool, m.Concept]:
                 mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="entity").values("source_id")
                 rows = model.objects.exclude(pk__in=mapped).order_by("pk")[:size]
                 count = sum(1 for row in rows if entity_for_legacy(row))
                 self.stdout.write(f"{model.__name__}: {count}")
         if options["claims"]:
-            rows = m.CuratedClaim.objects.filter(status__in=["confirmed", "published", "approved"]).exclude(
-                pk__in=m.KnowledgeLegacyMapping.objects.filter(source_type="catalog.curatedclaim", target_type="assertion").values("source_id"))
-            for claim in rows.order_by("id")[:size]:
-                with transaction.atomic():
-                    statement, _ = m.Assertion.objects.get_or_create(pk=uuid5(claim.pk, "assertion-v1"), defaults={
-                        "text": claim.proposition, "category": claim.kind, "conditions": claim.qualifiers,
-                        "status": claim.status, "source_quality": "legacy_evidence_pending", "created_by": claim.created_by,
-                        "origin": {"legacy_type": "catalog.curatedclaim", "legacy_id": str(claim.pk),
-                            "published_by": str(claim.published_by_id or ""), "published_at": str(claim.published_at or ""),
-                            "editorial_note": claim.editorial_note}})
-                    if claim.work_id:
-                        m.AssertionSource.objects.get_or_create(assertion=statement, work=claim.work,
-                            defaults={"provenance": {"legacy_source_only": True, "revision_gap": True}})
-                    m.KnowledgeLegacyMapping.objects.get_or_create(source_type="catalog.curatedclaim", source_id=claim.pk,
-                        target_type="assertion", defaults={"target_id": statement.pk, "quality": "manual_status_preserved",
-                            "provenance": {"source_quality_independent_of_human_decision": True}})
-                self.stdout.write(f"CuratedClaim {claim.pk} -> {statement.pk}")
+            from catalog.services.knowledge_migration import migrate_curated_claim
+            mapped=m.KnowledgeLegacyMapping.objects.filter(source_type="catalog.curatedclaim",target_type="assertion",
+                provenance__migration_version=2).values("source_id")
+            rows=m.CuratedClaim.objects.exclude(pk__in=mapped).order_by("id")
+            if options["after"]: rows=rows.filter(pk__gt=options["after"])
+            count,last=0,None
+            for claim in rows[:size]:
+                migrate_curated_claim(claim)
+                count+=1;last=str(claim.pk)
+            self.stdout.write(str({"curated_claims":count,"next_after":last}))
         if options["relations"]:
             from catalog.services.knowledge_migration import migrate_relation
             for model in [m.PersonNodeRelation, m.WorkNodeRelation, m.KnowledgeRelation]:
-                mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="assertion").values("source_id")
+                mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="assertion", provenance__migration_version=2).values("source_id")
                 rows = model.objects.filter(status__in=["confirmed", "approved", "published"]).exclude(pk__in=mapped).order_by("pk")[:size]
                 count = sum(1 for row in rows if migrate_relation(row))
                 self.stdout.write(f"{model.__name__}: {count}")

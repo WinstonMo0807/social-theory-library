@@ -129,10 +129,8 @@ def validate_result(artifact,output):
         if set(seen) != candidates or len(seen) != len(candidates):
             raise ValidationError("身份比较没有完整覆盖限定候选。")
     elif artifact.stage == 6:
-        allowed={a["id"] for a in data["assertions"]}
-        refs=output.get("assertion_ids",[])
-        if set(refs)-allowed or (output.get("text","").strip() and not refs):
-            raise ValidationError("知识页建议缺少本批原文陈述来源。")
+        from catalog.services.intelligence import validate_wiki_patch
+        validate_wiki_patch(output,data)
 
 
 def complete_stage(demand,result):

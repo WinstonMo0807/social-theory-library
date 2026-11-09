@@ -207,7 +207,12 @@ def create_anchor(revision, segments):
     if not isinstance(segments, list) or not 1 <= len(segments) <= 100:
         raise ValidationError("证据须含1至100个有序原文片段。")
     DocumentRevision.objects.select_for_update().get(pk=revision.pk)
-    pages = {p.page_number: p for p in revision.page_snapshots.all()}
+    page_numbers = [raw.get("page_number") for raw in segments if isinstance(raw, dict)]
+    if len(page_numbers) != len(segments) or any(type(n) is not int or n < 1 for n in page_numbers):
+        raise ValidationError("证据页码须为1基物理PDF页码。")
+    # An index may create thousands of small anchors. Fetch only cited pages;
+    # avoid reading the entire book's text/geometry for every chunk.
+    pages = {p.page_number: p for p in revision.page_snapshots.filter(page_number__in=page_numbers)}
     checked, previous = [], None
     for raw in segments:
         page = pages.get(raw.get("page_number"))

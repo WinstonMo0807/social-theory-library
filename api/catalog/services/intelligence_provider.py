@@ -7,7 +7,7 @@ Only the worker imports DocETL. There is no LiteLLM proxy or extra credential.
 from ingestion.services.ai_client import AIClient, AIInvalidOutput, current_ai_configuration
 from common.ai_runtime import AICapability
 
-PROMPT_VERSION = "stl-intelligence-v1"
+PROMPT_VERSION = "stl-intelligence-v2"
 SYSTEM = "你是有来源约束的学术编纂助手。区分主张者、作者、被引述和被批评者。只输出给定结构中的候选。没有证据则保留空数组，不补造身份、引文、偏移或关系。"
 
 

@@ -1,8 +1,7 @@
-"""Runnable pull worker for bounded, evidence-only local GPU tasks.
+"""Pull worker for fixed-window curation and on-demand document structure.
 
-The default remains claim extraction with ``llm_small``.  An operator may
-explicitly declare the ``llm_large`` and ``library_synthesis`` protocol through
-environment configuration.  The worker never connects directly to PostgreSQL.
+DocETL delegates model transport to STL, using its configured Provider and
+credentials. This worker never connects directly to PostgreSQL.
 """
 
 from __future__ import annotations
@@ -26,10 +25,8 @@ import httpx
 WORKER_VERSION = "3.0.4"
 SUPPORTED_PROVIDERS = {"ollama", "openai_compatible", "vllm"}
 SUPPORTED_CAPABILITIES = {"llm_small", "llm_large", "document_parse"}
-SUPPORTED_TASK_KINDS = {"claim_extraction", "library_synthesis", "document_structure", "curation_stage"}
+SUPPORTED_TASK_KINDS = {"document_structure", "curation_stage"}
 TASK_CAPABILITY = {
-    "claim_extraction": "llm_small",
-    "library_synthesis": "llm_large",
     "document_structure":"document_parse",
     "curation_stage":"llm_large",
 }
@@ -69,8 +66,8 @@ class RemoteWorkerClientConfig:
     model_url: str
     model: str
     model_revision: str
-    capabilities: tuple[str, ...] = ("llm_small",)
-    task_kinds: tuple[str, ...] = ("claim_extraction",)
+    capabilities: tuple[str, ...] = ("llm_large",)
+    task_kinds: tuple[str, ...] = ("curation_stage",)
     model_api_key: str = ""
     display_name: str = "RTX 4070 worker"
     gpu_name: str = "RTX 4070"
@@ -90,8 +87,8 @@ class RemoteWorkerClientConfig:
             model_url=os.getenv("STL_WORKER_MODEL_URL", "http://127.0.0.1:11434"),
             model=os.getenv("STL_WORKER_MODEL", ""),
             model_revision=os.getenv("STL_WORKER_MODEL_REVISION", ""),
-            capabilities=_environment_list("STL_WORKER_CAPABILITIES", "llm_small"),
-            task_kinds=_environment_list("STL_WORKER_TASK_KINDS", "claim_extraction"),
+            capabilities=_environment_list("STL_WORKER_CAPABILITIES", "llm_large"),
+            task_kinds=_environment_list("STL_WORKER_TASK_KINDS", "curation_stage"),
             model_api_key=os.getenv("STL_WORKER_MODEL_API_KEY", ""),
             display_name=os.getenv("STL_WORKER_DISPLAY_NAME", "RTX 4070 worker"),
             gpu_name=os.getenv("STL_WORKER_GPU_NAME", "RTX 4070"),
@@ -380,122 +377,7 @@ class RemoteAIWorkerClient:
             raise RemoteWorkerClientError("model_unavailable", "本地模型当前不可连接。") from exc
 
     def run_model(self, job: dict[str, Any]) -> dict[str, Any]:
-        task_kind = str(job.get("task_kind") or "").strip()
-        if task_kind not in self.config.task_kinds:
-            raise RemoteWorkerClientError("unsupported_task_kind", "Worker 未声明该 task kind。", retryable=False)
-        prompt = dict(job.get("prompt") or {})
-        source = dict(job.get("input") or {})
-        schema = dict(job.get("output_schema") or {})
-        system_prompt = str(prompt.get("content") or "")
-        if not system_prompt or not schema:
-            raise RemoteWorkerClientError("job_payload_invalid", "任务缺少 Prompt 或输出 schema。", retryable=False)
-        if task_kind == "claim_extraction":
-            document_text = str(source.get("text") or "")
-            if not document_text:
-                raise RemoteWorkerClientError("job_payload_invalid", "任务缺少 EvidenceSpan。", retryable=False)
-            user_prompt = (
-                "只分析以下馆藏原文。严格按给定 JSON schema 返回，不使用外部常识。\n\n"
-                f"{document_text}"
-            )
-        else:
-            evidence = source.get("evidence")
-            if not isinstance(evidence, list) or not 2 <= len(evidence) <= 12:
-                raise RemoteWorkerClientError("job_payload_invalid", "Library Synthesis 缺少有界的 EvidencePack。", retryable=False)
-            evidence_ids = {
-                str(row.get("id") or "")
-                for row in evidence
-                if isinstance(row, dict) and str(row.get("id") or "") and str(row.get("text") or "").strip()
-            }
-            if len(evidence_ids) != len(evidence) or not str(source.get("evidence_pack_id") or ""):
-                raise RemoteWorkerClientError("job_payload_invalid", "EvidencePack 缺少原文或稳定标识。", retryable=False)
-            user_prompt = (
-                "只使用下列 EvidencePack 馆藏原文生成候选。"
-                "evidence_span_ids 只能引用列出的 id，不得使用外部常识。"
-                "严格按给定 JSON schema 返回。\n\n"
-                + json.dumps(
-                    {
-                        "evidence_pack_id": source["evidence_pack_id"],
-                        "requested_field": source.get("requested_field"),
-                        "evidence": evidence,
-                    },
-                    ensure_ascii=False,
-                    separators=(",", ":"),
-                )
-            )
-        if self.config.provider == "ollama":
-            response = self._model_post(
-                "api/chat",
-                {
-                    "model": self.config.model,
-                    "stream": False,
-                    "format": schema,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "options": {"temperature": 0},
-                },
-            )
-            if response.status_code >= 400:
-                raise RemoteWorkerClientError("model_http_error", f"本地模型返回 HTTP {response.status_code}。")
-            payload = _response_json(response)
-            result = _json_content((payload.get("message") or {}).get("content"))
-        else:
-            response = self._model_post(
-                "v1/chat/completions",
-                {
-                    "model": self.config.model,
-                    "temperature": 0,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "response_format": {"type": "json_object"},
-                },
-            )
-            if response.status_code >= 400:
-                raise RemoteWorkerClientError("model_http_error", f"本地模型返回 HTTP {response.status_code}。")
-            payload = _response_json(response)
-            choices = payload.get("choices") or []
-            content = ((choices[0].get("message") or {}).get("content") if choices and isinstance(choices[0], dict) else "")
-            result = _json_content(content)
-        identity = {
-            "provider": self.config.provider,
-            "model": self.config.model,
-            "model_revision": self.config.model_revision,
-        }
-        if task_kind == "claim_extraction":
-            claims = result.get("claims")
-            if not isinstance(claims, list):
-                raise RemoteWorkerClientError("model_schema_invalid", "模型结果缺少 claims 数组。")
-            max_claims = max(1, min(int((job.get("limits") or {}).get("max_claims") or 24), 24))
-            if len(claims) > max_claims:
-                raise RemoteWorkerClientError("model_schema_invalid", "模型返回的 Claim 数量超过任务上限。")
-            return {**identity, "claims": claims}
-        candidate = result.get("candidate")
-        if not isinstance(candidate, dict):
-            raise RemoteWorkerClientError("model_schema_invalid", "模型结果缺少 candidate 对象。")
-        value = " ".join(str(candidate.get("value") or "").split())
-        rationale = " ".join(str(candidate.get("rationale") or "").split())
-        selected_ids = [str(value) for value in candidate.get("evidence_span_ids") or [] if str(value)]
-        allowed_ids = {str(row["id"]) for row in source["evidence"]}
-        max_output_chars = max(1, min(int((job.get("limits") or {}).get("max_output_chars") or 12_000), 12_000))
-        if (
-            not value
-            or len(value) > max_output_chars
-            or not selected_ids
-            or len(selected_ids) > 12
-            or any(value not in allowed_ids for value in selected_ids)
-        ):
-            raise RemoteWorkerClientError("model_schema_invalid", "Library Synthesis 结果未受 EvidencePack 约束。")
-        return {
-            **identity,
-            "candidate": {
-                "value": value,
-                "evidence_span_ids": selected_ids,
-                "rationale": rationale,
-            },
-        }
+        raise RemoteWorkerClientError("knowledge_producer_retired", "旧模型执行协议已停用，请运行 curation_stage。", retryable=False)
 
     def run_curation_stage(self,job,lease):
         from hashlib import sha256

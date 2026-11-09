@@ -14,7 +14,6 @@ from catalog.services.page_geometry import validated_geometry
 from catalog.models import (
     Asset,
     CatalogPublicationRevision,
-    ClaimEvidence,
     DerivedClaim,
     DocumentQualityAssessment,
     DocumentRevision,
@@ -526,170 +525,6 @@ def _same_interpretation(
     )
 
 
-def _span_identity(span: EvidenceSpan) -> tuple:
-    return (
-        span.page_id,
-        span.content_hash,
-        int(span.start_offset or 0),
-        int(span.end_offset or 0),
-    )
-
-
-def _carry_forward_unchanged_claims(
-    previous: DocumentRevision,
-    current: DocumentRevision,
-    *,
-    changed_page_indexes: Iterable[int],
-) -> tuple[int, int]:
-    """Reuse derived interpretation for pages untouched by selective OCR.
-
-    A new DocumentRevision is still the active provenance record, so claims
-    and curated evidence must point at its EvidenceSpan rows.  Copying only
-    claims whose complete evidence set is unchanged avoids an all-document LLM
-    rerun while keeping active-revision visibility rules intact.
-    """
-
-    changed = {int(value) for value in changed_page_indexes if int(value) > 0}
-    current_spans = {
-        _span_identity(span): span
-        for span in current.evidence_spans.filter(is_stale=False).select_related("page")
-    }
-    carried_claims = 0
-    carried_curated_links = 0
-    copied_source_ids = []
-    source_claims = (
-        previous.derived_claims.filter(status=DerivedClaim.Status.ACTIVE)
-        .select_related("primary_evidence")
-        .prefetch_related("evidence_links__evidence_span")
-    )
-    for source in source_claims:
-        source_spans = [source.primary_evidence]
-        source_spans.extend(link.evidence_span for link in source.evidence_links.all())
-        if any(
-            span.is_stale
-            or span.page_number in changed
-            or _span_identity(span) not in current_spans
-            for span in source_spans
-        ):
-            continue
-        primary = current_spans[_span_identity(source.primary_evidence)]
-        clone, created = DerivedClaim.objects.get_or_create(
-            document_revision=current,
-            fingerprint=source.fingerprint,
-            defaults={
-                "primary_evidence": primary,
-                "work": source.work,
-                "edition": source.edition,
-                "proposition": source.proposition,
-                "subject": source.subject,
-                "predicate": source.predicate,
-                "object": source.object,
-                "polarity": source.polarity,
-                "modality": source.modality,
-                "qualifiers": source.qualifiers,
-                "temporal_scope": source.temporal_scope,
-                "geographic_scope": source.geographic_scope,
-                "population_scope": source.population_scope,
-                "attribution": source.attribution,
-                "claim_type": source.claim_type,
-                "prompt_key": source.prompt_key,
-                "prompt_version": source.prompt_version,
-                "model_provider": source.model_provider,
-                "model_name": source.model_name,
-                "model_revision": source.model_revision,
-                "quality_factors": source.quality_factors,
-                "quality_score": source.quality_score,
-                "importance_score": source.importance_score,
-                "cluster_key": source.cluster_key,
-                "status": DerivedClaim.Status.ACTIVE,
-                "shadow": source.shadow,
-                "stale_reason": "",
-            },
-        )
-        if created:
-            carried_claims += 1
-        for link in source.evidence_links.all():
-            ClaimEvidence.objects.get_or_create(
-                derived_claim=clone,
-                evidence_span=current_spans[_span_identity(link.evidence_span)],
-                role=link.role,
-                defaults={
-                    "confidence": link.confidence,
-                    "sort_order": link.sort_order,
-                    "validation": link.validation,
-                },
-            )
-        copied_source_ids.append(source.pk)
-
-    curated_links = (
-        ClaimEvidence.objects.filter(
-            curated_claim__isnull=False,
-            evidence_span__document_revision=previous,
-            evidence_span__is_stale=False,
-        )
-        .select_related("evidence_span")
-        .order_by("created_at")
-    )
-    for link in curated_links:
-        span = link.evidence_span
-        replacement = current_spans.get(_span_identity(span))
-        if span.page_number in changed or replacement is None:
-            continue
-        _, created = ClaimEvidence.objects.get_or_create(
-            curated_claim=link.curated_claim,
-            evidence_span=replacement,
-            role=link.role,
-            defaults={
-                "confidence": link.confidence,
-                "sort_order": link.sort_order,
-                "validation": link.validation,
-            },
-        )
-        carried_curated_links += int(created)
-
-    if copied_source_ids:
-        DerivedClaim.objects.filter(pk__in=copied_source_ids).update(
-            status=DerivedClaim.Status.SUPERSEDED,
-            stale_reason=f"carried_forward_to_revision_{current.revision}",
-            updated_at=timezone.now(),
-        )
-    return carried_claims, carried_curated_links
-
-
-def _schedule_claim_shadow(
-    revision_id: str,
-    *,
-    page_indexes: tuple[int, ...] | None = None,
-) -> None:
-    """Start optional Claim work only after revision evidence is committed."""
-
-    try:
-        from catalog.models import DocumentRevision
-        from catalog.services.claims.indexing import index_document_revision_claims
-
-        revision = DocumentRevision.objects.get(pk=revision_id)
-        # This immediately publishes carried-forward machine claims and
-        # tombstones superseded revision documents even if no LLM is online.
-        index_document_revision_claims(revision)
-    except Exception:
-        logger.exception(
-            "Initial Claim Index synchronization failed for DocumentRevision %s",
-            revision_id,
-        )
-    try:
-        from catalog.services.claims.pipeline import schedule_document_claim_extraction
-
-        schedule_document_claim_extraction(revision_id, page_indexes=page_indexes)
-    except Exception:
-        # Claim extraction is intentionally non-blocking for ingestion and
-        # publication.  The capability runtime/Processing Center can recover
-        # the demand once an executor or provider is available.
-        logger.exception(
-            "Claim shadow scheduling failed for DocumentRevision %s",
-            revision_id,
-        )
-
-
 @transaction.atomic
 def synchronize_document_revision(
     asset: Asset,
@@ -787,28 +622,12 @@ def synchronize_document_revision(
     evidence_spans = _sync_evidence_spans(active)
     from catalog.services.knowledge_sources import snapshot_revision
     snapshot_revision(active)
-    if created and previous is not None and changed_page_indexes is not None:
-        carried_claims, carried_curated_links = _carry_forward_unchanged_claims(
-            previous,
-            active,
-            changed_page_indexes=changed_page_indexes,
-        )
     assessment = _ensure_quality_assessment(
         active,
         pending_ocr_pages=pending_ocr_pages,
     )
-    if schedule_claims:
-        scheduled_pages = (
-            tuple(sorted({int(value) for value in changed_page_indexes if int(value) > 0}))
-            if changed_page_indexes is not None
-            else None
-        )
-        transaction.on_commit(
-            lambda revision_id=str(active.pk), page_indexes=scheduled_pages: _schedule_claim_shadow(
-                revision_id,
-                page_indexes=page_indexes,
-            )
-        )
+    # schedule_claims remains a compatibility argument for ingestion callers.
+    # New model input is created only by an explicit versioned CurationRun.
     outline_job = None
     if schedule_outline and locked_asset.status == Asset.Status.READY and locked_asset.file and locked_asset.page_count:
         from catalog.services.document_outline import queue_outline_rebuild
