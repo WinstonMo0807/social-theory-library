@@ -105,7 +105,8 @@ def create_entity(payload, actor):
         raise ValidationError("请填写合法的实体类型和名称。")
     identity = {}
     if kind == "person":
-        identity["person"] = m.Person.objects.create(preferred_name=label, authority_status="draft")
+        identity["person"] = m.Person.objects.create(preferred_name=label, authority_status="draft", biography=payload.get("definition", ""))
+        m.ScholarProfile.objects.create(person=identity["person"], slug=f"scholar-{identity['person'].pk}")
     elif kind in {"concept", "school", "tradition", "debate", "question"}:
         node_kind = {"school": "theory_tradition", "tradition": "theory_tradition", "debate": "debate", "question": "research_problem", "concept": "concept"}[kind]
         identity["node"] = m.KnowledgeNode.objects.create(node_type=node_kind, canonical_name_zh=label,
@@ -120,15 +121,27 @@ def create_entity(payload, actor):
 
 
 @transaction.atomic
-def create_assertion(payload, revision, actor):
+def create_assertion(payload, revision, actor, *, allow_citation=False, subject_work=None):
     require_editor(actor)
-    require_revision_access(revision, actor, editorial=True)
+    if revision:
+        require_revision_access(revision, actor, editorial=True)
     text = payload.get("text")
     if payload.get("unresolved_names") or payload.get("unresolved_participants"):
         raise ValidationError("请先在审核中解决主张者或参与者身份。")
     evidence = payload.get("evidence", [])
-    if not isinstance(text, str) or not text.strip() or len(text) > 20000 or not evidence:
+    citation = str(payload.get("source_citation", "")).strip()
+    if not isinstance(text, str) or not text.strip() or len(text) > 20000:
+        raise ValidationError("学术陈述须包含正文。")
+    if not evidence and not (allow_citation and citation and len(citation) <= 20000):
         raise ValidationError("学术陈述须包含正文和经原文核对的证据。")
+    if evidence and not revision and any(not row.get("anchor_id") for row in evidence):
+        raise ValidationError("原文证据须固定到实际正文修订。")
+    previous = None
+    if payload.get("supersedes_id"):
+        previous = m.Assertion.objects.select_for_update().get(pk=payload["supersedes_id"])
+        from catalog.services.knowledge_workspace import source_hash
+        if payload.get("base_hash") != source_hash("assertion", previous.pk):
+            raise ValidationError({"conflict": "该陈述已变化，请对照当前记录重新审核。"})
     expression = payload.get("expression", "author_claim")
     if expression not in {"author_claim", "direct_quote", "paraphrase", "criticized_claim", "editorial_judgment"}:
         raise ValidationError("论述身份无效。")
@@ -139,7 +152,9 @@ def create_assertion(payload, revision, actor):
         raise ValidationError("陈述方向无效。")
     statement = m.Assertion.objects.create(text=text, predicate=payload.get("predicate", ""),
         category=payload.get("category", "proposition"), direction=payload.get("direction", "directed"),
-        expression=expression, conditions=payload.get("conditions", {}), source_quality="verified_text", created_by=actor)
+        expression=expression, conditions=payload.get("conditions", {}),
+        source_quality="verified_text" if evidence else "human_citation", created_by=actor,
+        supersedes=previous)
     for participant in payload.get("participants", []):
         role = participant.get("role")
         values = {key: participant[key] for key in ("entity_id", "work_id", "edition_id") if participant.get(key)}
@@ -151,13 +166,22 @@ def create_assertion(payload, revision, actor):
     attribution = payload.get("attribution_id")
     if attribution and not m.Entity.objects.filter(pk=attribution, kind__in=["person", "organization"]).exists():
         raise ValidationError("论述归属须为已解析的人物或组织。")
-    m.AssertionSource.objects.create(assertion=statement, work=revision.asset.edition.work,
-        edition=revision.asset.edition, document_revision=revision, attribution_id=attribution,
-        expression=expression, provenance={"attribution_status": "explicit" if attribution else "unresolved"})
+    source_defaults = {"attribution_id": attribution, "expression": expression, "citation": citation,
+        "provenance": {"attribution_status": "explicit" if attribution else "unresolved", "exact_location_verified": bool(evidence)}}
+    if revision or not evidence:
+        m.AssertionSource.objects.create(assertion=statement, work=revision.asset.edition.work if revision else subject_work,
+            edition=revision.asset.edition if revision else None, document_revision=revision, **source_defaults)
     for row in evidence:
         if row.get("stance") not in {"supports", "opposes", "qualifies", "context"}:
             raise ValidationError("请标明证据的支持、反对、限定或语境作用。")
-        anchor = create_anchor(revision, row.get("segments"))
+        if row.get("anchor_id"):
+            anchor = m.EvidenceAnchor.objects.select_related("document_revision__asset__edition__work").get(pk=row["anchor_id"])
+            require_revision_access(anchor.document_revision, actor, editorial=True)
+        else:
+            anchor = create_anchor(revision, row.get("segments"))
+        anchor_revision = anchor.document_revision
+        m.AssertionSource.objects.get_or_create(assertion=statement, document_revision=anchor_revision,
+            defaults={"work": anchor_revision.asset.edition.work, "edition": anchor_revision.asset.edition, **source_defaults})
         m.AssertionEvidence.objects.create(assertion=statement, anchor=anchor, stance=row["stance"])
     return statement
 

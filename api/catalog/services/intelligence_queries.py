@@ -22,10 +22,14 @@ def run_data(run, actor, *, detail=False):
 
 
 def changeset_data(changeset, actor):
-    require_editor(actor)
-    require_revision_access(changeset.document_revision, actor, editorial=True)
+    from catalog.services.intelligence_changes import require_changeset_access
+    require_changeset_access(changeset, actor)
     items = list(changeset.items.values("id", "kind", "payload", "dependencies", "decision", "decision_note", "application", "conflict", "reviewed_at"))
     for item in items:
+        if item["kind"] == "assertion":
+            from catalog.services.knowledge_sources import locator
+            item["evidence_context"] = [locator(anchor, actor, editorial=True) for anchor in m.EvidenceAnchor.objects.filter(
+                pk__in=[v["anchor_id"] for v in item["payload"].get("evidence", []) if v.get("anchor_id")])]
         applied = item["application"]
         if applied.get("type") == "assertion":
             item["current_status"] = m.Assertion.objects.filter(pk=applied["id"]).values_list("status", flat=True).first()
@@ -45,12 +49,14 @@ def changeset_data(changeset, actor):
                 "revision_id": str(revision.pk) if revision else None}
     accepted = [i for i in items if i["decision"] == "accepted"]
     status = "published" if accepted and all(i.get("current_status") == "published" for i in accepted) and all(i["decision"] in {"accepted", "rejected"} for i in items) else changeset.status
+    revision = changeset.document_revision
+    work = revision.asset.edition.work if revision else changeset.subject_work
     return {"id": str(changeset.pk), "version": changeset.version, "status": status,
-        "document_revision_id": str(changeset.document_revision_id), "origin": changeset.origin, "items": items,
-        "title": changeset.document_revision.asset.edition.work.title,
-        "edition_id": str(changeset.document_revision.asset.edition_id),
-        "work_id": str(changeset.document_revision.asset.edition.work_id),
-        "asset_id": str(changeset.document_revision.asset_id), "pages": changeset.document_revision.asset.page_count,
+        "document_revision_id": str(revision.pk) if revision else None, "origin": changeset.origin, "items": items,
+        "title": work.title if work else changeset.subject_entity.label,
+        "edition_id": str(revision.asset.edition_id) if revision else None,
+        "work_id": str(work.pk) if work else None, "entity_id": str(changeset.subject_entity_id) if changeset.subject_entity_id else None,
+        "asset_id": str(revision.asset_id) if revision else None, "pages": revision.asset.page_count if revision else 0,
         "review_url": f"/admin/intelligence?changeset={changeset.pk}"}
 
 

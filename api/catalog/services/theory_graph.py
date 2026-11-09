@@ -28,7 +28,8 @@ LINK_LABELS = {
     "teaching": "师承", "cooperation": "合作", "influence": "影响", "criticism": "批评",
     "comparative_reading": "比较阅读", "other": "其他关系",
 }
-RELATION_TYPES = {**dict(KnowledgeRelation.RelationType.choices), **LINK_LABELS}
+from catalog.services.assertion_graph import PREDICATES
+RELATION_TYPES = {**dict(KnowledgeRelation.RelationType.choices), **LINK_LABELS, **PREDICATES}
 
 
 def _values(params, key):
@@ -75,7 +76,16 @@ def graph_options(params):
     candidates = str(params.get("include_candidates", "false")).strip().lower()
     if candidates not in {"", "true", "false", "1", "0"}:
         raise ValidationError({"include_candidates": "请选择 true 或 false。"})
-    return {
+    source_filters = {}
+    for key in ("source_work", "source_revision"):
+        value = str(params.get(key, "")).strip()
+        if value:
+            try: source_filters[key] = str(UUID(value))
+            except ValueError: raise ValidationError({key:"来源编号无效。"})
+    direction = str(params.get("assertion_direction", "")).strip()
+    if direction not in {"", "directed", "undirected"}:
+        raise ValidationError({"assertion_direction":"请选择有方向或无方向。"})
+    return {**source_filters, "assertion_direction":direction, "context":str(params.get("context", ""))[:300],
         "center_kind": kind, "center": str(params.get("center", "")).strip(),
         "depth": _integer(params, "depth", 1, 1, 3),
         "limit": _integer(params, "limit", 60, 1, 120),
@@ -206,6 +216,10 @@ def edge_querysets(frontier, entities):
     ]
     for model, left_kind, left, right_kind, right, relation_type, status, allowed_left, allowed_right, near_left, near_right in specs:
         query = model.objects.filter(**status, **{f"{left}_id__in": allowed_left, f"{right}_id__in": allowed_right}).select_related(left, right)
+        if model in {KnowledgeRelation, PersonNodeRelation}:
+            from catalog.models import KnowledgeLegacyMapping
+            query = query.exclude(pk__in=KnowledgeLegacyMapping.objects.filter(
+                source_type=model._meta.label_lower, target_type="assertion", target_id__isnull=False).values("source_id"))
         if frontier is not None:
             query = query.filter(Q(**{f"{left}_id__in": near_left}) | Q(**{f"{right}_id__in": near_right}))
         if left == "person":
@@ -287,6 +301,8 @@ def _attach_evidence(edges, request):
             "reader_href": f"/reader/{row.file_id}?page={row.page_number}&evidence={row.pk}&revision={revision.document_revision_id}",
         })
     for edge in edges:
+        if edge["model"] == "Assertion":
+            continue
         sources = by_relation.get(edge["entity_id"], []) if edge["model"] == "KnowledgeRelation" else []
         edge["evidence"], edge["evidence_truncated"] = sources[:6], len(sources) > 6
         if sources:
@@ -330,6 +346,12 @@ def public_graph_edge(identifier):
         return None
     if not separator:
         return None
+    if model_name == "Assertion":
+        from catalog.models import Assertion
+        from catalog.services.assertion_graph import project_statement
+        statement = Assertion.objects.filter(pk=key, status="published").first()
+        projected = project_statement(statement, entity_querysets(graph_options({}))) if statement else None
+        return projected[0] if projected else None
     for spec in edge_querysets(None, entity_querysets(graph_options({}))):
         if spec[0].__name__ == model_name:
             row = spec[-1].filter(pk=key).first()
@@ -351,6 +373,31 @@ def _related_works(kind, row, request, page):
             work["version_label"] = str((edition.active_catalog_revision.snapshot.get("edition") or {}).get("version_label") or "")
             works.append(work)
     return works, total
+
+
+def _graph_projections(frontier, entities, options, seen, request):
+    from catalog.services.assertion_graph import near_statements, project_statement
+    from catalog.models import Assertion
+    for statement in near_statements(frontier, entities, options).exclude(pk__in=seen[Assertion]).iterator(chunk_size=64):
+        seen[Assertion].add(statement.pk)
+        projection = project_statement(statement, entities, getattr(request, "user", None))
+        if projection:
+            yield projection
+    for spec in edge_querysets(frontier, entities):
+        model, _lk, _left, _rk, _right, fixed_type, query = spec
+        if any(options.get(k) for k in ("source_work","source_revision","assertion_direction","context")):
+            continue
+        if options["relation_type"]:
+            if fixed_type and fixed_type not in options["relation_type"]:
+                continue
+            if not fixed_type:
+                field = "active_revision__materialized_preview__relation_type" if model is ScholarRelation else "relation_type"
+                query = query.filter(**{f"{field}__in":options["relation_type"]})
+        for row in query.exclude(pk__in=seen[model])[:options["edge_limit"]+1]:
+            seen[model].add(row.pk)
+            projection = _edge_payload(spec, row)
+            if projection:
+                yield projection
 
 
 def build_public_graph(params, request=None):
@@ -390,31 +437,17 @@ def build_public_graph(params, request=None):
     edges, seen_edges = {}, defaultdict(set)
     for level in range(1, options["depth"] + 1):
         next_frontier = set()
-        for spec in edge_querysets(frontier, entities):
-            model, _lk, _left, _rk, _right, fixed_type, query = spec
-            if options["relation_type"]:
-                if fixed_type and fixed_type not in options["relation_type"]:
-                    continue
-                if not fixed_type:
-                    field = "active_revision__materialized_preview__relation_type" if model is ScholarRelation else "relation_type"
-                    query = query.filter(**{f"{field}__in": options["relation_type"]})
-            # One extra eligible edge is enough to establish real truncation.
-            for row in query.exclude(pk__in=seen_edges[model])[:options["edge_limit"] - len(edges) + 1]:
-                seen_edges[model].add(row.pk)
-                projection = _edge_payload(spec, row)
-                if projection is None:
-                    continue
-                edge, left, right = projection
-                pending = {(node_kind, entity.pk): entity for node_kind, entity in (left, right) if (node_kind, entity.pk) not in selected}
-                if len(edges) >= options["edge_limit"] or len(selected) + len(pending) > options["limit"]:
-                    result["truncated"] = True
-                    break
-                edges[edge["id"]] = edge
-                for identity, entity in pending.items():
-                    selected[identity] = (entity, level)
-                    next_frontier.add(identity)
-            if result["truncated"]:
+        for edge, left, right in _graph_projections(frontier, entities, options, seen_edges, request):
+            if edge["id"] in edges:
+                continue
+            pending = {(node_kind, entity.pk): entity for node_kind, entity in (left, right) if (node_kind, entity.pk) not in selected}
+            if len(edges) >= options["edge_limit"] or len(selected) + len(pending) > options["limit"]:
+                result["truncated"] = True
                 break
+            edges[edge["id"]] = edge
+            for identity, entity in pending.items():
+                selected[identity] = (entity, level)
+                next_frontier.add(identity)
         if result["truncated"] or not next_frontier:
             break
         frontier = next_frontier

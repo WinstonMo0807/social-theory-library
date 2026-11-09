@@ -197,6 +197,7 @@ class Assertion(UUIDTimeStampedModel):
     source_quality = models.CharField(max_length=40, default="unverified")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
     origin = models.JSONField(default=dict)
+    supersedes = models.ForeignKey("self", null=True, on_delete=models.PROTECT, related_name="revisions")
 
 
 class AssertionParticipant(UUIDTimeStampedModel):
@@ -215,7 +216,8 @@ class AssertionParticipant(UUIDTimeStampedModel):
 
 class AssertionSource(UUIDTimeStampedModel):
     assertion = models.ForeignKey(Assertion, on_delete=models.PROTECT, related_name="sources")
-    work = models.ForeignKey("catalog.Work", on_delete=models.PROTECT)
+    work = models.ForeignKey("catalog.Work", null=True, on_delete=models.PROTECT)
+    citation = models.TextField(blank=True)
     edition = models.ForeignKey("catalog.Edition", null=True, on_delete=models.PROTECT)
     document_revision = models.ForeignKey("catalog.DocumentRevision", null=True, on_delete=models.PROTECT)
     node = models.ForeignKey(DocumentNode, null=True, on_delete=models.PROTECT)

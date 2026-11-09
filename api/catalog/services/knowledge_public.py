@@ -10,17 +10,45 @@ from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
 
 
+def public_entities():
+    """Legacy profile publication remains authoritative for its mapped identity."""
+    from django.db.models import Q
+    from catalog.services.discovery_sources import source_queryset
+    scope = Q(pk__in=[])
+    standalone = Q(status="published")
+    for field, kind in (("person", "scholar"), ("node", "node"), ("topic", "topic"),
+                        ("discipline", "discipline"), ("subdiscipline", "subdiscipline"),
+                        ("concept", "concept")):
+        scope |= Q(**{f"{field}_id__in": source_queryset(kind).values("person_id" if kind == "scholar" else "pk")})
+        standalone &= Q(**{f"{field}__isnull": True})
+    scope |= Q(theory_school__editorial_status="published")
+    standalone &= Q(theory_school__isnull=True)
+    return m.Entity.objects.filter(scope | standalone, merged_into__isnull=True).exclude(status__in=["withdrawn", "archived"])
+
+
 def assertion_public(statement):
     sources = list(statement.sources.select_related("document_revision__asset").all())
-    if statement.status != "published" or not sources:
+    if statement.status not in {"published", "superseded"}:
+        return False
+    if not sources and not statement.origin.get("human_confirmation_preserved"):
         return False
     for source in sources:
         if source.document_revision_id and not (public_editions(require_fulltext=True).filter(pk=source.edition_id).exists()
             and m.CatalogPublicationRevision.objects.filter(document_revision=source.document_revision,
                 reader_asset_id=source.document_revision.asset_id, status__in=["active", "superseded"], fulltext_ready=True).exists()):
             return False
-        if not source.document_revision_id and not public_editions().filter(work_id=source.work_id).exists():
+        if not source.document_revision_id and source.work_id and not public_editions().filter(work_id=source.work_id).exists():
             return False
+        if not source.document_revision_id and not source.work_id and not source.citation.strip():
+            return False
+    for participant in statement.participants.select_related("entity"):
+        if participant.work_id and not public_editions().filter(work_id=participant.work_id).exists():
+            return False
+        if participant.edition_id and not public_editions().filter(pk=participant.edition_id).exists():
+            return False
+        if participant.entity_id:
+            if not public_entities().filter(pk=participant.entity_id).exists():
+                return False
     return True
 
 
@@ -36,10 +64,45 @@ def assertion_data(statement, actor, *, draft=False):
             value["locator"] = locator(link.anchor, actor, editorial=draft)
         evidence.append(value)
     return {"id": str(statement.pk), "text": statement.text, "category": statement.category,
-        "predicate": statement.predicate, "expression": statement.expression, "conditions": statement.conditions,
+        "predicate": statement.predicate, "direction": statement.direction, "expression": statement.expression, "conditions": statement.conditions,
+        "source_quality": statement.source_quality, "supersedes_id": str(statement.supersedes_id) if statement.supersedes_id else None,
         "status": statement.status, "evidence": evidence,
         "participants": list(statement.participants.values("role", "entity_id", "entity__label", "work_id", "edition_id")),
-        "sources": list(statement.sources.values("work_id", "work__title", "edition_id", "document_revision_id", "node_id", "attribution_id", "attribution__label", "expression"))}
+        "sources": list(statement.sources.values("work_id", "work__title", "edition_id", "document_revision_id", "node_id", "attribution_id", "attribution__label", "expression", "citation"))}
+
+
+def publication_entities(page, statements):
+    from django.db.models import Q
+    ids = m.AssertionParticipant.objects.filter(assertion_id__in=statements).exclude(entity=None).values("entity_id")
+    rows = m.Entity.objects.filter(Q(pk__in=ids) | Q(pk=page.entity_id)).exclude(pk__in=public_entities().values("pk"))
+    return list(rows)
+
+
+def publish_reviewed_identity(entity, actor):
+    """Publish only an explicitly reviewed new identity, never revive a legacy draft."""
+    creation = m.ChangeItem.objects.filter(kind="entity", decision="accepted", application__id=str(entity.pk))
+    creation = next((v for v in creation if not v.payload.get("existing_id")), None)
+    if creation is None or entity.status not in {"draft", "published"} or entity.merged_into_id:
+        raise ValidationError(f"实体“{entity.label}”尚未公开，请先从其资料页审核发布。")
+    from catalog.services.editorial_revision import create_editorial_revision, publish_editorial_revision
+    target, kind, patch = None, None, None
+    if entity.person_id:
+        target = m.ScholarProfile.objects.get(person_id=entity.person_id)
+        kind, patch = "scholar_profile", {"editorial_status":"published"}
+    else:
+        for field, target_kind, status_field in (("node","knowledge_node","status"), ("topic","topic","editorial_status"),
+                                                ("discipline","discipline","editorial_status")):
+            if getattr(entity, f"{field}_id"):
+                target, kind, patch = getattr(entity, field), target_kind, {status_field:"published"}
+                break
+    if target:
+        if m.EditorialRevision.objects.filter(target_type=kind, target_id=target.pk, status="draft").exists():
+            raise ValidationError(f"“{entity.label}”另有资料编辑稿，请先核对该稿，避免连带发布未预览的修改。")
+        edit = create_editorial_revision(target_type=kind, target_id=target.pk, patch=patch, actor=actor,
+            idempotency_key=f"knowledge-identity-publish:{creation.pk}", change_note="随知识页发布已审核的新身份")
+        publish_editorial_revision(edit.pk, actor=actor)
+    entity.status = "published"
+    entity.save(update_fields=["status", "updated_at"])
 
 
 def page_data(page, actor, *, draft=False):
@@ -49,15 +112,8 @@ def page_data(page, actor, *, draft=False):
     else:
         if page.status != "published" or page.work_id and not public_editions().filter(work_id=page.work_id).exists():
             raise Http404
-        if page.entity_id and page.entity.status != "published":
+        if page.entity_id and not public_entities().filter(pk=page.entity_id).exists():
             raise Http404
-        if page.entity_id:
-            from catalog.services.discovery_sources import source_queryset
-            for field, kind in (("person_id", "scholar"), ("node_id", "node"), ("topic_id", "topic"),
-                                ("discipline_id", "discipline"), ("subdiscipline_id", "subdiscipline")):
-                key = getattr(page.entity, field)
-                if key and not source_queryset(kind).filter(**{"person_id" if kind == "scholar" else "pk": key}).exists():
-                    raise Http404
         blocks = page.body_blocks
         revision = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk, status="published").order_by("-revision").first()
     assertions, anchors, visible = {}, {}, []
@@ -91,7 +147,8 @@ def page_data(page, actor, *, draft=False):
             anchors.update(block_anchors)
     return {"id": str(page.pk), "title": page.title, "status": revision.status if draft and revision else page.status,
         "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()), "anchors": list(anchors.values()),
-        "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions)}}
+        "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions),
+            "entities": [{"id":str(v.pk), "label":v.label, "kind":v.kind} for v in publication_entities(page, assertions)] if draft else []}}
 
 
 def validate_page_publication(page, actor):
@@ -131,19 +188,30 @@ def publish_page(page_id, revision_id, actor):
     blocks, current = page_content(page)
     if not current or current.pk != latest.pk:
         raise ValidationError("知识页草稿已变化，请重新预览再发布。")
+    statement_ids = [ref["id"] for block in blocks for ref in block.get("references", []) if ref.get("type") == "assertion"]
+    for entity in publication_entities(page, statement_ids):
+        publish_reviewed_identity(entity, actor)
     for block in blocks:
         for ref in block.get("references", []):
             if ref.get("type") == "assertion":
                 statement = get_object_or_404(m.Assertion.objects.select_for_update(), pk=ref["id"])
                 # Only an applied human-reviewed item may enter publication.
-                if not m.ChangeItem.objects.filter(application__id=str(statement.pk), decision="accepted").exists():
+                reviewed = m.ChangeItem.objects.filter(application__id=str(statement.pk), decision="accepted")
+                legacy_confirmed = statement.status == "published" and statement.origin.get("human_confirmation_preserved")
+                if not reviewed.exists() and not legacy_confirmed:
                     raise ValidationError("陈述尚未经过管理员审核保存。")
-                if not statement.evidence.exists():
+                citation_reviewed = (statement.source_quality == "human_citation" and reviewed.filter(changeset__origin="human").exists()
+                    and statement.sources.exclude(citation="").exists())
+                if not statement.evidence.exists() and not (citation_reviewed or legacy_confirmed):
                     raise ValidationError("陈述尚无可验证原文证据。")
                 for link in statement.evidence.select_related("anchor__document_revision__asset__edition"):
                     require_revision_access(link.anchor.document_revision, actor, editorial=False)
                 statement.status = "published"
                 statement.save(update_fields=["status", "updated_at"])
+                if statement.supersedes_id:
+                    m.Assertion.objects.filter(pk=statement.supersedes_id, status="published").update(status="superseded", updated_at=statement.updated_at)
+                    from catalog.services.knowledge_workspace import invalidate_source
+                    invalidate_source("assertion", statement.supersedes_id)
                 m.Entity.objects.filter(assertion_participations__assertion=statement, status="draft").update(status="published")
             elif ref.get("type") == "anchor":
                 anchor = get_object_or_404(m.EvidenceAnchor, pk=ref["id"])

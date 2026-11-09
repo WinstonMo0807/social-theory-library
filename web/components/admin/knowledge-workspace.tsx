@@ -12,6 +12,7 @@ import type { IssueBlock } from "@/lib/api/recommendation-issues.types";
 import { IssueTextEditor } from "./curation/issue-text-editor";
 import { KnowledgePageContent, type KnowledgePageData, type KnowledgeBlock } from "@/components/public/knowledge-page-content";
 import { EvidencePanel, KnowledgeNavigation, knowledgeCall, type LibrarySource, type SourceLocator } from "./knowledge-workbench";
+import { KnowledgeAssertionEditor, type EditableAssertion } from "./knowledge-assertion-editor";
 import s from "./knowledge-workbench.module.css";
 
 type Ref = { type: string; id: string; edition_id?: string };
@@ -20,7 +21,7 @@ type PageRow = { id: string; title: string; kind: string; status: string; has_dr
 type Workspace = KnowledgePageData & { kind: string; work_id?: string; entity_id?: string; public_url?: string; blocks: Block[]; block_hashes: Record<string, string>;
   dependencies: { block_id: string; source_type: string; source_id: string; stale: boolean }[]; references: (Ref & { title: string; locator?: SourceLocator; unavailable?: boolean })[];
   backlinks: { page_id: string; title: string; block_id: string }[]; revisions: { id: string; revision: number; status: string; created_at: string }[];
-  pending_changesets: { id: string; origin: string; status: string }[] };
+  assertion_hashes: Record<string, string>; pending_changesets: { id: string; origin: string; status: string }[] };
 const kinds: Record<string, string> = { work: "作品", person: "人物", concept: "概念", school: "理论流派", tradition: "理论传统", theory_school: "理论流派", topic: "主题", discipline: "学科", special: "专题" };
 const date = (value: string) => new Date(value).toLocaleString("zh-CN", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
@@ -32,6 +33,7 @@ export function KnowledgeWorkspace() {
   const [locator, setLocator] = useState<SourceLocator | null>(null), [evidenceOpen, setEvidenceOpen] = useState(false), [reason, setReason] = useState("");
   const [error, setError] = useState(""), [busy, setBusy] = useState(false), [notice, setNotice] = useState(""), [attempt, setAttempt] = useState(0), [submitted, setSubmitted] = useState("");
   const [entityQuery, setEntityQuery] = useState(""), [entities, setEntities] = useState<{ id: string; label: string; kind: string; definition?: string }[]>([]);
+  const [newAssertion, setNewAssertion] = useState(false);
   const request = useRef<{ signature: string; id: string } | null>(null), editor = useRef<HTMLDivElement>(null);
   const source = sources.find(v => v.revision_id === revision), current = blocks.find(v => v.id === selected);
   const dirty = useUnsavedForm(submitted ? data?.blocks || [] : blocks, data?.blocks || []);
@@ -49,7 +51,7 @@ export function KnowledgeWorkspace() {
   useEffect(() => {
     const c = new AbortController();
     void knowledgeCall<{ sources: LibrarySource[] }>(`/search/sources/${work || data?.work_id ? `?work_id=${work || data?.work_id}` : ""}`, undefined, c.signal)
-      .then(r => { setSources(r.sources); setRevision(old => old || r.sources[0]?.revision_id || ""); }).catch(e => { if (!c.signal.aborted) setError(e.message); });
+      .then(r => { setSources(r.sources); setRevision(old => old || (work || data?.work_id ? r.sources[0]?.revision_id : "") || ""); }).catch(e => { if (!c.signal.aborted) setError(e.message); });
     return () => c.abort();
   }, [work, data?.work_id]);
   useEffect(() => {
@@ -65,7 +67,7 @@ export function KnowledgeWorkspace() {
   function addReference(ref: Ref) { if (current) update({ references: [...(current.references || []).filter(v => v.id !== ref.id || v.type !== ref.type), ref] }); }
   async function openIdentity(body: { work_id?: string; entity_id?: string }) { await action(async () => { const r = await knowledgeCall<{ id: string }>("/knowledge/workspace/", body); router.push(`/admin/knowledge?page=${r.id}${revision ? `&revision=${revision}` : ""}`); }); }
   async function submit() {
-    if (!data || !revision) return;
+    if (!data) return;
     const original = new Map(data.blocks.map(v => [v.id, v])), after = new Set(blocks.map(v => v.id));
     const patches: Record<string, unknown>[] = blocks.filter(b => JSON.stringify(b) !== JSON.stringify(original.get(b.id))).map(b => ({ operation: original.has(b.id) ? "replace" : "add", block_id: b.id, base_hash: data.block_hashes[b.id], block: b, reason: reason || "人工编纂知识页" }));
     for (const block of data.blocks) if (!after.has(block.id)) patches.push({ operation: "delete", block_id: block.id, base_hash: data.block_hashes[block.id], reason: reason || "人工移除区块" });
@@ -77,7 +79,7 @@ export function KnowledgeWorkspace() {
     });
   }
   async function publish() {
-    if (!data?.revision_id || dirty || !await confirmAction(`发布《${data.title}》当前已保存的知识页修订？此操作也会发布该页引用且已审核保存的陈述。`, { title: "发布知识页", confirmLabel: "发布当前修订" })) return;
+    if (!data?.revision_id || dirty || !await confirmAction(`发布《${data.title}》当前已保存的知识页修订？此操作也会发布该页引用且已审核保存的陈述。${data.publication_scope?.entities.length ? `同时发布已审核的新身份：${data.publication_scope.entities.map(v => v.label).join("、")}。` : ""}`, { title: "发布知识页", confirmLabel: "发布当前修订" })) return;
     await action(async () => { await knowledgeCall(`/knowledge/pages/${pageId}/`, { revision_id: data.revision_id }); setAttempt(v => v + 1); setNotice("当前知识页已发布。"); });
   }
   async function exportMarkdown() {
@@ -104,12 +106,15 @@ export function KnowledgeWorkspace() {
         {entities.map(v => <button className={s.result} key={v.id} onClick={() => void openIdentity({ entity_id: v.id })}><span>{kinds[v.kind] || v.kind}</span><strong>{v.label}</strong><span>{v.definition || "打开该身份的知识页"}</span></button>)}
       </section>
     </> : !data ? !error && <p role="status" className={s.empty}>正在读取正文、来源与修订…</p> : <>
-      <div className={s.toolbar}><Link href="/admin/knowledge"><ArrowLeft size={15} />全部知识页</Link><button className={s.primary} disabled={busy || !dirty || !revision} onClick={() => void submit()}>提交修改并审核</button><button disabled={busy || dirty || data.status === "published" || !data.revision_id} onClick={() => void publish()}>发布已保存稿</button><button disabled={busy || dirty || !data.revision_id} onClick={() => void exportMarkdown()}>导出 Markdown</button><button className={s.mobileOnly} onClick={() => setEvidenceOpen(true)}><PanelRightOpen size={16} />核对证据</button></div>
+      <div className={s.toolbar}><Link href="/admin/knowledge"><ArrowLeft size={15} />全部知识页</Link><button className={s.primary} disabled={busy || !dirty} onClick={() => void submit()}>提交修改并审核</button><button disabled={busy || dirty || data.status === "published" || !data.revision_id} onClick={() => void publish()}>发布已保存稿</button><button disabled={busy || dirty || !data.revision_id} onClick={() => void exportMarkdown()}>导出 Markdown</button><button className={s.mobileOnly} onClick={() => setEvidenceOpen(true)}><PanelRightOpen size={16} />核对证据</button></div>
       <div className={s.workspace}>
         <aside className={s.rail}><h2>页面区块</h2>{blocks.map((b, i) => <button key={b.id} aria-current={selected === b.id} onClick={() => setSelected(b.id)}>{i + 1}. {b.text.slice(0, 42) || "未填写正文"}<small>{b.human_edited ? "人工编辑" : "来源编纂"}{data.dependencies.some(d => d.block_id === b.id && d.stale) ? " · 来源有更新" : ""}</small></button>)}<button onClick={addBlock}><Plus size={15} />新增区块</button>
           {!!data.pending_changesets.length && <><h2>待审核修改</h2>{data.pending_changesets.map(v => <Link key={v.id} href={`/admin/intelligence?changeset=${v.id}`}>{v.origin === "human" ? "人工编纂" : "编纂建议"} →</Link>)}</>}
         </aside>
         <main className={s.main}>
+          <div className={s.toolbar}><button onClick={() => setNewAssertion(v => !v)}>{newAssertion ? "收起陈述编辑" : "新增学术陈述"}</button></div>
+          {newAssertion && <KnowledgeAssertionEditor key={`new-${data.id}`} pageId={data.id} title={data.title || ""} />}
+          {data.assertions.filter(a => current?.references?.some(r => r.type === "assertion" && r.id === a.id)).map(a => <KnowledgeAssertionEditor key={a.id} pageId={data.id} title={data.title || ""} initial={a as EditableAssertion} baseHash={data.assertion_hashes[a.id]} />)}
           {current ? <div ref={editor}><div className={s.sectionBar}><h2>编辑区块</h2><button onClick={() => { setSubmitted(""); setBlocks(old => old.filter(v => v.id !== current.id)); setSelected(""); }}>移除区块</button></div>
             {current.type === "analysis" && <label>展示方式<select value={current.style || "paragraph"} onChange={e => update({ style: e.target.value as "paragraph" | "heading", heading_level: e.target.value === "heading" ? 1 : undefined })}><option value="paragraph">解释正文</option><option value="heading">章节标题</option></select></label>}
             <IssueTextEditor key={current.id} block={{ ...current, references: undefined }} label="区块正文" onChange={patch => update(patch as Partial<Block>)} maxLength={6000} />
@@ -122,8 +127,9 @@ export function KnowledgeWorkspace() {
             <p className={s.muted}>{data.kind === "work" ? "作品页 / 研究资料 / 知识导读" : `${kinds[data.kind] || data.kind}详情 / 知识导读`}</p>
             <KnowledgePageContent page={{ ...data, anchors: [...(data.anchors || []), ...(availableAnchor ? [{ anchor_id: availableAnchor.anchor_id, locator: availableAnchor }] : [])], blocks: perspective === "current" ? data.blocks : blocks }} renderBlock={(block, content) => <div key={block.id} className={block.id === selected ? s.selectedBlock : undefined} role="button" tabIndex={0} aria-label="编辑此区块" onClick={() => { setSelected(block.id); editor.current?.scrollIntoView({ behavior: "instant", block: "nearest" }); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(block.id); } }}>{content}</div>} />
           </section>
-          <div className={s.toolbar}><label>本次依据的正文修订<select value={revision} onChange={e => setRevision(e.target.value)}><option value="">选择来源</option>{sources.map(v => <option key={v.revision_id} value={v.revision_id}>{v.title} · 修订 {v.revision_number}</option>)}</select></label></div>
+          <div className={s.toolbar}><label>本次依据的正文修订<select value={revision} onChange={e => setRevision(e.target.value)}><option value="">人工编纂（无指定正文修订）</option>{sources.map(v => <option key={v.revision_id} value={v.revision_id}>{v.title} · 修订 {v.revision_number}</option>)}</select></label></div>
           <label>修改说明<input value={reason} onChange={e => setReason(e.target.value)} placeholder="说明这次增补或修改的依据" /></label>
+          {!!data.publication_scope?.entities.length && <p className={s.notice}>本次发布还包含已审核的新身份：{data.publication_scope.entities.map(v => v.label).join("、")}。</p>}
           <details><summary>引用关系与修订</summary>{data.backlinks.map(v => <p key={`${v.page_id}:${v.block_id}`}><Link href={`/admin/knowledge?page=${v.page_id}`}>{v.title}</Link> 引用了此页</p>)}{!data.backlinks.length && <p className={s.muted}>尚无其他知识页引用此页。</p>}{data.dependencies.filter(v => v.stale).map((v, i) => <p key={i} className={s.notice}>区块 {blocks.findIndex(b => b.id === v.block_id) + 1} 的 {v.source_type} 来源有变化，请核对后更新。</p>)}{data.revisions.map(v => <p className={s.muted} key={v.id}>修订 {v.revision} · {v.status === "published" ? "已发布" : "草稿"} · {date(v.created_at)}</p>)}</details>
         </main>
         <EvidencePanel source={source} locator={locator} open={evidenceOpen} onClose={() => setEvidenceOpen(false)} />

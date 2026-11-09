@@ -91,6 +91,14 @@ def resolve_target(raw, *, public=False):
             revision = obj.document_revision
             eligible = public_editions(require_fulltext=True).filter(pk=revision.asset.edition_id).exists() and revision.catalog_publication_revisions.filter(status__in=["active", "superseded"], fulltext_ready=True).exists()
             title = revision.asset.edition.work.title
+        elif kind == "assertion":
+            from catalog.services.knowledge_public import assertion_public
+            eligible = assertion_public(obj)
+            title = obj.text
+        elif kind == "entity":
+            from catalog.services.knowledge_public import public_entities
+            eligible = public_entities().filter(pk=obj.pk).exists()
+            title = obj.label
         else:
             eligible = obj.status == "published"
             title = getattr(obj, "title", getattr(obj, "label", getattr(obj, "text", "")))

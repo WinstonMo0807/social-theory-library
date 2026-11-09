@@ -15,7 +15,7 @@ export type GraphEvidence = {
 export type GraphEdge = {
   id: string; entity_id: string; model: string; source: string; target: string; relation_type: string; relation_label: string;
   direction: "directed" | "bidirectional" | "undirected"; description: string; evidence_source: string;
-  status: string; evidence: GraphEvidence[]; evidence_truncated: boolean; source_status: "available" | "citation_only" | "missing" | "unverified";
+  status: string; evidence: GraphEvidence[]; evidence_truncated: boolean; conditions?: Record<string, string>; sources?: { work_id: string | null; work__title: string | null; document_revision_id: string | null; citation: string; attribution__label: string | null }[]; source_quality?: string; source_status: "login_required" | "available" | "citation_only" | "missing" | "unverified";
 };
 export type GraphViewState = {
   center_kind: GraphKind; center: string; depth: number; limit: number; edge_limit: number;
@@ -36,7 +36,7 @@ export type PublicTheoryGraph = {
 };
 export type GraphParams = Record<string, string>;
 export type GraphSearchParams = Record<string, string | string[] | undefined>;
-export const graphFilterKeys = ["center", "center_kind", "depth", "limit", "edge_limit", "node_type", "relation_type", "discipline", "start_year", "end_year", "has_collection", "selected_node", "works_page", "include_candidates"] as const;
+export const graphFilterKeys = ["center", "center_kind", "depth", "limit", "edge_limit", "node_type", "relation_type", "discipline", "start_year", "end_year", "has_collection", "selected_node", "works_page", "include_candidates", "source_work", "source_revision", "assertion_direction", "context"] as const;
 export const graphViewKeys = ["selected_edge", "view", "zoom", "offset_x", "offset_y"] as const;
 export const graphKindLabels: Record<GraphKind, string> = { knowledge_node: "理论与概念", scholar: "学者", topic: "主题", subdiscipline: "子学科" };
 export const graphNodeLabels: Record<string, string> = { theory_tradition: "理论流派", concept: "核心概念", debate: "学术争论", research_problem: "研究问题", subdiscipline: "子学科" };

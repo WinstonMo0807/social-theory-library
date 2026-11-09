@@ -42,7 +42,7 @@ def source_value(kind, key):
             row["participants"] = list(m.AssertionParticipant.objects.filter(assertion_id=key).order_by("id")
                 .values("role", "entity_id", "work_id", "edition_id"))
             row["sources"] = list(m.AssertionSource.objects.filter(assertion_id=key).order_by("id")
-                .values("work_id", "edition_id", "document_revision_id", "node_id", "attribution_id", "expression"))
+                .values("work_id", "edition_id", "document_revision_id", "node_id", "attribution_id", "expression", "citation"))
             row["evidence"] = list(m.AssertionEvidence.objects.filter(assertion_id=key).order_by("id")
                 .values("anchor_id", "stance", "note"))
     elif kind == "knowledge_page":
@@ -91,7 +91,8 @@ def reference_sources(ref):
             return result
         result += [("entity", value) for value in statement.participants.exclude(entity=None).values_list("entity_id", flat=True)]
         for source in statement.sources.all():
-            result.append(("work", source.work_id))
+            if source.work_id:
+                result.append(("work", source.work_id))
             if source.document_revision_id:
                 result.append(("document_revision", source.document_revision_id))
         for anchor in m.EvidenceAnchor.objects.filter(assertion_links__assertion=statement):
@@ -218,6 +219,7 @@ def page_workspace(page, actor):
             except (Http404, ValidationError, m.EvidenceAnchor.DoesNotExist):
                 references[identity] = {**ref, "title": "来源当前不可用", "unavailable": True}
     data["references"] = list(references.values())
+    data["assertion_hashes"] = {v["id"]: source_hash("assertion", v["id"]) for v in data.get("assertions", [])}
     data["public_url"] = public_page_url(page)
     return data
 
@@ -270,7 +272,56 @@ def submit_page_changes(page, revision, patches, actor, *, request_id):
         payload = {k: patch[k] for k in ("operation", "base_hash", "block", "reason") if k in patch}
         payload.update(page_id=str(page.pk), block_id=block_id, human_edited=True)
         proposals.append({"id": str(uuid5(request_id, str(i))), "kind": "wiki_patch", "payload": payload, "dependencies": []})
-    return submit_draft(revision, proposals, actor, request_id=request_id, origin="human")
+    return submit_draft(revision, proposals, actor, request_id=request_id, origin="human",
+        subject_work=page.work, subject_entity=page.entity)
+
+
+def submit_page_assertion(page, payload, actor, *, request_id, revision=None):
+    """Human citation edits stay drafts and use the identical ChangeSet path.
+
+    A citation is explicitly distinct from a verified passage. Automated and
+    external producers cannot use this manual-only entry to waive evidence.
+    """
+    from catalog.services.intelligence_changes import submit_draft, uuid_value
+    from catalog.services.knowledge_sources import create_anchor, require_revision_access
+    require_editor(actor)
+    key = uuid_value(request_id)
+    if not isinstance(payload, dict) or not str(payload.get("text", "")).strip():
+        raise ValidationError("请填写陈述内容。")
+    if revision:
+        require_revision_access(revision, actor, editorial=True)
+    evidence = payload.get("evidence", [])
+    if not isinstance(evidence, list) or len(evidence) > 50:
+        raise ValidationError("每条陈述最多引用50处原文。")
+    if evidence and not revision and any(not v.get("anchor_id") for v in evidence):
+        raise ValidationError("引用原文须指定正文修订。")
+    for value in evidence:
+        if not isinstance(value, dict) or value.get("stance") not in {"supports", "opposes", "qualifies", "context"}:
+            raise ValidationError("请标明证据作用。")
+        if value.get("anchor_id"):
+            anchor = m.EvidenceAnchor.objects.get(pk=uuid_value(value["anchor_id"]))
+            require_revision_access(anchor.document_revision, actor, editorial=True)
+        else:
+            create_anchor(revision, value.get("segments"))
+    if not evidence and not str(payload.get("source_citation", "")).strip():
+        raise ValidationError("请填写可供审核的文献出处，或选择并校验馆藏原文。")
+    statement_id, patch_id, block_id = [str(uuid5(key, name)) for name in ("assertion", "wiki-patch", "block")]
+    blocks, _ = page_content(page)
+    supersedes = payload.get("supersedes_id")
+    previous_block = next((b for b in blocks if any(r.get("type") == "assertion" and r.get("id") == supersedes
+        for r in b.get("references", []))), None) if supersedes else None
+    if supersedes and previous_block is None:
+        raise ValidationError("原陈述不属于此知识页，请从对应知识页修改。")
+    block_id = previous_block["id"] if previous_block else block_id
+    block = {**(previous_block or {"type": "analysis"}), "id": block_id, "text": payload["text"],
+        "references": [*([r for r in previous_block.get("references", []) if r.get("id") != supersedes] if previous_block else []),
+            {"type": "assertion", "id": {"change_item": statement_id}}]}
+    items = [{"id": statement_id, "kind": "assertion", "payload": payload, "dependencies": []},
+        {"id": patch_id, "kind": "wiki_patch", "dependencies": [statement_id], "payload": {
+            "page_id": str(page.pk), "operation": "replace" if previous_block else "add", "block_id": block_id,
+            "base_hash": digest(previous_block) if previous_block else None, "human_edited": True,
+            "reason": "人工编辑有来源的学术陈述", "block": block}}]
+    return submit_draft(revision, items, actor, request_id=key, origin="human", subject_work=page.work, subject_entity=page.entity)
 
 
 def submit_assertion_draft(revision, payload, actor, *, request_id, origin="human"):

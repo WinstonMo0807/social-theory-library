@@ -10,14 +10,15 @@ import type { IssueBlock } from "@/lib/api/recommendation-issues.types";
 export type KnowledgeBlock = Omit<Partial<IssueBlock>, "references" | "target"> & { id: string; text?: string; references?: { type: string; id: string; edition_id?: string }[] };
 export type KnowledgeAssertion = {
   id: string; text: string; conditions?: Record<string, string>;
-  sources: { work__title: string; attribution__label: string | null; expression: string }[];
+  sources: { work__title: string; attribution__label: string | null; expression: string; citation?: string }[];
   evidence: { anchor_id: string; stance: string; locator?: {
-    reader_url: string; segments: { exact: string; page_number: number; printed_label?: string }[];
+    reader_url: string; document_revision_id?: string; segments: { exact: string; page_number: number; printed_label?: string; start?: number; end?: number }[];
   } }[];
 };
 export type KnowledgePageData = {
   id: string; title?: string; blocks: KnowledgeBlock[]; assertions: KnowledgeAssertion[];
   revision_id?: string | null; status?: string;
+  publication_scope?: { entities: { id: string; label: string; kind: string }[] };
   anchors?: { anchor_id: string; locator?: { reader_url: string; segments: { exact: string; page_number: number; printed_label?: string }[] } }[];
 };
 
@@ -45,7 +46,8 @@ export function KnowledgeAssertionContent({ assertion }: { assertion: KnowledgeA
     <p className="work-curated-proposition">{assertion.text}</p>
     <p className="work-curated-note">{assertion.sources.map(s => [s.attribution__label, s.work__title].filter(Boolean).join(" · ")).join("；")}</p>
     {assertion.conditions && Object.values(assertion.conditions).some(Boolean) && <p className="work-curated-note">{Object.entries(assertion.conditions).filter(([, value]) => value).map(([key, value]) => `${({ time: "时间", region: "地区", population: "人群", research_object: "研究对象", concept_usage: "概念用法", other: "其他限定" } as Record<string, string>)[key] || key}：${typeof value === "string" ? value : JSON.stringify(value)}`).join("；")}</p>}
-    <section data-content-section className="work-curated-evidence"><header data-section-heading>查看依据 <span>{assertion.evidence.length} 条馆藏原文</span></header><div>
+    <section data-content-section className="work-curated-evidence"><header data-section-heading>查看依据 <span>{assertion.evidence.length ? `${assertion.evidence.length} 条馆藏原文` : "文献出处 · 未核验精确原文"}</span></header><div>
+      {assertion.sources.filter(s => s.citation).map((source, i) => <p key={i}>{source.citation}</p>)}
       {assertion.evidence.map(e => e.locator ? <blockquote key={`${e.anchor_id}:${e.stance}`}><small>{({ supports: "支持", opposes: "反对", qualifies: "限定", context: "语境" } as Record<string, string>)[e.stance] || e.stance}</small>
         <p>{e.locator.segments.map(s => s.exact).join("\n")}</p><footer><span>{e.locator.segments.map(s => s.printed_label ? `${s.printed_label} · PDF 第 ${s.page_number} 页` : `PDF 第 ${s.page_number} 页`).join("、")}</span><Link href={e.locator.reader_url}>查看原文 <ArrowRight size={14} /></Link></footer>
       </blockquote> : <p key={e.anchor_id}><Link href={`/login?next=${encodeURIComponent(typeof window === "undefined" ? "/home" : window.location.pathname)}`}>登录后查看原文依据</Link></p>)}

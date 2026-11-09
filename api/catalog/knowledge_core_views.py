@@ -196,7 +196,8 @@ class EntitiesView(APIView):
         if request.query_params.get("preview") == "1":
             require_editor(request.user)
         else:
-            rows = rows.filter(status="published")
+            from catalog.services.knowledge_public import public_entities
+            rows = rows.filter(pk__in=public_entities().values("pk"))
         query = request.query_params.get("q", "")[:300]
         if query:
             rows = rows.filter(label__icontains=query)
@@ -214,7 +215,8 @@ class EntityKnowledgeView(APIView):
                   "discipline": "discipline_id", "subdiscipline": "subdiscipline_id"}
         if source_type not in fields:
             raise Http404
-        page = KnowledgePage.objects.filter(entity__status="published", entity__merged_into__isnull=True,
+        from catalog.services.knowledge_public import public_entities
+        page = KnowledgePage.objects.filter(entity_id__in=public_entities().values("pk"),
             status="published", **{f"entity__{fields[source_type]}": source_id}).first()
         return Response({"page": page_data(page, request.user) if page else None})
 
@@ -258,8 +260,22 @@ class KnowledgeWorkspaceView(APIView):
         from catalog.services.knowledge_workspace import submit_page_changes
         from catalog.services.intelligence_queries import changeset_data
         page = get_object_or_404(KnowledgePage, pk=page_id)
-        revision = get_object_or_404(DocumentRevision, pk=serializers.UUIDField().run_validation(request.data.get("document_revision_id")))
+        revision = get_object_or_404(DocumentRevision, pk=serializers.UUIDField().run_validation(request.data["document_revision_id"])) if request.data.get("document_revision_id") else None
         result = submit_page_changes(page, revision, request.data.get("patches"), request.user, request_id=request.data.get("request_id"))
+        return Response(changeset_data(result, request.user), status=201)
+
+
+class PageAssertionDraftView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def post(self, request, page_id):
+        from rest_framework import serializers
+        from catalog.services.knowledge_workspace import submit_page_assertion
+        from catalog.services.intelligence_queries import changeset_data
+        page = get_object_or_404(KnowledgePage, pk=page_id)
+        revision = get_object_or_404(DocumentRevision, pk=serializers.UUIDField().run_validation(request.data["document_revision_id"])) if request.data.get("document_revision_id") else None
+        result = submit_page_assertion(page, request.data.get("assertion"), request.user,
+            request_id=request.data.get("request_id"), revision=revision)
         return Response(changeset_data(result, request.user), status=201)
 
 
@@ -267,6 +283,7 @@ urlpatterns = [
     path("anchors/verify/", VerifyAnchorView.as_view()),
     path("workspace/", KnowledgeDirectoryView.as_view()),
     path("pages/<uuid:page_id>/workspace/", KnowledgeWorkspaceView.as_view()),
+    path("pages/<uuid:page_id>/assertions/draft/", PageAssertionDraftView.as_view()),
     path("entities/", EntitiesView.as_view()),
     path("objects/<str:source_type>/<uuid:source_id>/", EntityKnowledgeView.as_view()),
     path("assertions/<uuid:assertion_id>/", AssertionView.as_view()),

@@ -49,21 +49,32 @@ def uuid_value(raw):
         raise ValidationError("缺少合法的请求或对象ID。")
 
 
-@transaction.atomic
-def submit_draft(revision, proposals, actor, *, request_id, origin="external", run=None):
+def require_changeset_access(changeset, actor):
     require_editor(actor)
-    require_revision_access(revision, actor, editorial=True)
+    if changeset.document_revision_id:
+        require_revision_access(changeset.document_revision, actor, editorial=True)
+
+
+@transaction.atomic
+def submit_draft(revision, proposals, actor, *, request_id, origin="external", run=None, subject_work=None, subject_entity=None):
+    require_editor(actor)
+    if revision:
+        require_revision_access(revision, actor, editorial=True)
+    elif origin != "human" or not (subject_work or subject_entity) or run:
+        raise ValidationError("自动分析和外部代理草稿必须指定可核验的正文修订。")
+    scope_key = str(revision.pk) if revision else f"work:{subject_work.pk}" if subject_work else f"entity:{subject_entity.pk}"
     request_id = uuid_value(request_id)
     if not isinstance(proposals, list) or len(proposals) > 2000:
         raise ValidationError("每份变更集最多2000项建议。")
-    fingerprint = digest([str(revision.pk), proposals, origin])
+    fingerprint = digest([scope_key, proposals, origin])
     previous = m.ChangeSet.objects.filter(request_id=request_id).first()
     if previous:
         if previous.input_hash != fingerprint or previous.created_by_id != actor.pk:
             raise ValidationError("请求ID已用于其他草稿。")
         return previous
     changeset = m.ChangeSet.objects.create(document_revision=revision, created_by=actor,
-        request_id=request_id, input_hash=fingerprint, origin=origin, run=run)
+        request_id=request_id, input_hash=fingerprint, origin=origin, run=run,
+        subject_work=subject_work, subject_entity=subject_entity)
     keys = [str(uuid_value(item.get("id"))) for item in proposals]
     if len(keys) != len(set(keys)) or m.ChangeItem.objects.filter(pk__in=keys).exists():
         raise ValidationError("建议ID重复。")
@@ -79,7 +90,7 @@ def submit_draft(revision, proposals, actor, *, request_id, origin="external", r
         if references-set(keys) or key in references:
             raise ValidationError("建议中的身份引用不属于当前变更集。")
         dependencies=sorted(set(dependencies)|references)
-        item_hash = proposal_fingerprint(revision.pk, kind, payload, proposal_map)
+        item_hash = proposal_fingerprint(scope_key, kind, payload, proposal_map)
         if item_hash in seen:
             raise ValidationError("变更集中存在内容和来源完全相同的建议，请保留一项并调整依赖。")
         seen.add(item_hash)
@@ -117,7 +128,8 @@ def refresh_fingerprints(changeset):
     """Also updates dependent meanings after an editor changes an identity."""
     items = list(changeset.items.select_for_update().all())
     proposals = {str(v.pk):{"kind":v.kind,"payload":v.payload} for v in items}
-    values = {v.pk:proposal_fingerprint(changeset.document_revision_id,v.kind,v.payload,proposals) for v in items}
+    scope_key = str(changeset.document_revision_id) if changeset.document_revision_id else f"work:{changeset.subject_work_id}" if changeset.subject_work_id else f"entity:{changeset.subject_entity_id}"
+    values = {v.pk:proposal_fingerprint(scope_key,v.kind,v.payload,proposals) for v in items}
     if len(set(values.values())) != len(values):
         raise ValidationError("修改后出现内容和来源完全重复的建议，请保留其中一项。")
     # Temporary, transaction-local keys permit exchanging two valid meanings.
@@ -131,7 +143,7 @@ def refresh_fingerprints(changeset):
 def review(changeset_id, decisions, actor, *, expected_version):
     require_editor(actor)
     changeset = m.ChangeSet.objects.select_for_update().get(pk=changeset_id)
-    require_revision_access(changeset.document_revision, actor, editorial=True)
+    require_changeset_access(changeset, actor)
     if changeset.version != expected_version:
         raise ValidationError({"conflict": "审核工作区已变化，请刷新；已保存决定仍保留。"})
     if not isinstance(decisions, list) or not 1 <= len(decisions) <= 2000:
@@ -197,7 +209,7 @@ def _groups(items):
 def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
     require_editor(actor)
     changeset = m.ChangeSet.objects.select_for_update().get(pk=changeset_id)
-    require_revision_access(changeset.document_revision, actor, editorial=True)
+    require_changeset_access(changeset, actor)
     selected = sorted(set(str(uuid_value(v)) for v in selected_ids))
     request_id = uuid_value(request_id)
     fingerprint = digest([str(changeset.pk), selected, expected_version])
@@ -233,7 +245,8 @@ def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
                         obj = create_entity(payload, actor)
                         result = {"type": "entity", "id": str(obj.pk), "status": obj.status}
                     elif item.kind == "assertion":
-                        obj = create_assertion(payload, changeset.document_revision, actor)
+                        obj = create_assertion(payload, changeset.document_revision, actor,
+                            allow_citation=changeset.origin == "human", subject_work=changeset.subject_work)
                         result = {"type": "assertion", "id": str(obj.pk), "status": obj.status}
                     elif item.kind == "alias":
                         entity = m.Entity.objects.get(pk=payload["entity_id"])
