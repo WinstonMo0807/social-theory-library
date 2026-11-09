@@ -257,3 +257,17 @@ class KnowledgeLegacyMapping(UUIDTimeStampedModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["source_type", "source_id", "target_type"], name="knowledge_legacy_mapping_unique")]
+
+
+class KnowledgeBlockDependency(UUIDTimeStampedModel):
+    """Rebuildable current-page reference projection; never another page body."""
+    page = models.ForeignKey(KnowledgePage, on_delete=models.CASCADE, related_name="dependencies")
+    block_id = models.UUIDField()
+    source_type = models.CharField(max_length=32)
+    source_id = models.UUIDField()
+    source_hash = models.CharField(max_length=64)
+    stale = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["page", "block_id", "source_type", "source_id"], name="knowledge_block_dependency_unique")]
+        indexes = [models.Index(fields=["source_type", "source_id"], name="knowledge_dep_source_idx")]

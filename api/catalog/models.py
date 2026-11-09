@@ -6618,6 +6618,6 @@ from .knowledge_models import (  # noqa: E402,F401
     RevisionPage, DocumentStructure, DocumentNode, DocumentNodeSegment,
     DocumentNodeReference, EvidenceAnchor, EvidenceSegment, Entity, EntityAlias,
     EntityIdentifier, Assertion, AssertionParticipant, AssertionSource,
-    AssertionEvidence, KnowledgePage, KnowledgeLegacyMapping,
+    AssertionEvidence, KnowledgePage, KnowledgeLegacyMapping, KnowledgeBlockDependency,
 )
 from .intelligence_models import CurationRun, CurationArtifact, ChangeSet, ChangeItem, ChangeReceipt  # noqa: E402,F401

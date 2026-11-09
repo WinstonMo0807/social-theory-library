@@ -15,6 +15,7 @@ class Command(BaseCommand):
         parser.add_argument("--identities", action="store_true")
         parser.add_argument("--claims", action="store_true")
         parser.add_argument("--relations", action="store_true")
+        parser.add_argument("--page-dependencies", action="store_true")
         parser.add_argument("--after", default="")
         parser.add_argument("--batch-size", type=int, default=100)
 
@@ -22,6 +23,17 @@ class Command(BaseCommand):
         size = options["batch_size"]
         if not 1 <= size <= 500:
             raise CommandError("batch-size须为1至500")
+        if options["page_dependencies"]:
+            from catalog.services.knowledge_workspace import sync_dependencies
+            rows = m.KnowledgePage.objects.order_by("id")
+            if options["after"]:
+                rows = rows.filter(id__gt=options["after"])
+            last, count = None, 0
+            for page in rows[:size]:
+                # Preserve existing baselines and stale flags on repeated batches.
+                sync_dependencies(page, changed_blocks=set())
+                last, count = str(page.pk), count + 1
+            self.stdout.write(str({"page_dependencies": count, "next_after": last}))
         if options["revision"]:
             revision = m.DocumentRevision.objects.get(pk=options["revision"])
             structure = build_structure(revision)

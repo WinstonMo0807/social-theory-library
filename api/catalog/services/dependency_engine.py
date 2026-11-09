@@ -411,6 +411,8 @@ def record_canonical_change(
         correlation_id=_uuid(correlation_id) if correlation_id else uuid.uuid4(),
         idempotency_key=idempotency_key,
     )
+    from catalog.services.knowledge_workspace import invalidate_source
+    invalidate_source(object_type, object_id)
     if resolve:
         _resolve_locked(event)
     return event

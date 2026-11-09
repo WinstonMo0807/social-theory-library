@@ -159,7 +159,38 @@ class AssertionView(APIView):
         return Response(assertion_data(get_object_or_404(Assertion, pk=assertion_id), request.user, draft=request.query_params.get("preview") == "1"))
 
 
+class KnowledgeDirectoryView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def get(self, request):
+        from rest_framework import serializers
+        from catalog.services.knowledge_workspace import page_directory
+        offset = serializers.IntegerField(min_value=0).run_validation(request.query_params.get("offset", 0))
+        limit = serializers.IntegerField(min_value=1, max_value=100).run_validation(request.query_params.get("limit", 30))
+        return Response(page_directory(request.user, query=request.query_params.get("q", "")[:300],
+            kind=request.query_params.get("kind", ""), state=request.query_params.get("state", ""), offset=offset, limit=limit))
+
+
+class KnowledgeWorkspaceView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def get(self, request, page_id):
+        from catalog.services.knowledge_workspace import page_workspace
+        return Response(page_workspace(get_object_or_404(KnowledgePage, pk=page_id), request.user))
+
+    def post(self, request, page_id):
+        from rest_framework import serializers
+        from catalog.services.knowledge_workspace import submit_page_changes
+        from catalog.services.intelligence_queries import changeset_data
+        page = get_object_or_404(KnowledgePage, pk=page_id)
+        revision = get_object_or_404(DocumentRevision, pk=serializers.UUIDField().run_validation(request.data.get("document_revision_id")))
+        result = submit_page_changes(page, revision, request.data.get("patches"), request.user, request_id=request.data.get("request_id"))
+        return Response(changeset_data(result, request.user), status=201)
+
+
 urlpatterns = [
+    path("workspace/", KnowledgeDirectoryView.as_view()),
+    path("pages/<uuid:page_id>/workspace/", KnowledgeWorkspaceView.as_view()),
     path("entities/", EntitiesView.as_view()),
     path("assertions/<uuid:assertion_id>/", AssertionView.as_view()),
     path("pages/<uuid:page_id>/", KnowledgePageView.as_view()),

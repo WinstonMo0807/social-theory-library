@@ -169,9 +169,14 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     require_editor(actor)
     if payload.get("page_id"):
         page = m.KnowledgePage.objects.select_for_update().get(pk=payload["page_id"])
-    else:
+    elif payload.get("entity_id"):
+        entity = m.Entity.objects.select_for_update().get(pk=payload["entity_id"], merged_into__isnull=True)
+        page, _ = m.KnowledgePage.objects.get_or_create(entity=entity, defaults={"slug": f"entity-{entity.pk}", "title": entity.label})
+    elif payload.get("work_id"):
         work = m.Work.objects.select_for_update().get(pk=payload["work_id"])
         page, _ = m.KnowledgePage.objects.get_or_create(work=work, defaults={"slug":f"work-{work.pk}","title":work.title})
+    else:
+        raise ValidationError("知识页修改须指定已有页面、作品或实体。")
     blocks, _ = page_content(page)
     by_id = {b["id"]: b for b in blocks}
     operation, key = payload.get("operation"), payload.get("block_id")
@@ -191,9 +196,13 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     else:
         blocks = [b for b in blocks if b["id"] != key]
     from catalog.services.editorial_revision import create_editorial_revision
-    return create_editorial_revision(target_type="knowledge_page", target_id=page.pk,
+    revision = create_editorial_revision(target_type="knowledge_page", target_id=page.pk,
         patch={"body_blocks": blocks}, actor=actor, idempotency_key=request_key,
         change_note=payload.get("reason", "审核知识页局部修改"))
+    from catalog.services.knowledge_workspace import sync_dependencies, invalidate_source
+    sync_dependencies(page, blocks, changed_blocks={str(key)})
+    invalidate_source("knowledge_page", page.pk)
+    return revision
 
 
 def export_page(page, actor, *, draft=False):
