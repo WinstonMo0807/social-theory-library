@@ -16,7 +16,8 @@ export type KnowledgeAssertion = {
   } }[];
 };
 export type KnowledgePageData = {
-  id: string; title?: string; blocks: KnowledgeBlock[]; assertions: KnowledgeAssertion[];
+  id: string; title?: string; scope?: string; blocks: KnowledgeBlock[]; assertions: KnowledgeAssertion[];
+  references?: { type: string; id: string; title: string; href?: string | null; work_url?: string; edition_label?: string; unavailable?: boolean }[];
   revision_id?: string | null; status?: string;
   publication_scope?: { withdrawals?: { id: string; text: string; reason: string }[]; entities: { id: string; label: string; kind: string }[] };
   anchors?: { anchor_id: string; locator?: { reader_url: string; segments: { exact: string; page_number: number; printed_label?: string }[] } }[];
@@ -24,16 +25,21 @@ export type KnowledgePageData = {
 
 // The editor supplies the same content to this renderer, without fetching or publishing it.
 export function KnowledgePageContent({ page, renderBlock }: {
-  page: Pick<KnowledgePageData, "blocks" | "assertions" | "anchors">;
+  page: Pick<KnowledgePageData, "blocks" | "assertions" | "anchors" | "references">;
   renderBlock?: (block: KnowledgeBlock, content: ReactNode) => ReactNode;
 }) {
   return <section className="detail-section work-curated-claims"><SectionHeading title="知识导读" />
     {page.blocks.map(block => {
       const anchors = (page.anchors || []).filter(a => block.references?.some(r => r.type === "anchor" && r.id === a.anchor_id));
       const assertions = page.assertions.filter(a => block.references?.some(r => r.type === "assertion" && r.id === a.id));
+      const references = page.references?.filter(r => !["anchor", "assertion"].includes(r.type) && block.references?.some(v => v.type === r.type && v.id === r.id)) || [];
       const repeated = assertions.length === 1 && block.text?.trim() === assertions[0].text.trim();
       const content = <div key={block.id}>{!repeated && <IssueBlockView block={{ ...block, type: block.type || "analysis", text: block.text || "", references: undefined }} />}
         {!!assertions.length && <div className="work-curated-claim-list">{assertions.map(assertion => <KnowledgeAssertionContent key={assertion.id} assertion={assertion} />)}</div>}
+        {!!references.length && <details className="work-curated-evidence"><summary>相关资料 · {references.length} 项</summary>{references.map(ref => {
+          const href = ref.href || ref.work_url || "";
+          return <p key={`${ref.type}:${ref.id}`}>{!ref.unavailable && /^\/(?!\/)/.test(href) ? <Link href={href}>{ref.title}</Link> : ref.title}{ref.edition_label ? ` · ${ref.edition_label}` : ""}</p>;
+        })}</details>}
         {!!anchors.length && <details className="work-curated-evidence"><summary>原文依据 · {anchors.length} 处</summary>{anchors.map(a => a.locator ? <blockquote key={a.anchor_id}><p style={{ whiteSpace: "pre-wrap" }}>{a.locator.segments.map(v => v.exact).join("\n")}</p><footer><span>{a.locator.segments.map(v => v.printed_label ? `${v.printed_label} · PDF ${v.page_number}` : `PDF ${v.page_number}`).join("、")}</span> <Link href={a.locator.reader_url}>查看原文 <ArrowRight size={14} /></Link></footer></blockquote> : <p key={a.anchor_id}><Link href={`/login?next=${encodeURIComponent(typeof window === "undefined" ? "/home" : window.location.pathname)}`}>登录后查看原文依据</Link></p>)}</details>}
       </div>;
       return renderBlock ? renderBlock(block, content) : content;

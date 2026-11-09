@@ -56,13 +56,13 @@ def require_changeset_access(changeset, actor):
 
 
 @transaction.atomic
-def submit_draft(revision, proposals, actor, *, request_id, origin="external", run=None, subject_work=None, subject_entity=None):
+def submit_draft(revision, proposals, actor, *, request_id, origin="external", run=None, subject_work=None, subject_entity=None, subject_page=None):
     require_editor(actor)
     if revision:
         require_revision_access(revision, actor, editorial=True)
-    elif origin not in {"human", "legacy_candidate"} or not (subject_work or subject_entity) or run:
+    elif origin not in {"human", "legacy_candidate"} or not (subject_work or subject_entity or subject_page) or run:
         raise ValidationError("自动分析和外部代理草稿必须指定可核验的正文修订。")
-    scope_key = str(revision.pk) if revision else f"work:{subject_work.pk}" if subject_work else f"entity:{subject_entity.pk}"
+    scope_key = str(revision.pk) if revision else f"work:{subject_work.pk}" if subject_work else f"entity:{subject_entity.pk}" if subject_entity else f"page:{subject_page.pk}"
     request_id = uuid_value(request_id)
     if not isinstance(proposals, list) or len(proposals) > 2000:
         raise ValidationError("每份变更集最多2000项建议。")
@@ -74,7 +74,7 @@ def submit_draft(revision, proposals, actor, *, request_id, origin="external", r
         return previous
     changeset = m.ChangeSet.objects.create(document_revision=revision, created_by=actor,
         request_id=request_id, input_hash=fingerprint, origin=origin, run=run,
-        subject_work=subject_work, subject_entity=subject_entity)
+        subject_work=subject_work, subject_entity=subject_entity, subject_page=subject_page)
     keys = [str(uuid_value(item.get("id"))) for item in proposals]
     if len(keys) != len(set(keys)) or m.ChangeItem.objects.filter(pk__in=keys).exists():
         raise ValidationError("建议ID重复。")
@@ -128,7 +128,7 @@ def refresh_fingerprints(changeset):
     """Also updates dependent meanings after an editor changes an identity."""
     items = list(changeset.items.select_for_update().all())
     proposals = {str(v.pk):{"kind":v.kind,"payload":v.payload} for v in items}
-    scope_key = str(changeset.document_revision_id) if changeset.document_revision_id else f"work:{changeset.subject_work_id}" if changeset.subject_work_id else f"entity:{changeset.subject_entity_id}"
+    scope_key = str(changeset.document_revision_id) if changeset.document_revision_id else f"work:{changeset.subject_work_id}" if changeset.subject_work_id else f"entity:{changeset.subject_entity_id}" if changeset.subject_entity_id else f"page:{changeset.subject_page_id}"
     values = {v.pk:proposal_fingerprint(scope_key,v.kind,v.payload,proposals) for v in items}
     if len(set(values.values())) != len(values):
         raise ValidationError("修改后出现内容和来源完全重复的建议，请保留其中一项。")

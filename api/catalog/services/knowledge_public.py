@@ -4,7 +4,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from catalog import models as m
-from catalog.services.knowledge_core import require_editor, page_content
+from catalog.services.knowledge_core import require_editor, page_content, page_metadata
 from catalog.services.knowledge_sources import require_revision_access, locator
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
@@ -123,17 +123,21 @@ def page_data(page, actor, *, draft=False):
             raise Http404
         blocks = page.body_blocks
         revision = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk, status="published").order_by("-revision").first()
-    assertions, anchors, visible = {}, {}, []
+    assertions, anchors, references, visible = {}, {}, {}, []
     from catalog.services.editorial_blocks import block_references
     for block in blocks:
         keep = True
-        block_assertions, block_anchors = {}, {}
+        block_assertions, block_anchors, block_sources = {}, {}, {}
         for ref in block_references(block):
-            if not draft:
-                from catalog.services.editorial_blocks import resolve_target
-                try:
-                    resolve_target(ref, public=True)
-                except Http404:
+            from catalog.services.editorial_blocks import resolve_target
+            try:
+                _, card = resolve_target(ref, public=not draft)
+                block_sources[f"{ref['type']}:{ref['id']}"] = card
+            except Http404:
+                if draft:
+                    card = {**ref, "title": "来源当前不可用", "unavailable": True}
+                    block_sources[f"{ref['type']}:{ref['id']}"] = card
+                else:
                     keep = False
                     break
             if ref.get("type") == "assertion":
@@ -152,10 +156,11 @@ def page_data(page, actor, *, draft=False):
             visible.append(block)
             assertions.update(block_assertions)
             anchors.update(block_anchors)
+            references.update(block_sources)
     from catalog.services.academic_relations import pending_withdrawals
     withdrawals = pending_withdrawals(page, blocks) if draft else []
-    return {"id": str(page.pk), "title": page.title, "status": revision.status if draft and revision else page.status,
-        "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()), "anchors": list(anchors.values()),
+    return {"id": str(page.pk), **page_metadata(page, draft=draft), "status": revision.status if draft and revision else page.status,
+        "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()), "anchors": list(anchors.values()), "references": list(references.values()),
         "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions),
             "withdrawals": [{"id": v.application["id"], "text": v.payload["text"], "reason": v.payload["reason"]} for v in withdrawals],
             "entities": [{"id":str(v.pk), "label":v.label, "kind":v.kind} for v in publication_entities(page, assertions)] if draft else []}}

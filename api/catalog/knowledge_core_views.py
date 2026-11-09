@@ -165,6 +165,16 @@ class KnowledgePageView(APIView):
         return Response(publish_page(page_id, revision, request.user))
 
 
+class KnowledgeSpecialView(APIView):
+    from rest_framework.permissions import AllowAny
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        from catalog.services.knowledge_public import page_data
+        page = get_object_or_404(KnowledgePage, slug=slug, work=None, entity=None, status="published")
+        return Response(page_data(page, request.user))
+
+
 class KnowledgeExportView(APIView):
     permission_classes = [CanReadLibrary]
 
@@ -250,7 +260,7 @@ class KnowledgeDirectoryView(APIView):
         from catalog.services.knowledge_workspace import open_page
         ids = {name: serializers.UUIDField().run_validation(request.data[name])
                for name in ("work_id", "entity_id") if request.data.get(name)}
-        return Response(open_page(request.user, **ids), status=201)
+        return Response(open_page(request.user, **ids, **{name: request.data[name] for name in ("title", "scope", "request_id") if name in request.data}), status=201)
 
 
 class KnowledgeWorkspaceView(APIView):
@@ -333,6 +343,7 @@ urlpatterns = [
     path("pages/<uuid:page_id>/assertions/draft/", PageAssertionDraftView.as_view()),
     path("entities/", EntitiesView.as_view()),
     path("objects/<str:source_type>/<uuid:source_id>/", EntityKnowledgeView.as_view()),
+    path("special/<slug:slug>/", KnowledgeSpecialView.as_view()),
     path("assertions/<uuid:assertion_id>/", AssertionView.as_view()),
     path("pages/<uuid:page_id>/", KnowledgePageView.as_view()),
     path("pages/<uuid:page_id>/export/", KnowledgeExportView.as_view()),

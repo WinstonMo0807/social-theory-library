@@ -52,6 +52,7 @@ class ChangeSet(UUIDTimeStampedModel):
     document_revision = models.ForeignKey("catalog.DocumentRevision", null=True, on_delete=models.PROTECT)
     subject_work = models.ForeignKey("catalog.Work", null=True, on_delete=models.PROTECT)
     subject_entity = models.ForeignKey("catalog.Entity", null=True, on_delete=models.PROTECT)
+    subject_page = models.ForeignKey("catalog.KnowledgePage", null=True, on_delete=models.PROTECT)
     origin = models.CharField(max_length=24, default="intelligence")
     status = models.CharField(max_length=24, default="review")
     version = models.PositiveIntegerField(default=1)
@@ -61,7 +62,8 @@ class ChangeSet(UUIDTimeStampedModel):
 
     class Meta:
         constraints = [models.CheckConstraint(condition=(models.Q(document_revision__isnull=False)
-            | models.Q(subject_work__isnull=False) | models.Q(subject_entity__isnull=False)), name="knowledge_changeset_has_subject")]
+            | models.Q(subject_work__isnull=False) | models.Q(subject_entity__isnull=False)
+            | models.Q(subject_page__isnull=False)), name="knowledge_changeset_has_subject")]
 
 
 class ChangeItem(UUIDTimeStampedModel):

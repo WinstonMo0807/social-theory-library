@@ -19,7 +19,7 @@ import s from "./knowledge-workbench.module.css";
 type Ref = { type: string; id: string; edition_id?: string };
 type Block = KnowledgeBlock & { type: IssueBlock["type"]; text: string; style?: "paragraph" | "heading"; heading_level?: 1 | 2 | 3; human_edited?: boolean };
 type PageRow = { id: string; title: string; kind: string; status: string; has_draft: boolean; changed_blocks: number; work_id?: string; updated_at: string };
-type Workspace = KnowledgePageData & { kind: string; work_id?: string; entity_id?: string; public_url?: string; blocks: Block[]; block_hashes: Record<string, string>;
+type Workspace = KnowledgePageData & { metadata_hash: string; kind: string; work_id?: string; entity_id?: string; public_url?: string; blocks: Block[]; block_hashes: Record<string, string>;
   dependencies: { block_id: string; source_type: string; source_id: string; stale: boolean }[]; references: (Ref & { title: string; locator?: SourceLocator; unavailable?: boolean })[];
   backlinks: { page_id: string; title: string; block_id: string }[]; revisions: { id: string; revision: number; status: string; created_at: string }[];
   assertion_hashes: Record<string, string>; pending_changesets: { id: string; origin: string; status: string }[] };
@@ -39,16 +39,19 @@ function PageWorkspace() {
   const [locator, setLocator] = useState<SourceLocator | null>(null), [evidenceOpen, setEvidenceOpen] = useState(false), [reason, setReason] = useState("");
   const [error, setError] = useState(""), [busy, setBusy] = useState(false), [notice, setNotice] = useState(""), [attempt, setAttempt] = useState(0), [submitted, setSubmitted] = useState("");
   const [entityQuery, setEntityQuery] = useState(""), [entities, setEntities] = useState<{ id: string; label: string; kind: string; definition?: string }[]>([]);
+  const [metadata, setMetadata] = useState({ title: "", scope: "" });
   const [newAssertion, setNewAssertion] = useState(query.get("new_assertion") === "1");
   const request = useRef<{ signature: string; id: string } | null>(null), editor = useRef<HTMLDivElement>(null);
   const source = sources.find(v => v.revision_id === revision), current = blocks.find(v => v.id === selected);
-  const dirty = useUnsavedForm(submitted ? data?.blocks || [] : blocks, data?.blocks || []);
+  const baseline = { blocks: data?.blocks || [], title: data?.title || "", scope: data?.scope || "" };
+  const dirty = useUnsavedForm(submitted ? baseline : { blocks, ...metadata }, baseline);
   useEffect(() => {
     const c = new AbortController(); setError("");
     if (pageId) {
       setData(null); setSubmitted("");
-      void knowledgeCall<Workspace>(`/knowledge/pages/${pageId}/workspace/`, undefined, c.signal).then(r => { setData(r); setBlocks(r.blocks); setSelected(r.blocks.find(b => b.references?.some(ref => ref.type === "assertion" && ref.id === query.get("assertion")))?.id || r.blocks[0]?.id || ""); }).catch(e => { if (!c.signal.aborted) setError(e.message); });
+      void knowledgeCall<Workspace>(`/knowledge/pages/${pageId}/workspace/`, undefined, c.signal).then(r => { setData(r); setMetadata({ title: r.title || "", scope: r.scope || "" }); setBlocks(r.blocks); setSelected(r.blocks.find(b => b.references?.some(ref => ref.type === "assertion" && ref.id === query.get("assertion")))?.id || r.blocks[0]?.id || ""); }).catch(e => { if (!c.signal.aborted) setError(e.message); });
     } else {
+      if (data) { setData(null); setMetadata({ title: "", scope: "" }); setBlocks([]); setSelected(""); setSubmitted(""); }
       setDirectory(null);
       void knowledgeCall<{ pages: PageRow[]; count: number }>(`/knowledge/workspace/?q=${encodeURIComponent(search)}&state=${state}&kind=${kind}&offset=${offset}`, undefined, c.signal).then(setDirectory).catch(e => { if (!c.signal.aborted) setError(e.message); });
     }
@@ -72,11 +75,21 @@ function PageWorkspace() {
   }
   function addReference(ref: Ref) { if (current) update({ references: [...(current.references || []).filter(v => v.id !== ref.id || v.type !== ref.type), ref] }); }
   async function openIdentity(body: { work_id?: string; entity_id?: string }) { await action(async () => { const r = await knowledgeCall<{ id: string }>("/knowledge/workspace/", body); router.push(`/admin/knowledge?page=${r.id}${revision ? `&revision=${revision}` : ""}`); }); }
+  async function openSpecial() {
+    await action(async () => {
+      const signature = JSON.stringify(metadata);
+      if (request.current?.signature !== signature) request.current = { signature, id: createRequestKey() };
+      const r = await knowledgeCall<{ id: string }>("/knowledge/workspace/", { ...metadata, request_id: request.current.id });
+      router.push(`/admin/knowledge?page=${r.id}`);
+    });
+  }
   async function submit() {
     if (!data) return;
     const original = new Map(data.blocks.map(v => [v.id, v])), after = new Set(blocks.map(v => v.id));
     const patches: Record<string, unknown>[] = blocks.filter(b => JSON.stringify(b) !== JSON.stringify(original.get(b.id))).map(b => ({ operation: original.has(b.id) ? "replace" : "add", block_id: b.id, base_hash: data.block_hashes[b.id], block: b, reason: reason || "人工编纂知识页" }));
     for (const block of data.blocks) if (!after.has(block.id)) patches.push({ operation: "delete", block_id: block.id, base_hash: data.block_hashes[block.id], reason: reason || "人工移除区块" });
+    if (metadata.title !== data.title || metadata.scope !== (data.scope || "")) patches.push({ operation: "metadata", block_id: pageId,
+      base_hash: data.metadata_hash, ...metadata, reason: reason || "人工修改知识页标题与范围" });
     if (!patches.length) return;
     await action(async () => {
       const signature = JSON.stringify({ revision, patches }); if (request.current?.signature !== signature) request.current = { signature, id: createRequestKey() };
@@ -110,9 +123,18 @@ function PageWorkspace() {
       <section className={s.preview}><h2>开始编纂</h2><div className={s.toolbar}><label>从馆藏版本选择<select value={revision} onChange={e => setRevision(e.target.value)}><option value="">选择作品</option>{sources.map(v => <option key={v.revision_id} value={v.revision_id}>{v.title} · {v.edition_label || `修订 ${v.revision_number}`}</option>)}</select></label><button disabled={busy || !source} onClick={() => source && void openIdentity({ work_id: source.work_id })}>打开作品知识页</button></div>
         <form className={s.toolbar} onSubmit={e => { e.preventDefault(); void action(async () => setEntities((await knowledgeCall<{ entities: typeof entities }>(`/knowledge/entities/?preview=1&q=${encodeURIComponent(entityQuery)}`)).entities)); }}><label>从规范身份选择<input value={entityQuery} onChange={e => setEntityQuery(e.target.value)} placeholder="人物、概念或其他实体" required /></label><button disabled={busy}>查找身份</button></form>
         {entities.map(v => <button className={s.result} key={v.id} onClick={() => void openIdentity({ entity_id: v.id })}><span>{kinds[v.kind] || v.kind}</span><strong>{v.label}</strong><span>{v.definition || "打开该身份的知识页"}</span></button>)}
+        <details data-disclosure="collection"><summary>创建跨著作专题</summary><form className={s.editor} onSubmit={e => { e.preventDefault(); void openSpecial(); }}>
+          <label>专题标题<input required maxLength={600} value={metadata.title} onChange={e => setMetadata(v => ({ ...v, title: e.target.value }))} /></label>
+          <label>编纂范围<textarea required maxLength={6000} value={metadata.scope} onChange={e => setMetadata(v => ({ ...v, scope: e.target.value }))} placeholder="说明问题、纳入的作品与边界" /></label>
+          <button className={s.primary} disabled={busy}>创建专题草稿</button></form></details>
       </section>
     </> : !data ? !error && <p role="status" className={s.empty}>正在读取正文、来源与修订…</p> : <>
       <div className={s.toolbar}><Link href="/admin/knowledge"><ArrowLeft size={15} />全部知识页</Link><button className={s.primary} disabled={busy || !dirty} onClick={() => void submit()}>提交修改并审核</button><button disabled={busy || dirty || data.status === "published" || !data.revision_id} onClick={() => void publish()}>发布已保存稿</button><button disabled={busy || dirty || !data.revision_id} onClick={() => void exportMarkdown()}>导出 Markdown</button><button className={s.mobileOnly} onClick={() => setEvidenceOpen(true)}><PanelRightOpen size={16} />核对证据</button></div>
+      <details data-disclosure="collection"><summary>编辑标题与编纂范围</summary><div className={s.editor}>
+        <label>知识页标题<input maxLength={600} value={metadata.title} onChange={e => { setSubmitted(""); setMetadata(v => ({ ...v, title: e.target.value })); }} /></label>
+        <label>编纂范围<textarea maxLength={6000} value={metadata.scope} onChange={e => { setSubmitted(""); setMetadata(v => ({ ...v, scope: e.target.value })); }} /></label>
+        <div className={s.preview} aria-label="页面信息预览"><h2>{metadata.title}</h2><p>{metadata.scope}</p></div>
+      </div></details>
       <div className={s.workspace}>
         <aside className={s.rail}><h2>页面区块</h2>{blocks.map((b, i) => <button key={b.id} aria-current={selected === b.id} onClick={() => setSelected(b.id)}>{i + 1}. {b.text.slice(0, 42) || "未填写正文"}<small>{b.human_edited ? "人工编辑" : "来源编纂"}{data.dependencies.some(d => d.block_id === b.id && d.stale) ? " · 来源有更新" : ""}</small></button>)}<button onClick={addBlock}><Plus size={15} />新增区块</button>
           {!!data.pending_changesets.length && <><h2>待审核修改</h2>{data.pending_changesets.map(v => <Link key={v.id} href={`/admin/intelligence?changeset=${v.id}`}>{v.origin === "human" ? "人工编纂" : "编纂建议"} →</Link>)}</>}
@@ -124,7 +146,7 @@ function PageWorkspace() {
           {current ? <div ref={editor}><div className={s.sectionBar}><h2>编辑区块</h2><button onClick={() => { setSubmitted(""); setBlocks(old => old.filter(v => v.id !== current.id)); setSelected(""); }}>移除区块</button></div>
             {current.type === "analysis" && <label>展示方式<select value={current.style || "paragraph"} onChange={e => update({ style: e.target.value as "paragraph" | "heading", heading_level: e.target.value === "heading" ? 1 : undefined })}><option value="paragraph">解释正文</option><option value="heading">章节标题</option></select></label>}
             {!current.references?.some(r => r.type === "assertion") && <IssueTextEditor key={current.id} block={{ ...current, references: undefined }} label="区块正文" onChange={patch => update(patch as Partial<Block>)} maxLength={6000} />}
-            {current.type === "analysis" && <><h3>本区块的依据</h3><ul className={s.sourceRefs}>{(current.references || []).map(ref => <li key={`${ref.type}:${ref.id}`}><span>{references.find(v => v.id === ref.id)?.title || (ref.type === "work" && ref.id === source?.work_id ? source.title : `${ref.type} · ${ref.id.slice(0, 8)}`)}</span><button onClick={() => update({ references: current.references?.filter(v => v !== ref) })}>移出依据</button></li>)}</ul>
+            {current.type === "analysis" && <><h3>本区块的依据</h3><ul className={s.sourceRefs}>{(current.references || []).map(ref => <li key={`${ref.type}:${ref.id}`}><span>{references.find(v => v.id === ref.id)?.title || (ref.type === "work" ? sources.find(v => v.work_id === ref.id && (!ref.edition_id || v.edition_id === ref.edition_id))?.title : undefined) || `${ref.type} · ${ref.id.slice(0, 8)}`}</span><button onClick={() => update({ references: current.references?.filter(v => v !== ref) })}>移出依据</button></li>)}</ul>
               {references.map(ref => <div key={`${ref.type}:${ref.id}`} className={s.toolbar}><span className={s.muted}>{ref.title}</span>{ref.locator && <button onClick={() => { setLocator(ref.locator!); setEvidenceOpen(true); }}>核验原文</button>}<button disabled={current.references?.some(v => v.id === ref.id && v.type === ref.type)} onClick={() => addReference({ type: ref.type, id: ref.id, ...(ref.edition_id ? { edition_id: ref.edition_id } : {}) })}>用作依据</button></div>)}
               <Link target="_blank" href={`/admin/sources?revision=${revision}&page=${pageId}`}>在原文工作区选取更多证据 <ArrowUpRight size={14} /></Link>
             </>}

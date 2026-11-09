@@ -42,11 +42,15 @@ def changeset_data(changeset, actor):
             key = item["payload"].get("block_id")
             saved_block = next((b for b in saved.materialized_preview.get("body_blocks",[]) if b.get("id") == key),None)
             public_block = next((b for b in page.body_blocks if b.get("id") == key),None)
-            item["current_status"] = "published" if published and page.status == "published" and saved_block == public_block else "draft"
+            same = saved_block == public_block
+            if item["payload"].get("operation") == "metadata":
+                same = all(saved.materialized_preview.get(k) == getattr(page, k) for k in ("title", "scope"))
+            item["current_status"] = "published" if published and page.status == "published" and same else "draft"
         if item["kind"] == "wiki_patch" and item["payload"].get("page_id"):
             page = get_object_or_404(m.KnowledgePage, pk=item["payload"]["page_id"])
             blocks, revision = page_content(page)
-            current = next((b for b in blocks if b["id"] == item["payload"].get("block_id")), None)
+            from catalog.services.knowledge_core import page_metadata
+            current = page_metadata(page, draft=True) if item["payload"].get("operation") == "metadata" else next((b for b in blocks if b["id"] == item["payload"].get("block_id")), None)
             item["current"] = {"block": current, "hash": digest(current) if current else None,
                 "revision_id": str(revision.pk) if revision else None}
     accepted = [i for i in items if i["decision"] == "accepted"]
@@ -55,7 +59,8 @@ def changeset_data(changeset, actor):
     work = revision.asset.edition.work if revision else changeset.subject_work
     return {"id": str(changeset.pk), "version": changeset.version, "status": status,
         "document_revision_id": str(revision.pk) if revision else None, "origin": changeset.origin, "items": items,
-        "title": work.title if work else changeset.subject_entity.label,
+        "title": work.title if work else changeset.subject_entity.label if changeset.subject_entity_id else changeset.subject_page.title,
+        "page_id": str(changeset.subject_page_id) if changeset.subject_page_id else None,
         "edition_id": str(revision.asset.edition_id) if revision else None,
         "work_id": str(work.pk) if work else None, "entity_id": str(changeset.subject_entity_id) if changeset.subject_entity_id else None,
         "asset_id": str(revision.asset_id) if revision else None, "pages": revision.asset.page_count if revision else 0,

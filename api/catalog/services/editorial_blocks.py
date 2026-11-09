@@ -101,11 +101,20 @@ def resolve_target(raw, *, public=False):
             eligible = public_entities().filter(pk=canonical_entity(obj).pk).exists()
             title = obj.label
         else:
-            eligible = obj.status == "published"
+            from catalog.services.publication_eligibility import public_editions
+            from catalog.services.knowledge_public import public_entities
+            from catalog.services.knowledge_identity import canonical_entity
+            eligible = obj.status == "published" and (not obj.work_id or public_editions().filter(work_id=obj.work_id).exists()) and (not obj.entity_id or public_entities().filter(pk=canonical_entity(obj.entity).pk).exists())
             title = getattr(obj, "title", getattr(obj, "label", getattr(obj, "text", "")))
         if public and not eligible:
             raise Http404
-        return {"type": kind, "id": str(key)}, {"type": kind, "id": str(key), "title": title, "public_eligible": eligible}
+        source = {"type": kind, "id": str(key), "title": title, "public_eligible": eligible}
+        if kind in {"knowledge_page", "entity"}:
+            from catalog.services.knowledge_workspace import public_page_url
+            page = obj if kind == "knowledge_page" else KnowledgePage.objects.filter(entity=canonical_entity(obj)).first()
+            if page:
+                source["href"] = public_page_url(page)
+        return {"type": kind, "id": str(key)}, source
     if not isinstance(kind, str):
         raise ValidationError("引用类型必须是文字标识。")
     if kind in {"work", "edition", "node", "span"}:

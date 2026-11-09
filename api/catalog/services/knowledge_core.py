@@ -239,6 +239,23 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     else:
         raise ValidationError("知识页修改须指定已有页面、作品或实体。")
     blocks, _ = page_content(page)
+    if payload.get("operation") == "metadata":
+        if origin != "human":
+            raise ValidationError("标题与范围须由管理员在知识页中编辑。")
+        if digest(page_metadata(page, draft=True)) != payload.get("base_hash"):
+            raise ValidationError({"conflict": "标题或范围已修改，请核对当前页面信息。"})
+        title, scope = payload.get("title"), payload.get("scope")
+        if not isinstance(title, str) or not title.strip() or len(title) > 600 or not isinstance(scope, str) or len(scope) > 6000:
+            raise ValidationError("请填写有效标题和编纂范围。")
+        if not page.work_id and not page.entity_id and not scope.strip():
+            raise ValidationError("专题必须保留明确编纂范围。")
+        from catalog.services.editorial_revision import create_editorial_revision
+        revision = create_editorial_revision(target_type="knowledge_page", target_id=page.pk,
+            patch={"title": title.strip(), "scope": scope.strip(), "body_blocks": blocks}, actor=actor, idempotency_key=request_key,
+            change_note=payload.get("reason", "审核知识页标题与范围"))
+        from catalog.services.knowledge_workspace import invalidate_source
+        invalidate_source("knowledge_page", page.pk)
+        return revision
     by_id = {b["id"]: b for b in blocks}
     operation, key = payload.get("operation"), payload.get("block_id")
     current = by_id.get(key)
@@ -261,12 +278,18 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
         blocks = [b for b in blocks if b["id"] != key]
     from catalog.services.editorial_revision import create_editorial_revision
     revision = create_editorial_revision(target_type="knowledge_page", target_id=page.pk,
-        patch={"body_blocks": blocks}, actor=actor, idempotency_key=request_key,
+        patch={**page_metadata(page, draft=True), "body_blocks": blocks}, actor=actor, idempotency_key=request_key,
         change_note=payload.get("reason", "审核知识页局部修改"))
     from catalog.services.knowledge_workspace import sync_dependencies, invalidate_source
     sync_dependencies(page, blocks, changed_blocks={str(key)})
     invalidate_source("knowledge_page", page.pk)
     return revision
+
+
+def page_metadata(page, *, draft=False):
+    revision = page_content(page)[1] if draft else None
+    snapshot = revision.materialized_preview if revision else {}
+    return {"title": snapshot.get("title", page.title), "scope": snapshot.get("scope", page.scope)}
 
 
 def export_page(page, actor, *, draft=False):
@@ -277,7 +300,8 @@ def export_page(page, actor, *, draft=False):
         from catalog.services.knowledge_public import page_data
         blocks = page_data(page, actor)["blocks"]
         revision = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk, status="published").order_by("-revision").first()
-    lines = [f"# {page.title}", "", f"<!-- STL knowledge_page={page.pk} editorial_revision={revision.pk if revision else 'legacy'}; database is authoritative -->", ""]
+    metadata = page_metadata(page, draft=draft)
+    lines = [f"# {metadata['title']}", "", metadata['scope'], "", f"<!-- STL knowledge_page={page.pk} editorial_revision={revision.pk if revision else 'legacy'}; database is authoritative -->", ""]
     for block in blocks:
         lines.extend([f"<!-- block={block['id']} hash={block.get('content_hash', '')} -->", block.get("text", ""), ""])
         for ref in block.get("references", []):

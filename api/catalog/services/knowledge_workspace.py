@@ -47,7 +47,8 @@ def source_value(kind, key):
                 .values("anchor_id", "stance", "note"))
     elif kind == "knowledge_page":
         page = m.KnowledgePage.objects.filter(pk=key).first()
-        row = {"title": page.title, "blocks": page_content(page)[0], "status": page.status} if page else None
+        from catalog.services.knowledge_core import page_metadata
+        row = {**page_metadata(page, draft=True), "blocks": page_content(page)[0], "status": page.status} if page else None
     elif kind == "work":
         row = m.Work.objects.filter(pk=key).values("title", "abstract").first()
         if row is not None:
@@ -198,7 +199,7 @@ def page_workspace(page, actor):
     data.update({"kind": page.entity.kind if page.entity_id else "work" if page.work_id else "special",
         "work_id": str(page.work_id) if page.work_id else None, "entity_id": str(page.entity_id) if page.entity_id else None,
         "dependencies": dependencies, "backlinks": [{"page_id": str(r.page_id), "title": r.page.title, "block_id": str(r.block_id)} for r in links],
-        "block_hashes": {b["id"]: digest(b) for b in blocks},
+        "block_hashes": {b["id"]: digest(b) for b in blocks}, "metadata_hash": digest({k: data[k] for k in ("title", "scope")}),
         "revisions": [{"id": str(r.pk), "revision": r.revision, "status": r.status, "created_at": r.created_at} for r in revisions],
         "pending_changesets": list(m.ChangeSet.objects.filter(items__payload__page_id=str(page.pk),
             items__decision__in=["pending", "accepted", "deferred"], items__application={}).distinct().values("id", "origin", "status", "created_at"))})
@@ -240,14 +241,27 @@ def public_page_url(page):
     if entity and entity.person_id:
         profile = m.ScholarProfile.objects.filter(person_id=entity.person_id).first()
         return f"/scholars/{profile.slug}" if profile else None
-    return None
+    return f"/knowledge/{page.slug}" if not entity else None
 
 
 @transaction.atomic
-def open_page(actor, *, work_id=None, entity_id=None):
+def open_page(actor, *, work_id=None, entity_id=None, title="", scope="", request_id=None):
     """A human opens a draft identity; body edits still go through ChangeSet."""
     require_editor(actor)
     from django.shortcuts import get_object_or_404
+    if not work_id and not entity_id:
+        from catalog.services.intelligence_changes import uuid_value
+        if not isinstance(title, str) or not isinstance(scope, str):
+            raise ValidationError("标题和编纂范围必须为文本。")
+        title, scope = title.strip(), scope.strip()
+        if not title or len(title) > 600 or not scope or len(scope) > 6000:
+            raise ValidationError("专题须填写标题与明确编纂范围；标题最多600字，范围最多6000字。")
+        key = uuid5(uuid_value(request_id), f"knowledge-special:{actor.pk}")
+        page, created = m.KnowledgePage.objects.get_or_create(pk=key,
+            defaults={"slug": f"special-{key}", "title": title, "scope": scope})
+        if not created and (page.title != title or page.scope != scope or page.work_id or page.entity_id):
+            raise ValidationError("请求编号已用于另一知识页，请重新打开创建表单。")
+        return page_workspace(page, actor)
     if bool(work_id) == bool(entity_id):
         raise ValidationError("请选择一个作品或知识实体。")
     rows = (m.Work if work_id else m.Entity).objects.select_for_update()
@@ -267,14 +281,14 @@ def submit_page_changes(page, revision, patches, actor, *, request_id):
         raise ValidationError("请提交1至200个区块修改。")
     proposals = []
     for i, patch in enumerate(patches):
-        if not isinstance(patch, dict) or patch.get("operation") not in {"add", "replace", "delete"}:
+        if not isinstance(patch, dict) or patch.get("operation") not in {"add", "replace", "delete", "metadata"}:
             raise ValidationError("区块修改操作无效。")
         block_id = str(uuid_value(patch.get("block_id")))
-        payload = {k: patch[k] for k in ("operation", "base_hash", "block", "reason") if k in patch}
+        payload = {k: patch[k] for k in ("operation", "base_hash", "block", "reason", "title", "scope") if k in patch}
         payload.update(page_id=str(page.pk), block_id=block_id, human_edited=True)
         proposals.append({"id": str(uuid5(request_id, str(i))), "kind": "wiki_patch", "payload": payload, "dependencies": []})
     return submit_draft(revision, proposals, actor, request_id=request_id, origin="human",
-        subject_work=page.work, subject_entity=page.entity)
+        subject_work=page.work, subject_entity=page.entity, subject_page=page)
 
 
 def submit_page_assertion(page, payload, actor, *, request_id, revision=None, origin="human"):
@@ -322,7 +336,7 @@ def submit_page_assertion(page, payload, actor, *, request_id, revision=None, or
             "page_id": str(page.pk), "operation": "replace" if previous_block else "add", "block_id": block_id,
             "base_hash": digest(previous_block) if previous_block else None, "human_edited": True,
             "reason": "人工编辑有来源的学术陈述", "block": block}}]
-    return submit_draft(revision, items, actor, request_id=key, origin=origin, subject_work=page.work, subject_entity=page.entity)
+    return submit_draft(revision, items, actor, request_id=key, origin=origin, subject_work=page.work, subject_entity=page.entity, subject_page=page)
 
 
 def submit_assertion_draft(revision, payload, actor, *, request_id, origin="human"):

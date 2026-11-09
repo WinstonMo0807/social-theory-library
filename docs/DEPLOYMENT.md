@@ -1,3 +1,5 @@
+2026-11-10 候选Web可用`powershell -File scripts/start_intelligence_demo.ps1 -NodePath <node.exe绝对路径>`启动独立隐藏进程，日志/PID写入忽略的tmp/intelligence-web。限定5174→18091；占用端口时拒绝启动，不自动杀其他进程。进程不随工具会话退出，但机器重启后需重新启动；仍为Vite开发候选，不是公网发行部署。0098迁移及受影响表备份见知识核心记录。
+
 # STL 部署与运行入口
 
 2026-11-10 新增[Knowledge Core / Intelligence 内网候选](stl4/KNOWLEDGE_INTELLIGENCE_20261109.md)，记录新模型、服务、locator、配置、隔离部署和未完成项。以下仍描述正式环境，不能将候选能力误作已上线。
