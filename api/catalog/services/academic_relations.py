@@ -40,7 +40,8 @@ def propose_work_relations(work, rows, actor):
 def scoped_assertions(*, entity=None, work=None):
     rows = m.Assertion.objects.all()
     if entity:
-        rows = rows.filter(participants__entity=entity)
+        from catalog.services.knowledge_identity import canonical_entity, family_ids
+        rows = rows.filter(participants__entity_id__in=family_ids([canonical_entity(entity).pk]))
     if work:
         rows = rows.filter(Q(participants__work=work) | Q(sources__work=work))
     return rows.distinct().order_by("-updated_at", "id")

@@ -24,6 +24,8 @@ def merge_scope_queries(source_id, target_id):
     for model in (models.PersonNodeRelation, models.KnowledgeNodeAlias, models.KnowledgeNodeDiscipline,
             models.KnowledgeNodeSubdiscipline, models.KnowledgeNodeTopic, models.TimelineEventRelation, models.LegacyKnowledgeMapping):
         rows[model.__name__] = model.objects.filter(node_id__in=ids)
+    from catalog.services.knowledge_identity import identity_scope
+    rows.update(identity_scope(models.Entity.objects.filter(node_id__in=ids)))
     return rows
 
 

@@ -18,7 +18,9 @@ def require_editor(actor):
 
 
 def entity_data(entity):
+    from catalog.services.knowledge_identity import canonical_entity
     return {"id": str(entity.pk), "kind": entity.kind, "label": entity.label,
+        "canonical_id": str(canonical_entity(entity).pk),
         "definition": entity.definition, "context": entity.context, "status": entity.status,
         "aliases": list(entity.aliases.values("text", "language", "script", "review_status", "source")),
         "identifiers": list(entity.identifiers.values("namespace", "value", "review_status", "source")),
@@ -28,10 +30,12 @@ def entity_data(entity):
 
 def match_entities(label, kind, *, limit=12):
     # Names only retrieve candidates. Even one exact name does not merge identity.
-    rows = m.Entity.objects.filter(kind=kind, merged_into__isnull=True).filter(
+    rows = m.Entity.objects.filter(kind=kind).filter(
         Q(label__iexact=label) | Q(aliases__text__iexact=label, aliases__review_status="confirmed")
     ).distinct().order_by("id")[:min(limit, 30)]
-    return [{**entity_data(row), "reason": "名称或已确认异名匹配，身份仍须审核", "automatic_same_identity": False} for row in rows]
+    from catalog.services.knowledge_identity import canonical_entity
+    candidates = {value.pk: value for row in rows if (value := canonical_entity(row))}
+    return [{**entity_data(row), "reason": "名称或已确认异名匹配，身份仍须审核", "automatic_same_identity": False} for row in candidates.values()]
 
 
 @transaction.atomic
@@ -160,8 +164,12 @@ def create_assertion(payload, revision, actor, *, allow_citation=False, subject_
         values = {key: participant[key] for key in ("entity_id", "work_id", "edition_id") if participant.get(key)}
         if role not in {"subject", "object", "claimant", "quoted", "criticized", "context"} or len(values) != 1:
             raise ValidationError("陈述参与者须有明确角色和唯一身份。")
-        if "entity_id" in values and not m.Entity.objects.filter(pk=values["entity_id"], merged_into__isnull=True).exists():
-            raise ValidationError("陈述包含未解析的实体。")
+        if "entity_id" in values:
+            from catalog.services.knowledge_identity import canonical_entity
+            identity = m.Entity.objects.filter(pk=values["entity_id"]).first()
+            if identity is None:
+                raise ValidationError("陈述包含未解析的实体。")
+            values["entity_id"] = canonical_entity(identity).pk
         m.AssertionParticipant.objects.create(assertion=statement, role=role, **values)
     attribution = payload.get("attribution_id")
     if attribution and not m.Entity.objects.filter(pk=attribution, kind__in=["person", "organization"]).exists():

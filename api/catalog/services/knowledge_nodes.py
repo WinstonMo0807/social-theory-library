@@ -172,7 +172,11 @@ def record_relation_version(
 
 
 def merge_preview(source: KnowledgeNode) -> dict:
+    from catalog import models as m
+    from catalog.services.knowledge_identity import identity_scope
+    knowledge = identity_scope(m.Entity.objects.filter(node=source))
     return {
+        "assertions": knowledge["Assertion"].count(), "knowledge_pages": knowledge["KnowledgePage"].count(),
         "aliases": source.aliases.count(),
         "discipline_links": source.discipline_links.count(),
         "subdiscipline_links": source.subdiscipline_links.count(),
@@ -355,96 +359,10 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
         if created:
             created_ids["KnowledgeNodeTopic"].append(str(copied.id))
 
-    work_relation_map = {}
-    for relation in source.work_relations.select_related("work"):
-        copied, created = WorkNodeRelation.objects.get_or_create(
-            work=relation.work,
-            node=target,
-            role=relation.role,
-            defaults={
-                "is_primary": relation.is_primary,
-                "strength": relation.strength,
-                "confidence": relation.confidence,
-                "status": relation.status,
-                "source": relation.source,
-                "created_by_id": _user_id(actor),
-                "reviewed_by": relation.reviewed_by,
-                "reviewed_at": relation.reviewed_at,
-            },
-        )
-        _check_merged_relation_decisions(relation, copied, created=created)
-        work_relation_map[relation.id] = copied
-        if created:
-            created_ids["WorkNodeRelation"].append(str(copied.id))
-        for evidence in relation.evidence.all():
-            evidence_copy, evidence_created = _copy_evidence(
-                evidence,
-                node=target,
-                work_relation=copied,
-            )
-            if evidence_created:
-                created_ids["EvidenceSnippet"].append(str(evidence_copy.id))
-
-    for relation in source.person_relations.select_related("person"):
-        copied, created = PersonNodeRelation.objects.get_or_create(
-            person=relation.person,
-            node=target,
-            defaults={
-                "relation_type": relation.relation_type,
-                "direction": relation.direction,
-                "node_is_source": relation.node_is_source,
-                "evidence_span_id": relation.evidence_span_id,
-                "source_document_revision_id": relation.source_document_revision_id,
-                "relation_label": relation.relation_label,
-                "is_representative": relation.is_representative,
-                "sort_order": relation.sort_order,
-                "confidence": relation.confidence,
-                "status": relation.status,
-                "source": relation.source,
-                "reviewed_by": relation.reviewed_by,
-                "reviewed_at": relation.reviewed_at,
-            },
-        )
-        _check_merged_relation_decisions(relation, copied, created=created)
-        if created:
-            created_ids["PersonNodeRelation"].append(str(copied.id))
-
-    source_relations = KnowledgeRelation.objects.filter(
-        Q(source_node=source) | Q(target_node=source)
-    ).select_related("source_node", "target_node")
-    for relation in source_relations:
-        new_source = target if relation.source_node_id == source.id else relation.source_node
-        new_target = target if relation.target_node_id == source.id else relation.target_node
-        if new_source.id == new_target.id:
-            continue
-        copied, created = KnowledgeRelation.objects.get_or_create(
-            source_node=new_source,
-            target_node=new_target,
-            relation_type=relation.relation_type,
-            defaults={
-                "direction": relation.direction,
-                "description": relation.description,
-                "evidence_source": relation.evidence_source,
-                "evidence_span_id": relation.evidence_span_id,
-                "source_document_revision_id": relation.source_document_revision_id,
-                "confidence": relation.confidence,
-                "status": relation.status,
-                "created_by_id": _user_id(actor),
-                "reviewed_by": relation.reviewed_by,
-                "published_at": relation.published_at,
-            },
-        )
-        _check_merged_relation_decisions(relation, copied, created=created)
-        if created:
-            created_ids["KnowledgeRelation"].append(str(copied.id))
-        for evidence in relation.evidence.all():
-            evidence_copy, evidence_created = _copy_evidence(
-                evidence,
-                node=target,
-                knowledge_relation=copied,
-            )
-            if evidence_created:
-                created_ids["EvidenceSnippet"].append(str(evidence_copy.id))
+    # Academic statements keep original endpoints and sources. Only identity resolves
+    # to the survivor; no relation uniqueness constraint can discard an interpretation.
+    from catalog.services.knowledge_identity import merge_identity
+    identity_before = merge_identity(source, target)
 
     relation_bound_evidence = source.evidence.filter(
         work_node_relation__isnull=True,
@@ -507,6 +425,7 @@ def merge_nodes(source_id, target_id, *, actor, change_note="") -> KnowledgeNode
         target_snapshot=before_target,
         affected_counts=affected,
         rollback_payload={
+            "identity_before": identity_before,
             "created_ids": dict(created_ids),
             "moved_ids": dict(moved_ids),
             "retired_rows": dict(retired_rows),
@@ -562,6 +481,8 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
     from django.utils.crypto import constant_time_compare
     if not constant_time_compare(expected, merge_scope_fingerprint(source.pk, target.pk)):
         raise ValueError("合并后的节点、关系、出处、路径或编辑版本已经变化，不能回滚覆盖后续工作。请先核对原记录与当前修改。")
+    from catalog.services.knowledge_identity import restore_identity
+    restore_identity(payload.get("identity_before"))
     created_ids = payload.get("created_ids", {})
     model_map = {
         "EvidenceSnippet": EvidenceSnippet,

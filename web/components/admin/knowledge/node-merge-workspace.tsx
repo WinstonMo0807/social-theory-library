@@ -16,7 +16,7 @@ import styles from "./timeline-editor.module.css";
 type Preview = components["schemas"]["NodeMergePreview"];
 type Result = components["schemas"]["NodeMergeResult"];
 type History = components["schemas"]["NodeMergeRows"];
-const labels: Record<string, string> = { aliases: "别名", discipline_links: "学科", subdiscipline_links: "子学科", topic_links: "主题", work_relations: "文献关系", person_relations: "人物关系", knowledge_relations: "知识关系", evidence: "证据", timeline_events: "时间线关联", reading_path_items: "阅读路径", review_tasks: "审核任务", legacy_mappings: "历史映射" };
+const labels: Record<string, string> = { assertions: "保留来源的学术陈述", knowledge_pages: "受影响知识页", aliases: "别名", discipline_links: "学科", subdiscipline_links: "子学科", topic_links: "主题", work_relations: "文献关系", person_relations: "人物关系", knowledge_relations: "知识关系", evidence: "证据", timeline_events: "时间线关联", reading_path_items: "阅读路径", review_tasks: "审核任务", legacy_mappings: "历史映射" };
 const statuses: Record<string, string> = { published: "已公开", draft: "草稿", pending: "待审核", rejected: "不采用", archived: "已下线" };
 
 export function NodeMergeWorkspace({ owner, nodeId, disabled, onChanged }: {

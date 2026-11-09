@@ -427,6 +427,17 @@ class KnowledgeNodeDetailView(TheorySystemFeatureMixin, generics.RetrieveAPIView
     serializer_class = KnowledgeNodeDetailSerializer
     lookup_field = "slug"
 
+    def get_object(self):
+        from catalog.models import Entity
+        from catalog.services.knowledge_identity import canonical_entity
+        original = Entity.objects.filter(node__slug=self.kwargs["slug"], merged_into__isnull=False).first()
+        if original:
+            survivor = canonical_entity(original)
+            obj = get_object_or_404(self.get_queryset(), pk=survivor.node_id)
+            self.check_object_permissions(self.request, obj)
+            return obj
+        return super().get_object()
+
     def get_queryset(self):
         return _published_node_queryset().prefetch_related(
             "outgoing_relations__target_node",

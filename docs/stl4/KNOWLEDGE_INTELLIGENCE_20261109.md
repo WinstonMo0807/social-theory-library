@@ -1,3 +1,9 @@
+## 2026-11-10 身份归并与历史知识查询
+
+节点归并改为Entity重定向，不再复制PersonNode/WorkNode/KnowledgeRelation。人工旧关系在原事务中幂等迁移；Assertion端点、来源、原页均保留。原归并命令复用权限/人工确认/事务/幂等，范围指纹包含新的知识模型。相关页只标依赖失效，不触发OCR或模型。公开图谱和关系投影按归并身份查询，旧节点URL可读取保留节点，人物/理论知识接口返回各自原页及其修订，前端沿用原组件。
+
+63项相关回归14.48秒通过；候选PostgreSQL实际SELECT FOR UPDATE核验23秒，Entity48/Assertion7/KnowledgePage7/归并记录0前后不变，模型调用0。本批无schema变化，也未执行真实人物或概念归并。原NodeEditorial和ScholarProfile的prose代码实查为绑定类型正文的格式，不是第二套Wiki正文；类型资料保持，KnowledgePage正文仍使用EditorialRevision。
+
 ## 2026-11-10 公开查询投影与概念任务退役
 
 `academic_projection`现在服务理论目录/详情、旧流派URL、作品关系、时间线、选书及检索知识筛选。当前已发布Assertion叠加于旧书目快照，不改快照、不公开未发布书目。旧ID已映射后不会回退读取旧关系，即使陈述已撤回。未映射历史人工行继续受原权限过滤。

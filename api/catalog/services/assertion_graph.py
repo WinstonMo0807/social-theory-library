@@ -4,9 +4,11 @@ from catalog import models as m
 from catalog.services.knowledge_public import assertion_public, assertion_data
 
 from catalog.services.academic_vocabulary import PREDICATES, legacy_citation
+from catalog.services.knowledge_identity import canonical_entity, family_ids
 
 
 def entity_endpoint(entity, entities):
+    entity = canonical_entity(entity)
     if entity is None:
         return None
     for field, kind in (("node_id","knowledge_node"), ("person_id","scholar"), ("topic_id","topic"), ("subdiscipline_id","subdiscipline")):
@@ -62,7 +64,7 @@ def near_statements(frontier, entities, options):
         else:
             field = {"knowledge_node":"node_id", "topic":"topic_id", "subdiscipline":"subdiscipline_id"}[kind]
             near |= Q(**{field:key})
-    ids = m.Entity.objects.filter(near).values("pk")
+    ids = family_ids(m.Entity.objects.filter(near).values_list("pk", flat=True))
     rows = m.Assertion.objects.filter(status="published", participants__entity_id__in=ids,
         participants__role__in=["subject","object"]).distinct().order_by("pk")
     if options.get("relation_type"):

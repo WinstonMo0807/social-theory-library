@@ -327,6 +327,7 @@ def test_person_merge_http_requires_owner_and_allows_confirmed_merge_and_rollbac
     api_client.force_authenticate(administrator)
     assert api_client.post(endpoint, {}, format="json").status_code == 403
     api_client.force_authenticate(merge_owner)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(merge_owner.pk))
     preview = api_client.get(preview_endpoint, {"target_person": str(target.pk)})
     assert preview.status_code == 200 and preview.data["merge_execution_available"] is True
     assert preview.data["execution_guidance"]

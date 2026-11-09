@@ -80,6 +80,9 @@ def preview(source, target, *, lock=False):
         blockers.append("条目、关系、阅读路径或相关作品存在未发布草稿，请先处理原修订。")
     if task_rows:
         blockers.append("相关作品正在更新智能内容，请等待原任务结束。")
+    from catalog.services.knowledge_identity import pending_identity_edits
+    if pending_identity_edits(models.Entity.objects.filter(node_id__in=[source.pk, target.pk])):
+        blockers.append("相关知识页或ChangeSet仍有待处理编辑，请先审核或暂缓归并。")
     affected = knowledge_nodes.merge_preview(source)
     affected.pop("public_url", None)
     return {"source": summary(source), "target": summary(target), "affected": affected,

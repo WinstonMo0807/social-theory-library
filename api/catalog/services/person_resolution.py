@@ -29,6 +29,8 @@ PERSON_REFERENCES = (
     (models.PersonNodeRelation, "person", "知识节点关系"),
 )
 PROFILE_REFERENCES = (
+    (models.ScholarRelation, "source_scholar", "学者关系来源"),
+    (models.ScholarRelation, "target_scholar", "学者关系对象"),
     (models.TheoryTimelineEvent, "scholar", "学者时间线事件"),
     (models.TimelineEventRelation, "scholar", "时间线关联"),
     (models.CuratedClaim, "scholar", "人工策展观点"),
@@ -59,6 +61,7 @@ def _assert_inventory():
             # Operation records preserve their historical endpoints; they are
             # inventoried but never retargeted by a later identity merge.
             declared.update({("catalog.PersonMergeRecord", "source_person"), ("catalog.PersonMergeRecord", "target_person")})
+            declared.add(("catalog.Entity", "person"))  # Canonical redirect; never repoint the historical identity.
         if actual != declared:
             raise ValueError("人物引用结构已经变化，请先更新合并影响预览。")
 

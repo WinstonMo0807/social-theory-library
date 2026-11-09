@@ -216,9 +216,14 @@ class EntityKnowledgeView(APIView):
         if source_type not in fields:
             raise Http404
         from catalog.services.knowledge_public import public_entities
-        page = KnowledgePage.objects.filter(entity_id__in=public_entities().values("pk"),
-            status="published", **{f"entity__{fields[source_type]}": source_id}).first()
-        return Response({"page": page_data(page, request.user) if page else None})
+        from catalog.services.knowledge_identity import canonical_entity, family_ids
+        entity = canonical_entity(Entity.objects.filter(**{fields[source_type]: source_id}).first())
+        if not entity or not public_entities().filter(pk=entity.pk).exists():
+            return Response({"page": None, "pages": []})
+        pages = list(KnowledgePage.objects.filter(entity_id__in=family_ids([entity.pk]), status="published").order_by("created_at", "pk"))
+        pages.sort(key=lambda p: p.entity_id != entity.pk)
+        data = [page_data(page, request.user) for page in pages]
+        return Response({"page": data[0] if data else None, "pages": data, "canonical_entity_id": str(entity.pk)})
 
 
 class AssertionView(APIView):

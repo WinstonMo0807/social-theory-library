@@ -140,6 +140,7 @@ class PersonMergePreviewResponseSerializer(serializers.Serializer):
     execution_policy = serializers.CharField(required=False)
     execution_guidance = serializers.ListField(child=serializers.CharField(), required=False)
     context_impact = serializers.JSONField(required=False)
+    knowledge_impact = serializers.DictField(child=serializers.IntegerField(), required=False)
 
 
 class PersonMergeRequestSerializer(serializers.Serializer):

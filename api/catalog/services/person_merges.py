@@ -128,6 +128,9 @@ def _editing_context(source, target, edition_ids, work_ids, *, lock=False):
 def _state(source, target, edition_ids, *, lock=False):
     """Canonical state only: asynchronous projection status is not an edit."""
     people = {source.pk, target.pk}
+    from catalog.services.knowledge_identity import identity_scope
+    knowledge = {name: [_canonical_record(row) for row in _limited(rows, lock=lock)]
+        for name, rows in identity_scope(models.Entity.objects.filter(person_id__in=people)).items()}
     profile_ids = list(models.ScholarProfile.objects.filter(person_id__in=people).values_list("pk", flat=True))
     references = []
     for model, field, _label in PERSON_REFERENCES:
@@ -153,7 +156,7 @@ def _state(source, target, edition_ids, *, lock=False):
         }} for row in editions],
         "decisions": [_canonical_record(row) for row in decisions], "locks": [_canonical_record(row) for row in locks],
         "pending": {kind: [{"id": str(row.pk), "updated_at": row.updated_at} for row in rows] for kind, rows in pending.items()},
-        "canonical": canonical,
+        "canonical": canonical, "knowledge": knowledge,
     }
     return payload, pending, decisions, locks
 
@@ -167,8 +170,12 @@ def prepare_person_merge(source, target):
         blockers.append({"code": "source_not_verified", "detail": "请先核验来源人物，未经确认的身份不能经合并成为正式别名。"})
     if preview["identity_conflicts"]:
         blockers.append({"code": "identity_conflict", "detail": "人物身份字段存在冲突，请先核对。"})
-    if any(group["collisions"] for group in preview["references"]):
+    if any(group["collisions"] for group in preview["references"] if group["model"] != "catalog.PersonNodeRelation"):
         blockers.append({"code": "reference_collision", "detail": "双方有重复唯一关系，本执行器不会删除或选择其中一条。"})
+    from catalog.services.knowledge_identity import pending_identity_edits
+    if pending_identity_edits(models.Entity.objects.filter(person_id__in=[source.pk, target.pk])):
+        blockers.append({"code": "knowledge_edits", "detail": "相关知识页或ChangeSet仍有待处理编辑，请先审核。"})
+    preview["knowledge_impact"] = {name: len(rows) for name, rows in state["knowledge"].items()}
     for kind, rows in pending.items():
         if rows:
             blockers.append({"code": "pending_context", "detail": f"{kind}仍有待处理内容，请先完成或放弃。"})
@@ -180,6 +187,7 @@ def prepare_person_merge(source, target):
     preview["execution_guidance"] = [
         "保留人物的姓名、生卒年、简介、图片和外部标识符保持现值；来源基础资料仍保留在来源人物及操作快照中。",
         "仅迁移无唯一约束冲突的引用，保留原记录ID、审核状态和来源；未核验名称不会被提升为已核验。",
+        f"{preview['knowledge_impact']['Assertion']}条学术陈述与{preview['knowledge_impact']['KnowledgePage']}个知识页保留原身份编号和正文，通过已审核身份重定向查询；不同来源不折叠。",
         "唯一学者档案保留原ID与网址；双方都有学者档案时暂不执行，不自动取舍内容。",
         "公开书目通过现有发布处理更新，处理完成前继续读取上一正式版本；回滚会拒绝后续人工修改。",
     ]
@@ -271,7 +279,14 @@ def merge_people(source_id, target_id, *, actor, expected_fingerprint, idempoten
     source_snapshot, target_snapshot = _record(source), _record(target)
     operation_id = uuid4()
     changes = []
+    from catalog.services.knowledge_identity import merge_identity
+    identity_before = merge_identity(source, target)
+    changes.append({"model": "catalog.Entity", "id": identity_before["id"],
+        "before": {key: identity_before[key] for key in ("merged_into_id", "status")},
+        "after": {"merged_into_id": str(models.Entity.objects.get(person=target).pk), "status": "merged"}})
     for model, field, _label in PERSON_REFERENCES:
+        if model is models.PersonNodeRelation:
+            continue  # Historical endpoints are preserved by canonical identity redirects.
         for row in _limited(model.objects.filter(**{f"{field}_id": source.pk}), lock=True):
             _change(row, {f"{field}_id": target.pk}, changes)
     _, _, decisions, locks = _state(source, target, edition_ids, lock=True)

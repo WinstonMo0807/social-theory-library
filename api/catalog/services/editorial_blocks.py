@@ -97,7 +97,8 @@ def resolve_target(raw, *, public=False):
             title = obj.text
         elif kind == "entity":
             from catalog.services.knowledge_public import public_entities
-            eligible = public_entities().filter(pk=obj.pk).exists()
+            from catalog.services.knowledge_identity import canonical_entity
+            eligible = public_entities().filter(pk=canonical_entity(obj).pk).exists()
             title = obj.label
         else:
             eligible = obj.status == "published"

@@ -9,6 +9,7 @@ from catalog.services.knowledge_sources import require_revision_access, locator
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
 from catalog.services.academic_vocabulary import PREDICATES
+from catalog.services.knowledge_identity import canonical_entity
 
 
 def public_entities():
@@ -34,6 +35,8 @@ def assertion_public(statement):
     if not sources and not statement.origin.get("human_confirmation_preserved"):
         return False
     for source in sources:
+        if source.attribution_id and not public_entities().filter(pk=canonical_entity(source.attribution).pk).exists():
+            return False
         if source.document_revision_id and not (public_editions(require_fulltext=True).filter(pk=source.edition_id).exists()
             and m.CatalogPublicationRevision.objects.filter(document_revision=source.document_revision,
                 reader_asset_id=source.document_revision.asset_id, status__in=["active", "superseded"], fulltext_ready=True).exists()):
@@ -48,7 +51,7 @@ def assertion_public(statement):
         if participant.edition_id and not public_editions().filter(pk=participant.edition_id).exists():
             return False
         if participant.entity_id:
-            if not public_entities().filter(pk=participant.entity_id).exists():
+            if not public_entities().filter(pk=canonical_entity(participant.entity).pk).exists():
                 return False
     return True
 
@@ -76,8 +79,10 @@ def assertion_data(statement, actor, *, draft=False):
 def publication_entities(page, statements):
     from django.db.models import Q
     ids = m.AssertionParticipant.objects.filter(assertion_id__in=statements).exclude(entity=None).values("entity_id")
-    rows = m.Entity.objects.filter(Q(pk__in=ids) | Q(pk=page.entity_id)).exclude(pk__in=public_entities().values("pk"))
-    return list(rows)
+    attributions = m.AssertionSource.objects.filter(assertion_id__in=statements).exclude(attribution=None).values("attribution_id")
+    entities = m.Entity.objects.filter(Q(pk__in=ids) | Q(pk__in=attributions) | Q(pk=page.entity_id))
+    canonical = {canonical_entity(row).pk for row in entities}
+    return list(m.Entity.objects.filter(pk__in=canonical).exclude(pk__in=public_entities().values("pk")))
 
 
 def publish_reviewed_identity(entity, actor):
@@ -114,7 +119,7 @@ def page_data(page, actor, *, draft=False):
     else:
         if page.status != "published" or page.work_id and not public_editions().filter(work_id=page.work_id).exists():
             raise Http404
-        if page.entity_id and not public_entities().filter(pk=page.entity_id).exists():
+        if page.entity_id and not public_entities().filter(pk=canonical_entity(page.entity).pk).exists():
             raise Http404
         blocks = page.body_blocks
         revision = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk, status="published").order_by("-revision").first()

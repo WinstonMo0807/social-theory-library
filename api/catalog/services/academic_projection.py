@@ -8,6 +8,7 @@ from django.db.models import Q
 from catalog import models as m
 from catalog.services.knowledge_public import assertion_public
 from catalog.services.academic_vocabulary import PREDICATES
+from catalog.services.knowledge_identity import canonical_entity, family_ids
 
 
 def _mapped(model):
@@ -20,9 +21,9 @@ def _statements(kind, *, person_ids=None, node_ids=None, work_ids=None):
     if kind == "person":
         rows = rows.filter(participants__entity__person__isnull=False)
     if person_ids is not None:
-        rows = rows.filter(participants__entity__person_id__in=person_ids)
+        rows = rows.filter(participants__entity_id__in=family_ids(m.Entity.objects.filter(person_id__in=person_ids).values_list("pk", flat=True)))
     if node_ids is not None:
-        rows = rows.filter(participants__entity__node_id__in=node_ids)
+        rows = rows.filter(participants__entity_id__in=family_ids(m.Entity.objects.filter(node_id__in=node_ids).values_list("pk", flat=True)))
     if kind == "work":
         rows = rows.filter(participants__work__isnull=False)
     if work_ids is not None:
@@ -39,7 +40,7 @@ def person_node_links(*, person_ids=None, node_ids=None, tradition_only=False):
         nodes = [v for v in members if v.role in {"subject", "object"} and v.entity_id and v.entity.node_id]
         if len(persons) != 1 or len(nodes) != 1:
             continue
-        person, node = persons[0].entity.person, nodes[0].entity.node
+        person, node = canonical_entity(persons[0].entity).person, canonical_entity(nodes[0].entity).node
         if tradition_only and node.node_type != "theory_tradition":
             continue
         record = statement.origin.get("record", {})
@@ -69,7 +70,7 @@ def work_node_links(*, work_ids=None, node_ids=None, preparing_catalog=False):
         nodes = [v for v in members if v.role in {"subject", "object"} and v.entity_id and v.entity.node_id]
         if len(works) != 1 or len(nodes) != 1:
             continue
-        work, node = works[0].work, nodes[0].entity.node
+        work, node = works[0].work, canonical_entity(nodes[0].entity).node
         record = statement.origin.get("record", {})
         yield SimpleNamespace(pk=statement.pk, id=statement.pk, work=work, work_id=work.pk, node=node, node_id=node.pk,
             role=statement.predicate, is_primary=bool(record.get("is_primary", False)), strength=record.get("strength", "medium"),
@@ -97,7 +98,7 @@ def node_node_links(*, node_ids=None):
             continue
         if not all(v.entity_id and v.entity.node_id for v in [subjects[0], objects[0]]):
             continue
-        source, target = subjects[0].entity.node, objects[0].entity.node
+        source, target = canonical_entity(subjects[0].entity).node, canonical_entity(objects[0].entity).node
         yield SimpleNamespace(id=statement.pk, pk=statement.pk, source_node=source, target_node=target,
             source_node_id=source.pk, target_node_id=target.pk, relation_type=statement.predicate,
             direction=statement.direction, description=statement.text, status="published",

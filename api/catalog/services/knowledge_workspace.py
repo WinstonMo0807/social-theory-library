@@ -229,7 +229,8 @@ def public_page_url(page):
         from catalog.services.publication_eligibility import public_editions
         edition = public_editions().filter(work_id=page.work_id).order_by("-is_primary").first()
         return f"/works/{edition.public_slug}" if edition and edition.public_slug else None
-    entity = page.entity
+    from catalog.services.knowledge_identity import canonical_entity
+    entity = canonical_entity(page.entity)
     if entity and entity.node_id:
         return f"/theories/nodes/{entity.node.slug}"
     if entity and entity.topic_id:
