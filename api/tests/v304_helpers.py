@@ -89,6 +89,7 @@ def activate_catalog_revision(
         ).encode("utf-8")
     ).hexdigest()
     now = timezone.now()
+    CatalogPublicationRevision.objects.filter(edition=edition, status="active").update(status="superseded")
     revision = CatalogPublicationRevision.objects.create(
         edition=edition,
         revision=revision_number,

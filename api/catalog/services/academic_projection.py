@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from django.db.models import Q
 from catalog import models as m
 from catalog.services.knowledge_public import assertion_public
+from catalog.services.academic_vocabulary import PREDICATES
 
 
 def _mapped(model):
@@ -47,8 +48,9 @@ def person_node_links(*, person_ids=None, node_ids=None, tradition_only=False):
             direction=statement.direction, node_is_source=nodes[0].role == "subject", status="published",
             is_representative=bool(record.get("is_representative", False)), confidence=record.get("confidence"),
             source="；".join(v.citation for v in statement.sources.all() if v.citation),
-            sort_order=record.get("sort_order", 0), assertion_id=statement.pk)
-    rows = m.PersonNodeRelation.objects.filter(status="published", node__status="published").exclude(pk__in=_mapped(m.PersonNodeRelation))
+            sort_order=record.get("sort_order", 0), assertion_id=statement.pk, statement=statement)
+    rows = m.PersonNodeRelation.objects.filter(status="published", node__status="published",
+        person__authority_status="verified", person__scholar_profile__editorial_status="published").exclude(pk__in=_mapped(m.PersonNodeRelation))
     if person_ids is not None:
         rows = rows.filter(person_id__in=person_ids)
     if node_ids is not None:
@@ -58,7 +60,7 @@ def person_node_links(*, person_ids=None, node_ids=None, tradition_only=False):
     yield from rows.select_related("person", "node").order_by("id")
 
 
-def work_node_links(*, work_ids=None, node_ids=None):
+def work_node_links(*, work_ids=None, node_ids=None, preparing_catalog=False):
     for statement in _statements("work", work_ids=work_ids, node_ids=node_ids):
         if not assertion_public(statement):
             continue
@@ -71,10 +73,81 @@ def work_node_links(*, work_ids=None, node_ids=None):
         record = statement.origin.get("record", {})
         yield SimpleNamespace(pk=statement.pk, id=statement.pk, work=work, work_id=work.pk, node=node, node_id=node.pk,
             role=statement.predicate, is_primary=bool(record.get("is_primary", False)), strength=record.get("strength", "medium"),
-            status="published", assertion_id=statement.pk, description=statement.text)
+            status="published", assertion_id=statement.pk, description=statement.text, statement=statement,
+            updated_at=statement.updated_at, get_role_display=lambda p=statement.predicate: PREDICATES.get(p, p))
+    from catalog.services.publication_eligibility import public_editions
     rows = m.WorkNodeRelation.objects.filter(status="published", node__status="published").exclude(pk__in=_mapped(m.WorkNodeRelation))
+    if not preparing_catalog:
+        rows = rows.filter(work_id__in=public_editions().values("work_id"))
     if work_ids is not None:
         rows = rows.filter(work_id__in=work_ids)
     if node_ids is not None:
         rows = rows.filter(node_id__in=node_ids)
     yield from rows.select_related("work", "node").order_by("id")
+
+
+def node_node_links(*, node_ids=None):
+    for statement in _statements("node", node_ids=node_ids):
+        if not assertion_public(statement):
+            continue
+        members = list(statement.participants.all())
+        subjects = [v for v in members if v.role == "subject"]
+        objects = [v for v in members if v.role == "object"]
+        if len(subjects) != 1 or len(objects) != 1:
+            continue
+        if not all(v.entity_id and v.entity.node_id for v in [subjects[0], objects[0]]):
+            continue
+        source, target = subjects[0].entity.node, objects[0].entity.node
+        yield SimpleNamespace(id=statement.pk, pk=statement.pk, source_node=source, target_node=target,
+            source_node_id=source.pk, target_node_id=target.pk, relation_type=statement.predicate,
+            direction=statement.direction, description=statement.text, status="published",
+            get_relation_type_display=lambda p=statement.predicate: PREDICATES.get(p, p), statement=statement,
+            assertion_id=statement.pk)
+    rows = m.KnowledgeRelation.objects.filter(status="published", source_node__status="published",
+        target_node__status="published").exclude(pk__in=_mapped(m.KnowledgeRelation))
+    if node_ids is not None:
+        rows = rows.filter(Q(source_node_id__in=node_ids) | Q(target_node_id__in=node_ids))
+    yield from rows.select_related("source_node", "target_node").order_by("id")
+
+
+def relation_payload(link, actor):
+    """Legacy public component fields with exact versioned, multi-segment locators."""
+    from catalog.services.knowledge_public import assertion_data
+    statement = link.statement
+    value = assertion_data(statement, actor)
+    evidence = []
+    for item in value["evidence"]:
+        location = item.get("locator")
+        if not location:
+            continue  # The existing login boundary applies to verbatim text.
+        evidence.append({"id": item["anchor_id"], "anchor_id": item["anchor_id"], "stance": item["stance"],
+            "work": location["work_id"], "file": location["asset_id"],
+            "work_title": next((s["work__title"] for s in value["sources"] if str(s["work_id"]) == location["work_id"]), ""),
+            "quote": location["exact"], "reader_href": location["reader_url"], "locator": location,
+            "document_revision_id": location["document_revision_id"], "page_number": location["segments"][0]["page_number"],
+            "page_end": location["segments"][-1]["page_number"],
+            "printed_page_label": "、".join(s["printed_label"] for s in location["segments"] if s.get("printed_label")),
+            "bounding_box": {}, "extraction_method": "verified_anchor", "review_status": "approved"})
+    return {"id": str(statement.pk), "assertion_id": str(statement.pk), "status": statement.status,
+        "description": statement.text, "source": "；".join(s["citation"] for s in value["sources"] if s["citation"]),
+        "sources": value["sources"], "conditions": value["conditions"], "evidence": evidence,
+        "source_quality": value["source_quality"], "confidence": None, "reviewed_at": None,
+        "created_at": statement.created_at, "updated_at": statement.updated_at}
+
+
+def published_knowledge_nodes(work_id, frozen_rows):
+    """Overlay independently published knowledge, never unpublished bibliography.
+
+    Unmigrated rows retain the activated catalog's boundary. Mapped rows use
+    current Assertions so withdrawing knowledge cannot resurrect a frozen edge.
+    """
+    replaced = set(map(str, m.WorkNodeRelation.objects.filter(work_id=work_id,
+        pk__in=_mapped(m.WorkNodeRelation)).values_list("node_id", flat=True)))
+    rows = [v for v in frozen_rows if isinstance(v, dict) and str(v.get("id")) not in replaced and not v.get("assertion_id")]
+    for link in work_node_links(work_ids=[work_id]):
+        if not getattr(link, "assertion_id", None):
+            continue
+        rows.append({"id": str(link.node_id), "name": link.node.canonical_name_zh, "slug": link.node.slug,
+            "type": link.node.node_type, "role": link.role, "is_primary": link.is_primary,
+            "assertion_id": str(link.assertion_id)})
+    return rows

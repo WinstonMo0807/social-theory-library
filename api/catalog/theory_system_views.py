@@ -1,4 +1,5 @@
 from __future__ import annotations
+from catalog.services.academic_projection import work_node_links, person_node_links
 from catalog.academic_relation_views import AcademicRelationCommandMixin
 from catalog.path_editor_views import PathCommandMixin
 
@@ -314,18 +315,13 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
                 Q(primary_discipline=discipline)
                 | Q(discipline_links__discipline=discipline, discipline_links__status="published")
             ).distinct()
-            work_ids = WorkNodeRelation.objects.filter(
-                node__in=nodes,
-                node__status="published",
-                status="published",
-                work_id__in=public_editions().values("work_id"),
-            ).values("work_id").distinct()
+            work_ids = {v.work_id for v in work_node_links(node_ids=nodes.values("pk"))}
             counts = {
                 "theory_traditions": nodes.filter(node_type="theory_tradition").count(),
                 "subdisciplines": Subdiscipline.objects.filter(
                     discipline=discipline, editorial_status="published",
                 ).count(),
-                "works": work_ids.count(),
+                "works": len(work_ids),
             }
             discipline_rows.append(
                 {
@@ -351,15 +347,7 @@ class TheorySystemOverviewView(TheorySystemFeatureMixin, APIView):
             )
             .order_by("-updated_at")[:6]
         )
-        recent_relations = (
-            WorkNodeRelation.objects.filter(
-                status="published",
-                node__status="published",
-                work_id__in=public_editions().values("work_id"),
-            )
-            .select_related("work", "node")
-            .order_by("-reviewed_at", "-updated_at")[:6]
-        )
+        recent_relations = sorted(work_node_links(), key=lambda v: v.updated_at, reverse=True)[:6]
         from .models import RecommendationPolicy
         from .services.canonical_identity import CanonicalIdentityError, mapped_node_for_legacy
         from .services.recommendations import current_snapshot
@@ -421,9 +409,7 @@ class KnowledgeNodeListView(TheorySystemFeatureMixin, generics.ListAPIView):
     def get_queryset(self):
         queryset = _node_filter(_published_node_queryset(), self.request.query_params)
         if self.request.query_params.get("has_works", "").strip().lower() in {"1", "true", "yes"}:
-            queryset = queryset.filter(pk__in=WorkNodeRelation.objects.filter(
-                status="published", work_id__in=public_editions().values("work_id"),
-            ).values("node_id"))
+            queryset = queryset.filter(pk__in={v.node_id for v in work_node_links(node_ids=queryset.values("pk"))})
         sort = self.request.query_params.get("sort", "")
         if sort and sort not in {"name", "updated"}:
             raise APIValidationError({"sort": "未知理论目录排序方式。"})
@@ -472,17 +458,8 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
         ).distinct()
         node_type = request.query_params.get("type", "theory_tradition") if request else "theory_tradition"
         displayed = nodes.filter(node_type=node_type).order_by("sort_order", "canonical_name_zh")
-        work_ids = WorkNodeRelation.objects.filter(
-            node__in=nodes,
-            status="published",
-            work_id__in=public_editions().values("work_id"),
-        ).values("work_id").distinct()
-        scholar_ids = PersonNodeRelation.objects.filter(
-            node__in=nodes,
-            status="published",
-            person__authority_status="verified",
-            person__scholar_profile__editorial_status="published",
-        ).values("person_id").distinct()
+        work_ids = {v.work_id for v in work_node_links(node_ids=nodes.values("pk"))}
+        scholar_ids = {v.person_id for v in person_node_links(node_ids=nodes.values("pk"))}
         reading_paths = ReadingPath.objects.filter(
             status="published",
             primary_discipline=discipline,
@@ -508,8 +485,8 @@ class TheoryDisciplineDetailView(TheorySystemFeatureMixin, APIView):
                 discipline=discipline, editorial_status="published",
             ).count(),
             "debates": nodes.filter(node_type="debate").count(),
-            "scholars": scholar_ids.count(),
-            "works": work_ids.count(),
+            "scholars": len(scholar_ids),
+            "works": len(work_ids),
         }
         return {
                 "discipline": DisciplineCompactSerializer(

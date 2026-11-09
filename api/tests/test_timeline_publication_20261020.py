@@ -201,8 +201,7 @@ def test_public_source_requires_current_exact_document_and_real_page(api_client,
         revision.save(update_fields=["fulltext_ready"])
     elif change == "foreign_document":
         other = source()
-        revision.document_revision = other[4].document_revision
-        revision.save(update_fields=["document_revision"])
+        activate_catalog_revision(edition, reader_asset=asset, document_revision=other[4].document_revision)
     elif change == "missing_page":
         page.delete()
     elif change == "missing_file":
@@ -211,6 +210,7 @@ def test_public_source_requires_current_exact_document_and_real_page(api_client,
         Page.objects.filter(pk=page.pk).update(text="当前正文已不再包含先前的引用")
         if change == "same_asset_new_revision":
             from catalog.models import DocumentRevision
+            DocumentRevision.objects.filter(asset=asset, is_active=True).update(is_active=False)
             newer = DocumentRevision.objects.create(
                 asset=asset, revision=2, source_checksum=asset.sha256, text_checksum="f" * 64,
                 parser_name="isolated-test", parser_version="next", extraction_method="embedded",
@@ -304,11 +304,14 @@ def test_subject_edition_and_precision_pass_through_existing_draft_publish_flow(
     _source_work, _source_edition, source_asset, source_page, _ = source(title="独立出处")
     row = event(work=work)
     api_client.force_authenticate(admin_user)
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(admin_user.pk))
     endpoint = f"/api/catalog/admin/theory-timeline/{row.pk}/"
     version = api_client.get(endpoint).data["edit_version"]
     saved = api_client.patch(endpoint, {
         "subject_edition": str(edition.pk), "date_precision": "range", "start_year": 1900, "end_year": 1910,
         "evidence_asset": str(source_asset.pk), "evidence_page": 1, "evidence_text": source_page.text,
+        "source": "经人工核对的独立出处", "description": "所选出版版本及日期范围已经核对。",
+        "editorial_details": {"confirmed": True},
     }, format="json", HTTP_IF_MATCH=version)
     assert saved.status_code == 202, saved.data
     assert str(saved.data["subject_edition"]) == str(edition.pk) and saved.data["date_precision"] == "range"

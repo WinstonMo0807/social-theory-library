@@ -60,7 +60,8 @@ def present(value):
 def related(issue, kind):
     """One-hop recorded relationships from saved, currently public selections."""
     from django.db.models import Q
-    from catalog.models import KnowledgeRelation, PersonNodeRelation
+    from itertools import islice
+    from catalog.services.academic_projection import person_node_links, node_node_links, work_node_links
     from catalog.services import editorial_issues as ledger
     from catalog.services.contribution_projection import contribution_projection, edition_author_projection
     from catalog.services.publication_eligibility import public_editions
@@ -113,24 +114,22 @@ def related(issue, kind):
                 authors = edition_author_projection(snapshot)
             for key in authors["author_ids"]:
                 add("person", key, f"《{title}》所选原文范围的已确认作者" if reference["type"] == "span" else f"《{title}》正式版本的整版作者")
-            for node in (snapshot.get("knowledge") or {}).get("nodes") or []:
-                if isinstance(node, dict):
-                    add("node", node.get("id"), f"《{title}》正式版本关联知识节点；不据此断言该原文讨论此概念")
+            for link in work_node_links(work_ids=[edition.work_id]):
+                add("node", link.node_id, f"《{title}》已发布学术陈述：{link.get_role_display()}；具体原文须分别核验")
         elif reference["type"] == "person":
             people.add(reference["id"])
         elif reference["type"] == "node":
             nodes.add(reference["id"])
-    links = PersonNodeRelation.objects.filter(status="published", node__status="published", person_id__in=public_scholar_queryset().values("person_id"))
-    links = links.filter(node_id__in=nodes) if kind == "person" else links.filter(person_id__in=people)
-    for index, link in enumerate(links.order_by("pk")[:121]):
+    links = person_node_links(node_ids=nodes, person_ids=public_scholar_queryset().values("person_id")) if kind == "person" else person_node_links(person_ids=people)
+    for index, link in enumerate(islice(links, 121)):
         if index == 120:
             truncated = True
             break
         origin = titles.get(("node", str(link.node_id))) if kind == "person" else titles.get(("person", str(link.person_id)))
         add(kind, link.person_id if kind == "person" else link.node_id, f"{origin} · {link.relation_label or '已发布人物与知识关系'}")
     if kind == "node" and nodes:
-        relations = KnowledgeRelation.objects.filter(status="published", source_node__status="published", target_node__status="published").filter(Q(source_node_id__in=nodes)|Q(target_node_id__in=nodes)).select_related("source_node", "target_node").order_by("pk")
-        for index, link in enumerate(relations[:121]):
+        relations = node_node_links(node_ids=nodes)
+        for index, link in enumerate(islice(relations, 121)):
             if index == 120:
                 truncated = True
                 break

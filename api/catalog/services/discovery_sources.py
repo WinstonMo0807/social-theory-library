@@ -130,6 +130,9 @@ def edition_metadata_header(row, *, taxonomy=None):
         values = snapshot.get(section) or {}
         snapshot[section] = {**values, field: [item for item in values.get(field, [])
             if isinstance(item, dict) and str(item.get("id")) in allowed]}
+    from catalog.services.academic_projection import published_knowledge_nodes
+    knowledge = snapshot.get("knowledge") or {}
+    snapshot["knowledge"] = {**knowledge, "nodes": published_knowledge_nodes(row.work_id, knowledge.get("nodes") or [])}
     work = snapshot.get("work") or {}
     edition = snapshot.get("edition") or {}
     readable = bool(asset and asset.kind == "normalized" and asset.status == "ready"

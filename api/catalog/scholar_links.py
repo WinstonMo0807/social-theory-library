@@ -185,6 +185,8 @@ class ScholarLinkView(LinkConfiguration, ScholarCommandMixin, AdminPrivateRespon
 
     def apply(self, request, scholar_id, data):
         kind, actor = self.kind, request.user
+        if kind != "topic":
+            raise ValidationError("学术陈述须从知识编纂提交同一审核草稿，旧人物与节点写入已退役。")
         model, target_model, field, status, published, pending, withdrawn, featured = configuration(kind)
         # Keep the scholar editor's original lock order, then serialize links on Person.
         scholar = get_object_or_404(ScholarProfile.objects.select_for_update(), pk=scholar_id)

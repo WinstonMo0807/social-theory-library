@@ -351,12 +351,9 @@ class SearchService:
                 Q(alias__icontains=query) | Q(normalized_alias__icontains=normalize_term(query)),
                 is_verified=True,
             ).values("node_id")
-            representatives = PersonNodeRelation.objects.filter(
-                Q(person__preferred_name__icontains=query) | Q(person__original_name__icontains=query),
-                status="published", is_representative=True,
-                person__authority_status=Person.AuthorityStatus.VERIFIED,
-                person__scholar_profile__editorial_status="published",
-            ).values("node_id")
+            from catalog.services.academic_projection import person_node_links
+            people = Person.objects.filter(Q(preferred_name__icontains=query) | Q(original_name__icontains=query))
+            representatives = {v.node_id for v in person_node_links(person_ids=people.values("pk")) if v.is_representative}
             contains_q |= Q(pk__in=verified_aliases) | Q(pk__in=representatives)
         if context == SearchContext.SUBDISCIPLINES:
             public = visibility == SearchVisibility.PUBLIC

@@ -124,6 +124,7 @@ from .services.publication_eligibility import (
     active_document_q,
     active_document_revision_q,
     public_edition_q,
+    public_editions,
 )
 from .services.text import clean_page_label, clipboard_payload, normalize_search_text, passage_snippet
 from .site_config import DEFAULT_SITE_CONFIG
@@ -1502,37 +1503,19 @@ class WorkDetailView(generics.RetrieveAPIView):
 
 
 def _legacy_theory_work_counts(theory_ids) -> dict:
-    """Union legacy and normalized work ids during the migration window."""
-
-    counts = {theory_id: set() for theory_id in theory_ids}
-    for theory_id, work_id in WorkKnowledgeRelation.objects.filter(
-        theory_school_id__in=theory_ids,
-        kind=WorkKnowledgeRelation.Kind.THEORY_SCHOOL,
-        approved=True,
-        work__editions__state=PublicationState.PUBLISHED,
-    ).values_list("theory_school_id", "work_id"):
-        counts.setdefault(theory_id, set()).add(work_id)
-    mappings = list(
-        LegacyKnowledgeMapping.objects.filter(
-            legacy_model="TheorySchool",
-            legacy_id__in=[str(value) for value in theory_ids],
-            migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
-            node__node_type="theory_tradition",
-        ).values_list("legacy_id", "node_id")
-    )
-    legacy_by_node = {}
-    for legacy_id, node_id in mappings:
-        try:
-            legacy_by_node[node_id] = UUID(str(legacy_id))
-        except (TypeError, ValueError):
-            continue
-    for node_id, work_id in WorkNodeRelation.objects.filter(
-        node_id__in=legacy_by_node,
-        status=KnowledgePublicationStatus.PUBLISHED,
-        work__editions__state=PublicationState.PUBLISHED,
-    ).values_list("node_id", "work_id"):
-        counts.setdefault(legacy_by_node[node_id], set()).add(work_id)
-    return {theory_id: len(work_ids) for theory_id, work_ids in counts.items()}
+    """Mapped legacy URLs read the same published assertion projection."""
+    from catalog.services.academic_projection import work_node_links
+    counts = {key: set() for key in theory_ids}
+    mappings = list(LegacyKnowledgeMapping.objects.filter(legacy_model="TheorySchool",
+        legacy_id__in=[str(v) for v in theory_ids], migration_status="mapped", node__node_type="theory_tradition").values_list("legacy_id", "node_id"))
+    by_node = {node_id: UUID(str(legacy_id)) for legacy_id, node_id in mappings}
+    mapped_legacy = set(by_node.values())
+    for theory_id, work_id in WorkKnowledgeRelation.objects.filter(theory_school_id__in=set(theory_ids)-mapped_legacy,
+        kind="theory_school", approved=True, work_id__in=public_editions().values("work_id")).values_list("theory_school_id", "work_id"):
+        counts[theory_id].add(work_id)
+    for row in work_node_links(node_ids=by_node):
+        counts[by_node[row.node_id]].add(row.work_id)
+    return {key: len(rows) for key, rows in counts.items()}
 
 
 def _legacy_theory_ids_for_normalized_nodes(node_ids) -> list[str]:
@@ -1572,11 +1555,8 @@ class TheorySchoolListView(generics.ListAPIView):
                 Q(topic__slug=theme) | Q(topic__name__icontains=theme),
                 review_status=RelationReviewStatus.APPROVED,
             ).values_list("work_id", flat=True)
-            normalized_node_ids = WorkNodeRelation.objects.filter(
-                work_id__in=topic_work_ids,
-                status=KnowledgePublicationStatus.PUBLISHED,
-                node__node_type="theory_tradition",
-            ).values_list("node_id", flat=True)
+            from catalog.services.academic_projection import work_node_links
+            normalized_node_ids = {v.node_id for v in work_node_links(work_ids=topic_work_ids) if v.node.node_type == "theory_tradition"}
             normalized_legacy_ids = _legacy_theory_ids_for_normalized_nodes(
                 normalized_node_ids
             )
@@ -1608,13 +1588,11 @@ class TheorySchoolListView(generics.ListAPIView):
         if self.request.query_params.get("has_works") == "true":
             queryset = queryset.filter(work_count__gt=0)
         if self.request.query_params.get("has_scholars") == "true":
-            normalized_scholar_nodes = WorkNodeRelation.objects.filter(
-                status=KnowledgePublicationStatus.PUBLISHED,
-                work__editions__contributions__approved=True,
-                work__editions__contributions__person__scholar_profile__editorial_status="published",
-                work__editions__contributions__person__authority_status="verified",
-                node__node_type="theory_tradition",
-            ).values_list("node_id", flat=True)
+            from catalog.services.academic_projection import person_node_links, work_node_links
+            authored = public_editions().filter(contributions__approved=True,
+                contributions__person__scholar_profile__editorial_status="published", contributions__person__authority_status="verified").values("work_id")
+            normalized_scholar_nodes = {v.node_id for v in work_node_links(work_ids=authored) if v.node.node_type == "theory_tradition"}
+            normalized_scholar_nodes.update(v.node_id for v in person_node_links(tradition_only=True))
             normalized_legacy_ids = _legacy_theory_ids_for_normalized_nodes(
                 normalized_scholar_nodes
             )
@@ -1675,6 +1653,16 @@ class TheorySchoolDetailView(generics.RetrieveAPIView):
             migration_status=LegacyKnowledgeMapping.MigrationStatus.MAPPED,
             node__node_type="theory_tradition",
         ).first()
+        if mapping is not None:
+            from catalog.services.academic_projection import work_node_links, person_node_links
+            work_ids = {v.work_id for v in work_node_links(node_ids=[mapping.node_id])}
+            person_ids = {v.person_id for v in person_node_links(node_ids=[mapping.node_id])}
+            works = public_works().filter(pk__in=work_ids)
+            scholars = public_scholar_queryset().filter(Q(person_id__in=person_ids) | Q(
+                person__contributions__approved=True, person__contributions__edition_id__in=public_editions().filter(work_id__in=work_ids).values("pk"))).distinct()
+            data["works"] = WorkCardSerializer(works, many=True, context={"request": request}).data
+            data["scholars"] = ScholarProfileSerializer(scholars, many=True, context={"request": request}).data
+            return Response(data)
         normalized_work_filter = Q()
         if mapping is not None:
             normalized_work_filter = Q(

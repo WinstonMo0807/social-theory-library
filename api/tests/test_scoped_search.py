@@ -24,6 +24,12 @@ from .v304_helpers import activate_catalog_revision
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def registered_search_session(api_client, reader_user):
+    # Search now requires login; public visibility still excludes all drafts.
+    api_client.force_authenticate(reader_user)
+
+
 def create_public_work(title="共同研究"):
     work = Work.objects.create(title=title, document_type="book", language="zh-CN")
     edition = Edition.objects.create(
@@ -53,7 +59,15 @@ def create_scholar(name, *, status=Person.AuthorityStatus.VERIFIED, profile_stat
 
 
 def create_public_alias(person, alias):
-    state = QueryLexiconState.objects.get(key="default")
+    from catalog.models import QueryLexiconGeneration
+    from catalog.services.query_lexicon.normalization import NORMALIZATION_VERSION
+    from catalog.services.query_lexicon.registry import SOURCE_REGISTRY_VERSION
+    state = QueryLexiconState.objects.filter(key="default").first()
+    if state is None:
+        generation = QueryLexiconGeneration.objects.create(status="active", normalization_version=NORMALIZATION_VERSION,
+            source_registry_version=SOURCE_REGISTRY_VERSION)
+        state = QueryLexiconState.objects.create(key="default", active_generation=generation,
+            normalization_version=NORMALIZATION_VERSION, source_registry_version=SOURCE_REGISTRY_VERSION)
     normalized = normalize_term(alias)
     QueryLexiconEntry.objects.create(
         generation=state.active_generation,
@@ -260,9 +274,9 @@ def test_public_scholar_search_excludes_draft_and_accepts_public_lexicon_alias(a
     assert legacy_list.data["results"] == []
 
 
-def test_admin_visibility_is_explicit_and_anonymous_cannot_request_it(api_client, admin_user):
+def test_admin_visibility_is_explicit_and_anonymous_cannot_request_it(api_client, admin_user, reader_user):
     rows = seeded_entities()
-
+    api_client.force_authenticate(None)
     anonymous = api_client.get(
         "/api/catalog/search/",
         {
@@ -272,9 +286,11 @@ def test_admin_visibility_is_explicit_and_anonymous_cannot_request_it(api_client
             "q": "共同草稿学者",
         },
     )
-    assert anonymous.status_code == 200
-    assert anonymous.data["visibility"] == "public"
-    assert anonymous.data["groups"][0]["results"] == []
+    assert anonymous.status_code == 401
+    api_client.force_authenticate(reader_user)
+    reader = api_client.get("/api/catalog/search/", {"context": "scholars", "envelope": "1", "visibility": "admin", "q": "共同草稿学者"})
+    assert reader.status_code == 200 and reader.data["visibility"] == "public"
+    assert reader.data["groups"][0]["results"] == []
 
     api_client.force_authenticate(admin_user)
     admin = api_client.get(

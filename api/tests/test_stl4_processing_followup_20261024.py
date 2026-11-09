@@ -29,26 +29,23 @@ def command(job, enabled):
             "action": "configure_followup", "expected_version": task_version(job), "align_concepts": enabled}
 
 
-def test_toggle_replay_survives_worker_checkpoint_and_publication(api_client, admin_user, settings, tmp_path):
+def test_retired_toggle_preserves_worker_checkpoint_and_publication(api_client, admin_user, settings, tmp_path):
     job = pending_followup(settings, tmp_path, admin_user)
+    job.stats["after_processing"] = {"align_concepts": False}
+    job.save(update_fields=["stats"])
     stale_stats = dict(job.stats)
-    body = command(job, False)
     api_client.force_authenticate(admin_user)
-    headers = {"HTTP_X_EDITOR_OWNER": str(admin_user.pk)}
-    first = api_client.post(URL, body, format="json", **headers)
-    assert first.status_code == 200, first.data
-    assert api_client.post(URL, body, format="json", **headers).data == first.data
-    assert AuditEvent.objects.filter(action="processing.configure_followup", object_id=str(job.pk)).count() == 1
+    response = api_client.post(URL, command(job, True), format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk))
+    assert response.status_code == 409
     _write_ocr_checkpoint(job, stats={**stale_stats, "processed_pages": 1})
     assert _publish_ocr_result(job, dict(stale_stats), job.task_id)
     job.refresh_from_db()
-    assert job.stats["after_processing"]["align_concepts"] is False
-    with patch("ingestion.services.processing.generate_theory_review_tasks") as generate:
-        assert run_concept_followup(job) == {"enabled": False}
+    with patch("catalog.services.theory_suggestions.generate_theory_review_tasks") as generate:
+        assert run_concept_followup(job)["retired"]
     generate.assert_not_called()
-    job.refresh_from_db()
-    assert followup_state(job)["state"] == "skipped"
-    assert job.stats["completed_page_indexes"] == [1]
+    assert followup_state(job)["state"] == "disabled" and not followup_state(job)["can_configure"]
+    assert job.stats["completed_page_indexes"] == [1] and job.stats["after_processing"]["align_concepts"] is False
+    assert not AuditEvent.objects.filter(action="processing.configure_followup", object_id=str(job.pk)).exists()
 
 
 def test_phase_receipt_and_source_guards(api_client, admin_user, settings, tmp_path):
@@ -68,20 +65,16 @@ def test_phase_receipt_and_source_guards(api_client, admin_user, settings, tmp_p
     assert not AuditEvent.objects.filter(action="processing.configure_followup", object_id=str(job.pk)).exists()
 
 
-def test_followup_uses_existing_service_once_and_fences_replaced_worker(admin_user, settings, tmp_path):
+def test_old_and_replaced_worker_cannot_generate_new_candidates(admin_user, settings, tmp_path):
     job = pending_followup(settings, tmp_path, admin_user)
-    result = {"enabled": True, "created": 2, "updated": 1, "new_node_tasks": 0}
-    with patch("ingestion.services.processing.generate_theory_review_tasks", return_value=result) as generate:
-        assert run_concept_followup(job) == result
-        assert run_concept_followup(job) == result
-    generate.assert_called_once_with(job.asset, actor=admin_user, force=False)
+    before = dict(job.stats)
+    with patch("catalog.services.theory_suggestions.generate_theory_review_tasks") as generate:
+        assert run_concept_followup(job)["retired"]
+        ProcessingJob.objects.filter(pk=job.pk).update(task_id=str(uuid4()))
+        assert run_concept_followup(job)["retired"]
+    generate.assert_not_called()
     job.refresh_from_db()
-    assert followup_state(job)["counts"]["created"] == 2
-    ProcessingJob.objects.filter(pk=job.pk).update(task_id=str(uuid4()))
-    with patch("ingestion.services.processing.generate_theory_review_tasks") as late:
-        with pytest.raises(OCRClaimSuperseded):
-            run_concept_followup(job)
-    late.assert_not_called()
+    assert job.stats == before and not TheoryReviewTask.objects.exists()
 
 
 def test_new_task_saves_followup_choice_before_dispatch(api_client, admin_user, settings, tmp_path):
@@ -110,26 +103,17 @@ def test_regeneration_keeps_human_decisions_and_quotes(admin_user, settings, tmp
         text = "本文依据象征互动论分析日常互动，象征互动论强调行动者对情境意义的解释。"
         page = Page.objects.create(asset=asset, index=index, text=text, normalized_text=text, text_source="embedded")
         Passage.objects.create(page=page, order=0, text=text, normalized_text=text)
-    generate_theory_review_tasks(asset, actor=admin_user)
-    task = TheoryReviewTask.objects.get(work=work, candidate_node=node)
-    relation = WorkNodeRelation.objects.get(work=work, node=node)
-    snippet = EvidenceSnippet.objects.filter(work=work, node=node).first()
-    snippet.quote, snippet.reviewed_by, snippet.reviewed_at = "人工核对后保留的原句", admin_user, timezone.now()
-    snippet.save()
-    # Even a pending relation with an editor attribution is protected.
-    relation.reviewed_by, relation.reviewed_at, relation.confidence = admin_user, timezone.now(), .42
-    relation.save()
-    generate_theory_review_tasks(asset, actor=admin_user, force=True)
-    relation.refresh_from_db()
-    assert relation.confidence == .42
-    relation.reviewed_by, relation.reviewed_at = None, None
-    relation.save()
-    generate_theory_review_tasks(asset, actor=admin_user, force=True)
-    snippet.refresh_from_db()
-    assert snippet.quote == "人工核对后保留的原句"
-    task.status, task.evidence_text = decision, "人工决定与原证据"
-    task.save()
-    result = generate_theory_review_tasks(asset, actor=admin_user, force=True)
-    task.refresh_from_db()
+    task = TheoryReviewTask.objects.create(work=work, file=asset, candidate_node=node, task_type="work_node",
+        status=decision, evidence_text="人工决定与原证据")
+    relation = WorkNodeRelation.objects.create(work=work, node=node, role="general_mention", status="published",
+        reviewed_by=admin_user, reviewed_at=timezone.now(), confidence=.42)
+    snippet = EvidenceSnippet.objects.create(work=work, file=asset, node=node, work_node_relation=relation,
+        page_number=1, quote="人工核对后保留的原句", reviewed_by=admin_user, reviewed_at=timezone.now())
+    for force in [False, True]:
+        result = generate_theory_review_tasks(asset, actor=admin_user, force=force)
+        assert result["retired"] and not result["enabled"]
+    task.refresh_from_db(); relation.refresh_from_db(); snippet.refresh_from_db()
     assert (task.status, task.evidence_text) == (decision, "人工决定与原证据")
-    assert result["protected_nodes"] == 1
+    assert relation.confidence == .42 and relation.reviewed_by == admin_user
+    assert snippet.quote == "人工核对后保留的原句" and snippet.reviewed_by == admin_user
+    assert TheoryReviewTask.objects.count() == WorkNodeRelation.objects.count() == EvidenceSnippet.objects.count() == 1

@@ -31,7 +31,6 @@ from catalog.services.edition_file_intake import prepare_reader_input, staged_fi
 from catalog.services.front_matter_intelligence import run_front_matter_intelligence
 from catalog.services.semantic_indexing import queue_semantic_job, remove_semantic_asset
 from catalog.services.publication_places import detect_publication_places
-from catalog.services.theory_suggestions import generate_theory_review_tasks
 from ingestion.models import (
     AuditEvent,
     FieldLock,
@@ -1364,26 +1363,6 @@ def run_pipeline(item_id: str) -> UploadItem:
                     "document_type": edition.work.document_type,
                 }
                 attempt.save(update_fields=["output_summary", "updated_at"])
-
-        # Theory suggestions depend on the persisted PDF text and page mapping.
-        # Failure here must not make the document unreadable or unpublishable.
-        try:
-            with processing_attempt(item, "theory_suggestions", reuse_completed=False) as attempt:
-                result = generate_theory_review_tasks(
-                    normalized,
-                    actor=item.batch.created_by,
-                    force=False,
-                )
-                attempt.output_summary = result
-                attempt.save(update_fields=["output_summary", "updated_at"])
-        except Exception as exc:
-            AuditEvent.objects.create(
-                actor=item.batch.created_by,
-                action="theory_suggestions_failed",
-                object_type="Asset",
-                object_id=str(normalized.id),
-                after={"error": str(exc)[:1000]},
-            )
 
         set_stage(item, UploadItem.Status.INDEXING, 78)
         with processing_attempt(item, "search_index", reuse_completed=False) as attempt:

@@ -30,7 +30,6 @@ from catalog.services.query_lexicon.candidates import (
 )
 from catalog.services.page_labels import infer_page_labels
 from catalog.services.publication_places import detect_publication_places
-from catalog.services.theory_suggestions import generate_theory_review_tasks
 from ingestion.models import ProcessingJob, UploadItem
 
 from .candidate_store import persist_metadata_candidates
@@ -1434,12 +1433,6 @@ def run_ocr_job(job_id: str, *, task_id: str = "") -> ProcessingJob:
         _ocr_phase(job, stats, "publishing")
         if not _publish_ocr_result(job, stats, claim_task_id):
             return ProcessingJob.objects.get(pk=job.pk)
-        try:
-            from .processing_followup import run_concept_followup
-            stats["theory_suggestions"] = run_concept_followup(job)
-            stats.pop("theory_suggestion_warning", None)
-        except Exception as exc:
-            stats["theory_suggestion_warning"] = str(exc)[:2000]
         try:
             queue_page_label_job(asset, upload_item=job.upload_item, actor=job.created_by, force=True)
             stats.pop("page_label_warning", None)

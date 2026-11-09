@@ -66,7 +66,6 @@ function SourceForm({ owner, editionId, workId, seed, refresh, disabled, onRevie
   const load = useCallback((path: string, signal: AbortSignal) => apiRequest<Source>(path, { signal, cache: "no-store", headers: { "X-Editor-Owner": owner } }, getServerSessionCredential(), false), [owner]);
   const resource = usePersistentWorkspace<Source>(`${endpoint}sources/${editionId}/?refresh=${refresh}`, owner, data => data.active_job_id ? 5000 : null, load);
   const [fileId, setFileId] = useState(seed.assetId || ""), [kind, setKind] = useState<"ocr" | "outline">(seed.taskType || "ocr");
-  const [alignConcepts, setAlignConcepts] = useState(true);
   const [scope, setScope] = useState("all"), [pages, setPages] = useState(""), [error, setError] = useState("");
   const [options, setOptions] = useState<OCROptions>({ languages: ["ch", "en", "chinese_cht"], layout: true, quality_threshold: .75, detect_spreads: true, detect_garbled: true, skip_reviewed: true });
   const data = resource.data?.work_id === workId ? resource.data : null;
@@ -75,7 +74,7 @@ function SourceForm({ owner, editionId, workId, seed, refresh, disabled, onRevie
     if (!file || !data || disabled) return;
     try {
       const body: Creation = { action: "create", task_type: kind, asset_id: file.id, source_version: file.source_version, confirmed: true };
-      if (kind === "ocr") { body.align_concepts = alignConcepts; body.task_options = options as Creation["task_options"]; if (scope === "pages") body.page_indexes = parseProcessingPages(pages, file.page_count); }
+      if (kind === "ocr") { body.align_concepts = false; body.task_options = options as Creation["task_options"]; if (scope === "pages") body.page_indexes = parseProcessingPages(pages, file.page_count); }
       setError(""); onReview(body, `${data.title} · ${data.edition_label} · ${file.filename} · 文件版本 ${file.version}`, data.provider_label);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "请核对处理范围。"); }
   }
@@ -88,7 +87,7 @@ function SourceForm({ owner, editionId, workId, seed, refresh, disabled, onRevie
       <label>任务类型<select data-stl-select value={kind} onChange={event => setKind(event.target.value as "ocr" | "outline")}><option value="ocr">OCR 文字识别</option><option value="outline">章节目录提取</option></select></label>
       {kind === "ocr" ? <><label>处理范围<select data-stl-select value={scope} onChange={event => setScope(event.target.value)}><option value="all">整份 PDF</option><option value="pages">指定 PDF 页序</option></select></label>{scope === "pages" ? <label>PDF 页序<input value={pages} maxLength={10000} onChange={event => setPages(event.target.value)} placeholder="例如 1–3、8、12–15"/><small>按 PDF 实际页序填写，不使用印刷页码。人工确认文字始终跳过。</small></label> : null}
       <div className={styles.taskOptions}><fieldset><legend>识别语言</legend>{languages.map(([value, label]) => <label key={value}><input type="checkbox" checked={options.languages.includes(value)} disabled={options.languages.length === 1 && options.languages.includes(value)} onChange={event => setOptions(current => ({ ...current, languages: event.target.checked ? [...current.languages, value] : current.languages.filter(item => item !== value) }))}/>{label}</label>)}</fieldset><div>{([["layout", "请求版面分析"], ["skip_reviewed", "跳过当前来源已核验页"], ["detect_spreads", "标出疑似双页合扫"], ["detect_garbled", "标出乱码替换符"]] as const).map(([key, label]) => <label key={key}><input type="checkbox" checked={options[key]} onChange={event => setOptions(current => ({ ...current, [key]: event.target.checked }))}/>{label}</label>)}<label>待校对置信度阈值<select data-stl-select value={options.quality_threshold} onChange={event => setOptions(current => ({ ...current, quality_threshold: Number(event.target.value) }))}>{[.5, .65, .75, .85, .9, .95].map(value => <option key={value} value={value}>{value.toFixed(2)}</option>)}</select></label></div></div>
-      <label className={styles.followupChoice}><input type="checkbox" checked={alignConcepts} onChange={event => setAlignConcepts(event.target.checked)}/><span>完成后自动开始概念对齐（基于馆内术语表）</span></label><p className={styles.note}>概念对齐保存为待审候选，保留已有人工决定；文字识别与检索更新沿原流程处理。</p>
+      <p className={styles.note}>识别完成后，可在 Intelligence 选择章节开展知识编纂。已确认知识与私人资料保持原样。</p>
       <p className={styles.note}>语言与版面策略传给现有服务；质量阈值用于提示人工核对，不代表正确率。人工文字与原 PDF 保留。</p>{data.paused ? <p className={styles.notice}>OCR 当前全局暂停，新任务会保留为暂停状态。</p> : null}{data.active_job_id ? <p className={styles.notice}>本出版版本已有未结束的 OCR 任务。<Link href={`/admin/processing?task_id=${data.active_job_id}&task_source=processing_job`}>查看任务并继续或取消</Link></p> : null}</> : <p className={styles.notice}>提取当前 PDF 的章节结构并保存候选，同一文件正在提取时复用原任务。人工确认目录继续保留。</p>}
       {!data.can_run ? <p className={styles.notice}>{data.denied_reason}</p> : null}<button type="button" className={styles.primary} disabled={!data.can_run || !file?.can_run || (kind === "ocr" && Boolean(data.active_job_id))} onClick={review}>核对处理范围</button></fieldset>
     </>}

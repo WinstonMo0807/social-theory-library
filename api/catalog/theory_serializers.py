@@ -490,6 +490,16 @@ class EvidenceSnippetSerializer(serializers.ModelSerializer):
 
 
 class WorkNodeRelationSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        if not getattr(instance, "assertion_id", None):
+            return super().to_representation(instance)
+        from catalog.services.academic_projection import relation_payload
+        return {**relation_payload(instance, getattr(self.context.get("request"), "user", None)),
+            "work": str(instance.work_id), "node": str(instance.node_id), "work_data": self.get_work_data(instance),
+            "node_name": instance.node.canonical_name_zh, "node_slug": instance.node.slug,
+            "role": instance.role, "role_label": instance.get_role_display(),
+            "is_primary": instance.is_primary, "strength": instance.strength}
+
     work_data = serializers.SerializerMethodField()
     node_name = serializers.CharField(source="node.canonical_name_zh", read_only=True)
     node_slug = serializers.CharField(source="node.slug", read_only=True)
@@ -542,6 +552,19 @@ class TheoryWorkGroupsSerializer(serializers.Serializer):
 
 
 class KnowledgeRelationSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        if not getattr(instance, "assertion_id", None):
+            return super().to_representation(instance)
+        from catalog.services.academic_projection import relation_payload
+        value = relation_payload(instance, getattr(self.context.get("request"), "user", None))
+        return {**value, "source_node": str(instance.source_node_id), "target_node": str(instance.target_node_id),
+            "source_name": instance.source_node.canonical_name_zh, "target_name": instance.target_node.canonical_name_zh,
+            "source_slug": instance.source_node.slug, "target_slug": instance.target_node.slug,
+            "source_node_type": instance.source_node.node_type, "target_node_type": instance.target_node.node_type,
+            "relation_type": instance.relation_type, "relation_label": instance.get_relation_type_display(),
+            "direction": instance.direction, "evidence_source": value["source"], "source_anchor": None,
+            "source_material": None, "published_at": None}
+
     from catalog.relation_source_anchor import RelationAnchorField
     private_relation_source = False
     source_anchor = RelationAnchorField(source="*", required=False, allow_null=True)
@@ -721,29 +744,21 @@ class KnowledgeNodeListSerializer(serializers.ModelSerializer):
         ).data
 
     def get_work_count(self, obj) -> int:
-        return obj.work_relations.filter(
-            status="published",
-            work_id__in=public_editions().values("work_id"),
-        ).values("work_id").distinct().count()
+        from catalog.services.academic_projection import work_node_links
+        return len({v.work_id for v in work_node_links(node_ids=[obj.pk])})
 
     def get_aliases_count(self, obj) -> int:
         return sum(1 for row in obj.aliases.all()
                    if row.is_verified or self.context.get("include_unpublished_items"))
 
     def get_relation_count(self, obj) -> int:
-        return (
-            obj.outgoing_relations.filter(status="published", target_node__status="published").count()
-            + obj.incoming_relations.filter(status="published", source_node__status="published").count()
-        )
+        from catalog.services.academic_projection import node_node_links
+        return sum(1 for _ in node_node_links(node_ids=[obj.pk]))
 
     @extend_schema_field(PersonNodeSerializer(many=True))
     def get_representative_scholars(self, obj):
-        queryset = obj.person_relations.filter(
-            status="published",
-            is_representative=True,
-            person__authority_status=Person.AuthorityStatus.VERIFIED,
-            person__scholar_profile__editorial_status="published",
-        ).select_related("person", "person__scholar_profile")[:5]
+        from catalog.services.academic_projection import person_node_links
+        queryset = sorted((v for v in person_node_links(node_ids=[obj.pk]) if v.is_representative), key=lambda v: v.sort_order)[:5]
         return PersonNodeSerializer(queryset, many=True, context=self.context).data
 
     def get_cover_url(self, obj) -> str:
@@ -835,30 +850,20 @@ class KnowledgeNodeDetailSerializer(KnowledgeNodeListSerializer):
 
     @extend_schema_field(KnowledgeRelationSerializer(many=True))
     def get_direct_relations(self, obj):
-        queryset = KnowledgeRelation.objects.filter(
-            Q(source_node=obj) | Q(target_node=obj),
-            status="published",
-            source_node__status="published",
-            target_node__status="published",
-        ).select_related("source_node", "target_node")[:24]
+        from itertools import islice
+        from catalog.services.academic_projection import node_node_links
+        queryset = list(islice(node_node_links(node_ids=[obj.pk]), 24))
         return KnowledgeRelationSerializer(queryset, many=True, context=self.context).data
 
     @extend_schema_field(TheoryWorkGroupsSerializer)
     def get_work_groups(self, obj):
+        from catalog.services.academic_projection import work_node_links
         groups = {}
-        for role, _label in WorkNodeRelation.Role.choices:
-            queryset = obj.work_relations.filter(
-                role=role,
-                status="published",
-                work_id__in=public_editions().values("work_id"),
-            ).select_related("work").distinct()[:12]
-            if queryset:
-                groups[role] = WorkNodeRelationSerializer(
-                    queryset,
-                    many=True,
-                    context=self.context,
-                ).data
-        return groups
+        for row in work_node_links(node_ids=[obj.pk]):
+            group = groups.setdefault(row.role, [])
+            if len(group) < 12:
+                group.append(row)
+        return {role: WorkNodeRelationSerializer(rows, many=True, context=self.context).data for role, rows in groups.items()}
 
     @extend_schema_field(EvidenceSnippetSerializer(many=True))
     def get_evidence(self, obj):
@@ -1798,7 +1803,7 @@ class NormalizedTimelineDetailSerializer(NormalizedTimelineEventSerializer):
         return KnowledgeRelationSerializer(self._knowledge(obj)[:40], many=True, context=self.context).data
 
     def get_knowledge_relation_count(self, obj) -> int:
-        return self._knowledge(obj).count()
+        return len(self._knowledge(obj))
 
 
 class TimelineEventTypeCountSerializer(serializers.Serializer):

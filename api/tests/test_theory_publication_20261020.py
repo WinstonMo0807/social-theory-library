@@ -41,7 +41,7 @@ def source(*, related_node=None, activate=True, fulltext=True):
     )
     asset = Asset.objects.create(
         edition=edition, kind="normalized", status="ready", validation_status="valid",
-        file=f"test/theory-{uuid4()}.pdf", sha256="a" * 64, page_count=1,
+        file=f"test/theory-{uuid4()}.pdf", sha256=uuid4().hex * 2, page_count=1,
     )
     Page.objects.create(
         asset=asset, index=1, text="用于核对理论关系的原文。",
@@ -67,7 +67,8 @@ def test_compact_work_uses_activated_metadata_and_exact_reader():
     Edition.objects.filter(pk=edition.pk).update(
         public_slug=f"draft-{uuid4()}", publisher="待发布出版社", publication_year=2099,
     )
-    Person.objects.filter(pk=author.pk).update(preferred_name="待发布姓名")
+    author.preferred_name = "待发布姓名"
+    author.save(update_fields=["preferred_name"])
     # Preparing a replacement file does not switch the serving revision.
     Asset.objects.filter(pk=asset.pk).update(is_current=False)
     Asset.objects.create(
@@ -248,8 +249,11 @@ def test_reading_path_retains_existing_node_filter_and_hides_draft_bibliography(
     for index, values in enumerate(({"node": visible}, {"node": hidden}, {"work": work})):
         ReadingPathItem.objects.create(reading_path=path, stage_name="阅读", reading_order=index, **values)
     public = ReadingPathSerializer(path).data
-    assert len(public["items"]) == 1 and str(public["items"][0]["node"]) == str(visible.pk)
-    assert public["primary_discipline"] is None and public["primary_discipline_data"] is None
+    assert len(public["items"]) == 3  # Preserve reading progress identities for unavailable items.
+    assert public["items"][0]["node_id"] == str(visible.pk)
+    assert all(row["source_status"] == "unavailable" and row["node_id"] is None
+        and row["work_id"] is None for row in public["items"][1:])
+    assert public["primary_discipline_data"] is None
     assert len(ReadingPathSerializer(path, context={"include_unpublished_items": True}).data["items"]) == 3
 
 
@@ -266,10 +270,11 @@ def test_mixed_legacy_path_item_cannot_reveal_its_private_target():
     )
     rows = ReadingPathSerializer(path).data["items"]
     assert len(rows) == 2
-    assert rows[0]["node"] is None and rows[0]["node_data"] is None
-    assert rows[0]["work_data"]["title"] == "正式版本题名"
-    assert rows[1]["work"] is None and rows[1]["work_data"] is None
-    assert rows[1]["node_data"]["id"] == str(visible.pk)
+    # Legacy mixed items keep their explicit node identity; never silently retarget to a book.
+    assert rows[0]["node_id"] is None and rows[0]["work_id"] is None
+    assert rows[0]["source_status"] == "unavailable" and rows[0]["title"] == "当前不可用的材料"
+    assert rows[1]["work_id"] is None and rows[1]["node_id"] == str(visible.pk)
+    assert rows[1]["title"] == visible.canonical_name_zh
 
 
 @pytest.mark.parametrize("access", ["private", "registered", "restricted"])
@@ -328,7 +333,7 @@ def test_relation_only_evidence_has_current_revision_and_focus(api_client):
     assert focused.data["document_revision_id"] == evidence[0]["document_revision_id"]
     assert focused.data["geometry_status"] == "unknown"
     graph = api_client.get("/api/catalog/theory-system/graph/", {"center": left.slug})
-    edge = next(row for row in graph.data["edges"] if row["id"] == str(relation.pk))
+    edge = next(row for row in graph.data["edges"] if row["id"] == f"KnowledgeRelation:{relation.pk}")
     assert edge["evidence"][0]["id"] == str(snippet.pk)
     Asset.objects.filter(pk=asset.pk).update(access_status="private")
     assert KnowledgeNodeDetailSerializer(left).data["direct_relations"][0]["evidence"] == []

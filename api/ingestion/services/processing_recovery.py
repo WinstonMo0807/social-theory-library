@@ -37,7 +37,7 @@ def recovery_state(job, *, now=None):
     eligible = last + timedelta(seconds=seconds) if last else None
     stale = bool(eligible and now >= eligible)
     supported = (discovery and stats.get("action") in {"build", "source"}
-                 or job.job_type == "ocr" or job.job_type == "text_extraction" and stats.get("operation") in {"outline_rebuild", "outline_export", "page_mapping_export", "concept_alignment"})
+                 or job.job_type == "ocr" or job.job_type == "text_extraction" and stats.get("operation") in {"outline_rebuild", "outline_export", "page_mapping_export"})
     exhausted = job.attempt >= job.max_attempts or discovery and job.status == "running" and job.attempt + 1 >= job.max_attempts
     allowed = supported and stale and not exhausted and not stats.get("retry_replacement_id")
     state = "recoverable" if allowed else "delayed" if stale else "waiting" if job.status == "pending" else "active"
@@ -77,9 +77,6 @@ def recover_processing_task(job, actor):
             if job.job_type == "ocr":
                 from .catalog_ocr import check_resume_source
                 check_resume_source(job)
-            elif job.job_type == "text_extraction" and job.stats.get("operation") == "concept_alignment":
-                from .concept_retry import current_source
-                current_source(job)
             elif job.job_type == "text_extraction" and job.stats.get("operation") in {"outline_rebuild", "outline_export", "page_mapping_export"}:
                 from catalog.services.document_outline import _source_current
                 _source_current(job.asset)

@@ -51,8 +51,7 @@ def draft_title_work_ids(query):
 def concept_review_url(job):
     if not job.asset_id:
         return ""
-    return (f"/admin/theories/relations?review_work={job.asset.edition.work_id}&review_file={job.asset_id}"
-            f"&review_status=all&processing_task={job.pk}")
+    return f"/admin/intelligence?work_id={job.asset.edition.work_id}"
 
 
 def processing_identity(job, titles=None):

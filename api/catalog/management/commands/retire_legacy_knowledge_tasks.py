@@ -1,10 +1,11 @@
 from django.core.management.base import BaseCommand, CommandError
 from catalog.models import CapabilityDemand, CuratedClaim, KnowledgeLegacyMapping
-from catalog.services.knowledge_retirement import RETIRED_TASKS, cancel_legacy_batch
+from catalog.services.knowledge_retirement import RETIRED_TASKS, cancel_legacy_batch, cancel_legacy_processing_batch
+from ingestion.models import ProcessingJob
 
 
 class Command(BaseCommand):
-    help="停止旧claim/library_synthesis任务并撤销租约；保留历史行、其他任务和搜索索引。默认只列范围。"
+    help="停止旧claim/library_synthesis及concept_alignment任务；保留历史行、其他任务和搜索索引。默认只列范围。"
 
     def add_arguments(self,parser):
         parser.add_argument("--apply",action="store_true")
@@ -19,7 +20,9 @@ class Command(BaseCommand):
         if options["apply"] and missing:
             raise CommandError(f"仍有{missing}条人工观点未迁移，请先运行backfill_knowledge_core --claims。")
         rows=CapabilityDemand.objects.filter(payload__task_kind__in=RETIRED_TASKS).exclude(state__in=["completed","canceled"])
-        self.stdout.write(str({"eligible":rows.count(),"unmigrated_human_claims":missing,"apply":options["apply"]}))
+        processing=ProcessingJob.objects.filter(job_type="text_extraction",stats__operation="concept_alignment").exclude(status__in=["succeeded","canceled"])
+        self.stdout.write(str({"eligible":rows.count(),"legacy_concept_tasks":processing.count(),"unmigrated_human_claims":missing,"apply":options["apply"]}))
         if options["apply"]:
             count=cancel_legacy_batch(size)
-            self.stdout.write(str({"canceled":count,"remaining":rows.count(),"history_retained":True}))
+            concepts=cancel_legacy_processing_batch(size)
+            self.stdout.write(str({"canceled":count,"remaining":rows.count(),"concept_canceled":concepts,"concept_remaining":processing.count(),"history_retained":True}))

@@ -470,8 +470,6 @@ def related_query(event, context=None):
 
 
 def event_knowledge_relations(event):
+    from catalog.services.academic_projection import node_node_links
     node_ids = [row.node_id for row in event.normalized_relations.all() if row.node_id and row.node.status == "published"]
-    return KnowledgeRelation.objects.filter(
-        Q(source_node_id__in=node_ids) | Q(target_node_id__in=node_ids),
-        status="published", source_node__status="published", target_node__status="published",
-    ).select_related("source_node", "target_node").order_by("-published_at", "pk")
+    return list(node_node_links(node_ids=node_ids))

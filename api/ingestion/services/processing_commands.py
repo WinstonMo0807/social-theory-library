@@ -70,17 +70,12 @@ def task_actions(job, actor):
         return recover + (["retry"] if state == "failed" else ["resume", "cancel"] if state == "paused" else ["cancel"] if state == "pending" else [])
     if kind == "text_extraction" and job.stats.get("operation") == "concept_alignment":
         if not has_capability(actor, Capability.VIEW_SYSTEM_STATUS): return []
-        return recover + (["cancel"] if state in {"pending", "running", "failed"} else []) + (["retry"] if state in {"failed", "canceled"} else [])
+        return ["cancel"] if state in {"pending", "running", "failed", "paused"} else []
     actions = []
     if kind == "ocr" and has_capability(actor, Capability.VIEW_SYSTEM_STATUS):
-        from .processing_followup import followup_state
         from .ocr_transfer import can_transfer
         if has_capability(actor, Capability.MANAGE_AI) and can_transfer(job):
             actions.append("transfer")
-        if state == "succeeded" and followup_state(job)["state"] == "failed" and not job.stats.get("concept_retry_job_id"):
-            actions.append("retry_followup")
-        if followup_state(job)["can_configure"]:
-            actions.append("configure_followup")
     if kind in {"ocr", "external_enrichment"}:
         if state in {"pending", "running"} and not job.pause_requested_at: actions.append("pause")
         if state == "paused": actions.append("resume")

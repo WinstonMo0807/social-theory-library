@@ -132,3 +132,36 @@ def test_internal_provenance_is_not_citation_and_v3_repair_preserves_manual_hist
     assert statement.origin["migration_v2"]["record"]["source"] == row.source
     assert page_data(page, admin_user)["assertions"][0]["predicate_label"] == "使用"
     assert m.PersonNodeRelation.objects.get(pk=row.pk).source == row.source
+
+
+def test_public_theory_and_catalog_read_canonical_relations_without_publishing_catalog_draft(admin_user):
+    from catalog.theory_serializers import KnowledgeNodeDetailSerializer
+    from catalog.serializers import WorkDetailSerializer
+    from catalog.services.publication_eligibility import active_catalog_snapshot
+    from catalog.services.discovery_sources import edition_metadata_header
+    from tests.v304_helpers import activate_catalog_revision
+    work = m.Work.objects.create(title="原已发布书名")
+    edition = m.Edition.objects.create(work=work, state="published", public_slug=str(uuid4()))
+    activate_catalog_revision(edition, fulltext_ready=False)
+    node = m.KnowledgeNode.objects.create(canonical_name_zh="已公开概念", slug="canonical-consumer", node_type="concept", status="published")
+    draft = legacy_relation_draft("work", {"work": work, "node": node, "role": "critique",
+        "text": "本作品批评这一概念的适用条件", "source_citation": "人工明确记载的文献出处"}, admin_user, request_id=uuid4())
+    result = apply_all(draft, admin_user)
+    assert not result["blocked"], result
+    page = m.KnowledgePage.objects.get(work=work)
+    assert not KnowledgeNodeDetailSerializer(node).data["work_groups"]
+    publish_page(page.pk, page_content(page)[1].pk, admin_user)
+    work.title = "尚未发布的书名修改"
+    work.save(update_fields=["title"])
+    edition.refresh_from_db()
+    data = KnowledgeNodeDetailSerializer(node).data
+    assert data["work_count"] == 1 and data["work_groups"]["critique"][0]["assertion_id"]
+    snapshot = active_catalog_snapshot(edition)
+    assert snapshot["work"]["title"] == "原已发布书名"
+    assert snapshot["knowledge"]["nodes"][0]["id"] == str(node.pk)
+    assert edition_metadata_header(edition)["theories"][0]["id"] == str(node.pk)
+    assert WorkDetailSerializer(work).data["theory_associations"][0]["role"] == "critique"
+    statement = m.Assertion.objects.get(text="本作品批评这一概念的适用条件")
+    statement.status = "withdrawn"; statement.save(update_fields=["status"])
+    assert not active_catalog_snapshot(edition)["knowledge"]["nodes"]
+    assert not KnowledgeNodeDetailSerializer(node).data["work_groups"]

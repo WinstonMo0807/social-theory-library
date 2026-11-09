@@ -32,76 +32,57 @@ def submit(api_client, actor, payload):
     return api_client.post(URL, payload, format="json", HTTP_X_EDITOR_OWNER=str(actor.pk))
 
 
-def test_retry_creates_one_stage_and_keeps_original_text(api_client, admin_user, settings, tmp_path):
+def legacy_child(parent):
+    return ProcessingJob.objects.create(job_type="text_extraction", asset=parent.asset, edition=parent.edition,
+        created_by=parent.created_by, task_id=str(uuid4()), stats={"operation":"concept_alignment", "ocr_job_id":str(parent.pk)})
+
+
+def test_old_retry_is_retired_and_keeps_original_text(api_client, admin_user, settings, tmp_path):
     parent = original(settings, tmp_path, admin_user)
     api_client.force_authenticate(admin_user)
-    request = body(parent)
-    with patch("ingestion.services.concept_retry.dispatch_concept_job"), patch("ingestion.services.processing.dispatch_ocr_job") as ocr:
-        first = submit(api_client, admin_user, request)
-        assert first.status_code == 202, first.data
-        assert submit(api_client, admin_user, request).data == first.data
-        child = ProcessingJob.objects.get(pk=first.data["result"]["job_id"])
-        assert child.pk != parent.pk and child.stats["operation"] == "concept_alignment"
-        result = {"enabled": True, "created": 1, "updated": 0, "new_node_tasks": 0, "protected_nodes": 2}
-        with patch("catalog.services.theory_suggestions.generate_theory_review_tasks", return_value=result) as generate:
-            assert run_concept_job(child.pk, task_id=child.task_id).status == "succeeded"
-            assert run_concept_job(child.pk, task_id=child.task_id).status == "succeeded"
-        generate.assert_called_once()
-    ocr.assert_not_called()
+    with patch("ingestion.services.processing.dispatch_ocr_job") as ocr, patch("catalog.services.theory_suggestions.generate_theory_review_tasks") as generate:
+        assert submit(api_client, admin_user, body(parent)).status_code == 409
+    ocr.assert_not_called(); generate.assert_not_called()
     parent.refresh_from_db()
     assert parent.status == "succeeded" and parent.progress == 100 and parent.stats["completed_page_indexes"] == [1]
-    assert parent.stats["concept_alignment"]["state"] == "completed" and "theory_suggestion_warning" not in parent.stats
-    stages = api_client.get(URL, {"group_by": "file"}).data
-    assert stages["count"] == 1 and len(stages["files"][0]["stages"]) == 2
-    assert stages["counts"]["failed"] == 0
+    assert not ProcessingJob.objects.filter(stats__operation="concept_alignment").exists()
 
 
-def test_cancel_and_retry_fence_old_delivery_and_changed_source(api_client, admin_user, settings, tmp_path):
+def test_old_delivery_cancels_only_its_legacy_task_and_preserves_source(api_client, admin_user, settings, tmp_path):
     parent = original(settings, tmp_path, admin_user)
+    child = legacy_child(parent)
+    old_task = child.task_id
+    with patch("catalog.services.theory_suggestions.generate_theory_review_tasks") as generate:
+        assert run_concept_job(child.pk, task_id=str(uuid4())).status == "pending"
+        assert run_concept_job(child.pk, task_id=old_task).status == "canceled"
+        assert run_concept_job(child.pk, task_id=old_task).status == "canceled"
+    generate.assert_not_called()
     api_client.force_authenticate(admin_user)
-    with patch("ingestion.services.concept_retry.dispatch_concept_job"):
-        created = submit(api_client, admin_user, body(parent))
-        child = ProcessingJob.objects.get(pk=created.data["result"]["job_id"])
-        old_task = child.task_id
-        assert submit(api_client, admin_user, body(child, "cancel")).status_code == 202
-        with patch("catalog.services.theory_suggestions.generate_theory_review_tasks") as generate:
-            assert run_concept_job(child.pk, task_id=old_task).status == "canceled"
-        generate.assert_not_called()
-        child.refresh_from_db()
-        assert submit(api_client, admin_user, {**body(child, "retry"), "page_indexes": [1]}).status_code == 400
-        assert submit(api_client, admin_user, body(child, "retry")).status_code == 202
-        child.refresh_from_db()
-        assert child.task_id != old_task
-        with patch("catalog.services.theory_suggestions.generate_theory_review_tasks") as generate:
-            assert run_concept_job(child.pk, task_id=old_task).status == "pending"
-        generate.assert_not_called()
-        child.asset.sha256 = "f" * 64
-        child.asset.save(update_fields=["sha256", "updated_at"])
-        with patch("catalog.services.theory_suggestions.generate_theory_review_tasks") as generate:
-            with pytest.raises(EditConflict): run_concept_job(child.pk, task_id=child.task_id)
-        generate.assert_not_called()
-        child.refresh_from_db()
-        assert child.status == "failed"
-        assert submit(api_client, admin_user, body(child, "retry")).status_code == 409
-
-
-def test_concept_stage_uses_original_recovery_dispatch(api_client, admin_user, settings, tmp_path):
-    from ingestion.services.processing import _dispatch_processing_job
-    parent = original(settings, tmp_path, admin_user)
-    api_client.force_authenticate(admin_user)
-    with patch("ingestion.services.concept_retry.dispatch_concept_job", return_value=True) as dispatch:
-        created = submit(api_client, admin_user, body(parent))
-        child = ProcessingJob.objects.get(pk=created.data["result"]["job_id"])
-        old_task = child.task_id
-        child.status = "running"
-        child.heartbeat_at = child.started_at = timezone.now() - timedelta(seconds=settings.INGESTION_STAGE_STALLED_SECONDS + 60)
-        child.save()
-        assert submit(api_client, admin_user, body(child, "recover")).status_code == 202
-        child.refresh_from_db()
-        assert child.status == "pending" and child.task_id != old_task
-        assert _dispatch_processing_job(str(child.pk), child.job_type, child.task_id) is True
-        dispatch.assert_called_with(str(child.pk), child.task_id)
+    child.refresh_from_db()
+    assert child.error_code == "knowledge_producer_retired"
+    assert submit(api_client, admin_user, body(child, "retry")).status_code == 409
     parent.refresh_from_db()
+    assert parent.status == "succeeded" and parent.stats["completed_page_indexes"] == [1]
+
+
+def test_original_recovery_dispatch_cannot_revive_retired_producer(api_client, admin_user, settings, tmp_path):
+    from ingestion.services.processing import _dispatch_processing_job
+    from ingestion.services.processing_recovery import recovery_state
+    from catalog.services.knowledge_retirement import cancel_legacy_processing_batch
+    parent = original(settings, tmp_path, admin_user)
+    child = legacy_child(parent)
+    child.status = "running"
+    child.heartbeat_at = child.started_at = timezone.now() - timedelta(seconds=settings.INGESTION_STAGE_STALLED_SECONDS + 60)
+    child.save()
+    assert not recovery_state(child)["can_recover"]
+    api_client.force_authenticate(admin_user)
+    assert submit(api_client, admin_user, body(child, "recover")).status_code == 409
+    assert not _dispatch_processing_job(str(child.pk), child.job_type, child.task_id)
+    another = legacy_child(parent)
+    projection = ProcessingJob.objects.create(job_type="discovery_index", edition=parent.edition, status="pending")
+    assert cancel_legacy_processing_batch() == 1
+    another.refresh_from_db(); projection.refresh_from_db(); parent.refresh_from_db()
+    assert another.status == "canceled" and projection.status == "pending"
     assert parent.stats["completed_page_indexes"] == [1] and parent.status == "succeeded"
 
 

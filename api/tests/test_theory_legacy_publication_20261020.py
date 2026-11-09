@@ -34,7 +34,7 @@ def source(*, primary=True):
     )
     asset = Asset.objects.create(
         edition=edition, kind="normalized", status="ready", validation_status="valid",
-        access_status="public", file=f"test/legacy-{uuid4()}.pdf", sha256="a" * 64, page_count=1,
+        access_status="public", file=f"test/legacy-{uuid4()}.pdf", sha256=uuid4().hex * 2, page_count=1,
     )
     Page.objects.create(asset=asset, index=1, text="隔离测试原文", text_source="embedded", width=600, height=900)
     activate_catalog_revision(edition, reader_asset=asset)
@@ -116,9 +116,9 @@ def test_public_legacy_paths_mask_unavailable_source(api_client, unavailable):
         activate_catalog_revision(edition, reader_asset=replacement)
     else:
         _other_work, other_edition, _other_asset = source()
-        revision = edition.active_catalog_revision
-        revision.document_revision = other_edition.active_catalog_revision.document_revision
-        revision.save(update_fields=["document_revision"])
+        # Model an inconsistent imported source, without rewriting an immutable revision.
+        activate_catalog_revision(edition, reader_asset=asset,
+            document_revision=other_edition.active_catalog_revision.document_revision)
 
     for row in evidence_rows(api_client, left, right, relation, event):
         assert row["evidence_text"] == ""

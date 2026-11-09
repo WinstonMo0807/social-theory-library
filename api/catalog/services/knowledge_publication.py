@@ -269,8 +269,9 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "type": row.node.node_type,
             "role": row.role,
             "is_primary": row.is_primary,
+            **({"assertion_id": str(row.assertion_id)} if getattr(row, "assertion_id", None) else {}),
         }
-        for row in work_node_links(work_ids=[work.pk])
+        for row in work_node_links(work_ids=[work.pk], preparing_catalog=True)
     ]
     asset, document_revision, quality_ready = _current_document(edition, content_asset_id=content_asset_id)
     decisions = [

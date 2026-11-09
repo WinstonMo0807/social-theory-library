@@ -114,7 +114,13 @@ def active_catalog_snapshot(
         or (require_fulltext and revision.document_revision_id is None)
     ):
         return {}
-    return public_taxonomy_snapshot(revision.snapshot) if isinstance(revision.snapshot, dict) else {}
+    if not isinstance(revision.snapshot, dict):
+        return {}
+    snapshot = public_taxonomy_snapshot(revision.snapshot)
+    from catalog.services.academic_projection import published_knowledge_nodes
+    knowledge = snapshot.get("knowledge") or {}
+    snapshot["knowledge"] = {**knowledge, "nodes": published_knowledge_nodes(edition.work_id, knowledge.get("nodes") or [])}
+    return snapshot
 
 
 def active_asset_q(*, asset_prefix: str, require_fulltext: bool = False) -> Q:

@@ -44,3 +44,12 @@ def cancel_legacy_batch(size=100):
     count+=CapabilityDemand.objects.filter(pk__in=idle).update(state="canceled",claimed_by=None,lease_token=None,
         lease_expires_at=None,last_error_code="knowledge_producer_retired",last_error_message=MESSAGE,updated_at=timezone.now())
     return count
+
+
+@transaction.atomic
+def cancel_legacy_processing_batch(size=100):
+    from ingestion.models import ProcessingJob
+    ids = list(ProcessingJob.objects.select_for_update().filter(job_type="text_extraction", stats__operation="concept_alignment")
+        .exclude(status__in=["succeeded", "canceled"]).order_by("id").values_list("pk", flat=True)[:size])
+    return ProcessingJob.objects.filter(pk__in=ids).update(status="canceled", task_id="", finished_at=timezone.now(),
+        error_code="knowledge_producer_retired", error_message=MESSAGE, updated_at=timezone.now())

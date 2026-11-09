@@ -154,7 +154,7 @@ class TheoryDirectoryView(TheorySystemFeatureMixin, APIView):
             row["parent_id"]: row["total"]
             for row in scope.filter(parent_id__in=[value.pk for value in values]).exclude(
                 pk__in=[value.pk for value in values if value.parent_id == value.pk],
-            ).values("parent_id").annotate(total=Count("pk", distinct=True))
+            ).order_by().values("parent_id").annotate(total=Count("pk", distinct=True))
         }
         groups = {}
         for row in values:

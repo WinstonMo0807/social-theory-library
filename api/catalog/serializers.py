@@ -951,6 +951,8 @@ class WorkDetailSerializer(WorkCardSerializer):
 
     @extend_schema_field(PublicTheoryAssociationSerializer(many=True))
     def get_theory_associations(self, obj):
+        from catalog.models import KnowledgeLegacyMapping
+        from catalog.services.academic_projection import work_node_links, relation_payload
         public_evidence = EvidenceSnippet.objects.filter(
             review_status=RelationReviewStatus.APPROVED,
             file__kind=Asset.Kind.NORMALIZED,
@@ -972,13 +974,14 @@ class WorkDetailSerializer(WorkCardSerializer):
                 status=KnowledgePublicationStatus.PUBLISHED,
                 node__status=KnowledgePublicationStatus.PUBLISHED,
             )
+            .exclude(pk__in=KnowledgeLegacyMapping.objects.filter(source_type="catalog.worknoderelation", target_type="assertion", target_id__isnull=False).values("source_id"))
             .select_related("node")
             .prefetch_related(
                 Prefetch("evidence", queryset=public_evidence, to_attr="public_evidence")
             )
             .order_by("role", "node__sort_order", "node__canonical_name_zh")
         )
-        return [
+        result = [
             {
                 "id": str(relation.id),
                 "node": {
@@ -1008,6 +1011,17 @@ class WorkDetailSerializer(WorkCardSerializer):
             }
             for relation in relations
         ]
+
+        for relation in work_node_links(work_ids=[obj.pk]):
+            if not getattr(relation, "assertion_id", None):
+                continue
+            projected = relation_payload(relation, getattr(self.context.get("request"), "user", None))
+            result.append({"id": str(relation.pk), "assertion_id": str(relation.pk),
+                "node": {"id": str(relation.node_id), "name": relation.node.canonical_name_zh,
+                    "foreign_name": relation.node.canonical_name_en, "slug": relation.node.slug, "type": relation.node.node_type},
+                "role": relation.role, "role_label": relation.get_role_display(), "strength": relation.strength,
+                "evidence": projected["evidence"], "description": projected["description"], "sources": projected["sources"]})
+        return result
 
     @extend_schema_field(serializers.DictField(
         child=serializers.ListField(child=serializers.JSONField()),
