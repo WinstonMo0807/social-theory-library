@@ -420,6 +420,29 @@ def _write_deep_projection(job, document):
             "message": "基础索引已保留，深度投影待补写。"}})
 
 
+def request_source_reindex(revision, *, keyword_only=False):
+    """Target one published source; existing projections remain until completion."""
+    from catalog.services.knowledge_sources import current_structure
+    generation=active_generation()
+    source,header=get_source("edition",revision.asset.edition_id)
+    if not generation or not header or header.get("document_revision_id") != str(revision.pk):
+        raise DiscoveryIndexError("source_not_published","请先发布此正文修订并准备活动索引，再更新关键词。")
+    structure=current_structure(revision,prepare=True)
+    key=fingerprint([str(generation.pk),header["source_revision"],str(structure.pk),"keyword" if keyword_only else "hybrid"])
+    with transaction.atomic():
+        job,created=ProcessingJob.objects.get_or_create(idempotency_key="logical-index:"+key,defaults={
+            "job_type":JOB_TYPE,"edition":source,"asset":revision.asset,"engine":"logical-node-v1",
+            "stats":{"action":"source","generation_id":str(generation.pk),"source_type":"edition",
+                "source_id":str(source.pk),"source_revision":header["source_revision"],"structure_id":str(structure.pk)}})
+        job=ProcessingJob.objects.select_for_update().get(pk=job.pk)
+        if created or job.status in {"failed","canceled"}:
+            if keyword_only: job.stats={**job.stats,"semantic_waiting":{"code":"keyword_only","message":"本次仅更新关键词，语义状态独立保留。"}}
+            job.attempt=0;job.save()
+            _enqueue_job(job)
+        DiscoverySourceState.objects.update_or_create(generation=generation,source_type="edition",source_id=source.pk,defaults={"job":job})
+    return job
+
+
 def process_source(job, generation):
     kind, source_id = job.stats["source_type"], job.stats["source_id"]
     source, header = get_source(kind, source_id)
@@ -428,8 +451,14 @@ def process_source(job, generation):
     contributions = contribution_projection(source, access_statuses=[header["access_status"]]) if kind == "edition" else None
     state, _ = DiscoverySourceState.objects.get_or_create(generation=generation, source_type=kind, source_id=source_id)
     deadline = time.monotonic() + 240
+    structure_id = job.stats.get("structure_id")
+    if kind == "edition" and not structure_id:
+        from catalog.services.knowledge_sources import current_structure
+        structure = current_structure(source.active_catalog_revision.document_revision,prepare=True)
+        structure_id = str(structure.pk)
+        _guard_job(job,stats={**job.stats,"structure_id":structure_id,"completed_units":0})
     completed_units = int(job.stats.get("completed_units", 0))
-    for unit_index, unit in enumerate(source_units(kind, source, header)):
+    for unit_index, unit in enumerate(source_units(kind, source, header,structure_id=structure_id)):
         if unit_index < completed_units:
             continue
         location = {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"), "start_offset": None, "end_offset": None}
@@ -450,11 +479,24 @@ def process_source(job, generation):
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")
     docs = DiscoveryDocument.objects.filter(generation=generation, source_type=kind, source_id=source_id, source_revision=header["source_revision"])
+    if structure_id:
+        docs = docs.filter(payload__structure_id=structure_id)
     expected, completed = docs.count(), docs.filter(keyword_ready=True).count()
     if kind == "edition" and not expected:
         raise DiscoveryIndexError("text_missing", "该文件尚无可用原文文字，请检查文字处理结果后重试。")
     if expected != completed:
         raise DiscoveryIndexError("incomplete", "部分文字尚未完成索引，可重试继续。")
+    if structure_id:
+        # Retire only after the replacement is complete. Keep SQL identities for
+        # historical feedback and source mappings instead of deleting references.
+        old = DiscoveryDocument.objects.filter(generation=generation,source_type=kind,source_id=source_id,
+            source_revision=header["source_revision"],keyword_ready=True).filter(
+                Q(payload__structure_id__isnull=True) | ~Q(payload__structure_id=structure_id))
+        while ids := list(old.values_list("pk",flat=True)[:200]):
+            if not _is_current(job,generation,header):
+                raise DiscoveryIndexError("superseded","来源已更新，停止旧投影清理。")
+            wait_index_task(meili("POST",f"/indexes/{generation.uid}/documents/delete-batch",list(map(str,ids))))
+            old.filter(pk__in=ids).update(keyword_ready=False,vector_ready=False)
     remove_source(generation, kind, source_id, keep_revision=header["source_revision"])
     with transaction.atomic():
         ProcessingJob.objects.select_for_update().get(pk=job.pk)

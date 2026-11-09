@@ -181,6 +181,10 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
     spans = {str(row["id"]): row for row in EvidenceSpan.objects.filter(pk__in=span_ids, is_stale=False).values(
         "id", "document_revision_id", "page__asset_id", "page__index", "original_text", "page__text", "start_offset", "end_offset", "section")}
     pages = {str(row["id"]): row for row in Page.objects.filter(pk__in=page_ids).values("id", "asset_id", "index", "text")}
+    from catalog.models import DocumentNodeSegment
+    from catalog.services.knowledge_sources import digest
+    logical_ids = [d.payload.get("node_segment_id") for d in documents if d.payload.get("node_segment_id")]
+    logical = {str(s.pk):s for s in DocumentNodeSegment.objects.filter(pk__in=logical_ids).select_related("page","node")}
     contribution_cache = {}
     for doc in documents:
         ref = refs[str(doc.pk)]
@@ -196,7 +200,20 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
         payload = dict(doc.payload)
         if channel == "passages":
             span_id, page_id = payload.get("evidence_span_id"), payload.get("page_id")
-            if span_id:
+            segment_id = payload.get("node_segment_id")
+            if segment_id:
+                segment = logical.get(segment_id)
+                if not segment or segment.page.document_revision_id != doc.document_revision_id or segment.node.document_revision_id != doc.document_revision_id:
+                    continue
+                if (str(segment.node.structure_id) != payload.get("structure_id") or str(segment.node_id) != payload.get("node_id")
+                        or str(segment.page_id) != payload.get("snapshot_id") or segment.start != payload.get("source_start_offset")
+                        or digest(segment.page.text) != segment.page.content_hash):
+                    continue
+                original = segment.page.text[segment.start:segment.end]
+                if digest(original) != segment.content_hash:
+                    continue
+                unit = {"index":segment.page.page_number}
+            elif span_id:
                 unit = spans.get(span_id)
                 original = unit["original_text"] if unit and str(unit["document_revision_id"]) == str(doc.document_revision_id) and str(unit["page__asset_id"]) == header["asset_id"] else None
             else:
@@ -204,11 +221,15 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
                 original = unit["text"] if unit and str(unit["asset_id"]) == header["asset_id"] else None
             if original is None or fingerprint(original) != payload.get("unit_hash") or original[doc.start_offset:doc.end_offset] != doc.text:
                 continue
-            payload["section_title"] = str(unit.get("section") or "") if span_id else ""
+            if not segment_id:
+                payload["section_title"] = str(unit.get("section") or "") if span_id else ""
             # Indexed similarity is not an editorial attribution decision.
             payload["attribution"] = {"status": "unknown", "label": "待人工核对",
                 "notice": "请结合上下文区分作者自述、转引与评论；检索相关性不证明观点归属。"}
-            if span_id:
+            if segment_id:
+                payload["page_text_range"] = page_text_range(segment.page.text,doc.text,
+                    segment.start+doc.start_offset,segment.start+doc.end_offset)
+            elif span_id:
                 # The saved span and index may predate the corrected extractor.
                 # Never certify raw-page offsets solely from cached metadata.
                 exact_unit = page_text_range(unit["page__text"], original, unit["start_offset"], unit["end_offset"])

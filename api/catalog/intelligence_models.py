@@ -33,6 +33,7 @@ class CurationArtifact(UUIDTimeStampedModel):
     schema_version = models.CharField(max_length=80)
     status = models.CharField(max_length=24, default="waiting")
     input_manifest = models.JSONField(default=dict)
+    execution_request = models.JSONField(default=dict)
     output = models.JSONField(default=dict)
     output_hash = models.CharField(max_length=64, blank=True)
     usage = models.JSONField(default=dict)

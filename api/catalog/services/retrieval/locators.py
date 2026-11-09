@@ -21,7 +21,8 @@ def index_anchor(document):
         start, end = base + document.start_offset, base + document.end_offset
         if not page or not 0 <= start < end <= len(page.text) or page.text[start:end] != document.text:
             raise ValidationError("检索片段与修订原文范围不一致。")
-        anchor = create_anchor(revision, [{"page_number":page.page_number,"start":start,"end":end,"exact":document.text}])
+        anchor = create_anchor(revision, [{"page_number":page.page_number,"start":start,"end":end,"exact":document.text,
+            "node_id":document.payload.get("node_id")}])
         values = {"target_id":anchor.pk,"quality":"verified_text","provenance":{"document_revision_id":str(revision.pk),"content_hash":digest(document.text)}}
     except ValidationError as exc:
         values = {"target_id":None,"quality":"legacy_offsets_not_raw_text","provenance":{"document_revision_id":str(revision.pk),"reason":str(exc.detail)}}

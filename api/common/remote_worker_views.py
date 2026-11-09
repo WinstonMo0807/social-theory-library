@@ -281,6 +281,22 @@ class RemoteWorkerSourceView(RemoteWorkerAPIView):
         return response
 
 
+class RemoteWorkerModelView(RemoteWorkerAPIView):
+    """One already-authorized stage, with credentials remaining on the server."""
+    def post(self,request,demand_id):
+        from catalog.services.intelligence_remote import model_transport
+        from ingestion.services.ai_client import AIServiceError,AIProviderRateLimited
+        serializer=LeaseSerializer(data=request.data);serializer.is_valid(raise_exception=True)
+        data=serializer.validated_data
+        if not _remote_executor(data["executor_id"]):
+            return _lease_error(ValueError("Remote executor is not registered."))
+        try:
+            result=model_transport(demand_id,data["executor_id"],data["lease_token"],request.data.get("input_hash"))
+        except AIServiceError as exc:
+            return Response({"code":exc.code,"detail":str(exc)},status=429 if isinstance(exc,AIProviderRateLimited) else 503)
+        return Response(result,headers={"Cache-Control":"private, no-store"})
+
+
 class RemoteWorkerCompleteView(RemoteWorkerAPIView):
     def post(self, request, demand_id):
         serializer = CompletionSerializer(data=request.data)

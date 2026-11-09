@@ -75,10 +75,10 @@ class Command(BaseCommand):
                     for doc in batch:
                         if str(doc.pk) not in valid:
                             continue
-                        key = (doc.source_type, str(doc.source_id))
+                        key = (doc.source_type, str(doc.source_id), doc.payload.get("structure_id"))
                         if key not in units:
-                            source, header = get_source(*key)
-                            units[key] = (header, {str(u["unit_id"]): u for u in source_units(key[0], source, header)}) if header else (None, {})
+                            source, header = get_source(*key[:2])
+                            units[key] = (header, {str(u["unit_id"]): u for u in source_units(key[0], source, header,structure_id=key[2])}) if header else (None, {})
                         header, source_map = units[key]
                         unit = source_map.get(str(doc.payload.get("unit_id")))
                         if not header or not unit or unit["text"][doc.start_offset:doc.end_offset] != doc.text:

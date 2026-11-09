@@ -119,6 +119,23 @@ class RevisionManifestView(APIView):
             headers={"Cache-Control": "private, no-store"})
 
 
+class RevisionReindexView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def post(self,request,revision_id):
+        from catalog.services.knowledge_core import require_editor
+        from catalog.services.knowledge_sources import require_revision_access
+        from catalog.services.discovery_indexing import request_source_reindex
+        from catalog.services.discovery_projection import DiscoveryIndexError
+        require_editor(request.user)
+        revision=get_object_or_404(DocumentRevision,pk=revision_id)
+        require_revision_access(revision,request.user,editorial=True)
+        try: job=request_source_reindex(revision,keyword_only=True)
+        except DiscoveryIndexError as exc:
+            return Response({"code":exc.code,"detail":str(exc)},status=409)
+        return Response({"job_id":str(job.pk),"status":job.status},status=202)
+
+
 class KnowledgePageView(APIView):
     from rest_framework.permissions import AllowAny
     permission_classes = [AllowAny]
@@ -243,6 +260,7 @@ urlpatterns = [
     path("pages/<uuid:page_id>/", KnowledgePageView.as_view()),
     path("pages/<uuid:page_id>/export/", KnowledgeExportView.as_view()),
     path("works/<uuid:work_id>/", WorkKnowledgeView.as_view()),
+    path("revisions/<uuid:revision_id>/reindex/",RevisionReindexView.as_view()),
     path("assets/<uuid:asset_id>/manifest/", RevisionManifestView.as_view()),
     path("revisions/<uuid:revision_id>/structure/", RevisionStructureView.as_view()),
     path("revisions/<uuid:revision_id>/structure/parse/", ParseStructureView.as_view()),

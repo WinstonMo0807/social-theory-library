@@ -50,6 +50,7 @@ def execute_curation(run_id, version):
     from catalog.services.intelligence import execute
     from catalog.services.intelligence_provider import configuration
     from ingestion.services.ai_client import AIProviderRateLimited
+    from catalog.services.intelligence_remote import RemoteStagePending
     run = CurationRun.objects.filter(pk=run_id, version=version).exclude(status="canceled").first()
     if not run:
         return
@@ -63,6 +64,8 @@ def execute_curation(run_id, version):
         return
     try:
         execute(run,config,lease)
+        complete_demand(lease.demand_id,lease.lease_token,executor_id=executor_id)
+    except RemoteStagePending:
         complete_demand(lease.demand_id,lease.lease_token,executor_id=executor_id)
     except Exception as exc:
         waiting = isinstance(exc,AIProviderRateLimited)

@@ -78,12 +78,18 @@ def schedule(run):
 @transaction.atomic
 def control_run(run_id, actor, action):
     require_editor(actor)
+    from django.db.models import Q
+    # Remote completion locks demand before run; use the same order here.
+    initial = m.CurationRun.objects.get(pk=run_id)
+    demands = list(m.CapabilityDemand.objects.select_for_update().filter(
+        Q(pk=initial.demand_id) | Q(payload__run_id=str(run_id))).order_by("pk"))
     run = m.CurationRun.objects.select_for_update().get(pk=run_id)
     require_revision_access(run.document_revision, actor, editorial=True)
     if action == "cancel":
-        if run.demand_id:
-            from common.task_runtime import _release_executor_load
-            demand = m.CapabilityDemand.objects.select_for_update().select_related("claimed_by").get(pk=run.demand_id)
+        from common.task_runtime import _release_executor_load
+        for demand in demands:
+            if demand.state in {"completed","canceled"}:
+                continue
             if demand.state == "claimed":
                 _release_executor_load(demand)
             demand.state, demand.claimed_by, demand.lease_token, demand.lease_expires_at = "canceled", None, None, None
@@ -94,6 +100,12 @@ def control_run(run_id, actor, action):
     elif action == "resume":
         if run.status in {"running", "waiting", "succeeded", "empty", "partial"}:
             return run
+        from common.task_runtime import _release_executor_load
+        for demand in demands:
+            if demand.state in {"completed","canceled"}:
+                continue
+            if demand.state == "claimed": _release_executor_load(demand)
+            demand.state="canceled";demand.claimed_by=None;demand.lease_token=None;demand.lease_expires_at=None;demand.save()
         run.version += 1
         run.status, run.error, run.finished_at = "waiting", {}, None
         run.save()
@@ -140,6 +152,10 @@ def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, valid
             return cached
         return _save_artifact(run, stage, unit, data, cached.output, config=config, lease=lease, cache_key=key)
     _guard(run, lease)
+    from django.conf import settings
+    if settings.INTELLIGENCE_EXECUTION == "remote":
+        from catalog.services.intelligence_remote import queue_stage
+        queue_stage(run,stage,unit,data,prompt,schema,config,key,lease)
     if lease:
         renew_demand_lease(lease.demand_id, lease.lease_token, executor_id=lease.executor_id, lease_seconds=int(config.timeout)+180)
     started = time.monotonic()

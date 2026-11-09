@@ -30,7 +30,7 @@ from common.task_runtime import DemandLease, complete_demand
 from ingestion.models import UploadItem
 
 
-REMOTE_TASK_KINDS = frozenset({"claim_extraction", "library_synthesis", "document_structure"})
+REMOTE_TASK_KINDS = frozenset({"claim_extraction", "library_synthesis", "document_structure", "curation_stage"})
 AI_CAPABILITIES = frozenset({"embedding", "rerank", "llm_small", "llm_large"})
 COMPLETION_MARKER_KEY = "_remote_completion"
 LEASE_CONTEXT_KEY = "_remote_lease_context"
@@ -340,6 +340,11 @@ def _library_synthesis_pack(demand: CapabilityDemand) -> EvidencePack:
 def build_remote_job(lease: DemandLease) -> dict[str, Any]:
     demand = CapabilityDemand.objects.get(pk=lease.demand_id)
     payload = dict(demand.payload or {})
+    if payload.get("task_kind") == "curation_stage":
+        from catalog.services.intelligence_remote import remote_job
+        from rest_framework.exceptions import APIException
+        try: return remote_job(demand)
+        except APIException as exc: raise RemoteWorkerProtocolError("curation_source_changed",str(exc),status_code=409) from exc
     if payload.get("task_kind") == "document_structure":
         from catalog.services.document_structure import structure_job,DOCLING_VERSION
         from rest_framework.exceptions import APIException
@@ -442,7 +447,13 @@ def bind_remote_lease_context(lease: DemandLease) -> dict[str, str]:
             "The remote demand lease is no longer active.",
             status_code=409,
         )
-    if demand.payload.get("task_kind") == "document_structure":
+    if demand.payload.get("task_kind") == "curation_stage":
+        from catalog.services.intelligence_remote import remote_job
+        from rest_framework.exceptions import APIException
+        try: runtime=remote_job(demand)["runtime"]
+        except APIException as exc: raise RemoteWorkerProtocolError("curation_source_changed",str(exc),status_code=409) from exc
+        declared={**runtime,"revision":runtime["model_revision"]}
+    elif demand.payload.get("task_kind") == "document_structure":
         from catalog.services.document_structure import DOCLING_VERSION
         declared={"provider":"docling","model":"layout","revision":DOCLING_VERSION}
     else:
@@ -575,7 +586,7 @@ def complete_remote_demand(
             status_code=409,
         )
     task_kind = str(payload.get("task_kind") or "")
-    prompt = _immutable_prompt(payload) if task_kind != "document_structure" else {}
+    prompt = _immutable_prompt(payload) if task_kind not in {"document_structure","curation_stage"} else {}
     provider, model, model_revision = _model_identity(demand.claimed_by, demand, result)
     artifact_ids=[]
     if task_kind == "claim_extraction":
@@ -626,6 +637,12 @@ def complete_remote_demand(
             ) from exc
         claim_ids = []
         candidate_ids = [str(persisted["candidate_id"])]
+    elif task_kind == "curation_stage":
+        from catalog.services.intelligence_remote import complete_stage
+        from rest_framework.exceptions import APIException
+        try: artifact=complete_stage(demand,result)
+        except APIException as exc: raise RemoteWorkerProtocolError("invalid_curation_result",str(exc),status_code=409) from exc
+        persisted={"created":1};claim_ids=[];candidate_ids=[];artifact_ids=[str(artifact.pk)]
     elif task_kind == "document_structure":
         from catalog.services.document_structure import complete_structure
         from rest_framework.exceptions import APIException

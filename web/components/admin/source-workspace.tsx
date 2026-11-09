@@ -61,6 +61,7 @@ export function SourceWorkspace() {
     <header className={s.heading}><div><h1>{source?.title || "原文与检索"}</h1><p>{source ? `${source.edition_label || "当前版本"} · 正文修订 ${source.revision_number} · ${source.pages} 页` : "从文献版本出发，检查正文、检索与每一处引用。"}</p></div>
       {source && <Link className={s.buttonLink} href={source.catalog_url}>作品编目 <ArrowUpRight size={15} /></Link>}</header>
     <KnowledgeNavigation active="sources" workId={source?.work_id || work} revisionId={revision} />
+    {parseNotice && <p role="status">{parseNotice}</p>}
     {error && <div className={s.error} role="alert">{error} <button onClick={() => setAttempt(v => v + 1)}>重新读取</button></div>}
     {!revision ? <>
       <form className={s.toolbar} onSubmit={e => { e.preventDefault(); setSearch(filter); }}><label>查找文献<input type="search" value={filter} onChange={e => setFilter(e.target.value)} placeholder="作品名称" /></label><button type="submit"><Search size={16} />查找</button><button type="button" onClick={() => setView(v => v === "search" ? "text" : "search")}>检验全库检索</button></form>
@@ -71,7 +72,9 @@ export function SourceWorkspace() {
       </tr>)}</tbody></table></div>{!loaded && !error && <p role="status" className={s.empty}>正在读取来源状态…</p>}{loaded && !rows.length && <p className={s.empty}>没有符合筛选的文献。</p>}
       {rows.length === 200 && <p className={s.muted}>当前显示前 200 个来源，请按作品名称缩小范围。</p>}
     </> : <div className={s.toolbar}><Link href="/admin/sources"><ArrowLeft size={15} />全部来源</Link><div className={s.segmented}><button aria-pressed={view === "text"} onClick={() => setView("text")}>正文结构</button><button aria-pressed={view === "search"} onClick={() => setView("search")}>检验检索</button></div>
-      {source && <><span className={s.muted}>关键词 {ready[source.keywords]} · 语义 {ready[source.semantic]} · {source.published ? "已公开" : "内部修订"}</span><Link href={source.outline_url}>目录校准</Link></>}
+      {source && <><span className={s.muted}>关键词 {ready[source.keywords]} · 语义 {ready[source.semantic]} · {source.published ? "已公开" : "内部修订"}</span><Link href={source.outline_url}>目录校准</Link>
+        <button disabled={busy || !source.published || ["pending","running"].includes(source.index_job?.status || "")} onClick={() => void action(async () => { const result=await knowledgeCall<{job_id:string;status:string}>(`/knowledge/revisions/${revision}/reindex/`,{}); setParseNotice(result.status === "succeeded" ? "此结构的关键词索引已完成。" : "关键词更新已排队，上一有效索引继续可用。"); setAttempt(v=>v+1); })}>更新关键词索引</button>
+        {source.index_job && <Link href={`/admin/processing?job=${source.index_job.id}`}>查看索引任务</Link>}</>}
       <button className={s.mobileOnly} onClick={() => setEvidenceOpen(true)}><PanelRightOpen size={16} />核对原文</button></div>}
     {(revision || view === "search") && <div className={s.workspace}>
       <aside className={s.rail}><h2>{view === "text" ? "正文目录" : "检索范围"}</h2>{view === "text" ? nodes.filter(n => ["document","part","chapter","section","preface","appendix","references"].includes(n.kind) && (n.title || n.kind === "document")).map(n => <button key={n.id} aria-current={nodeId === n.id} onClick={() => { setNodeId(n.id); setOffset(0); }}>{n.kind === "document" ? "全部正文" : n.title}</button>) : <p className={s.muted}>{source?.title || "全部已发布馆藏"}<br />与登录读者使用相同权限和检索服务。</p>}</aside>
@@ -90,7 +93,7 @@ export function SourceWorkspace() {
           {source && <details className={s.notice}><summary>补充段落与脚注结构</summary><p>选择结构缺失或不准确的范围。计算节点只解析所选页，保留已有原文与人工目录；不能核对的片段会留待校准。</p>
             <form onSubmit={e => { e.preventDefault(); void action(async () => { const result = await knowledgeCall<{ job_id: string; status: string }>(`/knowledge/revisions/${revision}/structure/parse/`, { pages: [parseStart,parseEnd], request_id: crypto.randomUUID() }); setParseNotice(`解析任务已保存，等待计算节点执行。`); setAttempt(v => v + 1); }); }}>
               <div className={s.toolbar}><label>PDF 起页<input type="number" min={1} max={source.pages} value={parseStart} onChange={e => setParseStart(Number(e.target.value))} required /></label><label>PDF 止页<input type="number" min={parseStart} max={Math.min(source.pages,parseStart+49)} value={parseEnd} onChange={e => setParseEnd(Number(e.target.value))} required /></label><button disabled={busy || ["pending","running"].includes(source.structure_job?.status || "")}>解析所选范围</button></div>
-            </form>{parseNotice && <p role="status">{parseNotice}</p>}{source.structure_job && <p>最近范围 PDF {source.structure_job.pages.join("—")} · {{pending:"等待计算节点",running:"正在解析",succeeded:"结构已保存",failed:"解析失败",canceled:"已取消"}[source.structure_job.status] || source.structure_job.status}{source.structure_job.error && ` · ${source.structure_job.error}`} <button onClick={() => setAttempt(v => v + 1)}>刷新结果</button></p>}
+            </form>{source.structure_job && <p>最近范围 PDF {source.structure_job.pages.join("—")} · {{pending:"等待计算节点",running:"正在解析",succeeded:"结构已保存",failed:"解析失败",canceled:"已取消"}[source.structure_job.status] || source.structure_job.status}{source.structure_job.error && ` · ${source.structure_job.error}`} <button onClick={() => setAttempt(v => v + 1)}>刷新结果</button></p>}
             {!!source.structure_coverage.alignment_gaps?.length && <p>有 {source.structure_coverage.alignment_gaps.length} 个解析片段尚不能与原文唯一对应，相关原文已保留。</p>}
           </details>}
           {contextError && <p className={s.error} role="alert">{contextError}</p>}

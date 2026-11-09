@@ -273,13 +273,16 @@ def get_source(kind, key, access_statuses=None):
     return row, source_header(kind, row)
 
 
-def source_units(kind, row, header):
+def source_units(kind, row, header, *, structure_id=None):
     from catalog.services.discovery_scope import unit_exclusions
     if kind != "edition":
         if header.get("text", "").strip():
             yield {"unit_id": str(row.pk), "text": header["text"], "metadata": {}}
         return
     revision = row.active_catalog_revision
+    if structure_id:
+        yield from logical_source_units(revision.document_revision, structure_id, header)
+        return
     spans = EvidenceSpan.objects.filter(document_revision_id=revision.document_revision_id,
         page__asset_id=revision.reader_asset_id, page_number=F("page__index"),
         is_stale=False).select_related("page").prefetch_related("page__blocks").order_by("page_number", "start_offset", "id")
@@ -307,6 +310,42 @@ def source_units(kind, row, header):
                 "page_id": str(page.pk), "pdf_page": page.index, "page_index": page.index,
                 "printed_page": page.printed_label, "unit_hash": fingerprint(page.text), "source_kind": "page_text", "locator_precision": "page", "bbox": [],
                 "reader_url": f"/reader/{revision.reader_asset_id}?page={page.index}", "quality_flags": ["page_locator_only"]}}
+
+
+def logical_source_units(revision, structure_id, header):
+    """New writes use immutable raw node segments; the old adapter is read-only recovery."""
+    from types import SimpleNamespace
+    from catalog.models import DocumentNodeSegment, DocumentStructure
+    from catalog.services.discovery_scope import unit_exclusions
+    from catalog.services.knowledge_sources import digest
+    structure = DocumentStructure.objects.get(pk=structure_id, document_revision=revision)
+    nodes = {n.pk:n for n in structure.nodes.all()}
+    segments = DocumentNodeSegment.objects.filter(node__structure=structure,
+        node__kind__in=["paragraph","footnote","table","references","unresolved"], node__children__isnull=True
+        ).select_related("page").order_by("node__order","order")
+    for segment in segments.iterator(chunk_size=100):
+        page, node = segment.page, nodes[segment.node_id]
+        text = page.text[segment.start:segment.end]
+        if digest(page.text) != page.content_hash or digest(text) != segment.content_hash:
+            raise ValueError("修订原文或节点摘要不一致，停止索引并保留上一版本。")
+        if not text.strip():
+            continue
+        path, parent = [], nodes.get(node.parent_id)
+        while parent:
+            if parent.kind != "document" and parent.title:
+                path.insert(0,parent.title)
+            parent = nodes.get(parent.parent_id)
+        blocks = [SimpleNamespace(text=b.get("text",""),block_type=b.get("kind","")) for b in page.blocks]
+        snapshot = SimpleNamespace(text=page.text,blocks=SimpleNamespace(all=lambda:blocks))
+        exclusions = [(0,len(text),True)] if node.kind == "footnote" else unit_exclusions(snapshot,text,segment.start,segment.end)
+        yield {"unit_id":str(segment.pk),"text":text,"scope_exclusions":exclusions,"metadata":{
+            "projection_layout":"logical-node-v1","structure_id":str(structure.pk),
+            "node_id":str(node.pk),"node_kind":node.kind,"node_segment_id":str(segment.pk),"snapshot_id":str(page.pk),
+            "source_start_offset":segment.start,"unit_hash":fingerprint(text),"pdf_page":page.page_number,"page_index":page.page_number,
+            "printed_page":page.printed_label,"chapter_path":path,"section_title":path[-1] if path else "",
+            "source_kind":page.text_source,"language":header.get("language","unknown"),"bbox":[],"locator_precision":"text_range",
+            "reader_url":f"/reader/{revision.asset_id}?revision={revision.pk}&page={page.page_number}",
+            "quality_flags":["structure_pending"] if node.kind == "unresolved" else []}}
 
 
 def visible_scope_tokens(channel, access_statuses):

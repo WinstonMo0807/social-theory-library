@@ -30,7 +30,7 @@ type Run = { work_id?: string; asset_id?: string; pages?: number; id: string; ti
   error: { message?: string }; artifacts?: Artifact[]; changeset?: Changes | null; model_identity: { model?: string } };
 type Source = { revision_id: string; asset_id: string; work_id: string; title: string; pages: number; revision_number: number; edition_id: string };
 type Index = { drafts: { id: string; title: string; origin: string }[]; runs: Run[]; stages: string[]; configuration: { enabled: boolean; model: string; settings_url: string } };
-const states: Record<string, string> = { external_draft: "人工审核", waiting: "等待执行", waiting_executor: "等待执行器", waiting_configuration: "等待配置模型", waiting_resource: "等待计算资源", running: "分析中", partial: "部分完成", succeeded: "分析完成 · 待审核", empty: "完成 · 无建议", failed: "执行失败", canceled: "已取消" };
+const states: Record<string, string> = { external_draft: "人工审核", waiting: "等待执行", waiting_remote: "等待独立计算节点", waiting_executor: "等待执行器", waiting_configuration: "等待配置模型", waiting_resource: "等待计算资源", running: "分析中", partial: "部分完成", succeeded: "分析完成 · 待审核", empty: "完成 · 无建议", failed: "执行失败", canceled: "已取消" };
 const kinds: Record<string, string> = { entity: "实体身份", alias: "异名", assertion: "学术陈述", wiki_patch: "知识页修改" };
 const expressions: Record<string, string> = { ...counterAttributions, direct_quote: "直接引述", paraphrase: "转述", editorial_judgment: "编辑判断" };
 const predicates: Record<string, string> = { uses: "使用", criticizes: "批评", inherits: "继承", develops: "发展", cites: "引用", responds_to: "回应", mentions: "提及", explains: "解释", supports: "支持", opposes: "反对", qualifies: "限定" };

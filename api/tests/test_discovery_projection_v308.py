@@ -202,7 +202,10 @@ def test_ready_revision_refresh_keeps_single_visible_build_coordinator(monkeypat
 
 
 def _queued_topic(monkeypatch, generation_status="active"):
-    topic = Topic.objects.create(name="可恢复的公开主题", slug="restored-discovery-topic", editorial_status="published")
+    from catalog.models import KnowledgeNode
+    node=KnowledgeNode.objects.create(canonical_name_zh="主题关联概念",slug="restored-topic-concept",node_type="concept",status="published")
+    topic = Topic.objects.create(name="可恢复的公开主题", slug="restored-discovery-topic", editorial_status="published",
+        curation={"concept_node_ids":[str(node.pk)]})
     def current_topic(kind):
         if kind == "topic":
             row, header = sources.get_source(kind, topic.pk)
@@ -247,8 +250,8 @@ def test_withdrawn_topic_restored_unchanged_requeues_superseded_source(api_clien
     assert restored.status_code == 200
     detail_url = f"/api/catalog/admin/topics/{topic.pk}/"
     republished = api_client.patch(detail_url, {"editorial_status": "published"}, format="json",
-        HTTP_IF_MATCH=api_client.get(detail_url).data["edit_version"])
-    assert republished.status_code == 200
+        HTTP_IF_MATCH=api_client.get(detail_url).data["edit_version"],HTTP_X_EDITOR_OWNER=str(admin_user.pk))
+    assert republished.status_code == 200, republished.data
     assert sources.get_source("topic", topic.pk)[1]["source_revision"] == header["source_revision"]
     assert indexing.schedule_sources(generation) == 1
     job.refresh_from_db()

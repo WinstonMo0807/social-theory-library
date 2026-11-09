@@ -26,11 +26,12 @@ import httpx
 WORKER_VERSION = "3.0.4"
 SUPPORTED_PROVIDERS = {"ollama", "openai_compatible", "vllm"}
 SUPPORTED_CAPABILITIES = {"llm_small", "llm_large", "document_parse"}
-SUPPORTED_TASK_KINDS = {"claim_extraction", "library_synthesis", "document_structure"}
+SUPPORTED_TASK_KINDS = {"claim_extraction", "library_synthesis", "document_structure", "curation_stage"}
 TASK_CAPABILITY = {
     "claim_extraction": "llm_small",
     "library_synthesis": "llm_large",
     "document_structure":"document_parse",
+    "curation_stage":"llm_large",
 }
 
 
@@ -123,7 +124,7 @@ class RemoteWorkerClientConfig:
         model_parsed = urlsplit(model_url)
         if model_parsed.scheme not in {"http", "https"} or not model_parsed.hostname:
             raise RemoteWorkerClientError("invalid_model_url", "STL_WORKER_MODEL_URL 必须是完整 URL。", retryable=False)
-        if any(k != "document_structure" for k in self.task_kinds) and (not str(self.model or "").strip() or not str(self.model_revision or "").strip()):
+        if any(k not in {"document_structure","curation_stage"} for k in self.task_kinds) and (not str(self.model or "").strip() or not str(self.model_revision or "").strip()):
             raise RemoteWorkerClientError("model_identity_missing", "模型名称与不可变 revision 都必须配置。", retryable=False)
         capabilities = tuple(dict.fromkeys(str(value or "").strip().casefold() for value in self.capabilities))
         task_kinds = tuple(dict.fromkeys(str(value or "").strip().casefold() for value in self.task_kinds))
@@ -224,11 +225,13 @@ class RemoteAIWorkerClient:
         if self._owns_model_client:
             self.model_client.close()
 
-    def _server_post(self, path: str, payload: dict[str, Any]) -> httpx.Response:
+    def _server_post(self, path: str, payload: dict[str, Any], *, timeout=None) -> httpx.Response:
         try:
+            options={"timeout":timeout} if timeout is not None else {}
             response = self.server_client.post(
                 f"{self.config.server_url}/{path.lstrip('/')}",
                 json=payload,
+                **options,
             )
         except httpx.TimeoutException as exc:
             raise RemoteWorkerClientError(
@@ -268,6 +271,8 @@ class RemoteAIWorkerClient:
             "model": self.config.model,
             "revision": self.config.model_revision,
         }
+        if set(self.config.task_kinds) <= {"curation_stage","document_structure"}:
+            model_revision={"provider":"stl-managed","model":"configured-provider","revision":"managed-v1"}
         response = self._server_post(
             "heartbeat/",
             {
@@ -492,6 +497,26 @@ class RemoteAIWorkerClient:
             },
         }
 
+    def run_curation_stage(self,job,lease):
+        from hashlib import sha256
+        from types import SimpleNamespace
+        from common.docetl_map import run_map
+        if "curation_stage" not in self.config.task_kinds or job.get("transport") != "stl-managed":
+            raise RemoteWorkerClientError("curation_not_enabled","执行器没有声明受控策展阶段。",retryable=False)
+        receipt={}
+        def invoke(text):
+            value=_response_json(self._server_post(f"demands/{lease['demand_id']}/model/",{
+                "executor_id":self.config.executor_id,"lease_token":lease["lease_token"],
+                "input_hash":sha256(text.encode("utf-8")).hexdigest()},timeout=self.config.request_timeout_seconds))
+            receipt.update(value)
+            return SimpleNamespace(data=value["data"])
+        try:
+            run_map(job["runtime"]["model"],job["prompt"],job["input"],job["output_schema"],invoke)
+        except RemoteWorkerClientError: raise
+        except Exception as exc:
+            raise RemoteWorkerClientError("curation_stage_failed",str(exc)[:1000],retryable=False) from exc
+        return {**job["runtime"],"artifact_id":job["artifact_id"],"output_hash":receipt["output_hash"]}
+
     def run_structure(self,job,lease):
         from tempfile import TemporaryDirectory
         from pathlib import Path
@@ -556,7 +581,9 @@ class RemoteAIWorkerClient:
                 daemon=True,
             )
             keepalive_thread.start()
-            result = self.run_structure(job,lease) if job.get("task_kind") == "document_structure" else self.run_model(job)
+            if job.get("task_kind") == "document_structure": result=self.run_structure(job,lease)
+            elif job.get("task_kind") == "curation_stage": result=self.run_curation_stage(job,lease)
+            else: result=self.run_model(job)
             keepalive_stop.set()
             keepalive_thread.join(timeout=5)
             if keepalive_errors:

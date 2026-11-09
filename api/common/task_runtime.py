@@ -210,6 +210,11 @@ def _stale_demand_reason(
         ).count()
         if not span_ids or current_count != len(span_ids):
             return "library synthesis evidence was superseded"
+    elif task_kind == "curation_stage":
+        from catalog.models import CurationArtifact
+        artifact=CurationArtifact.objects.select_related("run").filter(pk=demand.owner_key).first()
+        if not artifact or artifact.run.status == "canceled" or artifact.run.version != payload.get("run_version") or artifact.cache_key != payload.get("cache_key"):
+            return "curation stage version was canceled or superseded"
     elif task_kind == "projection_refresh":
         from ingestion.models import ProcessingJob
 
@@ -831,6 +836,11 @@ def release_demand(
     demand.lease_expires_at = None
     demand.last_error_code = str(error_code or "task_failed")[:120]
     demand.last_error_message = str(error_message or "")[:4000]
+    if _demand_task_kind(demand) == "curation_stage":
+        # Capacity waits do not consume model attempts; other failures have an
+        # explicit ceiling and remain visible for an administrator to resume.
+        capacity_wait=error_code in {"resource_busy","ai_provider_rate_limited","server_http_429"}
+        retry=retry and (capacity_wait or demand.attempts < 3)
     if retry:
         demand.not_before = timezone.now() + timedelta(seconds=max(0, int(retry_after_seconds)))
         demand.state = (
@@ -852,6 +862,11 @@ def release_demand(
             "updated_at",
         ]
     )
+    if _demand_task_kind(demand) == "curation_stage":
+        from catalog.models import CurationRun
+        CurationRun.objects.filter(pk=demand.payload.get("run_id"),version=demand.payload.get("run_version")).exclude(status="canceled").update(
+            status=("waiting_resource" if capacity_wait else "waiting_remote") if retry else "failed",
+            error={"code":demand.last_error_code,"message":demand.last_error_message})
     return demand
 
 
