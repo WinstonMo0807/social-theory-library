@@ -77,6 +77,14 @@ test("split catalog requests retain private headers, no-store, encoded IDs and 4
   assert.equal(request.init.cache, "no-store");
   assert.equal(request.init.headers["x-forwarded-proto"], "https");
   assert.equal(request.init.headers["x-internal-api-token"], "api-domain-test-token");
+  assert.equal(request.init.redirect, "manual");
+  let redirectRequests = 0;
+  globalThis.fetch = async () => {
+    redirectRequests += 1;
+    return new Response(null, { status: 302, headers: { location: "https://outside.invalid/" } });
+  };
+  await assert.rejects(() => loadWorks(), error => error instanceof ServerApiError && error.status === 302);
+  assert.equal(redirectRequests, 1, "redirects must be rejected without forwarding credentials");
   globalThis.fetch = async (url) => {
     request.url = url;
     return new Response("missing", { status: 404 });

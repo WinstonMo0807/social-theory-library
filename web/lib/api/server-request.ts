@@ -37,7 +37,9 @@ export async function serverRequest<T>(path: string, options: { forwardSession?:
   }
   const response = await fetch(`${SERVER_API}${path}`, {
     cache: "no-store",
-    redirect: "error",
+    // Workers support manual redirects; the non-2xx guard below rejects them.
+    // Never follow an API redirect with the internal credential or reader cookie.
+    redirect: "manual",
     headers: {
       accept: "application/json",
       // Reader and exploration opt in. Never forward refresh cookies or browser headers.

@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import csv
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/stl4/public-visual-20261110"
@@ -154,17 +155,32 @@ for file in (ROOT / "api").rglob("*.py"):
             fields[file.relative_to(ROOT).as_posix() + ":" + cls.name] = declared
 (RAW / "FIELD_CONTRACTS.json").write_text(json.dumps(fields, ensure_ascii=False, indent=2), encoding="utf8")
 (RAW / "API_METHOD_HINTS.json").write_text(json.dumps(handlers, ensure_ascii=False, indent=2), encoding="utf8")
+# Refresh declarations without losing the human-reviewed business notes.
+previous = {}
+contract_file = OUT / "API_CONTRACTS.csv"
+if contract_file.exists():
+    with contract_file.open(encoding="utf-8-sig", newline="") as stream:
+        previous = {(row["method"], row["path"]): row for row in csv.DictReader(stream)}
+def public_template(route):
+    """Readable URL parameters; preserve the resolver declaration separately."""
+    route = re.sub(r"\(\?P<(\w+)>[^)]+\)", r"{\1}", route)
+    route = re.sub(r"<(?:\w+:)?(\w+)>", r"{\1}", route)
+    return route.replace("^", "").replace("$", "").replace(r"\.", ".").replace("/?", "/")
+
+
 with (OUT / "API_CONTRACTS.csv").open("w", encoding="utf-8-sig", newline="") as file:
     writer = csv.writer(file)
-    writer.writerow(["method", "path", "name", "view", "handler", "permission_classes", "permission_selector", "input_candidates", "return_key_candidates", "serializer", "schema_references", "pagination", "errors", "source", "state_transition", "page_mapping", "review_status"])
+    writer.writerow(["method", "path", "public_path_template", "name", "view", "handler", "permission_classes", "permission_selector", "input_candidates", "return_key_candidates", "serializer", "schema_references", "pagination", "errors", "source", "state_transition", "page_mapping", "review_status", "verified_notes"])
     for row in rows:
         for method, handler in row["handlers"].items():
             hint = handlers.get(handler["key"], {})
-            writer.writerow([method.upper(), row["path"], row["name"], row["view"], handler["action"],
+            old = previous.get((method.upper(), row["path"]), {})
+            writer.writerow([method.upper(), row["path"], public_template(row["path"]), row["name"], row["view"], handler["action"],
                 ";".join(row["permissions"]), json.dumps(row["permission_selector"]),
                 ";".join(hint.get("literal_input_candidates", [])), ";".join(hint.get("dict_key_candidates", [])),
                 row["serializer"], ";".join(hint.get("schema_references", [])), row["pagination"], ";".join(hint.get("exception_types", [])),
-                json.dumps(handler["source"] or row["source"]), "待追踪服务与任务", "待对应 COVERAGE.csv", row["review_status"]])
+                json.dumps(handler["source"] or row["source"]), old.get("state_transition", "待追踪服务与任务"),
+                old.get("page_mapping", "待对应 COVERAGE.csv"), old.get("review_status", row["review_status"]), old.get("verified_notes", "")])
 print(json.dumps({"route_patterns": len(rows), "unique_views": len(sources), "static_serializers": len(serializers),
                   "method_paths": sum(len(set(row["methods"]) - {"head", "options"}) for row in rows),
                   "scope": "local deployed-source resolver; no DB or production requests"}))

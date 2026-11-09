@@ -1,5 +1,8 @@
 ## 2026-11-10 公网视觉候选盘点
 
+- D / PV-LOCAL-01：本机Workers开发环境不接受fetch redirect:error，导致SSR首页失败；server-request改manual，既有非2xx分支拒绝跳转并保留凭据边界。定向302/404/503/网络失败检查通过，隔离首页/PDF读回。不是公网Node运行故障。
+- 待核实 / PV-TEST-01：旧api-domain-boundaries第2项断言public-data-adapters只能有type导入，但已部署基线存在纯媒体函数mediaAllows导入；本轮运行整组2通过1失败。未修改此断言，后续按当前实际纯模块边界定位，不列作新视觉缺陷。
+
 - A / PV-PREVIEW-01（既有问题，尚未修复）：`web/components/admin/workflow/workflow-live-preview.tsx:56` 将整期期刊 `journal_contents` 固定为空，且当前 Work 投影没有 `journalContents`。`work-detail-view.tsx:135` 实际读取后者显示本期目录。触发：编目编辑整期期刊目录并查看相邻实时预览。影响：目录修改不能在预览中体现。最小范围：补齐现有草稿到正式 WorkDetailView 的目录投影，明确未保存关联的不可导航状态；不得新建出版接口或跳过发布校验。待业务盘点、设计覆盖后实施，在隔离环境验证目录增删/修改及返回编辑。
 - 本轮其他页面状态仍在核实，发现源码路由不等于验证完成。唯一范围表 `docs/stl4/public-visual-20261110/COVERAGE.csv`；新 Intelligence Demo 排除。生产未修改。
 

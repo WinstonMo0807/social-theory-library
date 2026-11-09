@@ -9,7 +9,18 @@ import sys
 import tempfile
 
 
-def main():
+def main(*, api_port=8105, web_port=3105, offline=False, ready_file=None):
+    if not all(isinstance(port, int) and 1024 <= port <= 65535 for port in (api_port, web_port)):
+        raise ValueError("Fixture ports must be unprivileged local ports")
+    if offline:
+        # Only this fixture process is fenced; incoming loopback requests work.
+        # Existing production providers, mail and local model services cannot
+        # accidentally be called by synthetic tasks or source checks.
+        import socket
+        def deny_connect(*args, **kwargs):
+            raise OSError("Outbound connections are disabled in the isolated visual fixture")
+        socket.socket.connect = deny_connect
+        socket.socket.connect_ex = deny_connect
     repository = Path(__file__).resolve().parents[1]
     fixture_directory = Path(tempfile.mkdtemp(prefix="stl-v305-e2e-")).resolve()
     os.environ.update({
@@ -33,11 +44,13 @@ def main():
         # unchanged; rate-limit behavior has independent failure-injection tests.
         "API_ANON_RATE": "2000/min", "API_USER_RATE": "4000/min",
         "DJANGO_ALLOWED_HOSTS": "127.0.0.1,localhost,testserver",
-        "CORS_ALLOWED_ORIGINS": "http://127.0.0.1:3105",
-        "DJANGO_CSRF_TRUSTED_ORIGINS": "http://127.0.0.1:3105",
+        "CORS_ALLOWED_ORIGINS": f"http://127.0.0.1:{web_port}",
+        "DJANGO_CSRF_TRUSTED_ORIGINS": f"http://127.0.0.1:{web_port}",
         "CELERY_BROKER_URL": "memory://", "CELERY_TASK_ALWAYS_EAGER": "true" if os.environ.get("STL_E2E_V307") == "1" else "false",
         "PROCESS_INGESTION_INLINE": "false", "PYTHONIOENCODING": "utf-8",
         "THEORY_SYSTEM_ENABLED": "true",
+        "CACHE_URL": "",
+        "EMAIL_BACKEND": "django.core.mail.backends.locmem.EmailBackend",
     })
     sys.path.insert(0, str(repository / "api"))
     import django
@@ -111,8 +124,21 @@ def main():
         from v307_e2e_fixtures import seed_v307
         seed_v307(User.objects.get(email="owner-v305@example.test"))
     print(f"Isolated local E2E database: {fixture_directory}", flush=True)
-    call_command("runserver", "127.0.0.1:8105", use_reloader=False)
+    if ready_file:
+        import json
+        Path(ready_file).write_text(json.dumps({"fixture_directory": str(fixture_directory),
+            "api_url": f"http://127.0.0.1:{api_port}/api", "web_url": f"http://127.0.0.1:{web_port}",
+            "offline": offline, "data": "synthetic fixtures; no production data"}), encoding="utf-8")
+    call_command("runserver", f"127.0.0.1:{api_port}", use_reloader=False)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--api-port", type=int, default=8105)
+    parser.add_argument("--web-port", type=int, default=3105)
+    parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--ready-file")
+    arguments = parser.parse_args()
+    main(api_port=arguments.api_port, web_port=arguments.web_port,
+         offline=arguments.offline, ready_file=arguments.ready_file)
