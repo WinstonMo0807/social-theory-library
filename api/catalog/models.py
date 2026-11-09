@@ -1952,7 +1952,7 @@ class PersonNameVariant(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
 
 class ScholarProfile(UUIDTimeStampedModel):
     person = models.OneToOneField(Person, on_delete=models.CASCADE, related_name="scholar_profile")
-    slug = models.SlugField(max_length=180, unique=True)
+    slug = models.SlugField(max_length=180, unique=True, allow_unicode=True)
     short_description = models.CharField(max_length=400, blank=True)
     affiliations = models.JSONField(default=list, blank=True)
     key_concerns = models.JSONField(default=list, blank=True)

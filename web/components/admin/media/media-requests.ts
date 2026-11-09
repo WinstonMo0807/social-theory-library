@@ -4,7 +4,8 @@ import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 
 export async function ownedRequest<T>(owner:string,url:string,options:RequestInit={}){
-  const signal=options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(60000)]):AbortSignal.timeout(60000);
+  const timeout=AbortSignal.timeout(options.body instanceof FormData?120000:60000);
+  const signal=options.signal?AbortSignal.any([options.signal,timeout]):timeout;
   return withPrivateOwner(owner,()=>apiRequest<T>(url,{...options,signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),signal);
 }
 export function useOwnedRead<T>(owner:string,url:string){

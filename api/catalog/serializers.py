@@ -3251,7 +3251,7 @@ class AdminScholarSerializer(serializers.ModelSerializer):
     biography = serializers.CharField(source="person.biography", required=False, allow_blank=True)
     portrait = serializers.ImageField(source="person.portrait", required=False, allow_null=True)
     portrait_media = serializers.SerializerMethodField()
-    slug = serializers.SlugField(required=False, allow_blank=True)
+    slug = serializers.SlugField(required=False, allow_blank=True, allow_unicode=True)
     suggestions = serializers.SerializerMethodField()
     authority_status = serializers.CharField(source="person.authority_status", read_only=True)
     public_eligible = serializers.SerializerMethodField()

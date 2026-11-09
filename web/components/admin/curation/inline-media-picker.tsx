@@ -32,7 +32,7 @@ export function InlineMediaPicker({ onSelect, selectedRenditionId, kind = "hero"
     return () => { controller.abort(); unsubscribe(); };
   }, [owner]);
   async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
-    const signal = AbortSignal.any([lifetime.current!.signal, AbortSignal.timeout(25000)]);
+    const signal = AbortSignal.any([lifetime.current!.signal, AbortSignal.timeout(init.body instanceof FormData ? 120000 : 60000)]);
     return withPrivateOwner(owner, () => apiRequest<T>(url, { ...init, signal, headers: { ...init.headers, "X-Editor-Owner": owner } }, getServerSessionCredential()), signal);
   }
   async function act(work: () => Promise<void>) {
