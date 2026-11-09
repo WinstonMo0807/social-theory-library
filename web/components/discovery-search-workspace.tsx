@@ -4,6 +4,7 @@ import { SourceText } from "./source-text";
 import { MediaPlacement } from "./media-placement";
 
 import Link from "next/link";
+import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
@@ -418,7 +419,8 @@ export function DiscoveryEntityCard({ item }: { item: DiscoveryEntity }) {
   const { t } = useEvidenceLanguage();
   const href = internalHref(item.url);
   const [failedPortrait, setFailedPortrait] = useState("");
-  return <article className={styles.entityCard}>{item.portrait_url && failedPortrait !== item.portrait_url ? <MediaPlacement uses={item.portrait_media?.display_uses}><img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setFailedPortrait(item.portrait_url || "")} /></MediaPlacement> : null}<div><small>{t(kindLabels[item.kind] || "知识条目")}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p>{item.excerpt}</p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
+  const fallback = item.kind === "scholar" || item.kind === "scholar_profile" ? <ScholarPortraitFallback name={item.title} identity={href || item.id} className={styles.scholarFallback}/> : null;
+  return <article className={styles.entityCard}>{item.portrait_url && failedPortrait !== item.portrait_url ? <MediaPlacement uses={item.portrait_media?.display_uses} fallback={fallback}><img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setFailedPortrait(item.portrait_url || "")} /></MediaPlacement> : fallback}<div><small>{t(kindLabels[item.kind] || "知识条目")}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p>{item.excerpt}</p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
 }
 
 export function DiscoveryCurationCard({ item, preview = false }: { item: DiscoveryCuration; preview?: boolean }) {

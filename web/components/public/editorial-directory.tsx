@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent } from "react";
 import { ArrowRight, FileText, ImageOff, LayoutGrid, List, Search, UserRound, X } from "lucide-react";
@@ -19,10 +20,10 @@ export function editorialHref(params: EditorialSearchParams, patch: Record<strin
   return `/recommendations${query.size ? `?${query}` : ""}`;
 }
 
-export function EditorialImage({ src, className = "", portrait = false, retry = false, displayUses }: { src: string; className?: string; portrait?: boolean; retry?: boolean; displayUses?:readonly MediaDisplayUse[] }) {
+export function EditorialImage({ src, className = "", portrait = false, retry = false, displayUses, scholar }: { src: string; className?: string; portrait?: boolean; retry?: boolean; displayUses?:readonly MediaDisplayUse[]; scholar?: {name:string; identity:string} }) {
   const [failedSource, setFailedSource] = useState("");
   const failed=!!src&&failedSource===src;
-  const fallback=<span className={`${className} ${styles.imageMissing}`}><span role="img" aria-label={failed?"图片暂不可用":src?"本位置不展示配图":portrait?"未提供公开头像":"暂未提供配图"}>{portrait ? <UserRound size={20} strokeWidth={1} /> : <ImageOff size={28} strokeWidth={1} />}</span>{retry && failed ? <button type="button" onClick={() => setFailedSource("")}>重新加载</button> : null}</span>;
+  const fallback=scholar ? <ScholarPortraitFallback name={scholar.name} identity={scholar.identity} className={className}/> : <span className={`${className} ${styles.imageMissing}`}><span role="img" aria-label={failed?"图片暂不可用":src?"本位置不展示配图":portrait?"未提供公开头像":"暂未提供配图"}>{portrait ? <UserRound size={20} strokeWidth={1} /> : <ImageOff size={28} strokeWidth={1} />}</span>{retry && failed ? <button type="button" onClick={() => setFailedSource("")}>重新加载</button> : null}</span>;
   return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} alt="" loading="lazy" onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
 }
 export function EditorialByline({ curator, date }: { curator: EditorialCurator; date: string | null }) {
@@ -43,7 +44,7 @@ export function EditorialRelated({ related }: { related: EditorialDirectory["rel
   return <section className={styles.related} aria-label="继续探索"><nav aria-label="关联内容">
     {[["scholars","相关学者"],["materials","相关材料"],["paths","相关阅读路径"]].map(([key,label]) => <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}
   </nav><p>{related.notice}</p><div className={styles.relatedRows}>
-    {tab === "scholars" ? related.scholars.length ? related.scholars.map(row => <Link key={row.id} href={row.href}><EditorialImage src={row.person.portrait} displayUses={row.person.portrait_media?.display_uses} className={styles.relatedPortrait} portrait /><span><strong>{row.person.preferred_name}</strong><small>{row.person.original_name}</small><small>{row.short_description}</small></span><ArrowRight size={16} /></Link>) : <p>这些文章尚未编入公开学者档案。</p> : null}
+    {tab === "scholars" ? related.scholars.length ? related.scholars.map(row => <Link key={row.id} href={row.href}><EditorialImage scholar={{name:row.person.preferred_name,identity:row.href}} src={row.person.portrait} displayUses={row.person.portrait_media?.display_uses} className={styles.relatedPortrait} portrait /><span><strong>{row.person.preferred_name}</strong><small>{row.person.original_name}</small><small>{row.short_description}</small></span><ArrowRight size={16} /></Link>) : <p>这些文章尚未编入公开学者档案。</p> : null}
     {tab === "materials" ? related.materials.length ? related.materials.map(row => <Link key={row.id} href={row.href}><EditorialImage src={row.cover_url} displayUses={row.cover_display_uses} className={styles.relatedCover} /><span><strong>{row.title}</strong><small>{row.authors}</small><small>{row.source_status === "available" ? "馆藏原文" : "公开书目"}</small></span><ArrowRight size={16} /></Link>) : <p>这些文章暂无可公开的关联材料。</p> : null}
     {tab === "paths" ? related.paths.length ? related.paths.map(row => <Link key={row.id} href={row.href}><span><strong>{row.title}</strong><small>打开完整阅读路径</small></span><ArrowRight size={16} /></Link>) : <p>这些文章尚未编入公开阅读路径。</p> : null}
   </div></section>;
@@ -53,7 +54,7 @@ function DirectoryRelated({related}:{related:EditorialDirectory["related"]}){
   return <div className={styles.directoryRelated}>
     <section aria-labelledby="directory-related-scholars"><header><h2 id="directory-related-scholars">相关学者 </h2><Link href="/scholars">学者目录 <ArrowRight size={13}/></Link></header>
       {related.scholars.length?<div className={styles.directoryScholars}>{related.scholars.map(row=><Link key={row.id} href={row.href}>
-        <EditorialImage src={row.person.portrait} displayUses={row.person.portrait_media?.display_uses} className={styles.directoryPortrait} portrait/>
+        <EditorialImage scholar={{name:row.person.preferred_name,identity:row.href}} src={row.person.portrait} displayUses={row.person.portrait_media?.display_uses} className={styles.directoryPortrait} portrait/>
         <div><h3>{row.person.preferred_name}</h3>{row.person.birth_year!=null||row.person.death_year!=null?<small>{row.person.birth_year==null?"出生年未详":row.person.birth_year}{row.person.death_year!=null?`—${row.person.death_year}`:""}</small>:null}<p>{row.short_description||row.fields.map(field=>field.name).join("、")||"公开资料待补充"}</p><ArrowRight size={13}/></div>
       </Link>)}</div>:<p className={styles.directoryRelatedEmpty}>当前文章尚未编入公开学者档案。</p>}
     </section>

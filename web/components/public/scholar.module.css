@@ -140,3 +140,7 @@
 :global(html[data-typeset="B"]) .filterForm label{font-size:var(--type-meta);line-height:1.7}
 @media(max-width:900px){:global(html[data-typeset="B"]) .hubGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}}
 @media(max-width:700px){:global(html[data-typeset="B"]) .page{padding-top:20px}:global(html[data-typeset="B"]) .directoryHero{margin-top:-20px;min-height:0}:global(html[data-typeset="B"]) .heroCopy,:global(html[data-typeset="B"]) .hubPage .heroCopy{padding:24px var(--type-gutter)}:global(html[data-typeset="B"]) .heroCopy>p{font-size:1rem}:global(html[data-typeset="B"]) .hubGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}:global(html[data-typeset="B"]) .cardCopy,:global(html[data-typeset="B"]) .hubGrid .cardCopy{padding:12px}:global(html[data-typeset="B"]) .hubGrid .cardFooter{margin:10px -12px -12px;padding:8px 12px}}
+
+.portrait { position: relative; }
+.portrait > img, .profilePortrait .portrait > img { object-fit: contain; object-position: center; }
+.portrait > picture { position: absolute; inset: 0; }

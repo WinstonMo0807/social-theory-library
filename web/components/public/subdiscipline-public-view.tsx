@@ -1,6 +1,7 @@
 import { DefaultCover } from "@/components/default-cover";
 import Image from "next/image";
 import Link from "next/link";
+import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, ExternalLink, FileText } from "lucide-react";
 import type { ReactNode } from "react";
@@ -80,7 +81,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
         <section className={styles.section} id="scholars" aria-labelledby="subdiscipline-scholars-title" data-edit-section="scholars">
           <h2 id="subdiscipline-scholars-title">代表性学者</h2>
           {scholars.length ? <div className={styles.scholars}>{scholars.map(person => <article key={person.id}>
-            {person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<span className={styles.portraitPlaceholder}>{person.name.slice(0,1)}</span>}><img src={person.portrait_url} alt={person.name} loading="lazy" /></MediaPlacement> : <span className={styles.portraitPlaceholder} aria-label={`${person.name}暂无肖像`}>{person.name.slice(0, 1)}</span>}
+            {person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.portraitPlaceholder}/>}><img src={person.portrait_url} alt={person.name} loading="lazy" /></MediaPlacement> : <ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.portraitPlaceholder}/>}
             <div><h3>{person.href ? <Link href={person.href}>{person.name}</Link> : person.name}</h3>
               {person.reason || person.relation_label || person.summary ? <p>{person.reason || person.relation_label || person.summary}</p> : null}
               {person.source_href ? <Link className={styles.sourceLink} href={person.source_href} target="_blank" rel="noopener noreferrer">查看来源<ArrowRight size={14} aria-hidden="true" /></Link>

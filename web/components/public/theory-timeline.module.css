@@ -313,3 +313,5 @@
   .axisDisclosure > :is(summary,:where([data-section-heading])) svg { transition: none; }
 }
 .participantRoles { margin:20px 0; }.participantRoles h3 { font:600 16px var(--serif); }.participantRoles ul { list-style:none; padding:0; display:flex; flex-wrap:wrap; gap:10px; }.participantRoles li { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding:9px 12px; border:1px solid var(--line); background:var(--surface); font:max(13px, var(--stl-readable-body)) var(--sans); }.participantRoles li>span,.participantRoles small { color:var(--muted); font-size:max(10px, var(--stl-readable-meta)); }.participantRoles strong { font-weight:500; overflow-wrap:anywhere; }
+
+.personFallback { width: 32px; height: 38px; border-radius: 2px; }

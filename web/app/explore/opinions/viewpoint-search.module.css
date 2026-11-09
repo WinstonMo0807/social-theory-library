@@ -423,3 +423,5 @@
  .page .mobileFilters { grid-template-columns:repeat(2,minmax(0,1fr)); }
  .page .mobileFilters button:last-child { grid-column:1 / -1; }
 }
+
+.scholarFallback { width: 48px; height: 60px; border-radius: 4px; }

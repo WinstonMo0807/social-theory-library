@@ -764,7 +764,7 @@
   width: 100%;
   min-height: 255px;
   border-radius: 0;
-  filter: grayscale(1) sepia(0.12);
+  filter: none;
 }
 
 [data-ui-scope="editorial-v2"] .home-reading-room .scholar-card > div:last-child {
@@ -1098,7 +1098,7 @@
   height: 100%;
   min-height: 440px;
   border-radius: 0;
-  filter: grayscale(1) sepia(0.16) contrast(0.96);
+  filter: none;
 }
 
 [data-ui-scope="editorial-v2"] .scholar-recommendation-primary .scholar-card > div:last-child {
@@ -1138,7 +1138,7 @@
   height: 100%;
   min-height: 210px;
   border-radius: 0;
-  filter: grayscale(1) sepia(0.14);
+  filter: none;
 }
 
 [data-ui-scope="editorial-v2"] .scholar-recommendation-supporting .scholar-card > div:last-child {
@@ -1195,7 +1195,7 @@
   height: 100%;
   min-height: 165px;
   border-radius: var(--stl2-radius-sm);
-  filter: grayscale(1) sepia(0.12);
+  filter: none;
 }
 
 [data-ui-scope="editorial-v2"] .scholar-directory-grid .scholar-card > div:last-child {
@@ -2438,7 +2438,7 @@
   min-height: 440px;
   aspect-ratio: 0.74;
   border-radius: var(--stl2-radius-md);
-  filter: grayscale(1) sepia(0.12);
+  filter: none;
 }
 
 [data-ui-scope="editorial-v2"] .scholar-intro h1 {

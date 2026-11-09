@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { Scholar, Work } from "@/lib/data";
 import { SaveWorkButton } from "./save-work-button";
 import { ResponsivePortraitImage } from "./responsive-portrait-image";
+import { DefaultScholarPortrait } from "./default-scholar-portrait";
 import { SearchInput } from "./ui/controls";
 import { CollectionLink } from "./collection-link";
 import { MediaPlacement } from "./media-placement";
@@ -124,18 +125,13 @@ export function BookCard({
 }
 
 export function ScholarPortrait({ scholar, large = false }: { scholar: Scholar; large?: boolean }) {
-  const initials = scholar.originalName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2);
   return (
     <div
       className={`scholar-portrait ${large ? "large" : ""} ${scholar.portrait ? "has-image" : ""}`}
       style={scholar.portrait && !scholar.portraitSources?.length ? { backgroundImage: `url("${scholar.portrait}")` } : undefined}
       aria-label={scholar.portrait ? `${scholar.name}肖像` : `${scholar.name}暂无肖像`}
     >
-      {scholar.portrait && scholar.portraitSources?.length ? <ResponsivePortraitImage scholar={scholar} large={large} /> : !scholar.portrait ? <span>{initials}</span> : null}
+      {scholar.portrait && scholar.portraitSources?.length ? <ResponsivePortraitImage scholar={scholar} large={large} /> : !scholar.portrait ? <DefaultScholarPortrait name={scholar.name} identity={scholar.slug} eager={large} /> : null}
     </div>
   );
 }
