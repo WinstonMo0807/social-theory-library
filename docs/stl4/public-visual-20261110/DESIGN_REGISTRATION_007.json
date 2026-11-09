@@ -1,0 +1,106 @@
+[
+  {
+    "id": "P04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0e227c69-e0f6-4e4a-9aac-45b3d6c47600.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "P05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6be56d1a-5595-405f-ae2b-5079f9dfa5a4.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "P06",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0fa33805-fc91-4f1a-82d5-ac84ae9fbef1.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2ba32a21-7683-4e28-87e0-7ee7de95e3d9.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-1a1f7609-9936-4e09-bc9f-07e8f3a37230.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R06",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6b3f4a51-b533-41ff-83ec-dabda263c055.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R07",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b2208bd6-5305-4ddd-a058-ed4afd811306.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R09",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-41ecc678-7872-4c2d-a06b-2bc35d79b2b6.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3b24f655-190f-40e1-a0a7-a54474e7d95c.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R11",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-a5ec9d2d-0da1-419b-999f-a2f83fa82547.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R13",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-dabae21f-2306-47cb-a069-6cb8c94ed64f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R15",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ec7bbe55-5e14-4752-95ad-b03da3b94ba9.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  },
+  {
+    "id": "R25",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-943bb9c6-0532-4fe8-b53d-d2fd43d2220f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json"
+  }
+]

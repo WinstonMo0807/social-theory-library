@@ -66,7 +66,9 @@
     ],
     "brief": "研究问题输入、范围和筛选；有查询的原文证据结果，条目含作品/版本/来源状态及原文定位；选中条目相邻上下文。候选/已读取/失败数量位置，取消/扩展/重试按真实任务状态。避免聊天界面。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P04-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
   },
   {
     "id": "P05",
@@ -80,9 +82,11 @@
       1536,
       1024
     ],
-    "brief": "同检索框exact/semantic/ask，当前ask；材料范围、问题、基于来源的结果和来源条目相邻；来源展开/原文定位/开始研究。未配置模型提示应替代结果而非假成功。图用示例结果且标明。",
-    "version": "v1",
-    "status": "pending"
+    "brief": "既有向书库提问会话列表/消息/发送、自动或始终检索、回答来源及个人模型设置；不是新增助手。未配置状态另图。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P05-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   },
   {
     "id": "P06",
@@ -95,9 +99,11 @@
       1536,
       1024
     ],
-    "brief": "选定作品标题与版本，问题输入和段落结果，来源上下文/页码定位以及返回作品；结果引用带示例标记，不出现跨库聊天助手。",
+    "brief": "单作品语义结果：原始查询只读，相关段落计数，原文/前后文/来源页码与反馈，返回全部结果与回到原页。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P06-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
   },
   {
     "id": "P07",
@@ -524,9 +530,11 @@
       1536,
       1024
     ],
-    "brief": "左书单目录/新建与搜索，中当前书单标题/说明、条目排序和添加作品，右选中作品与原文入口；收藏/公开分享分开，删除不删馆藏，保存失败保留输入。",
-    "version": "v1",
-    "status": "pending"
+    "brief": "书单详情：作品/计划/笔记/相关推荐，筛选排序多选与原文入口；目标/标签/关联主题侧栏；目录用同一读者列表结构，具体列表字段记录在PAGE_BEHAVIOR。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R04-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   },
   {
     "id": "R05",
@@ -539,9 +547,11 @@
       1536,
       1024
     ],
-    "brief": "计划列表active/archived和新建计划入口；展示目标/状态/更新时间，当前计划继续入口。创建表单抽屉展示目标、背景、时间预算、周数、语言、选择本人笔记；不自动生成成功结果。",
+    "brief": "阅读计划目录无归档/搜索筛选，现有计划目标/材料数/生成状态/更新时间/查看与分页；创建表单另图R25。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R05-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
   },
   {
     "id": "R06",
@@ -556,7 +566,9 @@
     ],
     "brief": "概览/材料/问题/设置tabs；目标和计划时间，材料pending/reading/completed/skipped操作、建议采用与手工编辑、来源修订变化；明确保存、增强、导出/打印，右侧当前材料。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R06-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
   },
   {
     "id": "R07",
@@ -571,7 +583,9 @@
     ],
     "brief": "简洁研究目录active/archived/all与分页，每项问题/状态/最近轮次、继续；开始研究沿既有探索入口。没有目录全文搜索控件。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R07-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
   },
   {
     "id": "R08",
@@ -603,7 +617,9 @@
     ],
     "brief": "可横向滚动材料×维度矩阵、固定行标题；维度草稿生成/采用分开，单元格笔记/引用在侧抽屉编辑；最多20维度、来源变化/保存冲突，不生成评分。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R09-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
   },
   {
     "id": "R10",
@@ -617,8 +633,10 @@
       1024
     ],
     "brief": "顶部陈述/子主张/轮次，支持/不同结论/限定/不足/无关筛选；证据列表与原文相邻，本人判断、模型建议、确认笔记分别操作，分页。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R10-v3.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
   },
   {
     "id": "R11",
@@ -632,8 +650,10 @@
       1024
     ],
     "brief": "时间/树切换，左轮次时间线，中快照材料/笔记/比较/证据tabs，右轮次差异；当前来源变化警告，分支复制范围确认。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R11-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   },
   {
     "id": "R12",
@@ -664,8 +684,10 @@
       1024
     ],
     "brief": "原稿页图、文内引用/书目列表、匹配来源三栏；修正文与原文件分开，来源版本选择、保存/重新核对、解析失败与未配置。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R13-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   },
   {
     "id": "R14",
@@ -696,8 +718,10 @@
       1024
     ],
     "brief": "稿件片段与来源原文并排，中或下问题说明、候选版本、证据、本人的处理决定；revision/来源变化状态，返回报告位置。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R15-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   },
   {
     "id": "R16",
@@ -711,8 +735,10 @@
       1024
     ],
     "brief": "六类保留设置、明确使用范围与保存；导出/擦除各自操作入口，automatic_memory_use不可启用；作用范围、约束、成功/失败，不伪造公开预览。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R16-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
   },
   {
     "id": "R17",
@@ -726,8 +752,10 @@
       1024
     ],
     "brief": "导出JSON/ZIP/CSV/本地文件夹方式，预览范围后确认，任务preview/queued/running/partial/failed/completed；文件清单/失败项/取消重试/下载，真实进度不用假百分比。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R17-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
   },
   {
     "id": "R18",
@@ -742,7 +770,9 @@
     ],
     "brief": "本人发出/接收等既有标签、研究/书单来源、目标/有效期/撤回状态、分页；查看分享/撤回/提案状态不同操作。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R18-v1.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   },
   {
     "id": "R19",
@@ -755,9 +785,11 @@
       1536,
       1024
     ],
-    "brief": "来源选择research/booklist，问题/材料/笔记各最多20，附加来源最多4；目标小组/公开/提案、200字附言与1–365天有效期；右侧实际接收方摘要预览，创建前确认范围。",
-    "version": "v1",
-    "status": "pending"
+    "brief": "最多5个研究/书单对象，每类问题材料笔记跨对象最多20；7/30/90/365天期限、附言200，目的地/成员明确选择，摘要预览与确认分离。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R19-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
   },
   {
     "id": "R20",
@@ -770,9 +802,11 @@
       1536,
       1024
     ],
-    "brief": "分享摘要与已包含内容、目标范围/有效期/来源状态、撤回动作与回执；私人原记录不删，公开撤回和提案处理不等同发布。",
-    "version": "v1",
-    "status": "pending"
+    "brief": "分享详情只读摘要与有效期，所有者公开摘要可复制链接；策划审核者独立改变提案状态。撤回在目录，不虚构本页动作。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R20-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
   },
   {
     "id": "R21",
@@ -787,7 +821,9 @@
     ],
     "brief": "小组列表、当前小组成员与邀请分别分页，campus/team类型；改名/归档/离开/移除/邀请/撤销，邀请仅指定账户可接受，成员权限清楚。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R21-v1.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   },
   {
     "id": "R22",
@@ -800,7 +836,7 @@
       1536,
       1024
     ],
-    "brief": "订阅来源分页列表，未读/变化/撤回/不可用状态，展开观察历史独立分页；标已读、暂停、取消、删除分别可操作，不说变化时间是发生时间。",
+    "brief": "来源分页列表，无全局筛选；未读/变化/撤回/不可用，历史抽屉单独分页；订阅取消、已读、删除分开。暂停保存更新是偏好状态，非逐条暂停按钮。",
     "version": "v1",
     "status": "pending"
   },
@@ -2112,5 +2148,22 @@
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P30-v1.png",
     "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+  },
+  {
+    "id": "R25",
+    "title": "创建阅读计划",
+    "coverage": [
+      "PV014"
+    ],
+    "domain": "读者表单",
+    "viewport": [
+      1536,
+      1200
+    ],
+    "brief": "Edit the provided STL design into one complete high-fidelity interface. Retain its restrained paper-white/white/charcoal/warm-gray/sand-gold design language and compact exact bilingual brand area. Replace all main contents. Desktop1536×1024, dense workspaces but readableChinese. Use clean flat CSS-like surfaces, 1px rules, square/slightlyround corners, no gradients/shadows/metal texture, no generic stats cards. Only listed business controls. Synthetic data visibly labeled示例数据. No real academic claims, credentials, usercontent. No browserchrome, no collage. 设置阅读目标与时间 creation form. Reader shell. Main left form 研究问题 textarea max1200; 当前基础 radios 没有基础/有一些基础/已有基础, 已读相关书籍数量, 已读材料与关注方向; 时间安排 budgetmode每周时间×计划周期 or本轮总时间, 每周小时,持续周数,每次阅读分钟,语言偏好; bottom 选择材料 from研究会话 dropdown and2samplecheckboxrows. Right依据预览 liveplaintext question/time/base; 使用选定的已确认笔记 checkbox unchecked. Bottom取消/生成计划. Fitthroughverticalviewport1536×1200 ifneeded, noarchivefilters.",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R25-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
   }
 ]

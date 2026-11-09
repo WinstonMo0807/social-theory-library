@@ -1,0 +1,50 @@
+[
+  {
+    "id": "R10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e8ba42a5-ea73-4ee0-b8ec-26bcb4d0fe28.png",
+    "version": "v3",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json"
+  },
+  {
+    "id": "R16",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d479dfa7-9c30-4c72-bbf2-ff3b039ed659.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json"
+  },
+  {
+    "id": "R17",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4e7805e8-36f0-4098-a38e-734b1c6874fc.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json"
+  },
+  {
+    "id": "R19",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ad772165-c5f0-483b-82b0-13a8446c9497.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json"
+  },
+  {
+    "id": "R20",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-8fd3205c-0497-48bb-920a-028b22a1885a.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json"
+  },
+  {
+    "id": "R22",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d45f2f9b-6fbe-4924-b981-049b270cefbb.png",
+    "version": "v2",
+    "status": "needs_revision",
+    "notes": "已实看，仍有状态与来源类型、目标链接不一致，继续纠正。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json"
+  }
+]

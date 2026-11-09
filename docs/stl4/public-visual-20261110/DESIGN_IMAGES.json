@@ -846,5 +846,533 @@
     ],
     "generator": "built-in image_gen",
     "synthetic_content": true
+  },
+  {
+    "id": "P04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0e227c69-e0f6-4e4a-9aac-45b3d6c47600.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/P04-v1.png",
+    "sha256": "969e6bad9f19d73c6967cee8ce6a575f1094c46c205f345f2d961ddeb94d5a07",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "P05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6be56d1a-5595-405f-ae2b-5079f9dfa5a4.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/P05-v1.png",
+    "sha256": "f74641d8de4bc7fccd18a4758815ee267ae7c8781901616d1798a184448dfba2",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "P06",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0fa33805-fc91-4f1a-82d5-ac84ae9fbef1.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/P06-v1.png",
+    "sha256": "0f25c922555792b0bc9e39039bb1478b28726414e07d89ca254575299514c235",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2ba32a21-7683-4e28-87e0-7ee7de95e3d9.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R04-v1.png",
+    "sha256": "6e813564a02028a6eab0dc78ce2547a2f9fee029bf5909afc41a149e7d62dd80",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-1a1f7609-9936-4e09-bc9f-07e8f3a37230.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R05-v1.png",
+    "sha256": "71302c10c6e2e0d0b332fe89dffbb7cc0b85a4a32ebb1347de1e7a1905c427c5",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R06",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6b3f4a51-b533-41ff-83ec-dabda263c055.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R06-v1.png",
+    "sha256": "ef98a553c094ddfc25a893f2e6af8bdf915c87ddf31c1872b2640fad25fe7317",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R07",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b2208bd6-5305-4ddd-a058-ed4afd811306.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R07-v1.png",
+    "sha256": "dbdf917ee9eb4aac5266e7bedde292a937aed7b4f0920764bdf115d1da23ff93",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R09",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-41ecc678-7872-4c2d-a06b-2bc35d79b2b6.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R09-v1.png",
+    "sha256": "23ce2d156cdb91ef674b9dc44970a7e09e3432c4bebf452c4690801e67d53632",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3b24f655-190f-40e1-a0a7-a54474e7d95c.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R10-v1.png",
+    "sha256": "9a41153b482416467546366dcdbc8790d55d59f71aff64c7abe10ed528f08d67",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R11",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-a5ec9d2d-0da1-419b-999f-a2f83fa82547.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R11-v1.png",
+    "sha256": "6b77c551b7029a04abf1eca4ab0b0cecd969e71eef312535aa056f251474806c",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R13",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-dabae21f-2306-47cb-a069-6cb8c94ed64f.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R13-v1.png",
+    "sha256": "9f6fa06d2ff64b8037da5e1f9e40c01563d3ea110671788225ca9d6bd7ad71df",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R15",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ec7bbe55-5e14-4752-95ad-b03da3b94ba9.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R15-v1.png",
+    "sha256": "2c1da11348fa7f169d3181afa6cdafc6bd7ca0c4b3c856b083963207ebcf46fb",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R25",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-943bb9c6-0532-4fe8-b53d-d2fd43d2220f.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实际查看后发现未支持的字段/状态或字数限制，待按DESIGN_CORRECTIONS_007修正；不能作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_007.json",
+    "path": "output/public-visual-20261110/design/R25-v1.png",
+    "sha256": "177d30029d13fde43d8df2fce3082c12d05b6fb7b5c1d818a096cfb73a24b339",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "P05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-23582fbd-1021-4489-b80f-af50b17dd9ee.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_007.json",
+    "path": "output/public-visual-20261110/design/P05-v2.png",
+    "sha256": "d342782ab92bbf9f077d7449efa6488fbd1ab04773bfc4841fa581bf1cf7ef98",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-7a6a2e43-908d-4431-86d5-b2529da87a3f.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_007.json",
+    "path": "output/public-visual-20261110/design/R04-v2.png",
+    "sha256": "ce9532d9197fceddb97ab736d9b654e3ffaa1bfb59bad3272499429b102e512b",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-989025df-f7fd-4e6a-8ead-8495d229e2b8.png",
+    "version": "v2",
+    "status": "superseded",
+    "notes": "实看后仍有生成器擅加字段/范围/标签，待DESIGN_CORRECTIONS_008修正，暂不作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_007.json",
+    "path": "output/public-visual-20261110/design/R10-v2.png",
+    "sha256": "1179f7411c27c77144439928a033b2a237a00407f2f0d4a0b853762bc59e0e57",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R11",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-656f698a-eea9-4b3f-96bf-3de51bf8c8d8.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_007.json",
+    "path": "output/public-visual-20261110/design/R11-v2.png",
+    "sha256": "7db30f50b302636e4bf0c85552ec309ac8225244d17d958a6ac3f564307e88c4",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R13",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6c7cfa09-7c23-4a9e-a907-56235da61d97.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_007.json",
+    "path": "output/public-visual-20261110/design/R13-v2.png",
+    "sha256": "066b9d4bc21b0c4bd3e2ab22fc31b5fc4c18f90c6c61c71bec1a2534a6d9e54c",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R15",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-539024e0-64bb-4ba9-9d0b-ed252b17ce5e.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_007.json",
+    "path": "output/public-visual-20261110/design/R15-v2.png",
+    "sha256": "bf0eae8a78ca56d88a161c9d402229675d17e6f653f3958930c55395831da19b",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R25",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-c110ac67-6313-4f99-8f48-54fc6d3c9a6c.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_007.json",
+    "path": "output/public-visual-20261110/design/R25-v2.png",
+    "sha256": "afe14777f8fc93241a325475e455a6789ecd97c2710c157bc73187f2daf84ba3",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R16",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e4ddacb9-e3af-42f0-806f-8f7c0d60c5ab.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实看后仍有生成器擅加字段/范围/标签，待DESIGN_CORRECTIONS_008修正，暂不作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_008.json",
+    "path": "output/public-visual-20261110/design/R16-v1.png",
+    "sha256": "f5662b1556b397e5cf2e06041fd9a2a61a7291430f59feba81844531c29acc2d",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R17",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e3c011b9-6cb8-4b1c-b331-d4d8a5698c9b.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实看后仍有生成器擅加字段/范围/标签，待DESIGN_CORRECTIONS_008修正，暂不作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_008.json",
+    "path": "output/public-visual-20261110/design/R17-v1.png",
+    "sha256": "c00e929fc14b7411f2fb895992351f41a6c25167ac1590f70e7ffcaaee2d7c3d",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R18",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b0714035-ec8b-4c6e-8071-9c96daab8d4a.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_008.json",
+    "path": "output/public-visual-20261110/design/R18-v1.png",
+    "sha256": "532cd32ea55ea65cafb7f9e585d92c5b2b5072913bb9eddc9a36cd73e71f2ae6",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R19",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-f16e6f8c-cfda-440a-a4ee-fc26997c51ea.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实看后仍有生成器擅加字段/范围/标签，待DESIGN_CORRECTIONS_008修正，暂不作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_008.json",
+    "path": "output/public-visual-20261110/design/R19-v1.png",
+    "sha256": "6e6d2fdca1d455c1714e5ab6575a610491e7391a31e8309b73db3e0a4bf095de",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R20",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-40ba6752-a2d8-4736-960b-f62d93856525.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "实看后仍有生成器擅加字段/范围/标签，待DESIGN_CORRECTIONS_008修正，暂不作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_008.json",
+    "path": "output/public-visual-20261110/design/R20-v1.png",
+    "sha256": "ba81037a134ec69b53a1d1bcb4b10c440d12f1158e88538dcbf200a1131c13d3",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R21",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4a76f1d4-3d54-4e4f-ab1e-009d7856db57.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_008.json",
+    "path": "output/public-visual-20261110/design/R21-v1.png",
+    "sha256": "af2d8badf7ca9b62fd62c7795d52988dc3a993b73ef596f7a09f42ce4fd3f9cd",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R22",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d2227670-c387-4ede-a75a-a86cf050f217.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "实看后仍有生成器擅加字段/范围/标签，待DESIGN_CORRECTIONS_008修正，暂不作为实现目标。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_008.json",
+    "path": "output/public-visual-20261110/design/R22-v1.png",
+    "sha256": "03423178c888492ce2bed4f16d63a7636666adbc94df9d61168fcec6324f749e",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e8ba42a5-ea73-4ee0-b8ec-26bcb4d0fe28.png",
+    "version": "v3",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json",
+    "path": "output/public-visual-20261110/design/R10-v3.png",
+    "sha256": "56cbc6acdce56ae91dc8e6dcb9146e54dfc0513647569c8b4e72589fd335d54d",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R16",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d479dfa7-9c30-4c72-bbf2-ff3b039ed659.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json",
+    "path": "output/public-visual-20261110/design/R16-v2.png",
+    "sha256": "8de3f6a25649e2033b14203acd6a20c9f96c215d4da08fd25f0bc85fe32c451b",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R17",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4e7805e8-36f0-4098-a38e-734b1c6874fc.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json",
+    "path": "output/public-visual-20261110/design/R17-v2.png",
+    "sha256": "e2748740148177f5ca363c702673efca9484fd6cdffb3fc26fd42b7e116fdf07",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R19",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ad772165-c5f0-483b-82b0-13a8446c9497.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json",
+    "path": "output/public-visual-20261110/design/R19-v2.png",
+    "sha256": "599cbfc2ed660dbea8c4a108f39470fd597b8b74d541ba1bbaba9b6ab623c8c1",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R20",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-8fd3205c-0497-48bb-920a-028b22a1885a.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json",
+    "path": "output/public-visual-20261110/design/R20-v2.png",
+    "sha256": "1383b34d6806376fc573d7b12cadc66081467f84b339af8abb36fc14cc80c66f",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "R22",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d45f2f9b-6fbe-4924-b981-049b270cefbb.png",
+    "version": "v2",
+    "status": "needs_revision",
+    "notes": "已实看，仍有状态与来源类型、目标链接不一致，继续纠正。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_008.json",
+    "path": "output/public-visual-20261110/design/R22-v2.png",
+    "sha256": "2e3d40dc3a6fa2ddcc7f683ffea08789ac4cc944939acbd489c26f255d0c1b2b",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
   }
 ]
