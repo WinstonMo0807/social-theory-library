@@ -1,3 +1,4 @@
+import { EntityKnowledge } from "../work-knowledge";
 import Link from "next/link";
 import { ArrowRight, BookOpen, CircleDot, Layers3, Network, Search, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
@@ -35,6 +36,7 @@ export function DisciplinePublicView({ payload, activeType, slug, footer }: {
       <Link href={`/explore?discipline=${encodeURIComponent(slug)}`}><BookOpen size={17} />全部馆藏{counts.works ? <b>{counts.works}</b> : null}</Link>
     </nav>
     <div className={styles.content} data-edit-section="content">
+      <EntityKnowledge kind="discipline" id={discipline.id} />
       {payload.nodes.length ? <section className={styles.nodes} aria-label="学科条目">{payload.nodes.map((node, index) => <Link className={styles.node} href={`/theories/nodes/${node.slug}`} key={node.id}>
         <div className={styles.nodeImage}><TheoryBanner image={node.cover_url} media={node.cover_media} fallbackImage={`${photos}/${nodePhotos[index % nodePhotos.length]}.webp`} /></div>
         <div className={styles.nodeCopy}><h2>{node.canonical_name_zh}<ArrowRight size={18} /></h2>

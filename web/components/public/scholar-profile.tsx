@@ -1,5 +1,6 @@
 "use client";
 
+import { EntityKnowledge } from "../work-knowledge";
 import Link from "next/link";
 import { IssueProse } from "./issue-prose";
 import { scholarProseBlock } from "@/lib/api/scholar-prose";
@@ -34,6 +35,7 @@ export function ScholarProfile({ data, preview = false, initialSection = "overvi
     <ScholarContent data={data} section={section} params={params} preview={preview} />
     {section === "relations" && !preview ? <ScholarCandidates key={`${data.id}:${data.candidate_access.requested}`} data={data} params={params} /> : null}
     {section !== "overview" ? <Link prefetch={false} className={styles.backLink} href={data.href}>返回学者概览<ArrowRight size={15} /></Link> : null}
+    {!preview && section === "overview" && <EntityKnowledge kind="person" id={data.person.id} />}
   </main>;
 }
 function BookProfileLinks({ data }: { data: PublicScholarDetail }) {

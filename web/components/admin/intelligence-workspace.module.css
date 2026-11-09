@@ -33,6 +33,8 @@
 .scope label { flex: 1; min-width: 100px; }
 .runs, .items { list-style: none; margin: 0; padding: 0; }
 .runs li, .items li { border-bottom: 1px solid var(--line, #d9d2c6); }
+.items li { display: flex; align-items: start; gap: 12px; }
+.items input[type=checkbox] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 24px 0 0; padding: 0; accent-color: #947547; }
 .runs button, .items button { border: 0; background: transparent; text-align: left; width: 100%; padding: 20px 8px; display: grid; justify-content: stretch; gap: 8px; }
 .runs strong, .items strong { font-weight: 500; line-height: 1.7; }
 .runs span, .items span { color: var(--muted, #6b655a); font-size: .875rem; }

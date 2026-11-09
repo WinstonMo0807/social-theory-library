@@ -1,5 +1,6 @@
 "use client";
 
+import { EntityKnowledge } from "../work-knowledge";
 import { DefaultCover } from "@/components/default-cover";
 import Link from "next/link";
 import { MediaPlacement } from "@/components/media-placement";
@@ -24,6 +25,7 @@ function NodeProse({ node, field, fallback, empty = "", className }: { node: Kno
 }
 
 type Props = {
+  preview?: boolean;
   node: KnowledgeNodeDetail; timeline: NormalizedTimelineEvent[]; paths: NormalizedReadingPath[];
   section?: string; initialCompare?: string; pagination?: ReactNode; actions?: ReactNode;
 };
@@ -54,7 +56,7 @@ function DebateSection({ node }: { node: KnowledgeNodeDetail }) {
   </section>;
 }
 
-export function TheoryDetailPublicView({ node, timeline, paths, section = "overview", initialCompare = "", pagination, actions }: Props) {
+export function TheoryDetailPublicView({ node, timeline, paths, section = "overview", initialCompare = "", pagination, actions, preview = false }: Props) {
   const tradition = node.node_type === "theory_tradition";
   const current = sectionAlias[section] || section;
   const shown = (...ids: string[]) => section === "overview" || ids.includes(current);
@@ -141,6 +143,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
     {shown("sources") ? <section id="sources" className={styles.section} data-module-id="theory-evidence"><header className={styles.sectionHeading}><h2>原文依据</h2></header>{node.evidenceCuration?.configured ? <EvidenceCurationView items={node.evidenceCuration.items} /> : node.evidence.length ? <div className={styles.sourceList}>{node.evidence.map(evidence => <article key={evidence.id}><h3>{evidence.work_title}</h3><blockquote>{evidence.quote}</blockquote><p>{evidence.printed_page_label || `PDF 第 ${evidence.page_number}${evidence.page_end && evidence.page_end !== evidence.page_number ? `–${evidence.page_end}` : ""} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">阅读原文<ExternalLink size={14} /></Link> : null}</article>)}</div> : <p className={styles.empty}>暂未提供可公开定位的原文。书目仍可在相关作品中核对。<Link href={`/feedback?category=content&path=${encodeURIComponent(base)}`}>反馈原文线索</Link></p>}</section> : null}
     {pagination ? <div className={styles.pagination}>{pagination}</div> : null}
     {shown("research") ? <section id="research" className={`${styles.section} ${styles.research}`}><div><h2>继续研究</h2><p>从相关馆藏继续查找，保留版本、页码与原文依据。</p></div><AskLibraryLink context="theories" ids={[node.id]} label={`围绕${node.canonical_name_zh}询问书库`} className={styles.secondary} /><Link className={styles.secondary} href={collectionHref}>检索相关馆藏<ArrowRight size={15} /></Link></section> : null}
+    {!preview && section === "overview" && <EntityKnowledge kind="node" id={node.id} />}
     </div>
     </div>
   </article>;

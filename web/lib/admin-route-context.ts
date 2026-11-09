@@ -51,6 +51,7 @@ export function adminLoginHref(pathname: string, search: string, hash = "") {
 }
 
 export function adminTaskScope(pathname: string) {
+  if (/^\/admin\/(sources|knowledge|intelligence)(?:\/|$)/.test(pathname)) return { title: "原文与知识", detail: "核对来源，审核修改，再发布已保存的知识。" };
   if (/^\/admin\/visual-review(?:\/|$)/.test(pathname)) return { title: "预览与批注", detail: "在实际页面上标记并保存修改意见。" };
   if (/^\/admin\/welcome(?:\/|$)/.test(pathname)) return { title: "欢迎页", detail: "保存草稿、预览与发布分别处理。" };
   if (/^\/admin\/support\/feedback(?:\/|$)/.test(pathname)) return { title: "反馈处理", detail: "保留读者原始提交，记录内部处理过程；状态更新不会自动发送邮件。" };

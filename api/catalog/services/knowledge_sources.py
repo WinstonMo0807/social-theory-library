@@ -282,24 +282,46 @@ def locator_payload(anchor, *, editorial=False):
             "revision": revision.pk, **({"preview": "1"} if editorial else {})})}
 
 
-def context(node, actor, *, budget=12000, editorial=False):
+def context(node, actor, *, budget=12000, editorial=False, offset=0, scope="node"):
     require_revision_access(node.document_revision, actor, editorial=editorial)
     if not 1 <= budget <= 60000:
         raise ValidationError("上下文预算须为1至60000字符。")
+    if scope not in {"node", "section", "chapter"} or type(offset) is not int or offset < 0:
+        raise ValidationError("上下文范围或起点无效。")
+    requested = node
+    if scope != "node":
+        parent = node
+        while parent:
+            if parent.kind == scope:
+                node = parent
+                break
+            parent = parent.parent
     texts, read, total = [], 0, 0
     for segment in node.segments.select_related("page").all():
-        text = segment.page.text[segment.start:segment.end]
-        total += len(text)
-        if read + len(text) <= budget:
-            texts.append({"page_number": segment.page.page_number, "start": segment.start, "end": segment.end,
-                          "exact": text, "content_hash": segment.content_hash})
-            read += len(text)
-        else:
-            # A complete segment is omitted visibly, never silently clipped.
-            break
-    total = sum(s.end-s.start for s in node.segments.all())
+        length = segment.end - segment.start
+        begin = max(0, offset - total)
+        total += length
+        if begin >= length or read >= budget:
+            continue
+        start = segment.start + begin
+        end = min(segment.end, start + budget - read)
+        text = segment.page.text[start:end]
+        if digest(segment.page.text) != segment.page.content_hash:
+            raise ValidationError("正文快照完整性校验失败。")
+        texts.append({"page_number": segment.page.page_number, "printed_label": segment.page.printed_label,
+            "node_id": str(node.pk), "start": start, "end": end, "exact": text, "content_hash": digest(text),
+            "partial_segment": begin > 0 or end < segment.end})
+        read += len(text)
+    path, parent = [], node
+    while parent:
+        if parent.title:
+            path.insert(0, parent.title)
+        parent = parent.parent
     return {"node_id": str(node.pk), "document_revision_id": str(node.document_revision_id), "segments": texts,
-            "returned_characters": read, "total_characters": total, "complete": read == total,
+            "requested_node_id": str(requested.pk), "chapter_path": path, "scope": node.kind,
+            "asset_id": str(node.document_revision.asset_id), "offset_unit": "unicode_code_point",
+            "returned_characters": read, "total_characters": total, "complete": offset == 0 and read == total,
+            "offset": offset, "next_offset": offset + read if offset + read < total else None,
             "budget": budget, "references": list(node.outgoing_references.values("target_id", "kind", "label"))}
 
 

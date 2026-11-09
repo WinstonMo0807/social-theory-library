@@ -24,6 +24,8 @@ const navigationGroups = [
     { href: "/admin/processing", title: "文件与处理", Icon: ClipboardCheck, paths: ["/admin/processing"], children: [["/admin/processing?surface=documents", "OCR 与文档"], ["/admin/processing?surface=workers", "后台任务"], ["/admin/processing?surface=research-sources", "资料来源"], ["/admin/processing/semantic-index", "搜索维护"]] },
   ] },
   { label: "内容", entries: [
+    { href: "/admin/sources", title: "原文与检索", Icon: Search, paths: ["/admin/sources"], children: [] },
+    { href: "/admin/knowledge", title: "知识编纂", Icon: FileText, paths: ["/admin/knowledge"], children: [] },
     { href: "/admin/intelligence", title: "STL Intelligence", Icon: FileText, paths: ["/admin/intelligence"], children: [] },
     { href: "/admin/recommendations", title: "特别策划", Icon: FileText, paths: ["/admin/recommendations"], children: [["/admin/recommendations", "策划文章"], ["/admin/recommendations?view=home", "首页推荐位置"]] },
     { href: "/admin/content", title: "页面编排", Icon: ChartColumn, paths: ["/admin/content", "/admin/welcome", "/admin/about", "/admin/media"], children: [["/admin/content", "内容编排"], ["/admin/welcome", "欢迎页"], ["/admin/about", "网站与关于书库"], ["/admin/media", "图片库"]] },
@@ -44,6 +46,8 @@ function navigationHref(pathname: string) {
 }
 
 const routeCapabilities: Record<string, string[]> = {
+  "/admin/sources": ["can_edit_metadata"],
+  "/admin/knowledge": ["can_edit_metadata"],
   "/admin/intelligence": ["can_edit_metadata"],
   "/admin/visual-review": ["can_manage_users"],
   "/admin/content": ["can_edit_metadata", "can_edit_draft_authority"],

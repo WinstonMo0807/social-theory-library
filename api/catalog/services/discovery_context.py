@@ -173,6 +173,19 @@ def session_context(session, result_id, access_statuses):
                       for item in neighbours]
         else:
             blocks = [{"text": row.get("excerpt", ""), "pdf_page": page_number, "role": "hit"}]
+    logical = None
+    if session.owner_id:
+        from catalog.services.retrieval.locators import attach_locators
+        from catalog.models import DocumentNode
+        from catalog.services.knowledge_sources import context
+        enriched = attach_locators(rows)[0]
+        node = DocumentNode.objects.filter(pk=enriched.get("node_id"), document_revision=revision).first()
+        if node:
+            logical = context(node, session.owner, scope="section", budget=12000)
+            blocks = [{"text": segment["exact"], "pdf_page": segment["page_number"],
+                "start": segment["start"], "end": segment["end"], "role": "hit" if segment["page_number"] == page_number
+                else "before" if segment["page_number"] < page_number else "after",
+                "truncated": segment["partial_segment"]} for segment in logical["segments"]]
     # Only identities from this bounded session are candidates. Hydration again
     # checks the active publication and exact text; withdrawn neighbours vanish.
     references = {str(ref.get("id")): ref for key in (DEEP_RESULTS_KEY, "passages")
@@ -200,6 +213,7 @@ def session_context(session, result_id, access_statuses):
             "reader_url": row.get("reader_url", ""),
             "locator_precision": row.get("locator_precision") or "page",
             "source_kind": row.get("source_kind", "collection_text"),
-            "notice": "上下文来自同一正文修订，相邻页面分别保留页号。" +
+            "logical_context": logical,
+            "notice": ("上下文按正文结构展开；返回范围和相关脚注见结构信息。" if logical else "上下文来自同一正文修订，相邻页面分别保留页号。") +
                       ("部分长段仅显示命中位置附近的连续文字；请打开 PDF 查看完整上下文。"
                        if any(item.get("truncated") for item in blocks) else "")}

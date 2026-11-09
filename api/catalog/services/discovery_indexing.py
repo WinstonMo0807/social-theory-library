@@ -147,6 +147,8 @@ def retry_job(job_id, *, actor=None):
     job = ProcessingJob.objects.select_for_update().filter(pk=job_id, job_type=JOB_TYPE).first()
     if not job or job.status not in {"failed", "paused"}:
         raise DiscoveryIndexError("not_retryable", "该任务当前不能重试。")
+    if job.stats.get("action") == "restore_projection":
+        raise DiscoveryIndexError("maintenance_restore", "此任务是丢失索引的维护恢复，请使用相同 restore_missing_discovery_index 命令继续保留的批次游标。")
     before = {"status": job.status, "error_code": job.error_code, "error_message": job.error_message,
               "attempt": job.attempt, "active_unit": job.stats.get("active_unit"), "completed_units": job.stats.get("completed_units", 0)}
     # Retrying retains the same source/generation identity and successful chunks.

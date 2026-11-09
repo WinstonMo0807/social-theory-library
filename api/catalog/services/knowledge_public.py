@@ -51,12 +51,21 @@ def page_data(page, actor, *, draft=False):
             raise Http404
         if page.entity_id and page.entity.status != "published":
             raise Http404
+        if page.entity_id:
+            from catalog.services.discovery_sources import source_queryset
+            for field, kind in (("person_id", "scholar"), ("node_id", "node"), ("topic_id", "topic"),
+                                ("discipline_id", "discipline"), ("subdiscipline_id", "subdiscipline")):
+                key = getattr(page.entity, field)
+                if key and not source_queryset(kind).filter(**{"person_id" if kind == "scholar" else "pk": key}).exists():
+                    raise Http404
         blocks = page.body_blocks
         revision = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk, status="published").order_by("-revision").first()
-    assertions, visible = {}, []
+    assertions, anchors, visible = {}, {}, []
+    from catalog.services.editorial_blocks import block_references
     for block in blocks:
         keep = True
-        for ref in block.get("references", []):
+        block_assertions, block_anchors = {}, {}
+        for ref in block_references(block):
             if not draft:
                 from catalog.services.editorial_blocks import resolve_target
                 try:
@@ -69,11 +78,19 @@ def page_data(page, actor, *, draft=False):
                 if not draft and not assertion_public(statement):
                     keep = False
                     break
-                assertions[ref["id"]] = assertion_data(statement, actor, draft=draft)
+                block_assertions[ref["id"]] = assertion_data(statement, actor, draft=draft)
+            if ref.get("type") == "anchor":
+                anchor = get_object_or_404(m.EvidenceAnchor, pk=ref["id"])
+                value = {"anchor_id": str(anchor.pk)}
+                if actor and actor.is_authenticated:
+                    value["locator"] = locator(anchor, actor, editorial=draft)
+                block_anchors[ref["id"]] = value
         if keep:
             visible.append(block)
+            assertions.update(block_assertions)
+            anchors.update(block_anchors)
     return {"id": str(page.pk), "title": page.title, "status": revision.status if draft and revision else page.status,
-        "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()),
+        "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()), "anchors": list(anchors.values()),
         "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions)}}
 
 

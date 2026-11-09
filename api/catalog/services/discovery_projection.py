@@ -130,7 +130,7 @@ def current_scopes(channel, access_statuses, filters=None, *, author_ranges=None
     filters = filters or {}
     scopes = []
     contribution_cache = contribution_cache if contribution_cache is not None else {}
-    if channel == "passages" and not any(value for key, value in filters.items() if key != "languages"):
+    if channel == "passages" and not any(value for key, value in filters.items() if key not in {"languages", "_keyword_only"}):
         for _, _, token in edition_scope_records(access_statuses):
             scopes.append(token)
             if len(scopes) > 20000:
@@ -148,7 +148,7 @@ def current_scopes(channel, access_statuses, filters=None, *, author_ranges=None
     return scopes
 
 
-def validate_discovery_results(channel, rows, access_statuses, *, filters=None):
+def validate_discovery_results(channel, rows, access_statuses, *, filters=None, require_keyword=True):
     """Hydrate by identity, then recheck source version AND the exact text slice."""
     if channel not in {"passages", "entities", "curation"}:
         return []
@@ -158,8 +158,10 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None):
             refs[str(UUID(str(row.get("id") or row.get("document_id"))))] = row
         except (AttributeError, TypeError, ValueError):
             continue
-    documents = list(DiscoveryDocument.objects.filter(pk__in=refs, channel=channel, keyword_ready=True,
-                                                  access_status__in=access_statuses))
+    documents = DiscoveryDocument.objects.filter(pk__in=refs, channel=channel, access_status__in=access_statuses)
+    if require_keyword:
+        documents = documents.filter(keyword_ready=True)
+    documents = list(documents)
     # Sessions can retain a retired generation; it is safe only while the same
     # source remains public at the same revision. Its index is not consulted.
     headers, editions, output = {}, {}, {}
@@ -266,7 +268,7 @@ def discovery_coverage(access_statuses, filters=None, *, contribution_cache=None
     # not one source-state query and two COUNTs for every book on every poll.
     current = {}
     filters = filters or {}
-    if not any(value for key, value in filters.items() if key != "languages"):
+    if not any(value for key, value in filters.items() if key not in {"languages", "_keyword_only"}):
         records = edition_scope_records(access_statuses)
     else:
         queryset = _edition_scope_queryset(access_statuses, filters)
@@ -386,9 +388,9 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     try:
         normalized_cache = context.setdefault("normalized", {})
         normalization_key = (str(generation.pk), query)
-        if normalization_key not in normalized_cache:
+        if normalization_key not in normalized_cache and not filters.get("_keyword_only"):
             normalized_cache[normalization_key] = normalize_texts([query])["texts"][0]
-        normalized = normalized_cache[normalization_key]
+        normalized = normalized_cache.get(normalization_key, query)
     except DiscoveryInferenceError:
         warnings.append({"code": "normalization_unavailable", "message": "文字规范化服务暂不可用，当前保留输入文字检索。"})
     base = {"limit": limit, "filter": [f"channel = {json.dumps(channel)}",
@@ -427,7 +429,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
             empty["sparse"] = [refs[key] for key in sorted(scores, key=lambda key: (-scores[key], key))][:limit]
     except DiscoveryIndexError:
         warnings.append({"code": "keyword_unavailable", "message": "关键词索引暂不可用。"})
-    if not scope:
+    if not scope and not filters.get("_keyword_only"):
         try:
             vector_cache = context.setdefault("vectors", {})
             dimensions = int(generation.dimensions or generation.config_snapshot.get("dimensions") or 384)

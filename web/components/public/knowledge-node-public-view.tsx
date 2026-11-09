@@ -21,7 +21,7 @@ export function KnowledgeNodePublicView({
   preview?: boolean;
 }) {
   return <><TheoryDetailPublicView node={node} timeline={timeline} paths={allPaths}
-    section={section} initialCompare={initialCompare} pagination={pagination}
+    preview={preview} section={section} initialCompare={initialCompare} pagination={pagination}
     actions={preview ? <div className={actionStyles.actions} aria-label="预览中的读者操作">
       <button type="button" disabled><Bookmark size={15} />收藏</button>
       <button type="button" disabled><Quote size={15} />引用</button>

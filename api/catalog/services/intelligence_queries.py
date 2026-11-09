@@ -10,6 +10,7 @@ def run_data(run, actor, *, detail=False):
     require_revision_access(run.document_revision, actor, editorial=True)
     data = {"id": str(run.pk), "work_id": str(run.work_id), "title": run.work.title,
         "edition_id": str(run.edition_id), "document_revision_id": str(run.document_revision_id),
+        "asset_id": str(run.document_revision.asset_id), "pages": run.document_revision.asset.page_count,
         "scope": run.scope, "status": run.status, "stage": run.stage, "coverage": run.coverage,
         "profile_key": run.profile_key, "model_identity": run.model_identity, "error": run.error,
         "version": run.version, "created_at": run.created_at, "finished_at": run.finished_at}
@@ -42,6 +43,8 @@ def changeset_data(changeset, actor):
         "document_revision_id": str(changeset.document_revision_id), "origin": changeset.origin, "items": items,
         "title": changeset.document_revision.asset.edition.work.title,
         "edition_id": str(changeset.document_revision.asset.edition_id),
+        "work_id": str(changeset.document_revision.asset.edition.work_id),
+        "asset_id": str(changeset.document_revision.asset_id), "pages": changeset.document_revision.asset.page_count,
         "review_url": f"/admin/intelligence?changeset={changeset.pk}"}
 
 

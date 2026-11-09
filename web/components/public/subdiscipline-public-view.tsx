@@ -1,3 +1,4 @@
+import { EntityKnowledge } from "../work-knowledge";
 import { DefaultCover } from "@/components/default-cover";
 import Image from "next/image";
 import Link from "next/link";
@@ -130,6 +131,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
           {item.parent ? <Link href={`/subdisciplines/${encodeURIComponent(item.parent.slug)}`}>上级子学科 · {item.parent.name}</Link> : null}
           {(item.children || []).map(child => <Link key={child.id} href={child.href}>下级子学科 · {child.name}</Link>)}
         </nav> : null}
+        {!preview && <EntityKnowledge kind="subdiscipline" id={item.id} />}
         {preview ? <PreviewFields item={item} /> : null}
       </div>
     </article>

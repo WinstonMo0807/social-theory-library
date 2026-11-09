@@ -38,6 +38,16 @@ class AnchorView(APIView):
         return Response(sources.locator(anchor, request.user, editorial=request.query_params.get("preview") == "1"))
 
 
+class VerifyAnchorView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def post(self, request):
+        from rest_framework import serializers
+        from catalog.services.source_workspace import verify_selection
+        revision = serializers.UUIDField().run_validation(request.data.get("document_revision_id"))
+        return Response(verify_selection(request.user, revision, request.data.get("segments")), status=201)
+
+
 class NodeContextView(APIView):
     permission_classes = [CanReadLibrary]
 
@@ -46,7 +56,9 @@ class NodeContextView(APIView):
         field = serializers.IntegerField(min_value=1, max_value=60000)
         budget = field.run_validation(request.query_params.get("budget", 12000))
         node = get_object_or_404(DocumentNode, pk=node_id)
-        return Response(sources.context(node, request.user, budget=budget, editorial=request.query_params.get("preview") == "1"))
+        offset = serializers.IntegerField(min_value=0).run_validation(request.query_params.get("offset", 0))
+        return Response(sources.context(node, request.user, budget=budget, offset=offset,
+            scope=request.query_params.get("scope", "node"), editorial=request.query_params.get("preview") == "1"))
 
 
 class RevisionPageView(APIView):
@@ -151,6 +163,22 @@ class EntitiesView(APIView):
         return Response({"entities": [entity_data(row) for row in rows.order_by("label")[:50]]})
 
 
+class EntityKnowledgeView(APIView):
+    from rest_framework.permissions import AllowAny
+    permission_classes = [AllowAny]
+
+    def get(self, request, source_type, source_id):
+        from django.http import Http404
+        from catalog.services.knowledge_public import page_data
+        fields = {"person": "person_id", "node": "node_id", "topic": "topic_id",
+                  "discipline": "discipline_id", "subdiscipline": "subdiscipline_id"}
+        if source_type not in fields:
+            raise Http404
+        page = KnowledgePage.objects.filter(entity__status="published", entity__merged_into__isnull=True,
+            status="published", **{f"entity__{fields[source_type]}": source_id}).first()
+        return Response({"page": page_data(page, request.user) if page else None})
+
+
 class AssertionView(APIView):
     permission_classes = [CanReadLibrary]
 
@@ -169,6 +197,13 @@ class KnowledgeDirectoryView(APIView):
         limit = serializers.IntegerField(min_value=1, max_value=100).run_validation(request.query_params.get("limit", 30))
         return Response(page_directory(request.user, query=request.query_params.get("q", "")[:300],
             kind=request.query_params.get("kind", ""), state=request.query_params.get("state", ""), offset=offset, limit=limit))
+
+    def post(self, request):
+        from rest_framework import serializers
+        from catalog.services.knowledge_workspace import open_page
+        ids = {name: serializers.UUIDField().run_validation(request.data[name])
+               for name in ("work_id", "entity_id") if request.data.get(name)}
+        return Response(open_page(request.user, **ids), status=201)
 
 
 class KnowledgeWorkspaceView(APIView):
@@ -189,9 +224,11 @@ class KnowledgeWorkspaceView(APIView):
 
 
 urlpatterns = [
+    path("anchors/verify/", VerifyAnchorView.as_view()),
     path("workspace/", KnowledgeDirectoryView.as_view()),
     path("pages/<uuid:page_id>/workspace/", KnowledgeWorkspaceView.as_view()),
     path("entities/", EntitiesView.as_view()),
+    path("objects/<str:source_type>/<uuid:source_id>/", EntityKnowledgeView.as_view()),
     path("assertions/<uuid:assertion_id>/", AssertionView.as_view()),
     path("pages/<uuid:page_id>/", KnowledgePageView.as_view()),
     path("pages/<uuid:page_id>/export/", KnowledgeExportView.as_view()),

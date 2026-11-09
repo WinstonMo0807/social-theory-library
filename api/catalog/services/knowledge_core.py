@@ -146,13 +146,13 @@ def page_content(page):
 
 
 def normalize_page_blocks(blocks, *, retained=None):
-    from catalog.services.editorial_blocks import normalize_typed_block
+    from catalog.services.editorial_blocks import normalize_typed_block, normalize_text_format
     if not isinstance(blocks, list) or len(blocks) > 500:
         raise ValidationError("知识页最多保存500个区块。")
     old = {b["id"]: b for b in (retained or [])}
     result, seen = [], set()
     for raw in blocks:
-        block = normalize_typed_block(raw, retained=old.get(raw.get("id")))
+        block = normalize_text_format(raw, normalize_typed_block(raw, retained=old.get(raw.get("id"))))
         if block["id"] in seen:
             raise ValidationError("知识区块ID重复。")
         seen.add(block["id"])

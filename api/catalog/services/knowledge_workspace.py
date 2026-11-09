@@ -197,7 +197,59 @@ def page_workspace(page, actor):
         "revisions": [{"id": str(r.pk), "revision": r.revision, "status": r.status, "created_at": r.created_at} for r in revisions],
         "pending_changesets": list(m.ChangeSet.objects.filter(items__payload__page_id=str(page.pk),
             items__decision__in=["pending", "accepted", "deferred"], items__application={}).distinct().values("id", "origin", "status", "created_at"))})
+    from catalog.services.editorial_blocks import block_references, resolve_target
+    from catalog.services.knowledge_sources import locator
+    from django.http import Http404
+    references = {}
+    for block in blocks:
+        for ref in block_references(block):
+            identity = f"{ref['type']}:{ref['id']}"
+            if identity in references:
+                continue
+            try:
+                _, card = resolve_target(ref)
+                if ref["type"] == "anchor":
+                    card["locator"] = locator(m.EvidenceAnchor.objects.get(pk=ref["id"]), actor, editorial=True)
+                references[identity] = {**ref, **card}
+            except (Http404, ValidationError, m.EvidenceAnchor.DoesNotExist):
+                references[identity] = {**ref, "title": "来源当前不可用", "unavailable": True}
+    data["references"] = list(references.values())
+    data["public_url"] = public_page_url(page)
     return data
+
+
+def public_page_url(page):
+    if page.work_id:
+        from catalog.services.publication_eligibility import public_editions
+        edition = public_editions().filter(work_id=page.work_id).order_by("-is_primary").first()
+        return f"/works/{edition.public_slug}" if edition and edition.public_slug else None
+    entity = page.entity
+    if entity and entity.node_id:
+        return f"/theories/nodes/{entity.node.slug}"
+    if entity and entity.topic_id:
+        return f"/topics/{entity.topic.slug}"
+    if entity and entity.discipline_id:
+        return f"/theories/disciplines/{entity.discipline.slug}"
+    if entity and entity.person_id:
+        profile = m.ScholarProfile.objects.filter(person_id=entity.person_id).first()
+        return f"/scholars/{profile.slug}" if profile else None
+    return None
+
+
+@transaction.atomic
+def open_page(actor, *, work_id=None, entity_id=None):
+    """A human opens a draft identity; body edits still go through ChangeSet."""
+    require_editor(actor)
+    from django.shortcuts import get_object_or_404
+    if bool(work_id) == bool(entity_id):
+        raise ValidationError("请选择一个作品或知识实体。")
+    rows = (m.Work if work_id else m.Entity).objects.select_for_update()
+    if entity_id:
+        rows = rows.filter(merged_into__isnull=True)
+    obj = get_object_or_404(rows, pk=work_id or entity_id)
+    field, title = ("work", obj.title) if work_id else ("entity", obj.label)
+    page, _ = m.KnowledgePage.objects.get_or_create(**{field: obj}, defaults={"slug": f"{field}-{obj.pk}", "title": title})
+    return page_workspace(page, actor)
 
 
 def submit_page_changes(page, revision, patches, actor, *, request_id):

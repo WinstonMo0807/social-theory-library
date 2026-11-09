@@ -45,7 +45,7 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
         if is_current and not is_current():
             return {"rows": [], "warnings": warnings, "canceled": True, "version": str(result.get("version") or "")}
         rerank_count = 40 if expanded else 20
-        rows, rerank_warnings = _rerank(query, rows, rerank_count, str(result.get("reranker_artifact") or ""))
+        rows, rerank_warnings = (rows, []) if filters.get("_keyword_only") else _rerank(query, rows, rerank_count, str(result.get("reranker_artifact") or ""))
         warnings.extend(rerank_warnings)
         # Only the scored pool is eligible for promotion. The unscored fusion
         # tail remains available, but work diversity is not evidence relevance.

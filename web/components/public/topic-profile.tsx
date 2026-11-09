@@ -1,5 +1,6 @@
 "use client";
 
+import { EntityKnowledge } from "../work-knowledge";
 import Link from "next/link";
 import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, MessageSquare } from "lucide-react";
@@ -21,5 +22,6 @@ export function TopicProfile({ topic, preview = false, initialSection = "overvie
     {topic.children.length ? <section className={styles.relatedTopics} data-module-id="topic-hierarchy" data-edit-section="identity"><header className={styles.sectionHeading}><h2>继续进入子主题</h2></header><div>{topic.children.map(child => <Link prefetch={false} key={child.id} href={child.href}>{child.name}<ArrowRight size={14} /></Link>)}</div></section> : null}
     <section data-content-section className={styles.guideDetails}><header data-section-heading>更多主题资料<ArrowRight size={13} /></header><div className={styles.profileTools}><span>{topic.work_count} 部相关作品 · {topic.edition_count} 个出版版本 · {topic.scholar_count} 位学者</span><div><TopicFollowButton topicId={topic.id} href={topic.href} className={styles.outlineButton} preview={preview} />{topic.feedback_href ? <Link href={topic.feedback_href}>推荐资料或反馈问题</Link> : null}</div></div><div className={styles.relatedTopics}>{topic.graph_href ? <Link prefetch={false} href={topic.graph_href}>查看主题关系图<ArrowRight size={12} /></Link> : null}{Object.entries(topicLegacySections).map(([name, label]) => <Link prefetch={false} key={name} href={`/topics/${encodeURIComponent(topic.slug)}/${name}`}>{label}<ArrowRight size={12} /></Link>)}</div></section>
     <footer className={styles.profileFooter}><span>{topic.public_revision.number ? `公开第 ${topic.public_revision.number} 版` : "公开主题资料"}{topic.public_revision.published_at ? ` · ${new Date(topic.public_revision.published_at).toLocaleDateString("zh-CN")}` : ""}</span>{topic.feedback_href ? <Link href={topic.feedback_href}><MessageSquare size={13} />纠错与资料推荐</Link> : null}</footer>
+    {!preview && section === "overview" && <EntityKnowledge kind="topic" id={topic.id} />}
   </main>;
 }
