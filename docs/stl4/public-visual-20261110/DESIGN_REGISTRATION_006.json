@@ -1,0 +1,98 @@
+[
+  {
+    "id": "P18",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3daa09be-4f2b-4c54-a2f8-3e937d392509.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P19",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-15f80824-5a0a-4334-86d4-bac7f921291f.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P21",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6dbf4091-ceef-409f-8a80-381931e1912a.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P22",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-a85e656f-000f-4d24-a6b4-fe5b733ea500.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P23",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-f46c9f1c-22ce-4993-9c6c-5e05563e97b3.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P24",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-71eb689e-b907-4b02-80f7-161edfb35b0a.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P25",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-7ec81eac-fabb-4cd6-88f6-101f776baf1c.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P26",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-34998cc6-9124-4263-bc92-6e68fdb69ef5.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P27",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-be2906ef-fe0d-44be-b439-77e26af88977.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P28",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-cf1fc8f9-761c-403e-a822-cd1e6bf50c70.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P29",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-66ace914-85cc-41a9-9fbf-d7ee3355fbb4.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  },
+  {
+    "id": "P30",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ba30399a-98c5-4dd3-8ce5-38453a692690.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_006.json"
+  }
+]

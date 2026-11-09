@@ -112,7 +112,9 @@
     ],
     "brief": "编辑式标题、搜索/学科/排序；一张领衔人物卡和紧凑人物网格/条目，用中性示例肖像轮廓而非真实人物照片；中外文名、生卒年可空、简介与学科、分页。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P07-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
   },
   {
     "id": "P08",
@@ -127,7 +129,9 @@
     ],
     "brief": "紧凑主题索引、搜索、学科筛选、推荐主题图文和全部列表/分页；每项显示名称、简短问题和关联内容，不虚构评分/热度。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P08-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
   },
   {
     "id": "P09",
@@ -144,7 +148,9 @@
     ],
     "brief": "左学科/子学科树，右类型tabs/搜索/条目列表及独立分页；精选区与全部区分别表达失败/空态。理论、概念、争论类型清楚，不把分类树变为新知识架构。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P09-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
   },
   {
     "id": "P10",
@@ -159,7 +165,9 @@
     ],
     "brief": "编辑标题，搜索与学科/难度条件；路径列表显示标题、受众、目标、预计阅读量/周数和材料信息；无需购买或星级。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P10-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
   },
   {
     "id": "P11",
@@ -194,7 +202,9 @@
     ],
     "brief": "人物页左小肖像与中外文姓名、生卒/国别；主要导读，栏目导航概述/著作/关系/来源等实际section；关联作品列表，引用出处与材料状态。长文行宽舒适，无AI人物传记。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P12-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
   },
   {
     "id": "P13",
@@ -215,7 +225,9 @@
     ],
     "brief": "页面标题、类型、中外文名、概述；左侧段落目录，主体理论问题/解释对象/命题或概念定义/主题导读，侧栏相关学者和作品。来源证据在正文相邻，关系可进入已有关系页，保留section URL。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P13-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
   },
   {
     "id": "P14",
@@ -232,7 +244,9 @@
     ],
     "brief": "学科标题与引言；子学科解释研究对象/核心问题/形成期/方向/方法/代表问题，所属学科和父级入口；作品、学者、路径分组。使用合成示例不编造学科史。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P14-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
   },
   {
     "id": "P15",
@@ -248,7 +262,9 @@
     ],
     "brief": "标题、受众/难度/预计量与目标；按阶段排列材料，必读/可选、推荐理由/学习问题/先修/替代版本及来源变化；开始跟读/复制计划/导出分别保留。右侧当前阶段目录。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P15-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
   },
   {
     "id": "P16",
@@ -263,7 +279,9 @@
     ],
     "brief": "一篇主要策划与不同尺寸的后续文章列表，标题/引言/署名/日期，搜索或筛选只呈现实际有的条件，清楚分页。白底编辑式长短节奏，无杂志排行榜。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P16-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
   },
   {
     "id": "P17",
@@ -279,7 +297,9 @@
     ],
     "brief": "编辑式文章标题、署名头像和日期、导语；长正文约720px，侧边文章目录，真实block结构的图文和关联作品；下方评论入口与来源说明。主文全标示例，不编造引文。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P17-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
   },
   {
     "id": "P18",
@@ -294,8 +314,10 @@
       1024
     ],
     "brief": "年代窗口与事件类型/分组筛选，纵向时间线，日期精度及不详年代，事件标题、来源和相关人物，分页。不是无限横向关系壁画。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P18-v2.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "P19",
@@ -310,8 +332,10 @@
       1024
     ],
     "brief": "事件名称、日期精度、简介、参与者、作品与出处证据，物理页/印刷页区别、版本和来源状态；返回时间线保留年代窗口。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P19-v2.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "P20",
@@ -327,7 +351,9 @@
     ],
     "brief": "现有关系图，顶部图/列表/主题/学者/作品模式；左筛选中心、深度、节点上限、关系/年代/馆藏；中可缩放图形用明确示例节点；右选中对象详情和来源。无新增评分和推测关系。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P20-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
   },
   {
     "id": "P21",
@@ -344,8 +370,10 @@
       1024
     ],
     "brief": "紧凑双语品牌，页标题和侧边章节目录，主栏中文长段落与步骤/链接，关于书库定位、登录注册说明；帮助目录与正文共享文档结构。真实正文由接口提供，图用示例说明。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P21-v2.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "P22",
@@ -358,42 +386,45 @@
       1536,
       1024
     ],
-    "brief": "表单类别content/function/account/privacy/other、正文必填、可选联系方式；上下文和提交按钮，成功回执/限流/错误保留输入。旁栏仅简明联络与隐私说明，无客服聊天。",
+    "brief": "类别content/function/usage/suggestion/other、正文4–500、关联公开页面、可选邮箱、明确同意、取消提交；成功回执/限流/未知结果保留输入。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P22-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "P23",
-    "title": "登录注册",
+    "title": "登录",
     "coverage": [
-      "PV118",
-      "PV124"
+      "PV118"
     ],
     "domain": "身份表单",
     "viewport": [
       1536,
       1024
     ],
-    "brief": "左侧简洁品牌和关于书库，右白色单列表单，登录/注册模式。登录账号密码、显示密码、忘记密码；注册按现有账号/邮箱/密码和同意条款字段。只书库账号，无未启用第三方按钮。",
+    "brief": "账号或邮箱、密码与显示、保持30天、登录、注册、忘记密码；书库账号。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P23-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "P24",
-    "title": "验证与账号恢复",
+    "title": "链接重设密码",
     "coverage": [
-      "PV026",
-      "PV125",
-      "PV150"
+      "PV125"
     ],
     "domain": "身份状态",
     "viewport": [
       1536,
       1024
     ],
-    "brief": "同身份布局，明确当前验证/重设密码步骤，邮箱或新密码/确认字段、提交/返回登录；失效链接/邮件未配置/成功不同状态，不显示发送成功假消息。",
+    "brief": "有效链接、新密码/确认、本人恢复同意、确认重置与原链接结果核对。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P24-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "P25",
@@ -406,9 +437,11 @@
       1536,
       1024
     ],
-    "brief": "理论栏目编辑首页：目录、关系图、时间线、阅读路径明确入口；学科/理论/概念/争论依实际内容分组，图像克制、无巨大统计头。",
+    "brief": "理论流派搜索；主要学科领域；馆藏理论流派及分页；进一步浏览理论传统/子学科/关键争论。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P25-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "P26",
@@ -423,7 +456,9 @@
     ],
     "brief": "摘要标题、分享说明、有效期/撤回状态；仅允许的研究或书单内容、问题/材料/笔记分组，原文可访问与私人来源不可公开严格分开。不存在公开密钥输入或账号信息。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P26-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   },
   {
     "id": "R01",
@@ -2009,5 +2044,73 @@
     "brief": "账户管理预览确认抽屉：当前与修改后角色，新增/保留/失去能力，账号激活与会话撤销影响，确认执行/返回修改；没有馆长授予选项，不泄露密码或邮箱。",
     "version": "v1",
     "status": "pending"
+  },
+  {
+    "id": "P27",
+    "title": "注册",
+    "coverage": [
+      "PV124"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 注册账户. Quiet two-column identity layout: white form on left, reading illustration and short existing benefits on right. Fields 邮箱地址 required, 用户名 required4–20 Chinese/letters/digits/underscore, 密码 required10–128 with show/hide and restrained strength indicator, 确认密码 required. Text 注册后即可登录，无需邮件验证。Primary 创建账户. Plain policy links 服务条款/隐私政策, not an extra consent checkbox. 已有账户？登录. No OAuth.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P27-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+  },
+  {
+    "id": "P28",
+    "title": "邮件未配置与人工找回",
+    "coverage": [
+      "PV125"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 找回账户 when email is not configured. Quiet identity layout. Top message 邮件重置暂未开放，可提交找回申请由管理员核对处理。 Below standalone section 无法访问邮箱？提交找回申请. Fields 用户名（可选）, 可联系的邮箱 required, 情况说明 required4–300 characters. Required checkbox 我同意管理员使用上述信息处理这次申请。Primary 提交找回申请, 登录 link. Short note 请勿填写密码、验证码、证件或私人研究正文。 No successful send banner, no new security-question fields.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P28-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+  },
+  {
+    "id": "P29",
+    "title": "邮箱验证",
+    "coverage": [
+      "PV150"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 邮箱验证 ready state. Quiet identity page with one white form: 确认你的邮箱. Note 验证不会自动登录、调整角色或合并资料。 Sample expiry labeled示例. One 账户密码 masked input with visibility button; required checkbox 这是我本人发起的邮箱验证。 Primary 确认邮箱归属. Secondary 重新核对链接与处理结果, 找回密码 and 登录 links. No newpassword fields, no real email/token.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P29-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+  },
+  {
+    "id": "P30",
+    "title": "邀请激活",
+    "coverage": [
+      "PV026"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 邀请激活账户 ready state. Quiet identity page with white form. Read-only 账户：示例账户 and 邮箱：sample@example.test, text 激活后角色：读者, sample expiry allmarked示例. 设置密码 and 确认密码 masked, show/hide;10–128. Required checkbox 这是本人账户，我已阅读账户与隐私说明。Primary 设置密码并激活. Secondary 重新核对邀请与激活结果 and 登录. No role selector or token field.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P30-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
   }
 ]

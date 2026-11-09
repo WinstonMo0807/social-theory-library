@@ -1,0 +1,58 @@
+[
+  {
+    "id": "P08",
+    "title": "主题目录",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 主题目录: Title 主题, search主题 and 学科 selector; one featured topic strip then six compact rows with sample name, guiding question, short introduction and 查看主题. Pagination. Only search/filter/clear/view/page controls, no editing/subscriptions. All 示例主题.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  },
+  {
+    "id": "P10",
+    "title": "阅读路径目录",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 阅读路径目录: Title 阅读路径. Search paths, 学科/难度 filters. Four sample path rows with title, audience, objective, estimated reading weeks and materials explicitly 示例. 查看路径 and pagination. No ratings, course purchase, progress or certificates.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  },
+  {
+    "id": "P14",
+    "title": "学科与子学科详情",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 学科与子学科详情: Title 示例子学科, parent breadcrumb 学科/示例学科. Intro and readable sections 研究对象/核心问题/形成时期/研究方向/研究方法/代表问题. Left narrow section outline, middle720px body, right scholar/work/path links. All 示例文字, no factual chronology. Only parent/section/related links.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  },
+  {
+    "id": "P16",
+    "title": "策划文章目录",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 策划文章目录: Title 特别策划. Large editorial lead row with neutral 示例配图, 示例策划 title, issue label/byline/introduction. Below a varied 2-column article list with small images, serif titles, metadata and excerpts. Pagination/阅读文章 only. No newsletter, scores or filter widgets.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  },
+  {
+    "id": "P18",
+    "title": "理论时间线",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 理论时间线: Title 理论时间线. Event-type selector, start/end year window, grouping selector and 更新视图. Vertical chronology with precision such as 约 or 年代待核对. Synthetic 示例事件A/B/C, involved example people and source links. Unknown-date subsection, pagination and small left window rail. Only window/type/grouping/pagination/open-event controls.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  },
+  {
+    "id": "P19",
+    "title": "事件详情",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 事件详情: Title 示例理论事件; 示例年代 and date precision. Main narrative, 参与者/相关作品/来源. Right source evidence with example version, physical PDF page and printed label clearly different. Small 示例配图 placeholder, not a fake historic photo. 返回时间线, 打开原文 and related links. No editing.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  },
+  {
+    "id": "P20",
+    "title": "理论关系图",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 理论关系图: Title 理论关系图. Tabs 关系图/列表/主题/学者/作品. Wide functional graph with synthetic 示例理论A/示例概念B/示例学者C and thin 示例关系 links. Left filters 中心对象/深度/节点上限/关系类型/年代/馆藏; right selected node detail/来源/打开详情. Canvas +/−/重置位置. Existing supported graph, no inferred relationships or scores.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  },
+  {
+    "id": "P21",
+    "title": "帮助与关于",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit the supplied STL page into an existing public page. Keep ONLY its exact compact top navigation and bilingual brand position: 首页 馆藏 学者 理论 主题 菜单 / 我的书库. Replace ALL body content. One high-fidelity desktop1536×1024 interface, not a collage. Paper-white #F7F4EE/white, charcoal#25241F, thin warm-gray#D6D0C4 rules and small sand-gold#AD8245 accents. Flat solid controls without texture/gradient/shadow. Refined Chinese Noto Serif SC headings, Noto Sans SC16–18px body; clear alignment and calm readable spacing. No functionality beyond explicit controls below. Use 示例 data, no real scholarly quotations or unsupported facts. Existing exact brand SVG used in code, never generated academic/portrait content.\nPage 帮助与关于: Title 使用帮助. Left section directory 阅读与下载/登录与账号/笔记与引用/隐私/常见问题. Main720px Chinese paragraphs and simple ordered steps. 示例说明 under headings 如何进入书库/如何返回原文. Only section anchors and 登录/注册/返回书库 links. About page shares document structure with actual sections. No added search or feedback form.\nDo not carry over homepage content or add counters, newsletter, AI/chat, ratings, admin sidebar. This is one usable page at readable scale. No browser chrome or visible API/source IDs/implementation notes."
+  }
+]

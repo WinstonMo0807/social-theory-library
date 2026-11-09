@@ -45,6 +45,11 @@ for record in records:
         design.update(status="generated_inspected", version=record["version"], image=relative,
                       inspection_notes=record["notes"])
     index.append(record)
+for image_record in index:
+    raw = (ROOT / image_record["path"]).read_bytes()
+    image_record.update(sha256=hashlib.sha256(raw).hexdigest(),
+                        dimensions=list(struct.unpack(">II", raw[16:24])),
+                        generator="built-in image_gen", synthetic_content=True)
 index_path.write_text(json.dumps(index, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
 (BASE/"DESIGN_MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
 with (BASE/"COVERAGE.csv").open(encoding="utf-8-sig", newline="") as f:
