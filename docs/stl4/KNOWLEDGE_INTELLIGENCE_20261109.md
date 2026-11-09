@@ -4,7 +4,7 @@
 
 ## 基线、隔离与入口
 
-- 最新 main 基线 `2f151a8617b33886f046a7ccc3325d7a2deca3ae`，与审计相同。任务分支 `codex/stl-knowledge-intelligence`，已有检查点 `d52c9f94`、`e7175ee7`。原 F: 工作区的暂存和未暂存修改保持。
+- 最新 main 基线 `2f151a8617b33886f046a7ccc3325d7a2deca3ae`，与审计相同。任务分支 `codex/stl-knowledge-intelligence`，已有检查点 `d52c9f94`、`e7175ee7`、`fe7d4e98`，已推送远程任务分支。原 F: 工作区的暂存和未暂存修改保持。
 - Web `http://192.168.5.3:5174`，本机 Vite/Vinext 开发进程。配置文件强制 API 目标为隔离候选 `192.168.5.6:18091`，不落回正式接口。Web 进程停止后入口不可用，尚非持久发行部署。
 - `/admin/intelligence` 为任务和审核入口；`/admin/intelligence/settings` 配置模型；`/admin/intelligence?changeset=5a0e2544-50bc-4635-9d2f-04c4a77d0fed` 为已保存样本；`/works/work-da2580bc` 的研究资料显示知识导读。
 - NAS 正式 18084 与公网共用实例，本轮没有在那里执行 migration、索引或知识写入。其他聊天同期改变正式 API/Web 镜像，因此不能声称整个操作期间正式服务身份始终不变；本任务没有切换这些服务。
@@ -83,7 +83,7 @@ DocETL 0.3.0、LiteLLM 1.108.3、MCP 2.3.0 已固定并安装于本机独立 wor
 - 回填 `python manage.py backfill_knowledge_core --revision UUID --batch-size 100 --identities --claims --relations`。批次/旧ID映射可重复执行，未跑全馆模型，未删除任何旧行。
 - 10项核心/审核定向测试通过，12.18秒；加密控制台新增测试通过1.73秒。早前含完整迁移初始化的4项来源测试153.29秒。DocETL测试使用确定性transport夹具，只证明输入完整和委托次数，不冒充真实推理。Django check、makemigrations --check --dry-run、TypeScript通过。
 - API为1 worker/2 threads；候选Redis64MiB、Meili192MiB；无候选beat。计算worker队列仅 intelligence，solo/concurrency=1，DocETL内部并发1，共用Provider的Redis容量租约继续生效。API/beat/OCR不加载DocETL。
-- API为测试中额外Django进程临时设置768MiB，实际采样192MiB；旧轻worker采样114MiB。新计算镜像构建与MCP协议核验另记更新，不把内存上限当实际用量。
+- API测试时临时设置768MiB，实际采样192MiB，测试后已调回512MiB（swap上限768MiB）。新计算worker为512MiB/768MiB、CPU0.5；不把容器上限当实际占用。
 - 计算镜像先因NAS下载停滞而停止本任务的build容器；官方PyPI匹配Linux/Python3.12依赖改在本机下载后传入隔离build。193,597,440 bytes wheel包不入Git；原镜像保留。
 - Web只使用候选独立cookie。正式数据库、活动Meili索引、Redis及Cloudflare配置未清空、未切换。候选源文件通过临时目录加散列比较、单文件原子替换更新。
 
@@ -96,6 +96,23 @@ DocETL 0.3.0、LiteLLM 1.108.3、MCP 2.3.0 已固定并安装于本机独立 wor
 |3 Intelligence|八阶段服务、顺序综合、产物缓存、审核和依赖事务|真实短章Provider及长章覆盖/恢复、Docling、远程worker CurationRun完成协议；本轮模型依用户决定等待配置|
 |4 管理端|启动/恢复、实体比较、陈述证据、Wiki局部diff、保存、预览发布入口，窄屏实看|集中批量决定的完整操作、桌面及更多冲突状态验证、实体关联作品资料展示补全|
 |5 公开消费者及退役|作品页知识导读和原文、历史映射、6条关系迁移|其他公开对象/策划消费者、旧写入口统一、旧AI触发/beat/remote结果关闭及无消费者代码清理|
-|6 MCP|官方SDK固定版本10工具注册，同一应用服务，无发布/审核/凭据/租约工具|真实stdio草稿与权限验证随后记录；远程暴露服务未启用|
+|6 MCP|官方SDK固定版本10工具注册，同一应用服务，无发布/审核/凭据/租约工具|真实stdio馆藏/锚点/run/草稿/幂等/权限已验证；仍需完整逻辑上下文与全馆检索覆盖。远程暴露服务未启用|
 
 旧FieldAssistant、DerivedClaim、Discovery上下文及旧正式知识写入仍保留，未隐瞒为“全部退役”。它们仍有业务消费者，不能为了demo直接删除。私人笔记、问答与连续研究不进入全馆Wiki输入。当前版本不符合全部六阶段最终完成标志。
+
+## 2026-11-10 计算镜像及 MCP 收尾
+
+- 固定依赖计算镜像 `stl-intelligence-worker:20261109-demo`，image `7cda5b20678482823a545013339a6803a7b6eb72fd259d81dfa0a3d6317d3835`，Python3.12；pip check 成功。新worker `3c34e3efe857`，仅消费intelligence；前一worker以 `stl-intelligence-demo-worker-r0` 停止保留，恢复时先停止新worker，再恢复原容器名称和运行。
+- MCP官方2.3客户端真实stdio读回10个工具、1条目标书目、2段跨页锚点及waiting_configuration任务；新建run `381962da-b577-4cee-a759-0867d618ecdf`，范围13–14。不存在发布、审核、凭据或租约工具。
+- 草稿ChangeSet `d3c39f01-8dfe-4041-9557-8f2caf54366c` 重复提交返回同一ID，保持pending，无正式Entity/Assertion写入，公开知识页前后完全相同。浏览器实际打开该草稿，显示待审1项、局部修改、两页来源引用及固定修订原文；草稿保留给管理员处理。
+- 普通读者提交草稿返回明确403。第一次真实调用发现SDK2将DRF权限异常当内部异常隐藏，已在所有MCP工具的共享边界转换APIException/Http404为官方ToolError，不放宽服务权限；未知内部异常仍不向客户端泄露。新增权限回归与已有注册检查2/2通过（5.68秒）。修复后真实协议复测44.3秒、退出0、0模型调用。首次检查脚本使用SDK1字段名称而失败的记录保留，改为2.3的is_error/structured_content后重跑，不算业务代码故障。
+- Wiki审核现在按引用解析正式Assertion/Anchor，或读取同一ChangeSet中的待审陈述来源；右栏读取引用自己的正文修订。不能只展示Wiki改写文字而失去证据入口。
+- TypeScript最终检查通过。浏览器已实看默认窄屏和1440px桌面三栏，视口已恢复；截图仅留忽略目录 `tmp/delivery/intelligence-review-20261110.jpg`，不提交账户画面或运行产物。
+
+MCP可信本地/SSH启动入口：
+
+```sh
+sudo docker exec -i stl-intelligence-demo-worker python manage.py serve_knowledge_mcp --actor 原有授权账号
+```
+
+该命令由可信启动者绑定已有账户，每次工具调用重新检查当前权限。不要把能执行此命令的NAS权限直接给予不可信外部代理；目前没有额外网络MCP端口。远程计算节点协议与这个知识访问入口是不同职责，前者尚待扩展。

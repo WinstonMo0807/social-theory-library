@@ -12,10 +12,11 @@ import { counterAttributions } from "@/lib/api/counter-evidence.client";
 import styles from "./intelligence-workspace.module.css";
 
 type Evidence = { stance: string; segments: { page_number: number; start: number; end: number; exact: string }[] };
+type EvidenceLocator = { anchor_id: string; document_revision_id: string; reader_url: string; segments: Evidence["segments"] };
 type Candidate = { id: string; label: string; kind: string; definition: string; context: string; aliases: { text: string }[]; identifiers: { namespace: string; value: string }[] };
 type Payload = { label?: string; kind?: string; definition?: string; context?: string; existing_id?: string; candidates?: Candidate[]; comparisons?: { candidate_id: string; judgment: string; reason: string }[];
   text?: string; predicate?: string; expression?: string; unresolved_names?: string[]; participants?: { role: string; work_id?: string; edition_id?: string; entity_id?: string | { change_item: string } }[];
-  evidence?: Evidence[]; reason?: string; operation?: string; block?: { text?: string }; page_id?: string };
+  evidence?: Evidence[]; reason?: string; operation?: string; block?: { text?: string; references?: { type: string; id: string | { change_item: string } }[] }; page_id?: string };
 type Item = { current_status?: string; id: string; kind: string; payload: Payload; dependencies: string[]; decision: string; decision_note: string;
   application: { id?: string; page_id?: string }; conflict: { reason?: string }; current?: { block: { text?: string } | null; hash: string | null } };
 type Changes = { title: string; document_revision_id: string; edition_id: string; id: string; version: number; status: string; items: Item[] };
@@ -41,6 +42,7 @@ export function IntelligenceWorkspace() {
   const [sourceId, setSourceId] = useState(""), [mode, setMode] = useState("whole"), [start, setStart] = useState(1), [end, setEnd] = useState(1);
   const [category, setCategory] = useState("all"), [selected, setSelected] = useState(""), [draft, setDraft] = useState<Payload | null>(null);
   const [note, setNote] = useState(""), [error, setError] = useState(""), [notice, setNotice] = useState(""), [busy, setBusy] = useState(false);
+  const [wikiEvidence, setWikiEvidence] = useState<EvidenceLocator[]>([]);
   const [evidenceOpen, setEvidenceOpen] = useState(false), [sourceText, setSourceText] = useState(""), [preview, setPreview] = useState<{ id?: string; title: string; blocks: { id: string; text?: string }[]; revision_id: string | null; status?: string } | null>(null);
   const applyRequest = useRef<{ signature: string; request_id: string } | null>(null);
   const lifetime = useRef<AbortController | null>(null);
@@ -69,15 +71,38 @@ export function IntelligenceWorkspace() {
   const source = sources.find(s => s.revision_id === (run?.document_revision_id || sourceId));
   const value = draft || item?.payload;
   const evidence = value?.evidence?.flatMap(e => e.segments) || [];
-  const firstEvidence = evidence[0];
+  const firstEvidence = evidence[0] || wikiEvidence[0]?.segments[0];
+  const evidenceRevision = evidence[0] ? run?.document_revision_id : wikiEvidence[0]?.document_revision_id;
+  useEffect(() => {
+    setWikiEvidence([]);
+    if (item?.kind !== "wiki_patch") return;
+    const controller = new AbortController();
+    const references = value?.block?.references || [];
+    void Promise.all(references.map(async ref => {
+      if (typeof ref.id !== "string") {
+        const dependency = items.find(v => v.id === (ref.id as { change_item: string }).change_item);
+        const segments = dependency?.payload.evidence?.flatMap(v => v.segments) || [];
+        return segments.length && run && source ? [{ anchor_id: dependency!.id, document_revision_id: run.document_revision_id,
+          reader_url: `/reader/${source.asset_id}?page=${segments[0].page_number}&revision=${run.document_revision_id}&preview=1`, segments }] : [];
+      }
+      if (ref.type === "anchor") return [await call<EvidenceLocator>(`/knowledge/anchors/${ref.id}/?preview=1`, undefined, controller.signal)];
+      if (ref.type === "assertion") {
+        const assertion = await call<{ evidence: { locator: EvidenceLocator }[] }>(`/knowledge/assertions/${ref.id}/?preview=1`, undefined, controller.signal);
+        return assertion.evidence.map(e => e.locator).filter(Boolean);
+      }
+      return [];
+    })).then(rows => { if (!controller.signal.aborted) setWikiEvidence(rows.flat()); })
+      .catch(e => { if (!controller.signal.aborted) setError(e.message); });
+    return () => controller.abort();
+  }, [item?.id, value?.block?.references, source?.asset_id]);
   useEffect(() => {
     setSourceText("");
-    if (!firstEvidence || !run) return;
+    if (!firstEvidence || !evidenceRevision) return;
     const controller = new AbortController();
-    void call<{ text: string }>(`/knowledge/revisions/${run.document_revision_id}/pages/${firstEvidence.page_number}/?preview=1`, undefined, controller.signal)
+    void call<{ text: string }>(`/knowledge/revisions/${evidenceRevision}/pages/${firstEvidence.page_number}/?preview=1`, undefined, controller.signal)
       .then(data => setSourceText(data.text)).catch(e => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
-  }, [run?.document_revision_id, firstEvidence?.page_number]);
+  }, [evidenceRevision, firstEvidence?.page_number]);
   function choose(id: string) { setSelected(id); setDraft(null); setNote(items.find(i => i.id === id)?.decision_note || ""); setPreview(null); }
   async function action(fn: () => Promise<void>) {
     if (busy) return; setBusy(true); setError(""); setNotice("");
@@ -133,13 +158,13 @@ export function IntelligenceWorkspace() {
               {item.kind === "entity" ? <><label>名称<input value={value.label || ""} disabled={!!item.application.id} onChange={e => setDraft({ ...value, label: e.target.value })} /></label><p>类型 {value.kind} · {value.context}</p><label>定义或人物资料<textarea value={value.definition || ""} disabled={!!item.application.id} onChange={e => setDraft({ ...value, definition: e.target.value })} /></label>
                 <label>身份决定<select value={value.existing_id || ""} disabled={!!item.application.id} onChange={e => setDraft({ ...value, existing_id: e.target.value })}><option value="">保留为独立身份，建立实体草稿</option>{value.candidates?.map(c => <option key={c.id} value={c.id}>关联 {c.label} · {c.kind}</option>)}</select></label>
                 {value.candidates?.map(c => <div key={c.id} className={styles.candidate}><strong>{c.label}</strong><p>{c.kind} · {c.definition || c.context || "尚无定义资料"}</p><p>{c.aliases?.map(a => a.text).join("、")}</p><p>{c.identifiers?.map(i => `${i.namespace}: ${i.value}`).join(" · ")}</p><p>匹配依据：名称或已记录异名相符，身份仍须审核。</p>{value.comparisons?.filter(v => v.candidate_id === c.id).map(v => <p key={v.candidate_id}>{({ same_suggested: "建议同一", different: "不同身份", uncertain: "尚不确定" })[v.judgment] || v.judgment}：{v.reason}</p>)}</div>)}</> : item.kind === "assertion" ? <><label>陈述<textarea value={value.text || ""} disabled={!!item.application.id} onChange={e => setDraft({ ...value, text: e.target.value })} /></label><p>关系 {predicates[value.predicate || ""] || value.predicate} · 论述身份 {expressions[value.expression || ""] || value.expression}</p>{value.participants?.map((p, i) => <p key={i}>{({ subject: "主体", object: "客体", claimant: "主张者", context: "来源语境", quoted: "被引述者", criticized: "被批评者" })[p.role] || p.role}：{!p.entity_id ? (p.work_id ? run.title : p.edition_id || "未解析") : typeof p.entity_id === "string" ? p.entity_id : items.find(v => v.id === (p.entity_id as { change_item: string }).change_item)?.payload.label}</p>)}{value.unresolved_names?.length ? <p className={styles.error}>身份尚未明确：{value.unresolved_names.join("、")}。此项不能保存。</p> : null}
-                {value.evidence?.map((e, i) => <div key={i}><h4>{({ supports: "支持证据", opposes: "反对证据", qualifies: "限定证据", context: "语境" })[e.stance] || e.stance}</h4>{e.segments.map((s, j) => <blockquote key={j}>{s.exact}<cite>PDF 第 {s.page_number} 页</cite></blockquote>)}</div>)}</> : item.kind === "wiki_patch" ? <><p>{value.reason}</p><div className={styles.diff}><section><h4>当前区块</h4><p>{item.current?.block?.text || "新增区块"}</p></section><section><h4>建议内容</h4><textarea value={value.block?.text || ""} disabled={!!item.application.id} onChange={e => setDraft({ ...value, block: { ...value.block, text: e.target.value } })} /></section></div></> : <p>{value.label}</p>}
+                {value.evidence?.map((e, i) => <div key={i}><h4>{({ supports: "支持证据", opposes: "反对证据", qualifies: "限定证据", context: "语境" })[e.stance] || e.stance}</h4>{e.segments.map((s, j) => <blockquote key={j}>{s.exact}<cite>PDF 第 {s.page_number} 页</cite></blockquote>)}</div>)}</> : item.kind === "wiki_patch" ? <><p>{value.reason}</p><div className={styles.diff}><section><h4>当前区块</h4><p>{item.current?.block?.text || "新增区块"}</p></section><section><h4>建议内容</h4><textarea aria-label="建议内容" value={value.block?.text || ""} disabled={!!item.application.id} onChange={e => setDraft({ ...value, block: { ...value.block, text: e.target.value } })} /></section></div>{!!wikiEvidence.length && <section><h4>来源依据</h4>{wikiEvidence.map(e => <blockquote key={e.anchor_id}>{e.segments.map(s => s.exact).join("\n")}<cite><Link target="_blank" href={e.reader_url}>查看 PDF 第 {e.segments.map(s => s.page_number).join("、")} 页原文</Link></cite></blockquote>)}</section>}</> : <p>{value.label}</p>}
               {!!item.dependencies.length && <p>依赖 {item.dependencies.length} 项身份或证据建议，保存时一并检查。</p>}
               {item.application.page_id && <button onClick={() => void previewPage(item.application.page_id!)}>预览已保存知识页</button>}
               {!item.application.id && <div className={styles.decide}><label>审核备注<input value={note} onChange={e => setNote(e.target.value)} /></label><div className={styles.actions}><button disabled={busy} onClick={() => void decide("accepted")}>确认</button><button disabled={busy} onClick={() => void decide("deferred")}>暂缓</button><button disabled={busy} onClick={() => void decide("rejected")}>拒绝</button></div></div>}
             </article> : <div><h3>{category === "all" ? "审核内容" : kinds[category]}</h3>{available.length ? <ul className={styles.items}>{available.map(i => <li key={i.id}><button onClick={() => choose(i.id)}><span>{kinds[i.kind]} · {i.current_status === "published" ? "已发布" : i.application.id ? "已保存草稿" : decisions[i.decision]}</span><strong>{i.payload.label || i.payload.text || i.payload.block?.text || "异名建议"}</strong>{i.conflict.reason && <span className={styles.error}>需要处理冲突</span>}</button></li>)}</ul> : <p>{["running", "waiting"].includes(run.status) ? "章节产物将在执行完成后显示。" : run.status === "empty" ? "本次分析没有形成建议，结果已保存。" : "此分类尚无建议。"}</p>}</div>}
           </main>
-          <aside className={`${styles.evidence} ${evidenceOpen ? styles.open : ""}`} aria-label="原文证据"><div className={styles.itemhead}><h3>原文证据</h3><button className={styles.evidenceButton} onClick={() => setEvidenceOpen(false)}>返回审核</button></div>{firstEvidence ? <><p>PDF 第 {firstEvidence.page_number} 页 · 指定正文修订</p>{source && <Link target="_blank" href={`/reader/${source.asset_id}?page=${firstEvidence.page_number}&revision=${run.document_revision_id}&preview=1`}>在阅读器打开原版本</Link>}<pre>{sourceText || "正在读取原文…"}</pre></> : <p>选择学术陈述，核对对应版本的原文。</p>}</aside>
+          <aside className={`${styles.evidence} ${evidenceOpen ? styles.open : ""}`} aria-label="原文证据"><div className={styles.itemhead}><h3>原文证据</h3><button className={styles.evidenceButton} onClick={() => setEvidenceOpen(false)}>返回审核</button></div>{firstEvidence ? <><p>PDF 第 {firstEvidence.page_number} 页 · 指定正文修订</p>{(wikiEvidence[0] || source) && <Link target="_blank" href={wikiEvidence[0]?.reader_url || `/reader/${source!.asset_id}?page=${firstEvidence.page_number}&revision=${evidenceRevision}&preview=1`}>在阅读器打开原版本</Link>}<pre>{sourceText || "正在读取原文…"}</pre></> : <p>选择学术陈述，核对对应版本的原文。</p>}</aside>
         </div></>}
     </>}
   </section>;

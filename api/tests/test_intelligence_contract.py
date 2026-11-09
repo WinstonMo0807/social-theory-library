@@ -106,6 +106,17 @@ def test_mcp_official_version_registers_only_bounded_tools():
     assert not any(word in name for name in names for word in ("publish", "apply", "credential", "lease"))
 
 
+@pytest.mark.django_db(transaction=True)
+def test_mcp_permission_failure_keeps_actionable_business_error(source, reader_user):
+    pytest.importorskip("mcp")
+    import asyncio
+    from mcp.server.mcpserver.exceptions import ToolError
+    from catalog.services.knowledge_mcp import build_server
+    with pytest.raises(ToolError, match="403: 当前账户不能编辑知识草稿"):
+        asyncio.run(build_server(reader_user.pk).call_tool("submit_draft", {
+            "document_revision_id": str(source.pk), "request_id": str(uuid4()), "items": proposals()}))
+
+
 @pytest.mark.django_db
 def test_console_provider_uses_encrypted_existing_service(superadmin_user, settings, monkeypatch):
     from io import StringIO
