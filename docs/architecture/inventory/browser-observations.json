@@ -1,0 +1,261 @@
+{
+  "observed": "2026-11-09",
+  "method": "Read-only browser navigation; headings and access boundary only. No business forms submitted. Ongoing curation records excluded.",
+  "public": [
+    {
+      "route": "/theories",
+      "url": "https://books.winstonmo.com/theories",
+      "errors": [],
+      "headings": [
+        "理论流派",
+        "主要学科领域",
+        "馆藏理论流派",
+        "进一步浏览"
+      ],
+      "title": "理论流派｜社会理论书库"
+    },
+    {
+      "route": "/scholars",
+      "url": "https://books.winstonmo.com/scholars",
+      "errors": [],
+      "headings": [
+        "学者",
+        "学者推荐",
+        "全部学者",
+        "筛选学者"
+      ],
+      "title": "学者｜社会理论书库"
+    },
+    {
+      "route": "/topics",
+      "url": "https://books.winstonmo.com/topics",
+      "errors": [],
+      "headings": [
+        "主题",
+        "全部主题",
+        "筛选主题"
+      ],
+      "title": "主题与专题方向｜社会理论书库"
+    },
+    {
+      "route": "/subdisciplines",
+      "url": "https://books.winstonmo.com/subdisciplines",
+      "errors": [],
+      "headings": [
+        "子学科",
+        "精选子学科",
+        "全部子学科"
+      ],
+      "title": "子学科｜社会理论书库"
+    },
+    {
+      "route": "/theories/reading-paths",
+      "url": "https://books.winstonmo.com/theories/reading-paths",
+      "errors": [],
+      "headings": [
+        "选择一条阅读路径",
+        "没有符合条件的公开阅读路径"
+      ],
+      "title": "阅读路径｜社会理论书库"
+    },
+    {
+      "route": "/theories/directory",
+      "url": "https://books.winstonmo.com/theories/directory",
+      "errors": [],
+      "headings": [
+        "理论目录",
+        "全部学科 · 理论传统",
+        "选择一个条目"
+      ],
+      "title": "理论目录｜社会理论书库"
+    },
+    {
+      "route": "/reader/[assetId]",
+      "url": "https://books.winstonmo.com/login?next=%2Freader%2Fc6d9d68f-85cd-4e09-95bb-62f811210548",
+      "headings": [
+        "登录",
+        "登录后，你将返回",
+        "保留你的研究内容",
+        "本地访客记录"
+      ]
+    },
+    {
+      "route": "/theories/disciplines/sociology",
+      "url": "https://books.winstonmo.com/theories/disciplines/sociology",
+      "headings": [
+        "社会学",
+        "理解社会学",
+        "社会转型论",
+        "组织新制度主义"
+      ]
+    },
+    {
+      "route": "/topics/organizations-institutions-governance",
+      "url": "https://books.winstonmo.com/topics/organizations-institutions-governance",
+      "headings": [
+        "组织、制度与国家治理",
+        "一、主题导读",
+        "二、核心问题",
+        "三、代表作品",
+        "相关学者",
+        "核心概念",
+        "策划文章",
+        "研究路径",
+        "原文线索"
+      ]
+    },
+    {
+      "route": "/account",
+      "url": "https://books.winstonmo.com/login?next=/account",
+      "headings": [
+        "登录",
+        "登录后，你将返回"
+      ]
+    },
+    {
+      "route": "/scholars/[slug]",
+      "url": "https://books.winstonmo.com/scholars/%E9%A9%AC%E5%85%8B%E6%96%AF%E9%9F%A6%E4%BC%AF",
+      "headings": [
+        "马克斯·韦伯",
+        "从作品与来源了解学者",
+        "主要作品1",
+        "核心概念0",
+        "人物简介",
+        "生平与时间线0",
+        "理论问题0",
+        "相关争论与学者0",
+        "代表原文0",
+        "专题策划0",
+        "阅读路径0"
+      ]
+    },
+    {
+      "route": "/subdisciplines/[slug]",
+      "url": "https://books.winstonmo.com/subdisciplines/rural-sociology",
+      "headings": [
+        "农村社会学",
+        "关键问题",
+        "相关理论",
+        "代表性学者",
+        "核心文献",
+        "相关主题",
+        "延伸阅读"
+      ]
+    },
+    {
+      "route": "/",
+      "url": "https://books.winstonmo.com/",
+      "headings": [
+        "让每一个观点，都有原文可循。"
+      ],
+      "evidence": "Final loaded screenshot: images/welcome-desktop.jpg"
+    }
+  ],
+  "admin": [
+    {
+      "route": "/admin/uploads",
+      "url": "https://books.winstonmo.com/admin/uploads",
+      "headings": [
+        "批量收件与上传"
+      ]
+    },
+    {
+      "route": "/admin/library",
+      "url": "https://books.winstonmo.com/admin/library",
+      "headings": [
+        "馆藏搜索"
+      ]
+    },
+    {
+      "route": "/admin/processing",
+      "url": "https://books.winstonmo.com/admin/processing",
+      "headings": [
+        "处理中心与任务队列"
+      ]
+    },
+    {
+      "route": "/admin/publication",
+      "url": "https://books.winstonmo.com/admin/publication",
+      "headings": [
+        "发布台、历史与撤回"
+      ]
+    },
+    {
+      "route": "/admin/theories",
+      "url": "https://books.winstonmo.com/admin/theories",
+      "headings": [
+        "理论、概念与关系编辑"
+      ]
+    },
+    {
+      "route": "/admin/scholars",
+      "url": "https://books.winstonmo.com/admin/scholars",
+      "headings": [
+        "学者"
+      ]
+    },
+    {
+      "route": "/admin/topics",
+      "url": "https://books.winstonmo.com/admin/topics",
+      "headings": [
+        "主题、学科与分类组织"
+      ]
+    },
+    {
+      "route": "/admin/theories/disciplines",
+      "url": "https://books.winstonmo.com/admin/theories/disciplines",
+      "headings": [
+        "学科"
+      ]
+    },
+    {
+      "route": "/admin/theories/subdisciplines",
+      "url": "https://books.winstonmo.com/admin/theories/subdisciplines",
+      "headings": [
+        "子学科"
+      ]
+    },
+    {
+      "route": "/admin/theories/reading-paths",
+      "url": "https://books.winstonmo.com/admin/theories/reading-paths",
+      "headings": [
+        "公共阅读路径编排"
+      ]
+    },
+    {
+      "route": "/admin/theories/relations",
+      "url": "https://books.winstonmo.com/admin/theories/relations",
+      "headings": [
+        "理论关系"
+      ]
+    },
+    {
+      "route": "/admin/theories/timeline",
+      "url": "https://books.winstonmo.com/admin/theories/timeline",
+      "headings": [
+        "时间线事件编辑"
+      ]
+    },
+    {
+      "route": "/admin/media",
+      "url": "https://books.winstonmo.com/admin/media",
+      "headings": [
+        "封面与媒体资料"
+      ]
+    },
+    {
+      "route": "/admin/content",
+      "url": "https://books.winstonmo.com/admin/content",
+      "headings": [
+        "内容编排"
+      ]
+    },
+    {
+      "route": "/admin/processing/status",
+      "url": "https://books.winstonmo.com/admin/processing/status",
+      "headings": [
+        "运行维护"
+      ]
+    }
+  ]
+}

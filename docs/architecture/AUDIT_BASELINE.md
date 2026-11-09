@@ -13,14 +13,14 @@
 | GitHub main，核对时 | `7cadf0142289c6f6d1f9c6c18e1f367847548c19`，2026-10-12，3.0.9.1 |
 | 原工作区 | `codex/stl4-unified`，`315a3c48442afc9cafc79718c152e5e70352b13f`，有既存暂存与未提交内容，保持原样 |
 | 本轮隔离分支 | `codex/stl-vnext-architecture`，以以上提交为起点，按已运行源码补齐 |
-| API 与六个应用/任务角色 | `social-theory-library-api:4.0.0-20261109-curation-publish-r1`，镜像 `sha256:0ad687520b142797198d3a8e1710d9b047e58cc409cae9fdfbe9b967f2c35563` |
+| 六个应用/任务容器（含 API） | `social-theory-library-api:4.0.0-20261109-curation-publish-r1`，镜像 `sha256:0ad687520b142797198d3a8e1710d9b047e58cc409cae9fdfbe9b967f2c35563`；具体运行状态见运行架构 |
 | Web | `social-theory-library-web:4.0.0-20261109-curation-publish-r1`，镜像 `sha256:68985623d6e520b448f0c928cb0a99a85068c62acd75e26690ac62111437e979` |
 | 配置中的 OCR 主服务 | RapidOCR 镜像 `sha256:65266bf60ba9f494151ffbf747e1b7a1b59d60591f5cb5e26b7a7f26741111c8`，观察时 exited；没有为审计启动 |
 | 公网真实浏览器 | `/api/ready/` 返回 4.0.0、database=true、pending_migrations=0；管理页可用授权会话、显示 STL 4.0 |
 
 ## 对应强度与限制
 
-- 2026-11-09 14:00 左右，只读读取 NAS 容器身份，未运行部署脚本。
+- 2026-11-09 14:00 左右，只读读取 NAS 容器身份，未运行部署脚本。15:06再次只读核对，API、Web与OCR镜像digest均未变化。
 - API 的七个应用目录与根运行文件共791份，逐份计算原始及 LF 规范化 SHA-256。隔离源码经补齐后791份一致。未读取数据库业务行、配置秘密或原文材料。
 - OCR 容器已停止，通过只读 `docker cp` 获取5份应用源码核对，均已对齐；不把容器存在写成 OCR 本轮运行成功。
 - Web 发布构建源目录与 Git 起点比较1757份已有文件，补齐8处差异和1份原先未跟踪的样式。镜像清单共1847份运行文件；除环境注入的 `runtime-config.js` 外逐份核对，无差异。这证明实际镜像对应既有发布产物；没有重新构建并证明构建可逐字节复现。
@@ -28,6 +28,8 @@
 - 变更来源与规范化指纹见 [SOURCE_RECONCILIATION.csv](SOURCE_RECONCILIATION.csv)。本机原始回执与完整基础设施路径保存在忽略目录，不公开凭据、用户资料或运行日志。
 - 既有报告是历史证据；本轮浏览器观察、源码追踪、历史测试和未来建议将分别标注。
 
-## 接续工作
+## 整合提交与后续差异
 
-版本整理完成后继续全站源码扫描，重点完成全部管理端入口到 API、服务、模型和公开消费者的映射，代表页面只读核验，架构图、问题证据与 README 重建。最终推送前检查秘密、数据文件、相对链接、Mermaid 和完整差异。
+`f5406339cd9c263e9ee58f6ea73d9f09881ab6d9` 保存本轮运行源码整合。随后文档提交增加架构、页面核对、审计与可维护索引，并按现有 serializer 重新生成 `api/openapi/schema.json` 的 Unicode slug 规则。该派生契约更新不是新的业务改造，也不把生产已有文件冒称来自后续文档提交。
+
+完整审计入口见[架构目录](README.md)，实际检查及限制见[验证记录](VALIDATION.md)。GitHub 整合保留旧 main 和新版开发线的提交历史；版本对应依据仍是上述时间点的运行文件与镜像证据。
