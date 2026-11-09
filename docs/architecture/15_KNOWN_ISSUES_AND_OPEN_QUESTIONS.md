@@ -54,7 +54,7 @@
 
 **公网发布与GitHub main版本脱节。**
 
-页面包括全站；前端Web发布文件、API/OCR源码与main不属于同一版本。相关API为health/ready，服务为部署/镜像交付，模型不适用。旧main仍为7cadf014的3.0.9.1，原本地分支315a3c48另有未提交且已部署代码；health仅报告4.0.0，不能给出完整source SHA。
+页面包括全站；前端Web发布文件、API/OCR源码与main不属于同一版本。相关API为health/ready，服务为部署/镜像交付，模型不适用。审计开始时main为7cadf014的3.0.9.1，原本地分支315a3c48另有未提交且已部署代码；health仅报告4.0.0，不能给出完整source SHA。
 
 根因是分次发布与未入Git的源码覆盖。影响可复现部署、审计和维护者判断。已用791份API、5份OCR源码与Web发布清单整合差异，形成f5406339检查点；后续文档与生成schema是本轮新增。建议未来release manifest固定source SHA、digest与环境注入边界，发布包不得默默包含未记录源码。验收应从干净checkout生成清单、与镜像逐项对应，分别核对API/Web/OCR；本轮没有宣称原生产由新commit构建。
 
