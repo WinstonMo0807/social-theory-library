@@ -9,7 +9,7 @@ from common.capabilities import Capability, has_capability
 from ingestion.models import AuditEvent
 from catalog import models
 from catalog.services import knowledge_nodes
-from catalog.services.knowledge_merge_guard import merge_scope_fingerprint
+from catalog.services.knowledge_merge_guard import merge_scope_fingerprint, merge_scope_fingerprints
 from catalog.services.person_authority import AuthorityConflict, digest
 from catalog.services.query_lexicon.mutations import acquire_entity_lock, acquire_generation_lock
 
@@ -118,12 +118,13 @@ def merge(source_id, target_id, *, actor, request_id, fingerprint, confirmed, ch
 
 
 def rollback_state(record, *, lock=False):
-    current = merge_scope_fingerprint(record.source_node_id, record.target_node_id, lock=lock)
+    fingerprints = merge_scope_fingerprints(record.source_node_id, record.target_node_id, lock=lock)
+    current = fingerprints[0]
     expected = (record.rollback_payload or {}).get("scope_fingerprint")
     blockers = []
     if record.rolled_back_at:
         blockers.append("这次合并已经回退。")
-    if not expected or current != expected:
+    if not expected or expected not in fingerprints:
         blockers.append("缺少原范围记录或合并后已有修改，不能覆盖后续工作。")
     return {"fingerprint": current, "can_rollback": not blockers, "blockers": blockers}
 

@@ -190,109 +190,40 @@ def test_viewpoint_evidence_matching_rejects_unrelated_same_page_text():
     assert close_match == spans[0]
 
 
-def test_claim_extraction_is_shadow_idempotent_and_preserves_qualifiers():
-    _work, _edition, _asset, revision, spans = _source(title="限定条件提取")
-    client = FakeClaimClient(
-        [
-            {
-                "proposition": "贫困可能导致犯罪，但仅在失业率高时如此。",
-                "subject": "贫困",
-                "predicate": "导致",
-                "object": "犯罪",
-                "polarity": "positive",
-                "modality": "可能",
-                "qualifiers": ["仅在失业率高时", "城市人口"],
-                "population_scope": {"label": "城市人口"},
-                "attribution": "author_claim",
-                "claim_type": "causal",
-                "quality_score": 0.9,
-                "importance_score": 0.8,
-            }
-        ]
-    )
-
-    first = extract_claims_shadow(spans[0], client=client)
-    repeated = extract_claims_shadow(spans[0], client=client)
-
-    assert first["status"] == "completed"
-    assert first["created"] == 1
-    assert first["publication_blocking"] is False
-    assert repeated["idempotent_replay"] is True
-    assert repeated["reused"] == 1
-    assert client.calls == 1
-    claim = DerivedClaim.objects.get(document_revision=revision)
-    assert claim.shadow is True
-    assert claim.qualifiers == ["仅在失业率高时", "城市人口"]
-    assert claim.population_scope == {"label": "城市人口"}
-    assert claim.model_revision == "model-sha-1"
-    assert claim.quality_factors["extraction_input_key"] == first["extraction_input_key"]
-    assert ClaimEvidence.objects.filter(
-        derived_claim=claim,
-        evidence_span=spans[0],
-        role=ClaimEvidence.Role.PRIMARY,
-    ).exists()
+def test_retired_extraction_cannot_create_or_rewrite_historical_claims():
+    _, _, _, revision, spans = _source(title="退役提取保护")
+    historical = _claim(revision, spans[0], proposition="已有人工作品记录", polarity="positive", fingerprint="retained")
+    historical.qualifiers=["原有限定条件"]
+    historical.save(update_fields=["qualifiers"])
+    client=FakeClaimClient([{"proposition":"不应写入"}])
+    first=extract_claims_shadow(spans[0],client=client)
+    assert extract_claims_shadow(spans[0],client=client)==first
+    assert first["status"]=="retired" and first["created"]==0 and not first["publication_blocking"]
+    assert client.calls==0 and DerivedClaim.objects.count()==1
+    historical.refresh_from_db()
+    assert historical.qualifiers==["原有限定条件"]
 
 
-def test_claim_extraction_failure_is_non_blocking():
-    _work, _edition, _asset, _revision, spans = _source(title="Claim AI 降级")
-    client = FakeClaimClient([])
-
-    def unavailable(**_kwargs):
-        raise AIServiceUnavailable("worker offline")
-
-    client.generate_json = unavailable
-    result = extract_claims_shadow(spans[0], client=client)
-
-    assert result["status"] == "degraded"
-    assert result["error_code"] == "ai_service_unavailable"
-    assert result["publication_blocking"] is False
-    assert DerivedClaim.objects.exists() is False
+def test_retired_extraction_never_contacts_unavailable_model():
+    _, _, _, _, spans = _source(title="退役模型不可调用")
+    client=FakeClaimClient([])
+    def unavailable(**kwargs):
+        raise AssertionError("retired producer must not call any model")
+    client.generate_json=unavailable
+    result=extract_claims_shadow(spans[0],client=client)
+    assert result["status"]=="retired" and not result["publication_blocking"]
+    assert not DerivedClaim.objects.exists()
 
 
-def test_active_prompt_registry_revision_controls_extraction_and_provenance():
-    _work, _edition, _asset, _revision, spans = _source(title="Prompt Registry Claim")
-    content = "只从原文提取命题，并保留所有限定条件。"
-    content_hash = sha256(content.encode()).hexdigest()
-    schema_hash = sha256(b"registered-schema").hexdigest()
-    prompt = PromptRegistryEntry.objects.create(
-        key="claim_extraction",
-        version=7,
-        capability="claim_extraction",
-        content=content,
-        output_schema=CLAIM_EXTRACTION_SCHEMA,
-        content_hash=content_hash,
-        schema_hash=schema_hash,
-        status=PromptRegistryEntry.Status.ACTIVE,
-    )
-    client = FakeClaimClient(
-        [
-            {
-                "proposition": "贫困导致犯罪",
-                "claim_type": "causal",
-                "attribution": "author_claim",
-                "qualifiers": ["仅限当前证据"],
-            }
-        ]
-    )
-
-    result = extract_claims_shadow(spans[0], client=client)
-    claim = DerivedClaim.objects.get()
-
-    assert client.last_kwargs["system_prompt"] == content
-    assert client.last_kwargs["schema"] == CLAIM_EXTRACTION_SCHEMA
-    assert client.last_kwargs["prompt_version"] == "registry-7"
-    assert claim.prompt_key == prompt.key
-    assert claim.prompt_version == "registry-7"
-    assert claim.quality_factors["prompt"] == {
-        "key": prompt.key,
-        "version": "registry-7",
-        "registry_id": str(prompt.id),
-        "registry_version": 7,
-        "content_hash": content_hash,
-        "schema_hash": schema_hash,
-        "source": "prompt_registry",
-    }
-    assert result["prompt"]["registry_id"] == str(prompt.id)
+def test_active_legacy_prompt_cannot_reactivate_retired_extraction():
+    _, _, _, _, spans = _source(title="旧提示词不能重启生产者")
+    prompt=PromptRegistryEntry.objects.create(key="claim_extraction",version=7,capability="claim_extraction",
+        content="仅供隔离测试",output_schema=CLAIM_EXTRACTION_SCHEMA,content_hash=sha256(b"fixture").hexdigest(),
+        schema_hash=sha256(b"schema").hexdigest(),status=PromptRegistryEntry.Status.ACTIVE)
+    client=FakeClaimClient([{"proposition":"不可写入"}])
+    assert extract_claims_shadow(spans[0],client=client)["status"]=="retired"
+    assert client.calls==0 and not DerivedClaim.objects.exists()
+    assert PromptRegistryEntry.objects.filter(pk=prompt.pk,status="active").exists()
 
 
 def test_attribution_does_not_turn_quoted_or_criticized_claim_into_author_claim():
@@ -419,21 +350,12 @@ def test_claim_index_failure_remains_visible_but_does_not_block_publication():
     ) == {ProjectionState.Status.FAILED}
 
 
-def test_document_claim_schedule_waits_without_executor_and_is_idempotent():
-    _work, _edition, _asset, revision, spans = _source(title="Claim capability waiting")
-
-    first = schedule_document_claim_extraction(revision)
-    repeated = schedule_document_claim_extraction(revision)
-
-    assert first["scheduled"] == len(spans)
-    assert first["states"] == {
-        CapabilityDemand.State.WAITING_FOR_CAPABILITY: len(spans)
-    }
-    assert first["publication_blocking"] is False
-    assert repeated["demand_ids"] == first["demand_ids"]
-    assert CapabilityDemand.objects.count() == len(spans)
-    assert CapabilityDemand.objects.filter(publication_blocking=True).exists() is False
-    assert set(CapabilityDemand.objects.values_list("preferred_queue", flat=True)) == {"celery"}
+def test_document_claim_schedule_is_retired_without_new_demands():
+    _, _, _, revision, _ = _source(title="不再派发旧主张任务")
+    first=schedule_document_claim_extraction(revision)
+    assert schedule_document_claim_extraction(revision)==first
+    assert first["status"]=="retired" and first["scheduled"]==0
+    assert not first["publication_blocking"] and not CapabilityDemand.objects.exists()
 
 
 def test_specific_demand_lease_prevents_celery_and_remote_double_claim():
@@ -469,7 +391,7 @@ def test_specific_demand_lease_prevents_celery_and_remote_double_claim():
     assert demand.claimed_by_id == nas.id
 
 
-def test_celery_claim_task_completes_leased_demand_and_indexes_final_revision():
+def test_delivered_legacy_celery_message_releases_lease_without_model_or_index_write():
     _work, _edition, _asset, revision, spans = _source(
         title="Claim celery execution",
         pages=1,
@@ -527,11 +449,14 @@ def test_celery_claim_task_completes_leased_demand_and_indexes_final_revision():
         ).result
 
     demand.refresh_from_db()
-    assert result["status"] == "completed"
-    assert result["claim_index"]["backend"] == "meilisearch"
-    assert demand.state == CapabilityDemand.State.COMPLETED
+    assert result["status"] == "retired"
+    assert demand.state == CapabilityDemand.State.CANCELED
     assert demand.publication_blocking is False
-    index_revision.assert_called_once_with(revision)
+    assert demand.lease_token is None and demand.claimed_by_id is None
+    assert not DerivedClaim.objects.exists()
+    executor.refresh_from_db()
+    assert executor.current_load == 0
+    index_revision.assert_not_called()
 
 
 def test_query_claim_preserves_causal_negation():

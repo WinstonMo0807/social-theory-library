@@ -15,7 +15,6 @@ import fitz
 import pytest
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import IntegrityError
 
 from catalog.models import Asset, CatalogPublicationRevision, CatalogingSession, DocumentRevision, Edition, KnowledgePublicationEvent, Page, Person, Work
 from ingestion.models import AuditEvent, FieldLock, UploadBatch, UploadItem
@@ -43,17 +42,15 @@ def lifecycle_adapters(settings, tmp_path, monkeypatch):
     # field storage, not merely a later settings.STORAGES dictionary.
     monkeypatch.setattr(UploadItem._meta.get_field("file"), "storage", FileSystemStorage(location=tmp_path / "incoming"))
     with ExitStack() as stack:
-        stack.enter_context(patch("catalog.services.edition_files.schedule_upload_item"))
+        stack.enter_context(patch("catalog.services.edition_file_intake.schedule_upload_item"))
+        stack.enter_context(patch("catalog.intelligence_tasks.refresh_source.apply_async"))
         stack.enter_context(patch("catalog.services.knowledge_publication.dispatch_knowledge_event", return_value=True))
-        stack.enter_context(patch("catalog.services.document_intelligence._schedule_claim_shadow"))
-        stack.enter_context(patch("catalog.services.front_matter_intelligence.schedule_library_synthesis", return_value={"status": "waiting_for_capability"}))
         for name in ("queue_semantic_job", "queue_page_label_job", "queue_ocr_job", "queue_external_enrichment_job"):
             stack.enter_context(patch(f"ingestion.services.pipeline.{name}"))
         stack.enter_context(patch("ingestion.services.pipeline.index_asset", return_value={"status": "staging_only", "documents": 0, "test_adapter": True}))
         stack.enter_context(patch("ingestion.services.pipeline.detect_publication_places", return_value=[]))
         stack.enter_context(patch("ingestion.services.pipeline.generate_cover_candidates", return_value=[]))
         stack.enter_context(patch("ingestion.services.pipeline.generate_recommendation_image", return_value=None))
-        stack.enter_context(patch("ingestion.services.pipeline.generate_theory_review_tasks", return_value={"created": 0, "reused": 0}))
         yield
 
 
@@ -93,7 +90,7 @@ def manual_report(client, actor, *, complete=True):
 def submit_file(client, edition, content, *, action="supplement", key=None):
     edition.refresh_from_db()
     values = {"action": action, "file": SimpleUploadedFile(f"{action}.pdf", content, content_type="application/pdf"),
-              "request_key": str(key or uuid4()), "expected_updated_at": edition.updated_at.isoformat(), "confirm": True}
+              "request_key": str(key or uuid4()), "expected_updated_at": edition.updated_at.isoformat(), "confirm": True, "generate_reader": True}
     if action == "replace":
         values["expected_reader_asset_id"] = str(edition.active_catalog_revision.reader_asset_id)
     result = client.post(f"/api/catalog/admin/editions/{edition.pk}/files/", values, format="multipart")
@@ -109,6 +106,16 @@ def publish(client, edition):
                          {"confirm_warnings": True, "prepared_fingerprint": prepared.data["fingerprint"]}, format="json")
     assert result.status_code == 200, result.data
     return result, prepared.data
+
+
+def adopt_reader(client, edition, asset):
+    url = f"/api/catalog/admin/editions/{edition.pk}/files/{asset.pk}/adopt/"
+    prepared = client.get(url)
+    assert prepared.status_code == 200 and not prepared.data["blocking"], prepared.data
+    values = {key: prepared.data[key] for key in ("request_key", "fingerprint")}
+    response = client.post(url, {**values, "confirm": True}, format="json")
+    assert response.status_code == 202, response.data
+    return response, url, {**values, "confirm": True}
 
 
 def range_header(client, asset):
@@ -152,9 +159,12 @@ def test_A09_early_manual_pdf_supplement_runs_without_rebinding_or_automatic_met
     assert session.source_type == "manual" and session.upload_item_id is None
     assert edition.work.title == "人工确认的社会调查报告" and edition.work.language == "zh-CN"
     assert Work.objects.count() == Edition.objects.count() == CatalogingSession.objects.count() == UploadItem.objects.count() == 1
-    normalized = edition.assets.get(kind="normalized", is_current=True)
+    normalized = edition.assets.get(kind="normalized", is_current=False)
     assert normalized.validation_status == "valid" and normalized.pages.count() == 3
     assert normalized.document_revisions.exists()
+    adopt_reader(api_client, edition, normalized)
+    normalized.refresh_from_db()
+    assert normalized.is_current
     assert edition.assets.get(kind="original").file.read() == content
     assert not CatalogPublicationRevision.objects.exists()
 
@@ -170,43 +180,38 @@ def test_A09_published_bibliography_adds_pdf_only_after_explicit_publication(api
     edition.refresh_from_db()
     assert edition.active_catalog_revision_id == old_revision
     assert edition.active_catalog_revision.reader_asset_id is None
-    normalized = edition.assets.get(kind="normalized", is_current=True)
-    from catalog.services.publication_commands import catalog_health
-    assert catalog_health(edition)["publication"] == "changes_pending"
+    normalized = edition.assets.get(kind="normalized", is_current=False)
     if metadata_change:
         response = api_client.patch(f"/api/catalog/admin/library/works/{edition.work_id}/sections/work/?edition={edition.pk}",
                                     {"data": {"title": "明确发布的报告新题名"}, "confirm_section": True}, format="json")
         assert response.status_code == 202, response.data
-        before_publish = api_client.get(f"/api/catalog/works/{edition.public_slug}/")
-        assert before_publish.data["title"] == "人工确认的社会调查报告"
-    published, prepared = publish(api_client, edition)
-    assert any(row["field"] in {"file", "reader_asset"} for row in prepared["changes"])
+    accepted, url, values = adopt_reader(api_client, edition, normalized)
     pending = KnowledgePublicationEvent.objects.filter(catalog_revision__edition=edition, catalog_revision__reader_asset=normalized)
-    assert pending.count() == 1, "Explicit publish must create the first PDF-bearing public revision."
-    assert CatalogPublicationRevision.objects.filter(edition=edition).count() == 2, "Metadata and first PDF share one new public revision."
-    event_id = pending.get().pk
-    again = api_client.post(f"/api/catalog/admin/library/works/{edition.work_id}/publication/?edition={edition.pk}",
-                            {"confirm_warnings": True, "prepared_fingerprint": prepared["fingerprint"]}, format="json")
-    assert again.status_code == 200, again.data
-    assert again.data["request_receipt"]["id"] == published.data["request_receipt"]["id"]
-    assert again.data["request_receipt"]["replayed"]
-    assert pending.count() == 1 and pending.get().pk == event_id
+    assert pending.count() == 1 and CatalogPublicationRevision.objects.filter(edition=edition).count() == 2
+    again = api_client.post(url, values, format="json")
+    assert again.status_code == 202 and again.data["request_key"] == accepted.data["request_key"]
+    assert pending.count() == 1
     acknowledge_catalog_projections(edition)
     assert edition.active_catalog_revision.reader_asset_id == normalized.pk
     range_header(api_client, normalized)
-    detail = api_client.get(f"/api/catalog/works/{edition.public_slug}/")
-    assert detail.data["title"] == ("明确发布的报告新题名" if metadata_change else "人工确认的社会调查报告")
+    # File adoption never publishes a pending bibliographic draft.
+    detail_url = f"/api/catalog/works/{edition.public_slug}/"
+    assert api_client.get(detail_url).data["title"] == "人工确认的社会调查报告"
+    if metadata_change:
+        publish(api_client, edition)
+        acknowledge_catalog_projections(edition)
+    expected = "明确发布的报告新题名" if metadata_change else "人工确认的社会调查报告"
+    assert api_client.get(detail_url).data["title"] == expected
     session.refresh_from_db()
     assert session.source_type == "manual" and session.upload_item_id is None and session.edition_id == edition.pk
     assert Work.objects.count() == Edition.objects.count() == 1
-    # A delayed retry of the old accepted request must not publish a later edit.
     later = api_client.patch(f"/api/catalog/admin/library/works/{edition.work_id}/sections/work/?edition={edition.pk}",
                              {"data": {"title": "随后保存但未批准的报告题名"}, "confirm_section": True}, format="json")
     assert later.status_code == 202
-    replay = api_client.post(f"/api/catalog/admin/library/works/{edition.work_id}/publication/?edition={edition.pk}",
-                             {"confirm_warnings": True, "prepared_fingerprint": prepared["fingerprint"]}, format="json")
-    assert replay.status_code == 200 and replay.data["request_receipt"]["replayed"]
-    assert api_client.get(f"/api/catalog/works/{edition.public_slug}/").data["title"] == detail.data["title"]
+    replay = api_client.post(url, values, format="json")
+    assert replay.status_code == 202 and replay.data["request_key"] == accepted.data["request_key"]
+    assert api_client.get(detail_url).data["title"] == expected
+
 
 
 def test_A13_never_accepted_stale_fingerprint_still_conflicts_without_publication(api_client, admin_user):
@@ -228,6 +233,7 @@ def test_A06_A08_A13_A28_replacement_keeps_stable_reader_private_ids_and_recover
     old_bytes = pdf_bytes("OriginalStableReader")
     _, initial = submit_file(api_client, edition, old_bytes)
     assert run_pipeline(str(initial.pk)).status == "ready"
+    adopt_reader(api_client, edition, edition.assets.get(kind="normalized", is_current=False))
     publish(api_client, edition)
     acknowledge_catalog_projections(edition)
     old_revision = edition.active_catalog_revision_id
@@ -259,27 +265,32 @@ def test_A06_A08_A13_A28_replacement_keeps_stable_reader_private_ids_and_recover
     _, repeat = submit_file(api_client, edition, replacement_bytes, action="replace", key=key)
     assert repeat.pk == replacement.pk
     range_header(api_client, old_reader)
-    if fail_before_publication:
-        with patch("ingestion.services.pipeline._finalize_item_publication", side_effect=RuntimeError("controlled late file failure")):
-            with pytest.raises(RuntimeError, match="controlled late"):
-                run_pipeline(str(replacement.pk))
-        replacement.refresh_from_db()
-        edition.refresh_from_db()
-        assert replacement.status == "failed"
-        assert replacement.attempts.filter(stage="replacement_activation", status="failed").exists()
-        assert edition.active_catalog_revision_id == old_revision
-        range_header(api_client, old_reader)
-        staged_ids = set(edition.assets.values_list("pk", flat=True))
-        staged_pages = set(Page.objects.filter(asset__edition=edition).values_list("pk", flat=True))
     completed = run_pipeline(str(replacement.pk))
-    assert completed.status == "published"
+    assert completed.status == "ready"
+    candidate = edition.assets.get(kind="normalized", is_current=False)
+    staged_ids = set(edition.assets.values_list("pk", flat=True))
+    staged_pages = set(Page.objects.filter(asset__edition=edition).values_list("pk", flat=True))
+    url = f"/api/catalog/admin/editions/{edition.pk}/files/{candidate.pk}/adopt/"
+    prepared = api_client.get(url).data
+    assert prepared["blocking"] == []
+    values = {key: prepared[key] for key in ("request_key", "fingerprint")}
+    values["confirm"] = True
+    if fail_before_publication:
+        with patch("catalog.services.knowledge_publication.create_catalog_publication_event", side_effect=ValueError("controlled late file failure")):
+            failed = api_client.post(url, values, format="json")
+        assert failed.status_code == 409 and "controlled late" in failed.data["detail"]
+        assert KnowledgePublicationEvent.objects.filter(catalog_revision__edition=edition).count() == 1
+        assert not AuditEvent.objects.filter(action="catalog.file_selected", after__request_key=values["request_key"]).exists()
+        range_header(api_client, old_reader)
+    accepted = api_client.post(url, values, format="json")
+    assert accepted.status_code == 202, accepted.data
+    assert api_client.post(url, values, format="json").status_code == 202
     edition.refresh_from_db()
     assert edition.active_catalog_revision_id == old_revision
     assert KnowledgePublicationEvent.objects.filter(catalog_revision__edition=edition).count() == 2
     range_header(api_client, old_reader)
-    if fail_before_publication:
-        assert set(edition.assets.values_list("pk", flat=True)) == staged_ids
-        assert set(Page.objects.filter(asset__edition=edition).values_list("pk", flat=True)) == staged_pages
+    assert set(edition.assets.values_list("pk", flat=True)) == staged_ids
+    assert set(Page.objects.filter(asset__edition=edition).values_list("pk", flat=True)) == staged_pages
     acknowledge_catalog_projections(edition)
     new_reader = edition.active_catalog_revision.reader_asset
     assert new_reader.pk != old_reader.pk and new_reader.version == 2
@@ -314,34 +325,31 @@ def test_A06_A08_A13_A28_replacement_keeps_stable_reader_private_ids_and_recover
     assert api_client.get(f"/api/reading/saved/{saved.pk}/").status_code == 200
 
 
-@pytest.mark.parametrize("timing", ["before_validation", "during_asset_copy"])
-def test_A13_duplicate_race_never_rebinds_requested_manual_edition(api_client, admin_user, timing):
+@pytest.mark.parametrize("stale_duplicate_read", [False, True])
+def test_A13_duplicate_race_never_rebinds_requested_manual_edition(api_client, admin_user, stale_duplicate_read):
+    from django.db.models.query import QuerySet
     session, target = manual_report(api_client, admin_user)
-    content = pdf_bytes(f"DuplicateRace-{timing}")
-    _, item = submit_file(api_client, target, content)
+    content = pdf_bytes("DuplicateRace")
     other = Edition.objects.create(work=Work.objects.create(title="并发进入的另一份馆藏"))
-    def create_duplicate():
-        return Asset.objects.create(edition=other, kind="original", status="ready", validation_status="valid", sha256=sha256(content).hexdigest(),
-                                    file=SimpleUploadedFile("concurrent.pdf", content, content_type="application/pdf"))
-    if timing == "before_validation":
-        duplicate = create_duplicate()
-        result = run_pipeline(str(item.pk))
-        assert result.status == "needs_review" and result.error_code == "duplicate_edition_file"
-        assert result.preflight_summary["duplicate_asset_id"] == str(duplicate.pk)
-    else:
-        from ingestion.services import pipeline
-        real_copy = pipeline._copy_asset
-        def competing_copy(requested, edition, kind, filename):
-            if kind == "original":
-                create_duplicate()
-            return real_copy(requested, edition, kind, filename)
-        with patch.object(pipeline, "_copy_asset", side_effect=competing_copy):
-            with pytest.raises(IntegrityError):
-                run_pipeline(str(item.pk))
-    item.refresh_from_db(); target.refresh_from_db(); session.refresh_from_db()
-    assert item.edition_id == session.edition_id == target.pk
-    assert item.asset_id is None and not target.assets.exists()
+    duplicate = Asset.objects.create(edition=other, kind="original", status="ready", validation_status="valid",
+        sha256=sha256(content).hexdigest(), file=SimpleUploadedFile("concurrent.pdf", content, content_type="application/pdf"))
+    real_exists = QuerySet.exists
+    hidden = False
+    def exists(rows):
+        nonlocal hidden
+        if stale_duplicate_read and not hidden and rows.model is Asset and "sha256" in str(rows.query):
+            hidden = True
+            return False  # Simulate the initial read losing a race; keep the DB constraint real.
+        return real_exists(rows)
+    values = {"action": "supplement", "file": SimpleUploadedFile("duplicate.pdf", content, content_type="application/pdf"),
+              "request_key": str(uuid4()), "expected_updated_at": target.updated_at.isoformat(), "confirm": True, "generate_reader": True}
+    with patch.object(QuerySet, "exists", exists):
+        response = api_client.post(f"/api/catalog/admin/editions/{target.pk}/files/", values, format="multipart")
+    assert response.status_code == 409 and response.data["code"] == "catalog.duplicate_edition_file", response.data
+    target.refresh_from_db(); session.refresh_from_db()
+    assert session.edition_id == target.pk and not target.assets.exists()
+    assert not UploadItem.objects.exists() and not CatalogPublicationRevision.objects.filter(edition=target).exists()
     assert target.work.title == "人工确认的社会调查报告"
     assert session.source_type == "manual" and session.upload_item_id is None
-    assert Asset.objects.filter(edition=other, kind="original").count() == 1
-    assert not CatalogPublicationRevision.objects.filter(edition=target).exists()
+    duplicate.refresh_from_db()
+    assert duplicate.edition_id == other.pk and duplicate.file.read() == content

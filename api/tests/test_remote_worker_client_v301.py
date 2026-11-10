@@ -37,6 +37,8 @@ class _ServerClient:
             return _Response(200, self.claim_payload) if self.claim_payload else _Response(204)
         if url.endswith("renew/"):
             return _Response(200, {"lease_expires_at": "2026-08-25T12:00:00Z"})
+        if url.endswith("model/"):
+            return _Response(200, {"data": {"summary": "fixture"}, "output_hash": "fixture-output-hash"})
         if url.endswith("complete/"):
             return _Response(200, {"status": "completed", "created": 1})
         if url.endswith("release/"):
@@ -156,110 +158,46 @@ def test_remote_worker_enforces_rate_safe_poll_floor():
     assert _config(poll_seconds=1).validated().poll_seconds == 10
 
 
-def test_remote_worker_environment_can_opt_into_library_synthesis(monkeypatch):
-    monkeypatch.setenv("STL_WORKER_SERVER_URL", "https://books.example/api/capability-worker")
-    monkeypatch.setenv("STL_WORKER_TOKEN", "w" * 40)
-    monkeypatch.setenv("STL_WORKER_MODEL", "qwen-library:14b")
-    monkeypatch.setenv("STL_WORKER_MODEL_REVISION", "sha256-library-model")
-    monkeypatch.setenv("STL_WORKER_CAPABILITIES", "llm_large")
-    monkeypatch.setenv("STL_WORKER_TASK_KINDS", "library_synthesis")
-
-    config = RemoteWorkerClientConfig.from_environment()
-
-    assert config.capabilities == ("llm_large",)
-    assert config.task_kinds == ("library_synthesis",)
+def test_remote_worker_environment_uses_managed_curation_and_rejects_old_kind(monkeypatch):
+    monkeypatch.setenv("STL_WORKER_SERVER_URL","https://books.example/api/capability-worker")
+    monkeypatch.setenv("STL_WORKER_TOKEN","w"*40)
+    monkeypatch.setenv("STL_WORKER_CAPABILITIES","llm_large")
+    monkeypatch.setenv("STL_WORKER_TASK_KINDS","curation_stage")
+    config=RemoteWorkerClientConfig.from_environment()
+    assert config.capabilities==("llm_large",) and config.task_kinds==("curation_stage",)
+    monkeypatch.setenv("STL_WORKER_TASK_KINDS","library_synthesis")
+    with pytest.raises(RemoteWorkerClientError): RemoteWorkerClientConfig.from_environment()
 
 
-def test_remote_worker_heartbeats_pulls_runs_ollama_and_completes_claim():
-    server = _ServerClient(_claim_payload())
-    model = _ModelClient(
-        {
-            "message": {
-                "content": json.dumps(
-                    {
-                        "claims": [
-                            {
-                                "proposition": "制度保障薄弱时，失业可能加剧贫困。",
-                                "subject": "失业",
-                                "predicate": "加剧",
-                                "object": "贫困",
-                                "polarity": "positive",
-                            }
-                        ]
-                    },
-                    ensure_ascii=False,
-                )
-            }
-        }
-    )
-    worker = RemoteAIWorkerClient(
-        _config(),
-        server_client=server,
-        model_client=model,
-        sleep=lambda _seconds: None,
-    )
-
-    result = worker.run_once()
-
-    assert result == "completed"
-    heartbeat = next(payload for url, payload in server.calls if url.endswith("heartbeat/"))
-    assert heartbeat["capabilities"] == ["llm_small"]
-    assert heartbeat["model_revisions"]["llm_small"] == {
-        "provider": "ollama",
-        "model": "qwen-claim:8b",
-        "revision": "sha256-model-revision",
-    }
-    complete = next(payload for url, payload in server.calls if url.endswith("complete/"))
-    assert complete["result"]["claims"][0]["polarity"] == "positive"
-    assert complete["result"]["provider"] == "ollama"
-    assert model.calls[0][0].endswith("/api/chat")
-    assert model.calls[0][1]["json"]["format"] == _claim_payload()["job"]["output_schema"]
-    assert "w" * 40 not in str(server.calls)
+def test_remote_worker_curation_uses_server_transport_and_bound_receipt(monkeypatch):
+    claimed=_curation_payload()
+    server=_ServerClient(claimed)
+    model=_ModelClient({})
+    worker=RemoteAIWorkerClient(_config(capabilities=("llm_large",)),server_client=server,model_client=model,sleep=lambda seconds:None)
+    monkeypatch.setattr("common.docetl_map.run_map",_map_fixture)
+    assert worker.run_once()=="completed"
+    heartbeat=next(payload for url,payload in server.calls if url.endswith("heartbeat/"))
+    assert heartbeat["metadata"]["task_kinds"]==["curation_stage"]
+    assert heartbeat["model_revisions"]["llm_large"]["provider"]=="stl-managed"
+    invocation=next(payload for url,payload in server.calls if url.endswith("model/"))
+    assert invocation["lease_token"]==claimed["lease"]["lease_token"]
+    assert len(invocation["input_hash"])==64
+    completion=next(payload for url,payload in server.calls if url.endswith("complete/"))
+    assert completion["result"]["artifact_id"]==claimed["job"]["artifact_id"]
+    assert completion["result"]["output_hash"]=="fixture-output-hash"
+    assert model.calls==[] and "w"*40 not in str(server.calls)
 
 
-def test_remote_worker_declares_and_executes_structured_library_synthesis():
-    claimed = _library_synthesis_payload()
-    evidence_ids = [row["id"] for row in claimed["job"]["input"]["evidence"]]
-    server = _ServerClient(claimed)
-    model = _ModelClient(
-        {
-            "message": {
-                "content": json.dumps(
-                    {
-                        "candidate": {
-                            "value": "馆藏原文把失业加剧贫困限定在制度保障薄弱的情境。",
-                            "evidence_span_ids": evidence_ids,
-                            "rationale": "导论和结论共同支持。",
-                        }
-                    },
-                    ensure_ascii=False,
-                )
-            }
-        }
-    )
-    worker = RemoteAIWorkerClient(
-        _config(
-            capabilities=("llm_large",),
-            task_kinds=("library_synthesis",),
-        ),
-        server_client=server,
-        model_client=model,
-        sleep=lambda _seconds: None,
-    )
-
-    assert worker.run_once() == "completed"
-    heartbeat = next(payload for url, payload in server.calls if url.endswith("heartbeat/"))
-    assert heartbeat["capabilities"] == ["llm_large"]
-    assert heartbeat["metadata"]["task_kinds"] == ["library_synthesis"]
-    assert heartbeat["metadata"]["task_profiles"] == {
-        "library_synthesis": ["library_synthesis"]
-    }
-    completed = next(payload for url, payload in server.calls if url.endswith("complete/"))
-    assert completed["result"]["candidate"]["evidence_span_ids"] == evidence_ids
-    assert completed["result"]["provider"] == "ollama"
-    model_prompt = model.calls[0][1]["json"]["messages"][1]["content"]
-    assert claimed["job"]["input"]["evidence_pack_id"] in model_prompt
-    assert all(evidence_id in model_prompt for evidence_id in evidence_ids)
+def test_remote_worker_rejects_legacy_producers_without_any_model_call():
+    for claimed in (_claim_payload(),_library_synthesis_payload()):
+        server=_ServerClient(claimed);model=_ModelClient({})
+        worker=RemoteAIWorkerClient(_config(),server_client=server,model_client=model,sleep=lambda seconds:None)
+        with pytest.raises(RemoteWorkerClientError) as raised: worker.run_once()
+        assert raised.value.code=="knowledge_producer_retired" and not raised.value.retryable
+        assert not model.calls
+        release=next(payload for url,payload in server.calls if url.endswith("release/"))
+        assert release["retry"] is False
+        assert not any(url.endswith("complete/") for url,_ in server.calls)
 
 
 def test_remote_worker_offline_poll_is_idle_and_does_not_call_model():
@@ -307,38 +245,31 @@ def test_remote_worker_wan_failure_is_bounded_and_run_forever_keeps_polling():
         worker.run_forever()
 
 
-def test_remote_worker_releases_retryable_model_schema_failure():
-    server = _ServerClient(_claim_payload())
-    model = _ModelClient({"message": {"content": "not json"}})
-    worker = RemoteAIWorkerClient(
-        _config(),
-        server_client=server,
-        model_client=model,
-        sleep=lambda _seconds: None,
-    )
-
-    with pytest.raises(RemoteWorkerClientError) as raised:
-        worker.run_once()
-
-    assert raised.value.code == "model_invalid_json"
-    release = next(payload for url, payload in server.calls if url.endswith("release/"))
-    assert release["retry"] is True
-    assert release["error_code"] == "model_invalid_json"
+def test_remote_worker_preserves_transient_transport_failure_retry(monkeypatch):
+    server=_ServerClient(_curation_payload())
+    worker=RemoteAIWorkerClient(_config(),server_client=server,model_client=_ModelClient({}),sleep=lambda seconds:None)
+    def unavailable(*args,**kwargs):
+        raise RemoteWorkerClientError("server_unavailable","fixture transport failure",retryable=True)
+    monkeypatch.setattr("common.docetl_map.run_map",unavailable)
+    with pytest.raises(RemoteWorkerClientError) as raised: worker.run_once()
+    assert raised.value.code=="server_unavailable"
+    release=next(payload for url,payload in server.calls if url.endswith("release/"))
+    assert release["retry"] is True and release["error_code"]=="server_unavailable"
+    assert not any(url.endswith("complete/") for url,_ in server.calls)
 
 
-def test_remote_worker_keeps_heartbeat_and_lease_alive_during_inference():
-    server = _ServerClient(_claim_payload())
-    model = _SlowModelClient({"message": {"content": '{"claims": []}'}})
-    worker = RemoteAIWorkerClient(
-        _config(keepalive_seconds=1),
-        server_client=server,
-        model_client=model,
-        sleep=lambda _seconds: None,
-    )
-
-    assert worker.run_once() == "completed"
-    assert sum(url.endswith("heartbeat/") for url, _payload in server.calls) >= 2
-    assert sum(url.endswith("renew/") for url, _payload in server.calls) >= 2
+def test_remote_worker_keeps_heartbeat_and_lease_alive_during_managed_stage(monkeypatch):
+    server=_ServerClient(_curation_payload())
+    model=_ModelClient({})
+    worker=RemoteAIWorkerClient(_config(keepalive_seconds=1),server_client=server,model_client=model,sleep=lambda seconds:None)
+    def delayed(*args):
+        time.sleep(1.1)
+        return _map_fixture(*args)
+    monkeypatch.setattr("common.docetl_map.run_map",delayed)
+    assert worker.run_once()=="completed"
+    assert sum(url.endswith("heartbeat/") for url,_ in server.calls)>=2
+    assert sum(url.endswith("renew/") for url,_ in server.calls)>=2
+    assert model.calls==[]
 
 
 def test_remote_worker_completion_id_is_stable_for_lease_replay():
@@ -362,3 +293,15 @@ def test_remote_worker_completion_id_is_stable_for_lease_replay():
     ]
     assert len(completion_ids) == 2
     assert completion_ids[0] == completion_ids[1]
+
+
+def _curation_payload():
+    value=_claim_payload()
+    value["job"]={"task_kind":"curation_stage","transport":"stl-managed","artifact_id":"fixture-artifact",
+        "runtime":{"provider":"openai_compatible","model":"fixture","model_revision":"fixture-v1"},
+        "prompt":"按原文范围分析","input":"隔离测试原文","output_schema":{"type":"object","properties":{"summary":{"type":"string"}}}}
+    return value
+
+def _map_fixture(model,prompt,text,schema,invoke):
+    assert model=="fixture" and schema["type"]=="object"
+    return invoke(prompt+"\n<source_data>"+text+"</source_data>")

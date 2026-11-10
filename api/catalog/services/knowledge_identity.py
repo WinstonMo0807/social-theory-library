@@ -60,6 +60,22 @@ def pending_identity_edits(entities):
         or scope["ChangeItem"].filter(decision__in=["pending", "deferred", "accepted"], application={}).exists())
 
 
+def historical_scope_versions(scope):
+    """Only schema-added empty values may match a pre-upgrade merge receipt.
+
+    Populated identities and knowledge can never disappear from the guard.
+    The caller still hashes every original field and associated record.
+    """
+    yield scope
+    profile_fields = {"organization_id", "timeline_event_id", "research_object_id"}
+    entities = scope.get("Entity", [])
+    if entities and all(all(row.get(key) is None for key in profile_fields) for row in entities):
+        yield {**scope, "Entity": [{key: value for key, value in row.items() if key not in profile_fields}
+                                   for row in entities]}
+    if not any(scope.values()):
+        yield {}
+
+
 @transaction.atomic
 def merge_identity(source, target):
     """Called only inside existing permissioned, previewed merge transactions."""

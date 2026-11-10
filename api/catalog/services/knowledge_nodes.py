@@ -29,7 +29,7 @@ from catalog.models import (
     WorkNodeRelation,
 )
 from catalog.services.canonical_mutations import record_admin_canonical_change
-from catalog.services.knowledge_merge_guard import merge_scope_fingerprint
+from catalog.services.knowledge_merge_guard import merge_scope_fingerprint, merge_scope_fingerprints
 
 
 def _user_id(user):
@@ -479,7 +479,7 @@ def rollback_merge(record_id, *, actor) -> KnowledgeNodeMergeRecord:
     if not expected:
         raise ValueError("这是缺少原关系版本核对记录的历史合并，不能直接自动回滚。请先核对原备份与后续修改；当前数据未改变。")
     from django.utils.crypto import constant_time_compare
-    if not constant_time_compare(expected, merge_scope_fingerprint(source.pk, target.pk)):
+    if not any(constant_time_compare(expected, current) for current in merge_scope_fingerprints(source.pk, target.pk)):
         raise ValueError("合并后的节点、关系、出处、路径或编辑版本已经变化，不能回滚覆盖后续工作。请先核对原记录与当前修改。")
     from catalog.services.knowledge_identity import restore_identity
     restore_identity(payload.get("identity_before"))

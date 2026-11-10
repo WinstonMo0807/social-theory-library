@@ -29,7 +29,7 @@ def merge_scope_queries(source_id, target_id):
     return rows
 
 
-def merge_scope_fingerprint(source_id, target_id, *, lock=True):
+def merge_scope_fingerprints(source_id, target_id, *, lock=True):
     # ponytail: bounded original graph snapshot, no second history store. Large
     # merges need an explicit staged recovery workflow instead of an unsafe truncation.
     snapshots = {}
@@ -39,5 +39,14 @@ def merge_scope_fingerprint(source_id, target_id, *, lock=True):
         values = list(rows.order_by("pk").values()[:5001])
         if len(values) > 5000:
             raise ValueError("相关记录超过单次安全回退范围，请先缩小合并范围；本次没有改写数据。")
-        snapshots[name] = [digest(row) for row in values]
-    return digest(snapshots)
+        snapshots[name] = values
+    from catalog.services.knowledge_identity import identity_scope, historical_scope_versions
+    knowledge_names = identity_scope(models.Entity.objects.none()).keys()
+    knowledge = {key: snapshots[key] for key in knowledge_names}
+    original = {key: rows for key, rows in snapshots.items() if key not in knowledge_names}
+    return tuple(digest({key: [digest(row) for row in rows] for key, rows in {**original, **version}.items()})
+                 for version in historical_scope_versions(knowledge))
+
+
+def merge_scope_fingerprint(source_id, target_id, *, lock=True):
+    return merge_scope_fingerprints(source_id, target_id, lock=lock)[0]

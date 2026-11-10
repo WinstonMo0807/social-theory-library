@@ -339,7 +339,15 @@ def _rollback_digest(record, state):
             for key in old_fields:
                 if key in row and row[key] == defaults[key]:
                     row.pop(key)
-    return _digest(state)
+    from catalog.services.knowledge_identity import historical_scope_versions
+    current = _digest(state)
+    for scope in historical_scope_versions(state.get("knowledge", {})):
+        candidate = {**state, "knowledge": scope}
+        if not scope:
+            candidate.pop("knowledge", None)
+        if _digest(candidate) == record.rollback_fingerprint:
+            return record.rollback_fingerprint
+    return current
 
 
 def rollback_preview(record):
