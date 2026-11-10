@@ -9,6 +9,14 @@
 - 隔离预览Web127.0.0.1:18110/API18111使用临时SQLite与合成对象、禁止后端出站；公网、原工作区、其他Demo的服务和端口未动。当前分支codex/stl-public-visual-20261110，提交状态见下方交付检查点；早期预览兼容改动已从产品3文件撤回，统一到scripts/start_center_layout_preview.mjs；最终重建退出0。无推送或部署。
 - 已有PV-FILTER-01、PV-PREVIEW-01、PV-PREVIEW-02、PV-NOTE-CITE-01只记录，本轮排版范围排除。学者编辑PV072横向溢出与原版相同；不得把它写成新增回归或假称已修复。生产切换仍须用户最终授权。
 
+
+### 本轮交付检查点
+
+- 实现提交：06219592（codex/stl-public-visual-20261110）。相对还原公网基线7b8963fe，产品前端38文件、API无差异；未推送或部署。
+- 最终构建build-public-scope.log退出0，范围/TypeScript/diff检查通过；200份运行截图摘要逐项重算一致。独立Edge已登录合成账号打开管理台和读者中心。
+- 当前交付与剩余限制见docs/stl4/public-visual-20261110/DELIVERY.md；不把已复现的既有功能错误写成通过。
+
+
 ## 2026-11-07 字体续查接续点（r9已构建，浏览器安全停止，未发布）
 
 - 检查点474345af后独立Edge窗口读回r8账户表、390/320任务详情、存储图例、素材标题、读者标签。证据已更新WORKSPACE_TYPE_REVIEW/COVERAGE_20261107。
