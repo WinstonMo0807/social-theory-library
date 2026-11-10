@@ -1,0 +1,46 @@
+{
+  "version": "2026-11-10-user-fixed",
+  "authority": "用户本轮截图与明确指令，覆盖所有生成设计图中不同品牌和左栏分类；不为此重新生成图片",
+  "reference": "output/public-visual-20261110/reference/admin-sidebar-user-20261110.png",
+  "brand": {
+    "component": "web/components/brand-image.tsx",
+    "asset": "web/public/brand/stl-symbol-20261027.svg#mark",
+    "adminLayout": "原精确图形在上，Social Theory Library在中，社会理论书库在下；使用现有Wordmark/BrandImage，不使用生成器图形或STL缩写"
+  },
+  "navigation": {
+    "component": "web/components/admin-shell.tsx",
+    "groups": [
+      {
+        "label": "工作",
+        "entries": [
+          "今日工作",
+          "收件与编目",
+          "馆藏目录",
+          "文件与处理"
+        ]
+      },
+      {
+        "label": "内容",
+        "entries": [
+          "特别策划",
+          "页面编排",
+          "学者与知识",
+          "发布台"
+        ]
+      },
+      {
+        "label": "系统",
+        "entries": [
+          "账户与权限",
+          "运行维护"
+        ]
+      }
+    ],
+    "preserve": "顺序、既有子菜单、URL、最具体路径高亮、权限过滤和窄屏展开能力全部保留"
+  },
+  "appliesTo": "所有已有与后续管理台设计、窄屏方案、代码与截图验收",
+  "imageOverrides": [
+    "生成图的品牌只作区域占位，精确品牌由现有资源决定",
+    "生成图侧栏的馆藏/处理任务/知识内容/策划与发布/系统设置等简化分类全部作废，以本文件固定分类为准"
+  ]
+}

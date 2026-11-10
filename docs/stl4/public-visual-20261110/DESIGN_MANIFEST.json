@@ -837,8 +837,10 @@
       1024
     ],
     "brief": "来源分页列表，无全局筛选；未读/变化/撤回/不可用，历史抽屉单独分页；订阅取消、已读、删除分开。暂停保存更新是偏好状态，非逐条暂停按钮。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R22-v3.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
   },
   {
     "id": "R23",
@@ -889,7 +891,9 @@
     ],
     "brief": "左固定工作导航，顶部今日工作/后台检索。紧凑category/kind/state/owner/ordering搜索栏，主表任务/最近编辑/问题/发布，右选中任务详情及继续工作入口；计数只对应真实响应，没有四张统计卡。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A01-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
   },
   {
     "id": "A02",
@@ -904,7 +908,9 @@
     ],
     "brief": "搜索、作品类型/发布状态/版本/分页，表格作品/版本/文件/处理/公开状态；右当前作品详情与编辑/文件/目录/OCR入口，选中保持return_to。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A02-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
   },
   {
     "id": "A03",
@@ -919,8 +925,10 @@
       1024
     ],
     "brief": "文件选择/拖放区域、上传队列逐文件状态与错误、重复文件处理和新建编目；开始/取消/重试按既有能力，保持文件身份，无伪进度。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A03-v2.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
   },
   {
     "id": "A04",
@@ -953,8 +961,10 @@
       1024
     ],
     "brief": "候选列表按来源/类型/状态，选中候选字段值、现有值、证据原文并列；采用/匹配现有/确认新建/拒绝依descriptor，冲突/回执未知独立；不展示自动人工确认。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A05-v3.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A06",
@@ -968,8 +978,10 @@
       1024
     ],
     "brief": "文件摘要与PDF预览相邻；匹配作品和版本、q/page/scope筛选、确认输入；未知结果查原请求，文件来源与版本校验，不替换原件。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A06-v3.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A07",
@@ -983,8 +995,10 @@
       1024
     ],
     "brief": "版本列表和versions/files/impact/rights/publication tabs；文件表包含种类/状态/摘要/大小，当前采用状态，上传新版本/采用/生成阅读副本/下载；影响预览和权利表单在抽屉。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A07-v2.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
   },
   {
     "id": "A08",
@@ -999,7 +1013,9 @@
     ],
     "brief": "左8页缩略图与问题筛选，中页图，右可编辑识别文本；问题/全文对比/设置/修改影响tabs，人工核验与重做OCR不同；保存候选、准备影响、采用分开，页码/未保存提示。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A08-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
   },
   {
     "id": "A09",
@@ -1031,7 +1047,9 @@
     ],
     "brief": "PDF页图与8行页码表相邻；物理页、标签、页型、确认，分段/搜索/未确认/重号筛选；批量编辑、缺页说明、撤销、历史恢复、准备影响和发布导出分开。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A10-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
   },
   {
     "id": "A11",
@@ -1046,7 +1064,9 @@
     ],
     "brief": "紧凑搜索类型状态日期条件；文件分组/任务历史列表，选中详情progress/file/results/issues/logs/settings tabs；pause/resume/retry/cancel/recover按真实actions，失败页选择/后续处理/节点转移抽屉。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A11-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
   },
   {
     "id": "A12",
@@ -1061,8 +1081,10 @@
       1024
     ],
     "brief": "分组问题/知识健康列表，严重度、最近检查、结果来源、未配置/过期/失败；选中问题详情说明与真实检查操作，不能固定绿灯；候选入口保持。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A12-v2.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
   },
   {
     "id": "A13",
@@ -1076,8 +1098,10 @@
       1024
     ],
     "brief": "作品/版本索引目录、状态/搜索/分页，选中索引详情与任务/错误，索引操作和取消重试权限可见；真实等待、失败、未配置，无新模型聊天。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A13-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A14",
@@ -1090,16 +1114,17 @@
       1536,
       1024
     ],
-    "brief": "搜索/来源/状态筛选表，词项/同义/重写候选及目标，侧边编辑字段和验证，采用或拒绝保留版本/回执，不改知识对象结构。",
-    "version": "v1",
-    "status": "pending"
+    "brief": "自动来源生成的只读词典：搜索、词条/实体/语言/信任/可见性/来源、预演与正式同步，不直接编辑候选。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A14-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A15",
     "title": "服务与模型配置",
     "coverage": [
-      "PV078",
-      "PV060"
+      "PV078"
     ],
     "domain": "配置工作区",
     "viewport": [
@@ -1107,8 +1132,10 @@
       1024
     ],
     "brief": "服务总览/模型服务/检查日志/配置管理。表格capability/provider/model/enabled/检查状态，右选定profile参数temperature/tokens/timeout/retrieval/fallback；凭据只显示已配置/未配置，馆长HTTPS条件，保存配置与检查不同。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A15-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A16",
@@ -1122,8 +1149,10 @@
       1024
     ],
     "brief": "OCR/AI/检索/提示词/读者投稿邮箱分类，内容区字段约束、作用范围、版本状态，保存和检查不同；禁用/未配置明确，不造读者预览。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A16-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A17",
@@ -1138,8 +1167,10 @@
       1024
     ],
     "brief": "存储位置及实际文件用量表，backups/verifications/rehearsals/failed分页；备份任务列表与归档校验、恢复计划、保留策略，清理扫描/排队/取消分开；恢复计划不是执行恢复。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A17-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A18",
@@ -1153,8 +1184,10 @@
       1024
     ],
     "brief": "S3 provider列表，endpoint/bucket/region/public_base_url/credential_reference表单，启用/默认，预算阈值通知邮箱；用量手工录入period/egress/cost明确来源，不伪造实时账单。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A18-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A19",
@@ -1168,8 +1201,10 @@
       1024
     ],
     "brief": "搜索role/state/page_size表，选中账户基本信息、roles/history；新建/修改/密码/邀请分开。权限变更前展示保留/新增/失去能力和会话撤销确认；不能授予馆长，不能停用自己。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A19-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A20",
@@ -1183,8 +1218,10 @@
       1024
     ],
     "brief": "类别/状态/搜索筛选与反馈列表，右正文和status/note/follow_up处理字段；待回复不代表发送邮件，未保存与请求未知保留。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A20-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A21",
@@ -1198,8 +1235,10 @@
       1024
     ],
     "brief": "左右原文与提交对齐/术语说明，提交者同意的公开范围，当前修订，审核/发布/拒绝动作；来源失效不可发布，私人笔记不公开。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A21-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   },
   {
     "id": "A22",
@@ -1212,9 +1251,11 @@
       1536,
       1024
     ],
-    "brief": "仅既有30天usage-analytics：阅读/搜索/下载聚合趋势及热门文献/检索词表；用示例数据标注，不加评分增长KPI或虚假实时在线人数。日期和空态清楚。",
+    "brief": "最近30天既有匿名聚合、热门馆藏与热门查询表，无时间序列趋势接口，不造图表。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A22-v1.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
   },
   {
     "id": "A23",
@@ -2165,5 +2206,39 @@
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R25-v2.png",
     "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+  },
+  {
+    "id": "A42",
+    "title": "运行维护状态",
+    "coverage": [
+      "PV060"
+    ],
+    "domain": "管理运行维护",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "独立只读服务状态中心，配置、观察时间与可用性分开。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A42-v1.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
+  },
+  {
+    "id": "A43",
+    "title": "兼容语义索引评估工作区",
+    "coverage": [
+      "PV058"
+    ],
+    "domain": "管理运行维护",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "legacy=1已有测试查询、标注、评估集与索引版本操作；独立设计，非新模块。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A43-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
   }
 ]

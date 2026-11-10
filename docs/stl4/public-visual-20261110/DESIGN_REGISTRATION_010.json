@@ -1,0 +1,90 @@
+[
+  {
+    "id": "R22",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-518be001-3d28-47c7-856b-8fd1fb377a13.png",
+    "version": "v3",
+    "status": "generated_inspected",
+    "notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_009.json"
+  },
+  {
+    "id": "A01",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b2c1ec2f-2b44-4173-8d3e-0a297481b142.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A02",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-dfe7acc6-f000-43c2-9339-53341ee21105.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A03",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-08cf9b02-13b0-4719-bd2f-beba0cbdbb0f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已查看，存在生成器新增控件或矛盾状态，按纠偏文件重新生成后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-511baa48-bb35-41d3-8e20-9f146cb10c45.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已查看，存在生成器新增控件或矛盾状态，按纠偏文件重新生成后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A06",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-12a434e6-9080-4f40-8825-4737f5c7848b.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已查看，存在生成器新增控件或矛盾状态，按纠偏文件重新生成后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A07",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4b560bca-2833-4602-acc7-a0f39c188faa.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已查看，存在生成器新增控件或矛盾状态，按纠偏文件重新生成后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A08",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-f8b18a9e-64e2-475a-be84-3cde7aebf0f6.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-f35627a2-2671-40cb-8b28-0624ef201786.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A11",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b4052e2b-7875-461b-a045-150c4cac76cb.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  },
+  {
+    "id": "A12",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-5be0a0f8-dab4-4130-b90f-d89f2dd282bc.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已查看，存在生成器新增控件或矛盾状态，按纠偏文件重新生成后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_009.json"
+  }
+]

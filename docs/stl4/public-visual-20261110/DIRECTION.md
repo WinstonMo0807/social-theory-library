@@ -18,6 +18,8 @@ FINISH：unreviewed and undocumented is unfinished; this build ends with the fin
 
 ## 范围与门槛
 
-DESIGN_MANIFEST.json当前120张计划：91张业务主布局、15张窄屏/平板、14张关键交互状态。130个有效业务消费者均有至少一项计划映射；这只是计划，不是生成覆盖。兼容跳转沿目标页，排除项保留原路由。COVERAGE.csv仍是唯一页面覆盖清单，设计图注册表从属，不另设另一套业务范围。
+设计数量和已检查数量以DESIGN_GATE.json为准；新增独立类型只来自当前源码中有实质差异的工作区。COVERAGE.csv仍是唯一页面覆盖清单。设计覆盖门槛仍待全部图片与映射核对，运行验证逐消费者记录。
 
-业务盘点门槛BUSINESS_GATE.json已通过“可设计”阶段。正式设计覆盖门槛尚未通过，15张业务图已生成并检查；其余须真实生成并检查后才允许大规模UI修改。运行验证仍按每个消费者分别记录。
+## 用户最新品牌与管理导航约束（2026-11-10）
+
+SHELL_CONSTRAINTS.json固定已有精确品牌及截图中的三组十项导航，覆盖任何生成图的不同画法。不为品牌和侧栏重新出图。现有admin-shell.tsx:19起的navigationGroups与截图完全一致，原样复用分类、顺序、子菜单、权限和URL。现有BrandImage使用stl-symbol-20261027.svg#mark，后台按图形、英文、中文竖排。截图副本与SHA记录留在本任务输出，原文件保留。

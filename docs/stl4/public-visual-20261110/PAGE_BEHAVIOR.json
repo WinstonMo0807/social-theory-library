@@ -5096,7 +5096,7 @@
         "api/distribution/storage_workspace.py:135",
         "api/distribution/storage_workspace.py:193"
       ],
-      "behavior_notes": "SettingsAdmin scope=backups；目的路径/include_originals、真实排队/失败/归档校验值。",
+      "behavior_notes": "StorageWorkspace，和/admin/storage共用完整工作区；备份、归档校验、隔离恢复准备与计划/保留规则，非旧SettingsAdmin。",
       "evidence_scope": "Per-route source closure. Shared consumers individually mapped, not individually runtime-tested. Runtime evidence remains VERIFICATION.md/FIXTURE_ROLE_HTTP.json."
     },
     {
