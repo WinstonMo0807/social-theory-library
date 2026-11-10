@@ -152,7 +152,7 @@ def create_assertion(payload, revision, actor, *, allow_citation=False, subject_
     conditions=payload.get("conditions",{})
     if not isinstance(conditions,dict) or any(not isinstance(v,str) or len(v)>4000 for v in conditions.values()):
         raise ValidationError("适用条件须按时间、地区、人群或概念用法填写文字。")
-    if payload.get("direction","directed") not in {"directed","undirected"}:
+    if payload.get("direction","directed") not in {"directed","bidirectional","undirected"}:
         raise ValidationError("陈述方向无效。")
     statement = m.Assertion.objects.create(text=text, predicate=payload.get("predicate", ""),
         category=payload.get("category", "proposition"), direction=payload.get("direction", "directed"),

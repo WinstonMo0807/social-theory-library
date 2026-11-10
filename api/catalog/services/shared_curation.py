@@ -205,74 +205,17 @@ def relation_payload(row, *, public=False, include_source=True):
     return data
 
 
-@transaction.atomic
 def save_relation(key, data, actor):
-    row = get_object_or_404(ScholarRelation.objects.select_for_update(), pk=key) if key else None
-    if row:
-        revisions._check_version("scholar_relation", row.pk, data.get("edit_version"))
-    source = get_object_or_404(ScholarProfile, pk=identifier(data.get("source_scholar")))
-    target_row = get_object_or_404(ScholarProfile, pk=identifier(data.get("target_scholar")))
-    if source.pk == target_row.pk:
-        raise ValidationError("关系两端须为不同学者。")
-    kind, direction = data.get("relation_type"), data.get("direction", "directed")
-    if kind not in RELATION_TYPES or direction not in DIRECTIONS:
-        raise ValidationError("关系类型或方向无效。")
-    payload = {"source_scholar": str(source.pk), "target_scholar": str(target_row.pk), "relation_type": kind, "direction": direction,
-               "summary": revisions._text(data.get("summary", ""), 6000), "source": revisions._text(data.get("source", ""), 6000)}
-    from catalog.relation_source_anchor import RelationAnchorInput, choose_anchor
-    latest = revisions._latest("scholar_relation", row.pk) if row else None
-    previous = (latest.materialized_preview or {}).get("source_anchor") if latest else None
-    selected = RelationAnchorInput(allow_null=True).run_validation(data.get("source_anchor", previous))
-    reference = {key: str(value) for key, value in selected.items()} if selected else None
-    if reference != previous:
-        choose_anchor(selected)
-    payload["source_anchor"] = reference
-    if row is None:
-        row = ScholarRelation.objects.create(source_scholar=source, target_scholar=target_row, relation_type=kind, direction=direction)
-    revisions._save_revision("scholar_relation", row.pk, payload, actor)
-    return relation_payload(row)
+    from catalog.services.academic_relations import legacy_relation_draft
+    if key:
+        row = get_object_or_404(ScholarRelation, pk=key)
+        data = {**relation_payload(row), **data}
+    return legacy_relation_draft("scholar", data, actor, request_id=data.get("request_id"), legacy_id=key)
 
 
-@transaction.atomic
 def publish_relation(key, expected, actor):
-    row = get_object_or_404(ScholarRelation.objects.select_for_update(), pk=key)
-    revisions._check_version("scholar_relation", row.pk, expected)
-    revision = revisions._latest("scholar_relation", row.pk)
-    if not revision or revision.status != "draft":
-        raise ValidationError("没有待发布的学者关系草稿。")
-    payload = revision.materialized_preview
-    if not payload["summary"] or not (payload["source"] or payload.get("source_anchor")):
-        raise ValidationError("发布关系前须填写关系说明与来源。")
-    if public_scholar_queryset().filter(pk__in=[payload["source_scholar"], payload["target_scholar"]]).count() != 2:
-        raise ValidationError("关系两端的学者档案须先公开。")
-    from catalog.relation_source_anchor import RelationAnchorInput, choose_anchor, ensure_relation_anchor_publication
-    selected = RelationAnchorInput(allow_null=True).run_validation(payload.get("source_anchor"))
-    row.evidence_span, row.source_document_revision = choose_anchor(selected)
-    ensure_relation_anchor_publication(row)
-    row.source_scholar_id, row.target_scholar_id = payload["source_scholar"], payload["target_scholar"]
-    for key in ("relation_type", "direction", "summary", "source"):
-        setattr(row, key, payload[key])
-    row.status, row.active_revision = "published", revision
-    row.save()
-    revisions._publish_revision(revision, actor)
-    return relation_payload(row)
+    raise ValidationError("学者关系统一从知识编纂审核发布；旧记录与修订保持只读。")
 
 
-@transaction.atomic
 def archive_relation(key, expected, actor):
-    from ingestion.models import AuditEvent
-    row = get_object_or_404(ScholarRelation.objects.select_for_update(), pk=key)
-    revisions._check_version("scholar_relation", row.pk, expected)
-    if row.status == "archived":
-        return relation_payload(row)
-    latest = revisions._latest("scholar_relation", row.pk)
-    if latest is None:
-        raise ValidationError("关系尚无可保留的编辑版本。")
-    # Preserve the current wording as a new editable revision. The former
-    # published revision remains intact, and an explicit publish can restore it.
-    revision = revisions._save_revision("scholar_relation", row.pk, deepcopy(latest.materialized_preview), actor)
-    row.status = "archived"
-    row.save(update_fields=["status", "updated_at"])
-    AuditEvent.objects.create(actor=actor, action="scholar_relation.archive", object_type="scholar_relation",
-                              object_id=str(row.pk), after={"revision": revision.revision, "status": "archived"})
-    return relation_payload(row)
+    raise ValidationError("请从知识编纂提出撤回审核；旧记录与历史证据保留。")

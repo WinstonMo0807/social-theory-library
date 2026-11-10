@@ -247,6 +247,11 @@ class AdminEntityLifecycleView(AdminPrivateResponseMixin, APIView):
         if not actor or actor.token_version != request.user.token_version:
             raise PermissionDenied("账户会话已经变化，请重新登录后操作。")
         request.user = actor
+        if kind == "scholar-relation":
+            if request.data.get("action") not in {"archive", "delete"}:
+                return Response({"detail": "历史关系通过知识编纂修订，不直接恢复旧正式行。", "workspace_url": "/admin/knowledge?relations=1"}, status=409)
+            from catalog.shared_curation_views import scholar_changeset_response
+            return scholar_changeset_response(request, pk, withdraw=True)
         if kind == "knowledge-relation":
             from catalog.academic_relation_views import relation_response
             if request.data.get("action") not in {"archive", "delete"}:

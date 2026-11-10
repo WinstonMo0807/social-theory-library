@@ -137,37 +137,48 @@ def test_public_curation_does_not_fill_missing_snapshot_label_from_live_draft(ad
 
 
 def test_scholar_relation_shared_identity_keeps_public_draft_isolation(api_client, admin_user):
+    from catalog import models as m
+    from catalog.services.knowledge_workspace import submit_page_assertion, source_hash
+    from catalog.services.knowledge_core import entity_for_legacy
+    from .test_stl4_scholar_relation_commands_20261024 import publish
+    from .test_manual_knowledge_sources import apply_all
     first, second, third = scholar("一"), scholar("二"), scholar("三")
     data = {"source_scholar": str(first.pk), "target_scholar": str(second.pk), "relation_type": "influence", "direction": "directed", "summary": "有出处的影响", "source": "馆藏第3页"}
     api_client.force_authenticate(admin_user)
     created = api_client.post("/api/catalog/admin/scholar-relations/", data, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
-    assert created.status_code == 201
-    key = created.data["id"]
-    publish_url = f"/api/catalog/admin/scholar-relations/{key}/publish/"
-    assert api_client.post(publish_url, {"edit_version": created.data["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 200
+    assert created.status_code == 202
+    page = publish(m.ChangeSet.objects.get(pk=created.data["id"]), admin_user)
+    statement = m.Assertion.objects.get()
     left = api_client.get(f"/api/catalog/scholar-relations/?scholar={first.pk}").data["results"][0]
     right = api_client.get(f"/api/catalog/scholar-relations/?scholar={second.pk}").data["results"][0]
-    assert left["id"] == right["id"] == key
+    assert left["id"] == right["id"] == str(statement.pk)
     assert left["source_slug"] == first.slug and right["target_slug"] == second.slug
-    changed = api_client.put(f"/api/catalog/admin/scholar-relations/{key}/", {**data, "target_scholar": str(third.pk), "edit_version": created.data["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
-    assert changed.status_code == 200
+    revised = {"text": "草稿改变对象", "predicate": "influence", "expression": "editorial_judgment", "source_citation": "人工出处", "evidence": [],
+        "supersedes_id": str(statement.pk), "base_hash": source_hash("assertion", statement.pk),
+        "participants": [{"role": "subject", "entity_id": str(entity_for_legacy(first.person).pk)}, {"role": "object", "entity_id": str(entity_for_legacy(third.person).pk)}]}
+    pending = submit_page_assertion(page, revised, admin_user, request_id=uuid4())
+    assert not apply_all(pending, admin_user)["blocked"]
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={second.pk}").data["count"] == 1
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={third.pk}").data["count"] == 0
-    assert api_client.get(f"/api/catalog/admin/scholar-relations/?scholar={third.pk}").data["count"] == 1
-    assert api_client.put(f"/api/catalog/admin/scholar-relations/{key}/", {**data, "edit_version": created.data["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 409
+    statement.text = "同时修改"
+    statement.save(update_fields=["text"])
+    with pytest.raises(ValidationError):
+        submit_page_assertion(page, revised, admin_user, request_id=uuid4())
     second.editorial_status = "draft"
     second.save(update_fields=["editorial_status"])
     assert api_client.get(f"/api/catalog/scholar-relations/?scholar={first.pk}").data["count"] == 0
 
 
 def test_scholar_relation_requires_source_and_public_endpoints(admin_user, api_client, reader_user):
+    from django.http import Http404
+    from .test_stl4_scholar_relation_commands_20261024 import publish
     first, second = scholar("公开"), scholar("未公开", "draft")
-    row = service.save_relation(None, {"source_scholar": str(first.pk), "target_scholar": str(second.pk), "relation_type": "comparative_reading", "direction": "undirected", "summary": "共同阅读", "source": ""}, admin_user)
-    with pytest.raises(ValidationError, match="说明与来源"):
-        service.publish_relation(row["id"], row["edit_version"], admin_user)
-    row = service.save_relation(row["id"], {**row, "source": "编辑阅读说明"}, admin_user)
-    with pytest.raises(ValidationError, match="须先公开"):
-        service.publish_relation(row["id"], row["edit_version"], admin_user)
+    data = {"request_id": str(uuid4()), "source_scholar": str(first.pk), "target_scholar": str(second.pk), "relation_type": "comparative_reading", "direction": "undirected", "summary": "共同阅读", "source": ""}
+    with pytest.raises(ValidationError):
+        service.save_relation(None, data, admin_user)
+    pending = service.save_relation(None, {**data, "source": "编辑阅读说明"}, admin_user)
+    with pytest.raises((ValidationError, Http404)):
+        publish(pending, admin_user)
     api_client.force_authenticate(reader_user)
     assert api_client.get("/api/catalog/admin/scholar-relations/").status_code == 403
 
@@ -177,32 +188,40 @@ def test_shared_curation_drafts_appear_in_real_queue(api_client, admin_user):
     topic = Topic.objects.create(name="待核策展", slug="queue", editorial_status="published")
     curation = service.save_curation("topic", topic.pk, data_for(span), admin_user)
     first, second = scholar("甲"), scholar("乙")
-    relation = service.save_relation(None, {"source_scholar": str(first.pk), "target_scholar": str(second.pk), "relation_type": "cooperation", "direction": "bidirectional"}, admin_user)
+    relation = service.save_relation(None, {"request_id": str(uuid4()), "source_scholar": str(first.pk), "target_scholar": str(second.pk), "relation_type": "cooperation", "direction": "bidirectional", "summary": "待审关系", "source": "测试人工出处"}, admin_user)
     api_client.force_authenticate(admin_user)
     rows = api_client.get("/api/catalog/admin/curation-drafts/").data["results"]
     assert any(row["object_id"] == curation["id"] and row["edit_url"] == f"/admin/topics/{topic.pk}?section=passages" for row in rows)
-    assert any(row["object_id"] == relation["id"] and row["edit_url"] == f"/admin/scholars/{first.pk}/relations?relation={relation['id']}" for row in rows)
+    from catalog.services.academic_relations import relation_directory
+    queue = relation_directory(admin_user, entity_id=relation.subject_entity_id)
+    assert any(row["id"] == str(relation.pk) for row in queue["pending_changesets"])
 
 
 def test_scholar_relation_archive_hides_both_ends_preserves_history_and_conflicts(api_client, admin_user, reader_user):
-    from catalog.models import ScholarRelation
-    from ingestion.models import AuditEvent
+    from catalog import models as m
+    from catalog.services.knowledge_migration import migrate_relation, migrate_assertion_page
+    from catalog.services.knowledge_workspace import source_hash
+    from .test_stl4_scholar_relation_sources_20261024 import historical, material
+    from .test_stl4_scholar_relation_commands_20261024 import publish
     first, second = scholar("归档甲"), scholar("归档乙")
-    row = service.save_relation(None, {"source_scholar": str(first.pk), "target_scholar": str(second.pk), "relation_type": "influence", "direction": "directed", "summary": "可复核关系", "source": "馆藏证据"}, admin_user)
-    row = service.publish_relation(row["id"], row["edit_version"], admin_user)
-    public_revision = ScholarRelation.objects.get(pk=row["id"]).active_revision_id
-    url = f"/api/catalog/admin/scholar-relations/{row['id']}/archive/"
+    span, _, _ = material()
+    row = historical(first, second, span)
+    statement = m.Assertion.objects.get(pk=migrate_relation(row).target_id)
+    migrate_assertion_page(statement)
+    public_revision = row.active_revision_id
+    url = f"/api/catalog/admin/scholar-relations/{row.pk}/archive/"
+    body = {"base_hash": source_hash("assertion", statement.pk), "reason": "审核后撤回"}
     api_client.force_authenticate(reader_user)
-    assert api_client.post(url, {"edit_version": row["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 403
+    assert api_client.post(url, body, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 403
     api_client.force_authenticate(admin_user)
-    archived = api_client.post(url, {"edit_version": row["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
-    assert archived.status_code == 200
-    assert archived.data["status"] == "archived"
-    assert archived.data["edit_version"] != row["edit_version"]
+    archived = api_client.post(url, body, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
+    assert archived.status_code == 202, archived.data
+    assert api_client.get(f"/api/catalog/scholar-relations/?scholar={first.pk}").data["count"] == 1
+    publish(m.ChangeSet.objects.get(pk=archived.data["id"]), admin_user)
     for person in (first, second):
         assert api_client.get(f"/api/catalog/scholar-relations/?scholar={person.pk}").data["count"] == 0
-    assert EditorialRevision.objects.get(pk=public_revision).status == "published"
-    assert api_client.post(url, {"edit_version": row["edit_version"]}, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code == 409
-    assert AuditEvent.objects.filter(action="scholar_relation.archive", object_id=row["id"]).exists()
-    service.publish_relation(row["id"], archived.data["edit_version"], admin_user)
-    assert api_client.get(f"/api/catalog/scholar-relations/?scholar={second.pk}").data["count"] == 1
+    assert m.EditorialRevision.objects.get(pk=public_revision).status == "published"
+    assert m.ScholarRelation.objects.get(pk=row.pk).status == "published"
+    assert api_client.post(url, body, format="json", HTTP_X_EDITOR_OWNER=str(admin_user.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code in {400, 409}
+    from ingestion.models import AuditEvent
+    assert AuditEvent.objects.filter(action="knowledge.assertion_withdrawn", object_id=str(statement.pk)).exists()

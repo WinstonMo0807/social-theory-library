@@ -216,7 +216,7 @@ def edge_querysets(frontier, entities):
     ]
     for model, left_kind, left, right_kind, right, relation_type, status, allowed_left, allowed_right, near_left, near_right in specs:
         query = model.objects.filter(**status, **{f"{left}_id__in": allowed_left, f"{right}_id__in": allowed_right}).select_related(left, right)
-        if model in {KnowledgeRelation, PersonNodeRelation}:
+        if model in {KnowledgeRelation, PersonNodeRelation, ScholarRelation}:
             from catalog.models import KnowledgeLegacyMapping
             query = query.exclude(pk__in=KnowledgeLegacyMapping.objects.filter(
                 source_type=model._meta.label_lower, target_type="assertion", target_id__isnull=False).values("source_id"))

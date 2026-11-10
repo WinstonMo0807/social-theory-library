@@ -686,6 +686,19 @@ class ScholarProfileAdmin(admin.ModelAdmin):
     list_filter = ("editorial_status",)
 
 
+@admin.register(WorkKnowledgeRelation, PersonKnowledgeRelation)
+class HistoricalAcademicRelationAdmin(admin.ModelAdmin):
+    """Historical compatibility records; changes belong to Knowledge ChangeSet."""
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 for model in (
     Page,
     TextBlock,
@@ -694,8 +707,6 @@ for model in (
     TheorySchool,
     Topic,
     Concept,
-    WorkKnowledgeRelation,
-    PersonKnowledgeRelation,
     PublicationEvent,
     SiteSetting,
     FeaturedSlot,

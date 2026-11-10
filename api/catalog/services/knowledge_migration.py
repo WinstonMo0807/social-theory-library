@@ -105,6 +105,16 @@ def migrate_relation(row):
         node = entity_for_legacy(row.node)
         participants = [("subject", {"work": row.work}), ("object", {"entity": node})]
         text = text or f"{row.work.title} — {row.get_role_display()} — {node.label}"
+    elif isinstance(row, m.ScholarRelation):
+        source, target = entity_for_legacy(row.source_scholar.person), entity_for_legacy(row.target_scholar.person)
+        participants = [("subject", {"entity": source}), ("object", {"entity": target})]
+        text = row.summary or f"{source.label} — {predicate} — {target.label}"
+        # Published rows are materialized from this immutable revision. A newer
+        # unpublished revision remains a separate historical draft.
+        if (not row.active_revision_id or row.active_revision.status != "published"
+            or row.active_revision.target_type != "scholar_relation" or row.active_revision.target_id != row.pk
+            or any(str(row.active_revision.materialized_preview.get(f"{side}_scholar")) != str(getattr(row, f"{side}_scholar_id")) for side in ("source", "target"))):
+            raise ValueError("Scholar relation lacks a published source revision")
     else:
         source, target = entity_for_legacy(row.source_node), entity_for_legacy(row.target_node)
         participants = [("subject", {"entity": source}), ("object", {"entity": target})]
@@ -112,7 +122,8 @@ def migrate_relation(row):
     origin = {"legacy_type": label, "legacy_id": str(row.pk), "record": record_snapshot(row),
               "human_confirmation_preserved": True, "finer_semantics_not_reconstructed": True}
     origin["history"] = historical_revisions({"catalog.knowledgerelation":"knowledge_relation",
-        "catalog.personnoderelation":"person_node_relation", "catalog.worknoderelation":"work_node_relation"}[label],row.pk)
+        "catalog.personnoderelation":"person_node_relation", "catalog.worknoderelation":"work_node_relation",
+        "catalog.scholarrelation":"scholar_relation"}[label],row.pk)
     snippets = list(row.evidence.all()) if hasattr(row,"evidence") else []
     origin["legacy_evidence_snippets"] = [record_snapshot(v) for v in snippets]
     origin["snippet_revision_gap"] = bool(snippets)
@@ -140,6 +151,11 @@ def migrate_relation(row):
         m.KnowledgeLegacyMapping.objects.get_or_create(source_type="catalog.evidencesnippet",source_id=snippet.pk,target_type="anchor",
             defaults={"quality":"historical_revision_missing","provenance":{"record":record_snapshot(snippet),"historical_locator_preserved":True}})
     span = getattr(row, "evidence_span", None)
+    if isinstance(row, m.ScholarRelation) and span and (span.document_revision_id != row.source_document_revision_id
+        or row.active_revision.materialized_preview.get("source_anchor") != {"span_id": str(span.pk), "document_revision_id": str(span.document_revision_id)}):
+        statement.origin = {**statement.origin, "historical_anchor_mismatch": True}
+        statement.save(update_fields=["origin", "updated_at"])
+        span = None
     if span:
         evidence = migrate_span(span)
         if evidence.target_id:

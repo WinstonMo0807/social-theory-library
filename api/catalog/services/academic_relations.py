@@ -13,7 +13,7 @@ from catalog.services.knowledge_core import entity_for_legacy, require_editor, p
 from catalog.services.knowledge_workspace import source_hash
 
 
-LEGACY = {"person": m.PersonNodeRelation, "node": m.KnowledgeRelation, "work": m.WorkNodeRelation}
+LEGACY = {"person": m.PersonNodeRelation, "node": m.KnowledgeRelation, "work": m.WorkNodeRelation, "scholar": m.ScholarRelation}
 
 
 def propose_work_relations(work, rows, actor):
@@ -123,7 +123,7 @@ def submit_withdrawal(statement, actor, *, request_id, base_hash, reason):
                     "base_hash": digest(block), "human_edited": True, "reason": str(reason)}})
     if len(proposals) == 1:
         raise ValidationError("该陈述尚未映射到知识页区块，请先完成历史知识页回填。")
-    return submit_draft(None, proposals, actor, request_id=key, origin="human", subject_work=page.work, subject_entity=page.entity)
+    return submit_draft(None, proposals, actor, request_id=key, origin="human", subject_work=page.work, subject_entity=page.entity, subject_page=page)
 
 
 def stage_withdrawal(payload, actor):
@@ -183,7 +183,17 @@ def legacy_relation_draft(kind, values, actor, *, request_id, legacy_id=None):
         raw = value(name)
         row = raw if isinstance(raw, model) else get_object_or_404(model, pk=raw)
         return entity_for_legacy(row)
-    if kind == "person":
+    if kind == "scholar":
+        profiles = []
+        for field in ("source_scholar", "target_scholar"):
+            raw = value(field)
+            profiles.append(raw if isinstance(raw, m.ScholarProfile) else get_object_or_404(m.ScholarProfile, pk=raw))
+        if profiles[0].pk == profiles[1].pk:
+            raise ValidationError("关系两端须为不同学者。")
+        left, right = [entity_for_legacy(v.person) for v in profiles]
+        participants = [{"role": "subject", "entity_id": str(left.pk)}, {"role": "object", "entity_id": str(right.pk)}]
+        subject, work = left, None
+    elif kind == "person":
         person, node = identity(m.Person, "person"), identity(m.KnowledgeNode, "node")
         left, right = (node, person) if value("node_is_source", False) else (person, node)
         participants = [{"role": "subject", "entity_id": str(left.pk)}, {"role": "object", "entity_id": str(right.pk)}]
@@ -201,7 +211,7 @@ def legacy_relation_draft(kind, values, actor, *, request_id, legacy_id=None):
     field, obj, title = ("work", work, work.title) if work else ("entity", subject, subject.label)
     page = m.KnowledgePage.objects.get_or_create(**{field: obj}, defaults={"slug": f"{field}-{obj.pk}", "title": title})[0]
     predicate = value("relation_type", value("role", "mentions"))
-    text = value("text") or value("description") or value("relation_label")
+    text = value("text") or value("description") or value("relation_label") or value("summary")
     if not text:
         raise ValidationError("请填写关系的具体陈述，不能仅以对象共现代替学术关系。")
     payload = {"text": text, "predicate": predicate, "direction": value("direction", "directed"),
@@ -209,9 +219,10 @@ def legacy_relation_draft(kind, values, actor, *, request_id, legacy_id=None):
         "conditions": values.get("conditions", {}), "source_citation": value("source_citation") or value("evidence_source") or value("source", ""),
         "evidence": values.get("evidence", [])}
     if values.get("source_anchor"):
-        from catalog.relation_source_anchor import choose_anchor
-        from catalog.services.knowledge_sources import migrate_span
-        span, revision = choose_anchor(values["source_anchor"])
+        from catalog.relation_source_anchor import choose_anchor, RelationAnchorInput
+        from catalog.services.knowledge_sources import migrate_span, snapshot_revision
+        span, revision = choose_anchor(RelationAnchorInput().run_validation(values["source_anchor"]))
+        snapshot_revision(revision)
         mapping = migrate_span(span)
         if not mapping.target_id:
             raise ValidationError("原证据无法核验，请在原文工作区重新选取；历史记录仍保留。")

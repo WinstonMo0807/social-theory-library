@@ -16,6 +16,53 @@ def _mapped(model):
         target_type="assertion", target_id__isnull=False).values("source_id")
 
 
+def scholar_links(*, scholar_id=None):
+    rows = m.Assertion.objects.filter(status="published", participants__entity__person__isnull=False)
+    if scholar_id:
+        roots = m.Entity.objects.filter(person__scholar_profile__pk=scholar_id).values_list("pk", flat=True)
+        rows = rows.filter(participants__entity_id__in=family_ids(roots))
+    rows = rows.distinct().order_by("-updated_at", "pk").prefetch_related("participants__entity__person__scholar_profile", "sources")
+    for statement in rows:
+        members = list(statement.participants.all())
+        left = [v for v in members if v.role == "subject"]
+        right = [v for v in members if v.role == "object"]
+        if len(left) != 1 or len(right) != 1 or not all(v.entity_id and v.entity.person_id for v in left + right):
+            continue
+        if not assertion_public(statement):
+            continue
+        source, target = [canonical_entity(v.entity).person.scholar_profile for v in left + right]
+        if source.pk == target.pk:
+            continue
+        yield SimpleNamespace(pk=statement.pk, id=statement.pk, statement=statement,
+            source_scholar=source, target_scholar=target, source_scholar_id=source.pk, target_scholar_id=target.pk,
+            relation_type=statement.predicate, direction=statement.direction, updated_at=statement.updated_at)
+    from catalog.services.public_scholars import legacy_public_scholar_relations
+    old = legacy_public_scholar_relations().exclude(pk__in=_mapped(m.ScholarRelation))
+    if scholar_id:
+        old = old.filter(Q(source_scholar_id=scholar_id) | Q(target_scholar_id=scholar_id))
+    yield from old.select_related("source_scholar__person", "target_scholar__person")
+
+
+def scholar_payload(row, actor=None):
+    if not hasattr(row, "statement"):
+        from catalog.services.shared_curation import relation_payload as legacy_payload
+        return legacy_payload(row, public=True)
+    from catalog.services.knowledge_public import assertion_data
+    from catalog.services.public_scholars import _base, _formal_profile
+    people = {p.pk: _formal_profile(p, p.public_snapshot or {}) for p in _base().filter(pk__in=[row.source_scholar_id, row.target_scholar_id])}
+    if len(people) != 2:
+        return None
+    source, target = people[row.source_scholar_id], people[row.target_scholar_id]
+    value = assertion_data(row.statement, actor)
+    return {"id": str(row.pk), "assertion_id": str(row.pk), "source_scholar": str(source.pk),
+        "target_scholar": str(target.pk), "source_name": source.person.preferred_name,
+        "target_name": target.person.preferred_name, "source_slug": source.slug, "target_slug": target.slug,
+        "relation_type": row.relation_type, "relation_label": PREDICATES.get(row.relation_type, row.relation_type),
+        "direction": row.direction, "summary": value["text"], "status": value["status"],
+        "source": "；".join(v["citation"] or v["work__title"] or "" for v in value["sources"]),
+        "assertion": value, "source_material": None, "edit_version": ""}
+
+
 def _statements(kind, *, person_ids=None, node_ids=None, work_ids=None):
     rows = m.Assertion.objects.filter(status="published", participants__entity__node__isnull=False)
     if kind == "person":

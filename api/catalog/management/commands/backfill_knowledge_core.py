@@ -113,8 +113,10 @@ class Command(BaseCommand):
             self.stdout.write(str({"curated_claims":count,"next_after":last}))
         if options["relations"]:
             from catalog.services.knowledge_migration import migrate_relation
-            for model in [m.PersonNodeRelation, m.WorkNodeRelation, m.KnowledgeRelation]:
+            for model in [m.PersonNodeRelation, m.WorkNodeRelation, m.KnowledgeRelation, m.ScholarRelation]:
                 mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="assertion", provenance__migration_version=4).values("source_id")
                 rows = model.objects.filter(status__in=["confirmed", "approved", "published"]).exclude(pk__in=mapped).order_by("pk")[:size]
+                if model is m.ScholarRelation:
+                    rows = model.objects.filter(status="published", active_revision__status="published").exclude(pk__in=mapped).order_by("pk")[:size]
                 count = sum(1 for row in rows if migrate_relation(row))
                 self.stdout.write(f"{model.__name__}: {count}")

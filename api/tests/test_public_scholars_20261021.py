@@ -88,9 +88,11 @@ def test_draft_preview_and_follow_summary_keep_formal_identity(admin_user, api_c
 
 
 def test_candidates_require_editorial_capabilities_and_do_not_change_formal_count(admin_user):
-    from catalog.services.shared_curation import save_relation
+    from catalog.models import ScholarRelation
     scholar, other = profile(), profile("Related")
-    save_relation(None, {"source_scholar": str(scholar.pk), "target_scholar": str(other.pk), "relation_type": "influence", "summary": "Draft relation", "source": "Synthetic citation"}, admin_user)
+    row = ScholarRelation.objects.create(source_scholar=scholar, target_scholar=other, relation_type="influence")
+    EditorialRevision.objects.create(target_type="scholar_relation", target_id=row.pk, revision=1, status="draft",
+        materialized_preview={"source_scholar": str(scholar.pk), "target_scholar": str(other.pk), "relation_type": "influence", "direction": "directed", "summary": "Historical draft relation", "source": "Synthetic citation"}, idempotency_key=str(uuid4()))
     public = public_scholar_detail(scholar.slug)
     assert public["relations"]["count"] == 0 and public["candidate_relations"] is None
     with pytest.raises(PermissionDenied):

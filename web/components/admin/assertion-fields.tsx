@@ -14,7 +14,7 @@ export type AssertionFieldsValue = {
 type Option = { id: string; label: string; kind?: string; definition?: string; pending?: boolean };
 const roles: Record<string, string> = { subject: "主体", object: "客体", claimant: "主张者", quoted: "被引述者", criticized: "被批评者", context: "语境参与者" };
 const expressions = { author_claim: "作者主张", direct_quote: "直接引述", paraphrase: "转述", criticized_claim: "被批评主张", editorial_judgment: "编辑判断" };
-const predicates: Record<string, string> = { uses: "使用", criticizes: "批评", inherits: "继承", develops: "发展", cites: "引用", responds_to: "回应", mentions: "提及", proposes: "提出", defines: "定义", interprets: "解释", explains: "阐释", influences: "影响", general_mention: "一般提及", critique: "批判", introduction: "介绍", foundational: "奠基", application: "应用", development: "发展" };
+const predicates: Record<string, string> = { teaching: "师承", cooperation: "合作", comparative_reading: "比较阅读", criticism: "批评", influence: "影响", other: "其他关系", uses: "使用", criticizes: "批评", inherits: "继承", develops: "发展", cites: "引用", responds_to: "回应", mentions: "提及", proposes: "提出", defines: "定义", interprets: "解释", explains: "阐释", influences: "影响", general_mention: "一般提及", critique: "批判", introduction: "介绍", foundational: "奠基", application: "应用", development: "发展" };
 const conditions = { time: "时间", region: "地区", population: "人群", research_object: "研究对象", concept_usage: "概念用法", other: "其他限定" };
 const identityKey = (id?: Identity) => typeof id === "string" ? id : id ? `proposal:${id.change_item}` : "";
 const identityValue = (id: string): Identity => id.startsWith("proposal:") ? { change_item: id.slice(9) } : id;
@@ -42,7 +42,7 @@ export function AssertionFields({ value, disabled, options, onChange }: {
     <div className={styles.scope}>
       <label>关系类型<select value={value.predicate || ""} disabled={disabled} onChange={e => onChange({ ...value, predicate: e.target.value })}><option value="">仅保存论述</option>{value.predicate && !predicates[value.predicate] && <option value={value.predicate}>{value.predicate}（原记录）</option>}{Object.entries(predicates).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <label>论述身份<select value={value.expression || "author_claim"} disabled={disabled} onChange={e => onChange({ ...value, expression: e.target.value })}>{Object.entries(expressions).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-      <label>关系方向<select value={value.direction || "directed"} disabled={disabled} onChange={e => onChange({ ...value, direction: e.target.value })}><option value="directed">主体指向客体</option><option value="undirected">无方向</option></select></label>
+      <label>关系方向<select value={value.direction || "directed"} disabled={disabled} onChange={e => onChange({ ...value, direction: e.target.value })}><option value="directed">主体指向客体</option><option value="bidirectional">双向关系</option><option value="undirected">无方向</option></select></label>
     </div>
     <h4>论述参与者</h4>
     {participants.map((p, index) => <div className={styles.scope} key={index}>

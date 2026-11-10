@@ -149,6 +149,8 @@ class ScholarKnowledgeSerializer(ScholarLinkSerializer):
 
 
 class ScholarRelationRowSerializer(serializers.Serializer):
+    assertion_id = serializers.UUIDField(read_only=True, required=False)
+    assertion = serializers.JSONField(read_only=True, required=False)
     from catalog.relation_source_anchor import RelationAnchorMaterial
     source_material = RelationAnchorMaterial(read_only=True, allow_null=True, required=False)
     id = serializers.UUIDField()

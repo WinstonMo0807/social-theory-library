@@ -1,14 +1,18 @@
+import type { KnowledgeAssertion } from "@/components/public/knowledge-page-content";
 import type { components } from "@/lib/api/generated/schema";
 
 export type ScholarRelation = {
   id: string;
+  assertion?: KnowledgeAssertion;
+  assertion_id?: string;
+  relation_label?: string;
   source_scholar: string;
   target_scholar: string;
   source_name: string;
   target_name: string;
   source_slug?: string;
   target_slug?: string;
-  relation_type: "teaching" | "cooperation" | "influence" | "criticism" | "comparative_reading" | "other";
+  relation_type: string;
   direction: "directed" | "bidirectional" | "undirected";
   summary: string;
   source: string;

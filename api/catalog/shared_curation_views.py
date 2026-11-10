@@ -59,6 +59,9 @@ class EvidenceCurationSerializer(serializers.Serializer):
 
 
 class ScholarRelationSerializer(serializers.Serializer):
+    assertion_id = serializers.UUIDField(read_only=True, required=False)
+    assertion = serializers.JSONField(read_only=True, required=False)
+    relation_label = serializers.CharField(read_only=True, required=False)
     save_receipt = ScholarRelationReceipt(read_only=True, required=False)
     save_replayed = serializers.BooleanField(read_only=True, required=False)
     id = serializers.UUIDField(read_only=True)
@@ -167,6 +170,19 @@ class PublicEvidenceCurationView(EditorialErrorMixin, APIView):
         return Response(service.curation_payload(object_type, object_id, public=True))
 
 
+def scholar_changeset_response(request, key=None, *, withdraw=False):
+    from rest_framework.exceptions import PermissionDenied
+    from catalog.services.intelligence_queries import changeset_data
+    if request.headers.get("X-Editor-Owner") != str(request.user.pk):
+        raise PermissionDenied("请重新核对当前编辑账户。")
+    data = {**request.data, "request_id": request.headers.get("Idempotency-Key") or request.data.get("request_id")}
+    if withdraw:
+        data["operation"] = "withdraw"
+    from catalog.scholar_relation_commands import submit_relation_command
+    changeset = submit_relation_command(request, key, data)
+    return Response({**changeset_data(changeset, request.user), "review_url": f"/admin/intelligence?changeset={changeset.pk}"}, status=202)
+
+
 class AdminScholarRelationListView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
     permission_classes = [IsKnowledgeEditor]
 
@@ -180,7 +196,7 @@ class AdminScholarRelationListView(ScholarRelationCommandMixin, EditorialErrorMi
 
     @extend_schema(request=ScholarRelationSerializer, responses={201: ScholarRelationSerializer})
     def post(self, request):
-        return self.relation_command(request, lambda: Response(service.save_relation(None, request.data, request.user), status=201), creating=True)
+        return scholar_changeset_response(request)
 
 
 class AdminScholarRelationDetailView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
@@ -197,7 +213,7 @@ class AdminScholarRelationDetailView(ScholarRelationCommandMixin, EditorialError
 
     @extend_schema(request=ScholarRelationSerializer, responses=ScholarRelationSerializer)
     def put(self, request, pk):
-        return self.relation_command(request, lambda: Response(service.save_relation(pk, request.data, request.user)))
+        return scholar_changeset_response(request, pk)
 
 
 class PublishScholarRelationView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
@@ -206,7 +222,7 @@ class PublishScholarRelationView(ScholarRelationCommandMixin, EditorialErrorMixi
 
     @extend_schema(request=EditorialPublishSerializer, responses=ScholarRelationSerializer)
     def post(self, request, pk):
-        return self.relation_command(request, lambda: Response(service.publish_relation(pk, request.data.get("edit_version"), request.user)))
+        return Response({"detail": "请在统一审核工作台预览并发布知识页。", "replacement": "/admin/knowledge?relations=1"}, status=409)
 
 
 class PublicScholarRelationListView(APIView):
@@ -215,11 +231,10 @@ class PublicScholarRelationListView(APIView):
     @extend_schema(responses=ScholarRelationPageSerializer)
     def get(self, request):
         from catalog.services.public_scholars import public_scholar_relations
-        rows = public_scholar_relations()
-        if request.query_params.get("scholar"):
-            key = service.identifier(request.query_params["scholar"])
-            rows = rows.filter(Q(source_scholar_id=key) | Q(target_scholar_id=key))
-        return Response(paged(request, rows.order_by("-updated_at", "pk"), lambda row: service.relation_payload(row, public=True)))
+        from catalog.services.academic_projection import scholar_payload
+        key = service.identifier(request.query_params["scholar"]) if request.query_params.get("scholar") else None
+        rows = public_scholar_relations(key)
+        return Response(paged(request, rows, lambda row: scholar_payload(row, request.user)))
 
 
 class ArchiveScholarRelationView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
@@ -228,4 +243,4 @@ class ArchiveScholarRelationView(ScholarRelationCommandMixin, EditorialErrorMixi
 
     @extend_schema(request=EditorialPublishSerializer, responses=ScholarRelationSerializer)
     def post(self, request, pk):
-        return self.relation_command(request, lambda: Response(service.archive_relation(pk, request.data.get("edit_version"), request.user)))
+        return scholar_changeset_response(request, pk, withdraw=True)

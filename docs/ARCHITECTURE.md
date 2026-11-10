@@ -1,3 +1,7 @@
+## 2026-11-10 学者关系兼容边界
+
+ScholarRelation只保留历史身份、来源、已发布与未发布修订。旧HTTP保存转换到ChangeSet，公开关系及学者消费者统一读取来源独立的Assertion。旧取消回执与请求锁保留；回收站撤回转审核，旧直接发布返回明确替代入口。Django后台WorkKnowledgeRelation/PersonKnowledgeRelation只读。回填命令backfill_knowledge_core --relations --human-pages --batch-size 100按当前公开修订保留来源，数量与备份见CURRENT_PROGRESS；无ScholarRelation真实候选数据，测试夹具不能代替实书迁移。
+
 2026-11-10 专题页可无Work/Entity主对象，以KnowledgePage自身范围提交人工ChangeSet（0098）。正文、标题、范围由同一EditorialRevision管理；公开/knowledge/{slug}仅读取发布投影，来源权限变化继续隐藏受影响区块。关联资料与跨知识页链接由既有resolve_target验证，不另建正文权威。
 
 2026-11-10 身份归并：`knowledge_identity`保存Entity重定向，查询按明确归并展开，原Assertion端点与KnowledgePage不重写。原节点/人物归并命令继续负责权限、预览、事务、幂等和可回退记录；知识修改纳入指纹保护。类型资料里的`prose`只保存与原文完全相符的格式标记，继续作为类型资料功能保留，不与Wiki正文双向同步。

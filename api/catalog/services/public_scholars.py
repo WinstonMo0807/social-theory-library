@@ -36,6 +36,8 @@ PERIODS = {"classical": ("古典（1800 年以前）", -9999, 1799),
 PERIOD_NOTICE = "时期按已知生卒年份区间交叠筛选，不代表思想活跃期；仅有一个年份时按该年，年代未知者不归入时期。"
 RELATION_LABELS = {"teaching": "师承", "cooperation": "合作", "influence": "影响", "criticism": "批评",
                    "comparative_reading": "比较阅读", "other": "其他关系"}
+from catalog.services.academic_vocabulary import PREDICATES
+RELATION_LABELS.update(PREDICATES)
 FOLLOW_NOTICE = "关注此学者正式发布的档案内容；独立馆藏、学术关系与时间线的更新不计入本订阅。"
 
 
@@ -468,7 +470,7 @@ def _knowledge_rows(nodes, profile):
         "source_count": sources.get(row.pk, 0), "scholar_count": people.get(row.pk, 0)} for row in nodes]
 
 
-def public_scholar_relations():
+def legacy_public_scholar_relations():
     """Use the formal snapshot's exact owning row and publicly visible endpoints."""
     public = public_scholar_queryset().values("pk")
     rows = ScholarRelation.objects.filter(status="published", active_revision__status="published",
@@ -480,16 +482,14 @@ def public_scholar_relations():
     return rows
 
 
-def _relation_rows(rows):
-    from catalog.services.shared_curation import relation_payload
-    result = []
-    for row in rows:
-        value = relation_payload(row, public=True)
-        if value:
-            result.append({key: value.get(key, "") for key in ("id", "source_scholar", "target_scholar", "source_name", "target_name", "source_slug", "target_slug", "relation_type", "direction", "summary", "source", "status")})
-            result[-1]["relation_label"] = RELATION_LABELS.get(value["relation_type"], value["relation_type"])
-            result[-1]["source_material"] = value.get("source_material")
-    return result
+def public_scholar_relations(scholar_id=None):
+    from catalog.services.academic_projection import scholar_links
+    return sorted(scholar_links(scholar_id=scholar_id), key=lambda v: (v.updated_at, str(v.pk)), reverse=True)
+
+
+def _relation_rows(rows, actor=None):
+    from catalog.services.academic_projection import scholar_payload
+    return [value for row in rows if (value := scholar_payload(row, actor))]
 
 
 def _candidate_relations(profile, params, request):
@@ -603,13 +603,13 @@ def public_scholar_detail(slug, params=None, *, request=None, preview_profile=No
     from catalog.theory_serializers import NormalizedTimelineEventSerializer
     events = ordered(public_events().filter(scholar_match(public_scholar_queryset().filter(pk=profile.pk))).distinct(), "asc")
     result["timeline"] = _page(events, params, path, section="timeline", transform=lambda rows: list(NormalizedTimelineEventSerializer(rows, many=True, context={"request": request}).data))
-    relations = public_scholar_relations().filter(Q(source_scholar=profile) | Q(target_scholar=profile))
+    relations = public_scholar_relations(profile.pk)
     all_relations = relations
     if kinds:
-        relations = relations.filter(active_revision__materialized_preview__relation_type__in=kinds)
+        relations = [v for v in relations if v.relation_type in kinds]
     if direction != "all":
-        relations = relations.filter(**{("target_scholar" if direction == "incoming" else "source_scholar"): profile})
-    result["relations"] = _page(relations.order_by("-updated_at", "pk"), params, path, section="relations", transform=_relation_rows)
+        relations = [v for v in relations if getattr(v, "target_scholar_id" if direction == "incoming" else "source_scholar_id") == profile.pk]
+    result["relations"] = _page(relations, params, path, section="relations", transform=lambda rows: _relation_rows(rows, getattr(request, "user", None)))
     evidence = _evidence(profile)
     result["sources"] = _page(_sources(profile), params, path, section="sources")
     result["evidence"] = _page(evidence, params, path, section="evidence")
@@ -626,9 +626,8 @@ def public_scholar_detail(slug, params=None, *, request=None, preview_profile=No
         counts={name: result[name]["count"] for name in SECTIONS if name != "overview"})
     # There are nine fixed roles; each count is the number of exact public editions, never live metadata.
     result["facets"] = {"roles": [{"value": role, "label": label, "count": scholar_editions(profile.person_id, (role,)).count()} for role, label in Contribution.Role.choices],
-        "relation_types": [{"value": row["active_revision__materialized_preview__relation_type"],
-            "label": RELATION_LABELS.get(row["active_revision__materialized_preview__relation_type"], "其他关系"), "count": row["count"]}
-            for row in all_relations.values("active_revision__materialized_preview__relation_type").annotate(count=Count("pk")).order_by("active_revision__materialized_preview__relation_type")]}
+        "relation_types": [{"value": kind, "label": RELATION_LABELS.get(kind, kind), "count": sum(v.relation_type == kind for v in all_relations)}
+            for kind in sorted({v.relation_type for v in all_relations})]}
     return result
 
 
