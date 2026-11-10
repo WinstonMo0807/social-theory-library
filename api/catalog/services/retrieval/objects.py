@@ -32,11 +32,8 @@ def _objects(query, kind, actor, limit, work_id):
             rows = rows.filter(work_id=work_id)
         rows = rows.order_by("work_id", "-is_primary", "pk")
     elif kind == "knowledge_object":
-        published_people = m.EditorialRevision.objects.filter(target_type="scholar_profile", status="published").filter(
-            Q(materialized_preview__person__preferred_name__icontains=query) | Q(materialized_preview__person__biography__icontains=query))
-        rows = public_entities().filter(Q(label__icontains=query) | Q(definition__icontains=query)
-            | Q(aliases__text__icontains=query, aliases__review_status="confirmed")
-            | Q(person__scholar_profile__pk__in=published_people.values("target_id"))).distinct().order_by("label", "pk")
+        from catalog.services.knowledge_entity_queries import entity_query
+        rows = entity_query(public_entities(), query=query, public=True, definitions=True)
         if work_id:
             rows = rows.filter(assertion_participations__assertion__sources__work_id=work_id,
                 assertion_participations__assertion__status="published").distinct()

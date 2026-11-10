@@ -57,8 +57,9 @@ def build_server(actor_id):
         """Find published knowledge identities; names never imply the same identity."""
         actor()
         from catalog.services.knowledge_public import public_entities
-        return {"entities":[entity_data(e, public=True) for e in public_entities().filter(
-            label__icontains=query[:300]).order_by("label")[:max(1,min(limit,50))]]}
+        from catalog.services.knowledge_entity_queries import entity_query
+        return {"entities":[entity_data(e, public=True) for e in entity_query(
+            public_entities(), query=query[:300], public=True)[:max(1,min(limit,50))]]}
 
     @tool
     def unified_search(query: str, source_types: list[str] | None = None, work_id: str | None = None, limit: int = 20) -> dict:

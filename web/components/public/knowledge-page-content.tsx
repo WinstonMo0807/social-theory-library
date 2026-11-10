@@ -18,11 +18,11 @@ export type KnowledgeAssertion = {
   } }[];
 };
 export type KnowledgePageData = {
-  identity?: { kind: string; profile?: IdentityProfile | null } | null;
+  identity?: { kind: string; profile?: IdentityProfile | null; aliases?: { text: string; language?: string; script?: string }[] } | null;
   id: string; title?: string; scope?: string; blocks: KnowledgeBlock[]; assertions: KnowledgeAssertion[];
   references?: { type: string; id: string; title: string; href?: string | null; work_url?: string; edition_label?: string; unavailable?: boolean }[];
   revision_id?: string | null; status?: string;
-  publication_scope?: { profiles?: { id: string; label: string; kind: string }[]; withdrawals?: { id: string; text: string; reason: string }[]; entities: { id: string; label: string; kind: string }[] };
+  publication_scope?: { aliases?: { id: string; text: string; language: string; script: string }[]; profiles?: { id: string; label: string; kind: string }[]; withdrawals?: { id: string; text: string; reason: string }[]; entities: { id: string; label: string; kind: string }[] };
   anchors?: { anchor_id: string; locator?: { reader_url: string; segments: { exact: string; page_number: number; printed_label?: string }[] } }[];
 };
 
@@ -33,6 +33,7 @@ export function KnowledgePageContent({ page, renderBlock }: {
 }) {
   return <section className="detail-section work-curated-claims"><SectionHeading title="知识导读" />
     {page.identity && <EntityProfileContent kind={page.identity.kind} profile={page.identity.profile} />}
+    <EntityAliases aliases={page.identity?.aliases || []} />
     {page.blocks.map(block => {
       const anchors = (page.anchors || []).filter(a => block.references?.some(r => r.type === "anchor" && r.id === a.anchor_id));
       const assertions = page.assertions.filter(a => block.references?.some(r => r.type === "assertion" && r.id === a.id));
@@ -49,6 +50,11 @@ export function KnowledgePageContent({ page, renderBlock }: {
       return renderBlock ? renderBlock(block, content) : content;
     })}
   </section>;
+}
+
+export function EntityAliases({ aliases }: { aliases: { text: string; language?: string; script?: string }[] }) {
+  if (!aliases.length) return null;
+  return <dl className="work-knowledge-aliases"><dt>异名</dt>{aliases.map((value, index) => <dd key={`${value.text}:${value.language}:${index}`}><span>{value.text}</span>{(value.language || value.script) && <small>{[value.language, value.script].filter(Boolean).join(" · ")}</small>}</dd>)}</dl>;
 }
 
 export function KnowledgeAssertionContent({ assertion }: { assertion: KnowledgeAssertion }) {

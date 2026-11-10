@@ -18,7 +18,8 @@ ENTITY_PROFILES = {
     "discipline": ("discipline", m.Discipline, ["name", "description", "editorial_status", "introduction"]),
     "subdiscipline": ("subdiscipline", m.Subdiscipline, ["name", "description", "editorial_status", "research_object", "core_questions", "research_directions", "methods", "representative_issues"]),
     "theory_school": ("theory_school", m.TheorySchool, ["name", "description", "editorial_status", "entity_level", "formation_period", "core_questions", "key_themes"]),
-    "organization_profile": ("organization", m.OrganizationAuthority, ["preferred_name", "original_name", "organization_type", "country", "authority_status"]),
+    "concept": ("concept", m.Concept, ["name", "description", "editorial_status"]),
+    "organization_profile": ("organization", m.OrganizationAuthority, ["preferred_name", "original_name", "description", "organization_type", "country", "authority_status"]),
     "timeline_event": ("timeline_event", m.TheoryTimelineEvent, ["title", "description", "event_type", "start_year", "end_year", "start_date", "end_date", "date_precision", "date_label", "source", "review_status"]),
     "research_object_profile": ("research_object", m.ResearchObjectProfile, ["object_kind", "geographic_scope", "temporal_scope", "population", "unit_of_analysis"]),
 }
@@ -35,7 +36,10 @@ def source_value(kind, key):
                 if getattr(entity, f"{relation}_id"):
                     typed = getattr(entity, relation)
                     row[relation] = {k: getattr(typed, k) for k in fields}
-            row["aliases"] = list(entity.aliases.filter(review_status="confirmed").order_by("id").values("text", "language", "script"))
+            from .knowledge_entity_queries import profile_aliases
+            row["aliases"] = sorted(({key: value[key] for key in ("text", "language", "script")}
+                for value in profile_aliases(entity) if value["review_status"] == "confirmed"),
+                key=lambda value: (value["text"], value["language"], value["script"]))
     elif kind in ENTITY_PROFILES:
         _, model, fields = ENTITY_PROFILES[kind]
         row = model.objects.filter(pk=key).values(*fields).first()
@@ -140,7 +144,7 @@ def invalidate_source(kind, key):
     """Called by the existing canonical change coordinator, without model work."""
     targets = [(kind, key)]
     legacy = {"person": "person_id", "knowledge_node": "node_id", "topic": "topic_id",
-              "discipline": "discipline_id", "subdiscipline": "subdiscipline_id", "theory_school": "theory_school_id",
+              "discipline": "discipline_id", "subdiscipline": "subdiscipline_id", "theory_school": "theory_school_id", "concept": "concept_id",
               "organization_profile": "organization_id", "timeline_event": "timeline_event_id", "research_object_profile": "research_object_id"}
     if kind in legacy:
         targets += [("entity", value) for value in m.Entity.objects.filter(**{legacy[kind]: key}).values_list("pk", flat=True)]

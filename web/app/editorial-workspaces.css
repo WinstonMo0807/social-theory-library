@@ -6657,3 +6657,8 @@ dialog.workflow-step-rail:not(:is([open],[data-content-section])) { display: non
   .workflow-v306-preview { margin: 12px; }
   .workflow-v306-preview iframe { height: 70vh; }
 }
+
+.work-knowledge-aliases { display: flex; align-items: baseline; flex-wrap: wrap; gap: .5rem 1.5rem; margin: 1rem 0 1.6rem; line-height: 1.7; }
+.work-knowledge-aliases dt { color: var(--muted-foreground, #655f55); font-size: .8rem; }
+.work-knowledge-aliases dd { margin: 0; overflow-wrap: anywhere; }
+.work-knowledge-aliases small { margin-left: .55rem; color: var(--muted-foreground, #655f55); }

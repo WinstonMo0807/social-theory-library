@@ -262,13 +262,8 @@ def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
                                 allow_citation=changeset.origin == "human", subject_work=changeset.subject_work)
                             result = {"type": "assertion", "id": str(obj.pk), "status": obj.status}
                     elif item.kind == "alias":
-                        entity = m.Entity.objects.get(pk=payload["entity_id"])
-                        text = str(payload.get("text", "")).strip()
-                        if not text or len(text) > 600:
-                            raise ValidationError("异名不可为空或超过600字符。")
-                        obj, _ = m.EntityAlias.objects.get_or_create(entity=entity, text=text, language=payload.get("language", ""),
-                            defaults={"review_status": "confirmed", "source": {"changeset": str(changeset.pk)}})
-                        result = {"type": "alias", "id": str(obj.pk)}
+                        from .knowledge_aliases import stage_alias
+                        result = stage_alias(payload, actor, request_key=f"change:{item.pk}", changeset=changeset)
                     else:
                         obj = apply_page_patch(payload, actor, request_key=f"change:{item.pk}", origin=changeset.origin)
                         result = {"type": "editorial_revision", "id": str(obj.pk), "page_id": str(obj.target_id), "status": "draft"}

@@ -1,3 +1,5 @@
+2026-11-10 `knowledge_entity_queries`以原约束资料和人物发布快照为名称/异名的读取权威，Entity迁移副本保留历史；DRF/MCP/检索/匹配共用。`knowledge_aliases`只在ChangeSet应用时形成未公开草稿，知识页预览列明异名发布范围，原有publish_page事务统一确认，草稿不参与公开查询。
+
 ## 2026-11-10 Entity类型资料
 
 Entity以受约束的一对一外键复用OrganizationAuthority、TheoryTimelineEvent，研究对象使用ResearchObjectProfile。资料字段只在既有EditorialRevision中编纂，ChangeSet.entity/profile_patch记录审核、基准与应用回执；知识页发布事务激活对应类型修订，公开读取仍执行原类型和来源权限。事件保留原关联与合并历史；同名组织不再被名称唯一约束视为同一身份。管理入口/knowledge/entities/{id}/profile/和原事件资料工作区协同，Markdown与页面正文的唯一权威不变。

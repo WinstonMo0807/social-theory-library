@@ -175,6 +175,12 @@ def page_data(page, actor, *, draft=False):
     from catalog.services.knowledge_profiles import pending_profiles
     withdrawals = pending_withdrawals(page, blocks) if draft else []
     identity = entity_data(page.entity, public=not draft) if page.entity_id else None
+    from catalog.services.knowledge_aliases import alias_preview
+    aliases = alias_preview(page) if draft else []
+    if draft and identity:
+        identity["aliases"] = [v for v in identity["aliases"] if v["review_status"] == "confirmed"]
+        known = {(v["text"], v["language"], v["script"]) for v in identity["aliases"]}
+        identity["aliases"] += [v for v in aliases if (v["text"], v["language"], v["script"]) not in known]
     if draft and identity:
         for item in pending_profiles(page).order_by("created_at"):
             identity["profile"] = {**(identity.get("profile") or {}), **item.payload["profile"]}
@@ -182,6 +188,7 @@ def page_data(page, actor, *, draft=False):
         "identity": identity,
         "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()), "anchors": list(anchors.values()), "references": list(references.values()),
         "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions),
+            "aliases": aliases,
             "profiles": [{"id": v.application["id"], "label": v.payload["label"], "kind": v.payload["kind"]} for v in pending_profiles(page)] if draft else [],
             "withdrawals": [{"id": v.application["id"], "text": v.payload["text"], "reason": v.payload["reason"]} for v in withdrawals],
             "entities": [{"id":str(v.pk), "label":v.label, "kind":v.kind} for v in publication_entities(page, assertions)] if draft else []}}
@@ -232,6 +239,8 @@ def publish_page(page_id, revision_id, actor):
     publish_withdrawals(page, blocks, actor)
     for entity in publication_entities(page, statement_ids):
         publish_reviewed_identity(entity, actor)
+    from catalog.services.knowledge_aliases import publish_aliases
+    publish_aliases(page, actor)
     for block in blocks:
         for ref in block.get("references", []):
             if ref.get("type") == "assertion":

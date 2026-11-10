@@ -20,10 +20,12 @@ def require_editor(actor):
 def entity_data(entity, *, public=False):
     from catalog.services.knowledge_identity import canonical_entity
     from catalog.services.knowledge_profiles import profile_data
-    result = {"id": str(entity.pk), "kind": entity.kind, "label": entity.label,
+    from catalog.services.knowledge_entity_queries import identity_text, profile_aliases
+    label, definition = identity_text(entity)
+    result = {"id": str(entity.pk), "kind": entity.kind, "label": label,
         "canonical_id": str(canonical_entity(entity).pk),
-        "definition": entity.definition, "context": entity.context, "status": entity.status, "profile": profile_data(entity),
-        "aliases": list(entity.aliases.values("text", "language", "script", "review_status", "source")),
+        "definition": definition, "context": entity.context, "status": entity.status, "profile": profile_data(entity),
+        "aliases": profile_aliases(entity, public=public),
         "identifiers": list(entity.identifiers.values("namespace", "value", "review_status", "source")),
         "person": {"birth_year": entity.person.birth_year, "death_year": entity.person.death_year,
             "biography": entity.person.biography, "authority_status": entity.person.authority_status} if entity.person_id else None}
@@ -47,9 +49,8 @@ def entity_data(entity, *, public=False):
 
 def match_entities(label, kind, *, limit=12):
     # Names only retrieve candidates. Even one exact name does not merge identity.
-    rows = m.Entity.objects.filter(kind=kind).filter(
-        Q(label__iexact=label) | Q(aliases__text__iexact=label, aliases__review_status="confirmed")
-    ).distinct().order_by("id")[:min(limit, 30)]
+    from catalog.services.knowledge_entity_queries import entity_query
+    rows = entity_query(m.Entity.objects.filter(kind=kind), query=label, exact=True)[:min(limit, 30)]
     from catalog.services.knowledge_identity import canonical_entity
     candidates = {value.pk: value for row in rows if (value := canonical_entity(row))}
     return [{**entity_data(row), "reason": "名称或已确认异名匹配，身份仍须审核", "automatic_same_identity": False} for row in candidates.values()]
@@ -140,10 +141,10 @@ def create_entity(payload, actor, *, source_work=None):
         identity["node"] = m.KnowledgeNode.objects.create(node_type=node_kind, canonical_name_zh=label,
             slug=f"knowledge-{uuid4().hex}", definition=payload.get("definition", ""), status="draft", created_by=actor)
     elif kind == "topic":
-        identity["topic"] = m.Topic.objects.create(name=label,slug=f"topic-{uuid4().hex}",editorial_status="draft")
+        identity["topic"] = m.Topic.objects.create(name=label,slug=f"topic-{uuid4().hex}", description=payload.get("definition", ""), editorial_status="draft")
     elif kind == "discipline":
         slug = f"discipline-{uuid4().hex}"
-        identity["discipline"] = m.Discipline.objects.create(name=label,slug=slug,code=slug,editorial_status="draft")
+        identity["discipline"] = m.Discipline.objects.create(name=label,slug=slug,code=slug, description=payload.get("definition", ""), editorial_status="draft")
     elif kind in {"organization", "event", "research_object"}:
         from catalog.services.knowledge_profiles import create_profile
         identity = create_profile(kind, label, payload.get("definition", ""), payload.get("profile", {}))

@@ -101,7 +101,7 @@ function PageWorkspace() {
     });
   }
   async function publish() {
-    if (!data?.revision_id || dirty || !await confirmAction(`发布《${data.title}》当前已保存的知识页修订？此操作也会发布该页引用且已审核保存的陈述。${data.publication_scope?.withdrawals?.length ? `同时撤回 ${data.publication_scope.withdrawals.length} 条陈述。` : ""}${data.publication_scope?.profiles?.length ? `同时更新已审核的类型资料：${data.publication_scope.profiles.map(v => v.label).join("、")}。` : ""}${data.publication_scope?.entities.length ? `同时发布已审核的新身份：${data.publication_scope.entities.map(v => v.label).join("、")}。` : ""}`, { title: "发布知识页", confirmLabel: "发布当前修订" })) return;
+    if (!data?.revision_id || dirty || !await confirmAction(`发布《${data.title}》当前已保存的知识页修订？此操作也会发布该页引用且已审核保存的陈述。${data.publication_scope?.withdrawals?.length ? `同时撤回 ${data.publication_scope.withdrawals.length} 条陈述。` : ""}${data.publication_scope?.aliases?.length ? `同时发布异名：${data.publication_scope.aliases.map(v => v.text).join("、")}。` : ""}${data.publication_scope?.profiles?.length ? `同时更新已审核的类型资料：${data.publication_scope.profiles.map(v => v.label).join("、")}。` : ""}${data.publication_scope?.entities.length ? `同时发布已审核的新身份：${data.publication_scope.entities.map(v => v.label).join("、")}。` : ""}`, { title: "发布知识页", confirmLabel: "发布当前修订" })) return;
     await action(async () => { await knowledgeCall(`/knowledge/pages/${pageId}/`, { revision_id: data.revision_id }); setAttempt(v => v + 1); setNotice("当前知识页已发布。"); });
   }
   async function exportMarkdown() {

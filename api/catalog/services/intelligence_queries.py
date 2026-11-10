@@ -26,12 +26,21 @@ def changeset_data(changeset, actor):
     require_changeset_access(changeset, actor)
     items = list(changeset.items.values("id", "kind", "payload", "dependencies", "decision", "decision_note", "application", "conflict", "reviewed_at"))
     for item in items:
+        if item["kind"] == "alias":
+            from uuid import UUID
+            from catalog.services.knowledge_core import entity_data
+            try:
+                entity_id = UUID(str(item["payload"].get("entity_id", "")))
+            except ValueError:
+                entity_id = None
+            entity = m.Entity.objects.filter(pk=entity_id).first() if entity_id else None
+            item["identity"] = entity_data(entity) if entity else None
         if item["kind"] == "assertion":
             from catalog.services.knowledge_sources import locator
             item["evidence_context"] = [locator(anchor, actor, editorial=True) for anchor in m.EvidenceAnchor.objects.filter(
                 pk__in=[v["anchor_id"] for v in item["payload"].get("evidence", []) if v.get("anchor_id")])]
         applied = item["application"]
-        if applied.get("type") in {"assertion_withdrawal", "entity_profile"}:
+        if applied.get("type") in {"assertion_withdrawal", "entity_profile", "alias"}:
             item["current_status"] = applied.get("status", "draft")
         elif applied.get("type") == "assertion":
             item["current_status"] = m.Assertion.objects.filter(pk=applied["id"]).values_list("status", flat=True).first()

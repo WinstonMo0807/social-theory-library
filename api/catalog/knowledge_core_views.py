@@ -209,9 +209,21 @@ class EntitiesView(APIView):
             from catalog.services.knowledge_public import public_entities
             rows = rows.filter(pk__in=public_entities().values("pk"))
         query = request.query_params.get("q", "")[:300]
-        if query:
-            rows = rows.filter(label__icontains=query)
-        return Response({"entities": [entity_data(row, public=request.query_params.get("preview") != "1") for row in rows.order_by("label")[:50]]})
+        from catalog.services.knowledge_entity_queries import entity_query
+        public = request.query_params.get("preview") != "1"
+        rows = entity_query(rows, query=query, public=public)
+        return Response({"entities": [entity_data(row, public=public) for row in rows[:50]]})
+
+
+class EntityAliasView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def post(self, request, entity_id):
+        from catalog.services.knowledge_aliases import submit_alias
+        from catalog.services.intelligence_queries import changeset_data
+        draft = submit_alias(get_object_or_404(Entity, pk=entity_id), request.data, request.user,
+            request_id=request.data.get("request_id"), base_hash=request.data.get("base_hash"))
+        return Response(changeset_data(draft, request.user), status=201)
 
 
 class EntityProfileView(APIView):
@@ -358,6 +370,7 @@ urlpatterns = [
     path("pages/<uuid:page_id>/assertions/draft/", PageAssertionDraftView.as_view()),
     path("entities/", EntitiesView.as_view()),
     path("entities/<uuid:entity_id>/profile/", EntityProfileView.as_view()),
+    path("entities/<uuid:entity_id>/aliases/", EntityAliasView.as_view()),
     path("objects/<str:source_type>/<uuid:source_id>/", EntityKnowledgeView.as_view()),
     path("special/<slug:slug>/", KnowledgeSpecialView.as_view()),
     path("assertions/<uuid:assertion_id>/", AssertionView.as_view()),
