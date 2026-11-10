@@ -14,3 +14,5 @@
 @media(max-width:900px){.layout{display:block}.preview{position:static;max-width:none;width:100%;margin:0}.section>h2{font-size:21px}.relations{grid-template-columns:1fr 1fr;gap:14px 0}.checks{grid-template-columns:1fr 1fr;gap:13px 0}.checks article{border:0}}
 @media(max-width:580px){.object{grid-template-columns:1fr;padding:13px}.current{border-left:0;border-top:1px solid var(--line);padding:12px 0 0}.book h3{font-size:21px}.section>h2{font-size:19px;gap:10px}.section>h2>span{font-size:18px;width:26px;height:26px}.comparison{grid-template-columns:1fr;gap:10px}.comparison h3{font-size:16px}.comparison dt{font-size:max(11px, var(--stl-readable-body))}.comparison dd{font-size:max(12px, var(--stl-readable-body))}.checks{grid-template-columns:1fr}.checks h3{font-size:max(13px, var(--stl-readable-meta))}.checks p,.checks a{font-size:max(11px, var(--stl-readable-body))}.record>div{margin:7px 0}.preview{padding:13px}.preview h2{font-size:18px}}
 
+/* Layout-only public candidate; publication preview and gates stay intact. */
+:global(.admin-content) .layout { gap:24px; }

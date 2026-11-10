@@ -40,3 +40,7 @@
 /* Long original filenames must wrap inside the task identity column. */
 .identity { min-width: 0; max-width: 100%; }
 .identity > span { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .workspace:not(:global(dialog *), :global([role="dialog"] *)) { padding-inline:0; }
+:global(.admin-content) .layout:not(:global(dialog *), :global([role="dialog"] *)) { gap:24px; }

@@ -1,4 +1,34 @@
-# 盘点验证记录
+# 管理台与读者中心排版验证
+
+本轮最新范围以 SCOPE.json 为准。视觉实施基于已还原的公网源码 7b8963fe，7c4e4a0d 为实施前设计检查点；没有采用最新 main 或 Knowledge Core Demo。测试仅在隔离 Web 18110 / API 18111，临时 SQLite、合成 PDF 与测试账号中运行。
+
+| 检查 | 实际结果 | 证据及边界 |
+|---|---|---|
+| 页面与视图 | 80 个中心入口，200 个视图 | 每页1536与390，20个复杂入口另查320与768；逐入口在唯一COVERAGE.csv，图片哈希在RUNTIME_LAYOUT_EVIDENCE.json |
+| 保留文字样式 | 80入口 UI文案、字体、字号、字重、行高、字色比较一致 | 同页关闭/开启新增全局link样式及模块追加规则；PDF正文按原有渲染器重新适配画布，不把其像素字号当UI字体变更 |
+| 保护区域 | 80入口受保护样式一致，源文件范围检查通过 | 没有改导航、品牌、登录、弹窗、加载、公开渲染器或业务处理代码；窄屏分类入口的网格间接影响已由独立复审发现并修复 |
+| CSS范围检查 | 退出0，38个前端文件：36份CSS与两个布局入口 | scripts/check_center_layout_scope.py直接对比7b8963fe：原CSS声明保留；新增只含布局属性，业务TSX仅import与display:contents包装 |
+| 类型检查 | 退出0 | node web/node_modules/typescript/bin/tsc --noEmit -p web/tsconfig.json |
+| 正式构建 | 完整构建与复审修正后的最终重建均退出0；清除产品内预览兼容改动后再次构建退出0（build-public-scope.log） | node scripts/patch-vinext-static-paths.mjs；node scripts/prepare-pdfjs-assets.mjs；node node_modules/vinext/dist/cli.js build。仅本地输出，不部署 |
+| 真实交互 | 6项定向场景通过 | 实际书单创建/刷新、503保留输入与恢复锁、编目草稿实时预览/差异弹窗/保存/还原、搜索分页与返回URL、欢迎编辑预览切换保留草稿、公网页及登录样式不受影响。均为隔离对象，未发布 |
+| 原文—笔记—来源补充链路 | 3步通过，引用步骤复现既有400；脚本退出1 | 实际PDF选文创建笔记201、读者中心编辑后刷新保留、返回原文PDF画布均通过；导出引用因evidence_span_id为null被旧输入serializer拒绝，关闭新增CSS后同样400。note-source.json保留partial_existing_failure，未算全链路通过 |
+| 偏好与响应式 | 16组检查通过 | 管理员测试账号：大号宋体、夜间、刷新持久化、减少动态效果；4页面×1536/768/390/320，无新增溢出。字体/字色与基线一致 |
+| 独立视觉复审 | 初审fix；唯一修复复核ship | 13张必需截图有效；发现手机overview网格改变分类入口高度，<=900px恢复block；390/320恢复基线，桌面双列保留。ship仅指该修复复核，不是生产批准 |
+| 样式检测器 | 一次运行退出2，23项均来自未改的既有CSS | 无新增规则命中；没有因通用建议改用户固定的字体、颜色或导航。保留detector.json与detector-triage.json |
+
+运行产物位于 output/public-visual-20261110/runtime/，不提交数据库、会话、构建或截图。accepted.json汇总最终80入口；confirmed.json重查引文列宽与PDF重绘；review-fix.json重查读者分类。interactions.json为6项交互结果，preferences/report.json为字号外观矩阵，scope-check.json为修改边界。
+
+收尾再次从7b8963fe核对整个产品目录，发现早期本机兼容代码尚在server-request.ts、vite.config.ts及相应测试中，已只撤回这三份本任务干净文件的改动，恢复公网原源码。API目录与7b8963fe无差异，前端只有38个允许文件。专用scripts/start_center_layout_preview.mjs在本机开发进程配置/api代理，并仅在serve模式内存转换Workers不支持的redirect:error；不会写源码，也不会进入生产构建。既有非2xx拒绝保持。早期手写的manual断言随对应兼容改动撤回，原本失败的基线断言仍保留。启动器切换后再次TypeScript、范围检查、diff检查与构建均退出0；本机管理台及读者中心重新打开核对。
+
+前两轮审计只关闭了模块追加CSS，没有关闭独立link样式，不作为最终完整比较结论。已改脚本并补跑80入口。PDF异步文本层和iframe自动居中的极小浮点误差曾产生误报，最终比较排除原文重绘文本并归一化近零margin，保留UI字体与真正样式比较。文件上传控件的默认宽度、引文百分比列加gap引起的新增溢出已实测修正。
+
+本轮发现且保留的既有问题：PV072学者编辑在1536/390px的scrollWidth分别1558/453，候选与基线完全相同；PV098主题预览的association_notes被既有serializer拒绝400；PV011笔记导出引用存在evidence_span_id空值契约错误，详BUSINESS_FINDINGS.md。PV035当前三列编排结构与PV050原文公开投影保留，80入口覆盖不等于80处强制重写。
+
+模型、OCR、邮件、远程索引及真实生产发布没有在离线夹具中执行。发布按钮、任务状态与失败恢复保留真实业务状态，不以未配置服务的页面截图冒充成功。完整业务静态盘点和早期五角色140个GET证据保留，但本轮不宣称全部业务场景E2E通过。
+
+---
+
+# 早期盘点验证记录（历史阶段）
 
 环境为独立工作区 `C:/Users/12297/.codex/worktrees/stl-public-visual-20261110/书库开发3`。尚无视觉实现，以下不是全站功能或视觉验收。
 

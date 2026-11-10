@@ -1,3 +1,13 @@
+补充已核实既有问题 PV-NOTE-CITE-01：按页笔记导出引用带evidence_span_id:null，被既有UUIDField拒绝400。关闭本轮CSS仍复现；创建/编辑/刷新/回到原文通过。详情见docs/stl4/public-visual-20261110/BUSINESS_FINDINGS.md。按最新用户范围不改业务契约。
+
+## 2026-11-10 最新排版范围与关闭项
+
+- D / PV-LAYOUT-01：reader-overview新增grid使手机分类入口的百分比flex-basis按确定高度解析。<=900px恢复父级block，nav/form样式不改；独立复审390/320与桌面确认唯一修复resolved。
+- D：编目上传控件窄屏默认宽度、引文百分比列加gap溢出、OCR长标题挤列均已在主体CSS中修正并定向复查。没有改数据、字段或接口。
+- 本轮排除 / PV-PREVIEW-02（既有）：主题预览自动发送curation.association_notes，但api/catalog/backoffice_views.py的TopicPreviewCurationSerializer缺少该字段并返回400；public_topics.preview_topic下游接受它。只记录契约不一致，保留真实错误；最新用户只授权排版，不能擅自修业务。
+- 本轮排除 / PV-LAYOUT-02（既有）：PV072学者编辑1536/390的scrollWidth为1558/453，原版与候选相同；涉及保留的导航/弹层结构，未扩大改造。
+- 下方早期PV-FILTER-01、PV-PREVIEW-01的“设计后实施”承诺由最新SCOPE.json取消，作为既有问题保留。旧api-domain-boundaries中的1项断言失败继续如实保留，未删除测试或改弱断言。
+
 ## 2026-11-10 公网视觉候选盘点
 
 - A / PV-FILTER-01（既有问题，尚未修复）：理论管理选择理论传统仍返回概念/争论。隔离浏览器实际复现；`web/components/theory-system-admin.tsx:455` API发送node_type，`api/catalog/theory_system_views.py:162`读取type。最小修复保留页面URL的node_type，将API查询转换为type；设计覆盖后实施，验证四分类、分页与返回。

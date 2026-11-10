@@ -16,3 +16,6 @@
 @media(max-width:760px){.textFooter{position:sticky;bottom:-16px;z-index:2;padding:13px 0;margin-top:16px}.textFooter button{min-height:38px;font-size:max(11px, var(--stl-readable-ui))}.textFooter .primary{flex:1}}
 
 @media(min-width:761px){.workspace[data-group=welcome]{grid-template-columns:minmax(180px,.6fr) minmax(0,1.4fr)}.workspace[data-group=welcome] .detail{padding-left:32px}}
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .heading:not(:global(dialog *), :global([role="dialog"] *)) { padding-block:20px; }

@@ -20,3 +20,8 @@
 /* PDF123: edit the project question in the selected project, using its original revision. */
 .inlineQuestion{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}.inlineQuestion textarea{display:block;width:100%;box-sizing:border-box;min-height:76px;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--ink);padding:10px;font:max(13px, var(--stl-readable-ui))/1.7 var(--serif);resize:vertical}.inlineQuestion>span{font-size:max(12px, var(--stl-readable-meta));color:var(--annotation)}.inlineQuestion>p{font-size:max(12px, var(--stl-readable-body));color:var(--night-danger,#ad4943);margin:0}.inlineQuestion>button{margin-left:auto}
 @media(max-width:760px){.inlineQuestion textarea{font-size:max(13px, var(--stl-readable-ui));min-height:72px}.inlineQuestion>button{width:100%}}
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .page:not(:global(dialog *), :global([role="dialog"] *)) { padding-inline:0; }
+:global(.admin-content) .columns:not(:global(dialog *), :global([role="dialog"] *)) { gap:24px; }
+:global(.admin-content) .form:not(:global(dialog *), :global([role="dialog"] *)) { padding-block:24px; }

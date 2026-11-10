@@ -10,11 +10,6 @@ const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
-// Optional loopback fixture API. Production still uses its existing edge proxy.
-const isolatedApi = process.env.STL_ISOLATED_API_ORIGIN;
-if (isolatedApi && !/^http:\/\/127\.0\.0\.1:\d{4,5}$/.test(isolatedApi)) {
-  throw new Error("STL_ISOLATED_API_ORIGIN must be an explicit loopback origin");
-}
 
 const localBindingConfig = {
   main: "./worker/index.ts",
@@ -56,10 +51,9 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
-    server: {
-      ...(isCodexSeatbeltSandbox ? { watch: { useFsEvents: false, usePolling: true } } : {}),
-      ...(isolatedApi ? { proxy: { "/api": { target: isolatedApi, changeOrigin: false } } } : {}),
-    },
+    server: isCodexSeatbeltSandbox
+      ? { watch: { useFsEvents: false, usePolling: true } }
+      : undefined,
     plugins: [
       vinext(),
       sites(),

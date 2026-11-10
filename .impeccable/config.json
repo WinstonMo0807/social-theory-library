@@ -1,3 +1,4 @@
 {
-  "buildPath": "comp"
+  "buildPath": "code",
+  "reason": "Existing-system layout refinement under user-pinned brand/type/navigation/content constraints; earlier comp plan superseded by the latest user scope."
 }

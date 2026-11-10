@@ -17,3 +17,6 @@
 .fileTypes { flex-wrap: wrap; }
 .fileTypes .legend { flex: 1 0 12em; max-width: none; }
 .legend span { white-space: nowrap; }
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .panel:not(:global(dialog *), :global([role="dialog"] *)) { padding:24px; border-radius:3px; }

@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-10-user-fixed-type-and-color",
+  "version": "2026-11-10-user-layout-only",
   "authority": "用户本轮截图与明确指令，以及追加沿用当前公网字体和字体颜色；覆盖所有生成设计图中的不同品牌、左栏分类、字体和字色；不为此重新生成图片",
   "reference": "output/public-visual-20261110/reference/admin-sidebar-user-20261110.png",
   "brand": {
@@ -36,12 +36,23 @@
         ]
       }
     ],
-    "preserve": "顺序、既有子菜单、URL、最具体路径高亮、权限过滤和窄屏展开能力全部保留"
+    "preserve": "分类栏整体原样保留，包括名称、分组、顺序、图标、样式、宽度、既有子菜单、URL、高亮、权限及窄屏展开能力；读者中心分类栏同样原样保留。"
   },
   "typography": {
     "baseline": "本任务已核实公网work-session-r2源码；沿用A/balanced默认及实际组件级字体映射，不取最新内网Demo，也不以图片中的字体代替",
-    "sources": ["web/app/layout.tsx", "web/styles/tokens/type-fonts.css", "web/styles/tokens/typeface.css", "web/styles/tokens/design.css", "web/styles/layout/brand-identity.css", "web/lib/appearance.ts", "web/components/display-preferences.tsx"],
-    "selfHostedAliases": {"STL Text Sans": "Noto Sans SC", "STL Display Serif": "Noto Serif SC"},
+    "sources": [
+      "web/app/layout.tsx",
+      "web/styles/tokens/type-fonts.css",
+      "web/styles/tokens/typeface.css",
+      "web/styles/tokens/design.css",
+      "web/styles/layout/brand-identity.css",
+      "web/lib/appearance.ts",
+      "web/components/display-preferences.tsx"
+    ],
+    "selfHostedAliases": {
+      "STL Text Sans": "Noto Sans SC",
+      "STL Display Serif": "Noto Serif SC"
+    },
     "assets": "web/public/fonts/stl-type/现有字体文件、SOURCES.json和OFL许可证；不新增外部字体依赖",
     "defaultContent": "--content-text沿现有STL Text Sans栈；--content-display沿现有STL Display Serif栈；保留页面、阅读器及导航的实际字体作用域",
     "brand": "既有BrandImage及brand-identity规则保持，英文Times New Roman/Georgia，中文既有serif栈；不随内容偏好改写锁定品牌",
@@ -49,10 +60,37 @@
   },
   "textColors": {
     "rule": "沿用已核实公网实际CSS级联中的标题、正文、辅助文字、链接、导航选中、按钮文字和语义状态颜色；不把所有文字统一成图中的黑色或金色。以下是源码锚点，不是逐页浏览器计算值验收。",
-    "sources": ["web/styles/tokens/design.css", "web/styles/tokens/appearance.css", "web/styles/tokens/typeface.css", "web/styles/features/workbench-editorial.css", "web/styles/layout/brand-identity.css"],
-    "lightAnchors": {"--stl-ink-primary": "#1b1b18", "--stl-readable-muted": "#5c6267", "--stl-readable-ink": "#343b3c", "--workbench-ink": "#292b28", "--workbench-accent": "#98702e", "--night-gold": "#aa854d", "brand": "#242424"},
-    "darkAnchors": {"--stl-ink-primary": "#eee9df", "--stl-readable-muted": "#c2c4bd", "--stl-readable-ink": "#e8e7e0", "--workbench-ink": "#edece6", "--workbench-muted": "#b8bbb2", "--workbench-accent": "#d3ad69", "brand": "#f7f4ee"},
-    "semanticLightAnchors": {"--stl-accent-danger": "#993d33", "--stl-accent-success": "#315f40", "--stl-accent-info": "#315f6b", "--stl-accent-warning": "#785b1e"},
+    "sources": [
+      "web/styles/tokens/design.css",
+      "web/styles/tokens/appearance.css",
+      "web/styles/tokens/typeface.css",
+      "web/styles/features/workbench-editorial.css",
+      "web/styles/layout/brand-identity.css"
+    ],
+    "lightAnchors": {
+      "--stl-ink-primary": "#1b1b18",
+      "--stl-readable-muted": "#5c6267",
+      "--stl-readable-ink": "#343b3c",
+      "--workbench-ink": "#292b28",
+      "--workbench-accent": "#98702e",
+      "--night-gold": "#aa854d",
+      "brand": "#242424"
+    },
+    "darkAnchors": {
+      "--stl-ink-primary": "#eee9df",
+      "--stl-readable-muted": "#c2c4bd",
+      "--stl-readable-ink": "#e8e7e0",
+      "--workbench-ink": "#edece6",
+      "--workbench-muted": "#b8bbb2",
+      "--workbench-accent": "#d3ad69",
+      "brand": "#f7f4ee"
+    },
+    "semanticLightAnchors": {
+      "--stl-accent-danger": "#993d33",
+      "--stl-accent-success": "#315f40",
+      "--stl-accent-info": "#315f6b",
+      "--stl-accent-warning": "#785b1e"
+    },
     "preserve": "保留现有变量和组件作用域的优先级、深色覆盖、禁用与焦点表达；旧CSS选择器名称不代表采用其历史外部设计参考。若存在实际对比度缺陷，单独记录证据并最小修复，不能擅自替换全站字色。"
   },
   "verification": "实现后按公开页、读者台、管理台、阅读器、弹窗分别核对computed font-family/color；核对无衬线/宋体、三档字号及白昼/夜间；图片差异须服从本约束，不因图片相似而降低字号可读性",
@@ -61,5 +99,6 @@
     "生成图的品牌只作区域占位，精确品牌由现有资源决定",
     "生成图侧栏的馆藏/处理任务/知识内容/策划与发布/系统设置等简化分类全部作废，以本文件固定分类为准",
     "生成图字体与字体颜色只作区域层级示意，全部以当前公网字体资源、组件映射和实际颜色级联为准；不为这项约束重新出图"
-  ]
+  ],
+  "scope": "SCOPE.json优先。只改管理台/读者中心主体，两个中心任务分类栏本身也原样保留。其余区域仅做保持不变的回归验证。"
 }

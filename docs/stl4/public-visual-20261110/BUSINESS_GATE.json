@@ -40,7 +40,8 @@
   ],
   "open_existing_defects": [
     "PV-PREVIEW-01：作品草稿的期刊目录未投影到实际预览。",
-    "PV-FILTER-01：理论目录API使用node_type而后端读取type。"
+    "PV-FILTER-01：理论目录API使用node_type而后端读取type。",
+    "PV-PREVIEW-02：主题预览association_notes在服务支持，但serializer拒绝；最新范围仅排版，本轮排除。"
   ],
-  "design_gate": "pending: every active route plus special state needs a real generated image or explicit shared mapping before UI implementation"
+  "design_gate": "closed for latest center-body scope; see DESIGN_GATE.json and SCOPE.json"
 }

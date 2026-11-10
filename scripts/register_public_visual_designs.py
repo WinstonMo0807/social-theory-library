@@ -55,17 +55,22 @@ index_path.write_text(json.dumps(index, ensure_ascii=False, indent=2)+"\n", enco
 with (BASE/"COVERAGE.csv").open(encoding="utf-8-sig", newline="") as f:
     rows = list(csv.DictReader(f))
 for row in rows:
-    designs = [d for d in manifest if row["id"] in d["coverage"]]
+    designs = [d for d in manifest if row["id"] in d["coverage"] and d.get("current_scope") == "page_layout"]
     ready = [d for d in designs if d["status"] == "generated_inspected"]
+    if row.get("current_scope") != "page_layout":
+        continue
     row["design_version"] = " ; ".join(f"{d['id']} {d['version']} {d['image']}" for d in ready)
     if designs:
         pending = [d["id"] for d in designs if d["status"] != "generated_inspected"]
         row["uncovered_reason"] = ("待生成/核对设计：" + ",".join(pending) + "；" if pending else "") + "实现和逐消费者运行验证待完成。"
 with (BASE/"COVERAGE.csv").open("w", encoding="utf-8-sig", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
-pending = [d["id"] for d in manifest if d["status"] != "generated_inspected"]
+active = [d for d in manifest if d.get("current_scope") == "page_layout"]
+pending = [d["id"] for d in active if d["status"] != "generated_inspected"]
 gate = {"status": "pending" if pending else "ready_for_implementation_review",
-        "planned_designs": len(manifest), "generated_inspected":len(manifest)-len(pending),
-        "pending":pending, "meaning":"Image existence and explicit mapping only; full design/business correspondence and responsive review still required before UI implementation."}
+        "scope": "SCOPE.json: admin/account main-body layout only; all protected surfaces unchanged",
+        "planned_designs": len(active), "generated_inspected":len(active)-len(pending),
+        "historical_out_of_scope_designs": len(manifest)-len(active),
+        "pending":pending, "meaning":"Image existence and explicit mapping only; scope-constrained design review is required before UI implementation. Existing navigation, content, interactions, overlays, loading, typography and text colors override images."}
 (BASE/"DESIGN_GATE.json").write_text(json.dumps(gate, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
 print(json.dumps({k:v for k,v in gate.items() if k not in {"pending", "meaning"}}, ensure_ascii=False))

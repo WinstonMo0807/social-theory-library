@@ -183,3 +183,6 @@ Desktop.ini
 *.swo
 *~
 ~$*
+
+# Local visual review captures; evidence hashes are tracked in docs.
+/.impeccable/review/

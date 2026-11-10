@@ -1,3 +1,19 @@
+# 最新范围与追加发现
+
+用户已将本轮严格收窄为管理／读者中心主体排版。下文早期“设计覆盖后实施”的PV-FILTER-01、PV-PREVIEW-01均改为本轮排除的既有功能缺陷，不继续改接口、投影或业务流程。
+
+PV-PREVIEW-02（既有，当前排版任务排除）：主题编辑的预览请求携带curation.association_notes；api/catalog/backoffice_views.py:471的TopicPreviewCurationSerializer缺少该字段，to_internal_value在484行拒绝未知字段。下游api/catalog/services/public_topics.py的preview_topic实际接受association_notes。隔离页面PV098自动预览POST返回400，详情为“主题预览只接受明确的编排字段”。触发不依赖CSS，本轮没有改前后端请求代码；未放宽校验，也未伪造预览成功。后续最小业务修复应统一既有字段契约及校验，另行取得符合范围的开发指令。
+
+PV-NOTE-CITE-01（既有，当前排版任务排除）：在实际PDF原生文字层选文后创建笔记，/account/notes的DetailActions.cite直接把fresh.source传给POST /api/reading/citation-preview/。按页来源中evidence_span_id为null，api/reading/research_serializers.py:6的UUIDField(required=False)未允许null，于是400“该字段不能为 null”。前端reader-notebook.tsx:213及shared-citation.client.ts仍为原代码；research.py:193产出空span，compact_reference本可移除空字段但此调用未使用。隔离实际新建/编辑/刷新/返回原文成功，引用步骤关闭本轮CSS后复现相同400。未放宽权限或改变来源校验；后续最小修复须统一该入口来源投影的可选字段，另属业务开发。
+
+PV-LAYOUT-01（本轮已修复）：窄屏reader-overview新增grid使内部百分比flex-basis按确定高度解析，分类入口被拉高。<=900px恢复父容器block，nav及form样式未改；独立复审390/320和桌面确认修复。
+
+PV-LAYOUT-02（既有，保护范围保留）：学者编辑PV072横向scrollWidth在1536/390下分别1558/453，候选与原CSS相同。受保护导航／弹层结构本轮不重做；不是新增排版回归。
+
+以下为已核实业务盘点的历史记录，业务事实继续有效，开发承诺服从上述最新范围。
+
+---
+
 # 公网业务核对记录
 
 基线见 BASELINE.md。本文记录已读源码与只读运行观察，不是全站验收报告。唯一页面覆盖表为 COVERAGE.csv，API_CONTRACTS.csv 是其接口明细；自动提取的候选字段不等于完整契约。

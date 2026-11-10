@@ -2206,5 +2206,613 @@
     ],
     "generator": "built-in image_gen",
     "synthetic_content": true
+  },
+  {
+    "id": "A36",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-cbc2fbf4-adb0-4692-9735-b7fcd7f584d7.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "主体编辑/预览同屏可采用。图中红色星号与字符数字仅样例，必填与上限以serializer及现有字段校验为准；不会全部设为必填。正文编辑继续复用已有块编辑器，不增加产品未支持的格式按钮。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A36-v1.png",
+    "sha256": "7c483b259cd240b3b4affb05189102e2419e5a3692954858b8af49d6746e7c1f",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A37",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0168f550-55b5-4dd6-b7c6-51f26334a018.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "需纠正：生成器添加了正文富文本工具条；当前网站文案按实际纯文本/段落字段，不能新增富文本能力；预览页头导航也须实际公开组件。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A37-v1.png",
+    "sha256": "519ce5ce8249bd34001f3b8e1cb5326e682c493c8c4474f7717cea67750564cc",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A38",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-57f369a7-e0f1-4e19-ad87-e1acad45411e.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "需纠正：下方固定介绍被画成可上下排序/删除；当前仅编辑已有文案，不能增加区块删除排序功能；展示字符上限须实际字段。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A38-v1.png",
+    "sha256": "5d8eddd6ed8b13affb7871f2c6485e28f3a31eabb2e6bbf2780d5257db32a3c7",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A39",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-79a99a2b-3ef9-460d-b0f6-1e76a106242e.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "需纠正：缺少封面被画成发布必填阻塞，无此已核实依据。改为已核实来源未公开/无可发布文件的真实阻塞文案，出版版本不能用草稿修订号代替。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A39-v1.png",
+    "sha256": "8c1b8fb616bdde6fc33be3cef8b70588bd01bc0ea6d3b951d6ef8b24c5edb275",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A40",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b4375a56-75ae-4065-82fa-a0e291618dfd.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "需纠正：日期范围画成任意起止日期，实际仅近7/30/90天选项；恢复不能描述为自动创建新对象并立即公开，须按实际恢复范围。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A40-v1.png",
+    "sha256": "f3e2e2e41144225d8743e3c6f2623bd90a3c4125484aae65d08c3134a0ef0f39",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A41",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-74a9aa07-30c5-441e-978e-b615ce665a74.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "需纠正：当前未发布来源却画了可发布按钮；当前状态应禁用发布已保存编排，并说明未发布来源只可存草稿。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A41-v1.png",
+    "sha256": "7dc038f596db5cc14d93113f519ad3b5cde4f2fd401f2926fd6283f3fa5bf117",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A44",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4994b143-40f2-403a-8923-99b9fbf4cec4.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "素材目录/来源表单/使用位置/历史布局可采用，来源、许可证值仅示例；字段类型、权利枚举和焦点坐标继续使用真实组件，不照图硬编码许可选择。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A44-v1.png",
+    "sha256": "8ba0b1bd5bfbdf1d28674af4f1c611cd15de91a44b20533e1293e68a078d3d65",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A45",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d643bca8-0cf9-489a-a7b6-f7d1e32d0a3c.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "概念归属/来源原文只读布局可采用，源文都是明确示例。来源状态由接口决定，缺失原文不输出假引文。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json",
+    "path": "output/public-visual-20261110/design/A45-v1.png",
+    "sha256": "8a7e9104e44957613694a654be9b1fa78208356858e4801926505eabee72a6cf",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A46",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-46e4bf7e-b23c-4199-98aa-400eedb8613a.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "需纠正：图中撤回被描述为自动回到上一公开版，这不符合已核实规则；移除该文案。历史页没有保存/放弃未保存草稿的独立表单，改为返回编辑；不得在此直接发布未保存版本。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A46-v1.png",
+    "sha256": "34a449a8708a0b07c401e3ba71a2356f092d35e464636122f627b5c773ce2bdc",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A47",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4cb827a6-2d73-4b11-b194-a23548e73cc6.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A47-v1.png",
+    "sha256": "36f0a6ee82a410167c36ea2e161f59854bd325acfa57bb8194c55bce9358e8a3",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A48",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-60fabe7c-e56f-4515-9fb3-5a78c85dc52c.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A48-v1.png",
+    "sha256": "038e5a209c44f0ed7d4f2206f66036afd977313f016084e645e8f196cb1851f7",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A49",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-1a4adff2-d458-4ba7-8528-4c39261e7697.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A49-v1.png",
+    "sha256": "7acc16eb47510d45e4393ce9143aed70695a2a79baf8645830324f82561d4802",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A50",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e36ceed6-ea9a-4d02-9377-2cb2badace0f.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "需纠正：不得新增用途，不得新增多个备用配置或排序链，不得出现HTTP请求方式POST编辑器。备用配置为选择一个已有同用途配置；凭据动作保留/更新/删除并停用为选择项，保存时生效；HTTP仅安全上下文说明，不是新功能面板。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A50-v1.png",
+    "sha256": "890d397feb835004cc685c2f9758b112050c6dce6601049b64dd0c2afcc04f33",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A51",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ed1a89e5-3679-421f-b7cd-080af1aa6750.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A51-v1.png",
+    "sha256": "93aad85b2585f5ea91a3fce20117fa2d52c81c9b9e0b5e0bf7aafe9511445729",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A52",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d9ab45b7-e6f4-47b3-b9fe-63d934db43b1.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A52-v1.png",
+    "sha256": "f42187157e0a2f91faed738340244961947bc0259d9edef302d3c98a2916237f",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A53",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-067143c1-9609-4a03-bc98-e6e44b67af1d.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json",
+    "path": "output/public-visual-20261110/design/A53-v1.png",
+    "sha256": "5140c8c5db74226882ccf2191432484cbf76538c8a85b9aa65a187e631d86f6d",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A37",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-7dd77aa9-665a-479f-9112-df4ac79f1e06.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_016.json",
+    "path": "output/public-visual-20261110/design/A37-v2.png",
+    "sha256": "b27d5dc0cdf024d55e10067da0e7e72f63d9ff847f4c0f8d6e594d342f1660a5",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A38",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-9191ca6e-05a7-4bc1-82c3-2e1ac16181bf.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_016.json",
+    "path": "output/public-visual-20261110/design/A38-v2.png",
+    "sha256": "adc3e570111b582fd8470f7b8968d62987ba418e22ccdf75479a89ace35a4c2d",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A39",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-1cf9976c-6928-47a7-af81-9666b303d0c9.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_016.json",
+    "path": "output/public-visual-20261110/design/A39-v2.png",
+    "sha256": "bd38cc8dc38b5d44335ce2931d3457a427ca78f3671922f0272a871a77c90d16",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A40",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-9cf49b51-7a39-4409-a288-2fd1a08c8707.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_016.json",
+    "path": "output/public-visual-20261110/design/A40-v2.png",
+    "sha256": "c6fee1eba6d297746f2fa959282439b80fb0a6fc202b051b6fac1392aa01e57b",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A41",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4055b57d-1a8b-4383-958f-9405a695d4c3.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_016.json",
+    "path": "output/public-visual-20261110/design/A41-v2.png",
+    "sha256": "26bbe0fa2f54e396da207dd5744818334ae05629b6b596892e91ed17d18687f8",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A46",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-1b94f532-734d-4e14-9b65-df0dc5f67029.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_016.json",
+    "path": "output/public-visual-20261110/design/A46-v2.png",
+    "sha256": "018adf8f030f22838fa42ed14301f957186cb5245f5efdfaa9ed719aa7589b3c",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "A50",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4184f902-d94a-4810-bba3-fd1f05276ba1.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_016.json",
+    "path": "output/public-visual-20261110/design/A50-v2.png",
+    "sha256": "cb95a2831f23124c4eed899df7bc13980438c933e1f9535c0525d385a7441128",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M01",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2e9f3be6-889c-4062-b8cb-1e82c5f4c85f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "手机首屏信息过多，示例演示仍为桌面双栏，下面三列介绍不适合390px。需改为单列和适当截取首屏。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M01-v1.png",
+    "sha256": "f5f51a2c4f28af25e8ecb521f02e681868f4c9fd097095bdf4121a3698372549",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M02",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-37d63429-2d46-4b72-bbda-f00b86bac8dc.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M02-v1.png",
+    "sha256": "9b5b405db7f9848c38efd1b73599d9d6e8eb201b934f58c2676f61f378cb9433",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M03",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-be7771fb-2e67-4ef0-8012-d19ada79e327.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M03-v1.png",
+    "sha256": "111b531bf040baf430617352ce703bd49d3ed567e90fe9fa5c4c859a3f9b301b",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6c91c52a-ca00-4400-81a8-bed526651328.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M04-v1.png",
+    "sha256": "aa6df2db07b69f8835e7141709aab4cfc718fea9311325d95dcd9bae42798a6b",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-123bcbe3-4859-42f3-bd43-f1b1964d222e.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M05-v1.png",
+    "sha256": "690afa442b57d0b5f65058d94fd18a3c196ab6d5e127a61103749470df6c37fb",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M06",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d93edff6-44a4-43aa-b59a-d60138133382.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M06-v1.png",
+    "sha256": "e300e18828874477bb1740bb17dd703fe84361a09a5ed108343b6ada48552588",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M07",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3e64ece2-ae35-45e8-aae4-208a7a3719cc.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M07-v1.png",
+    "sha256": "5f246ae8959acb32600902f9da6b2c6c17a1cd79c60ce7c1e23a48cb32412c74",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M08",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-7a7ad549-9407-47f5-a82f-b978fce1ac1d.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M08-v1.png",
+    "sha256": "cf029a259e1f14b3d1630ab9a205440d71c0789bddf001ce35837bf40de568d7",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M09",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d747b3f6-1e71-4621-b9c5-a903b962ad9a.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "生成器借真实人物配造示例书目，必须全部匿名；行列密度仍接近桌面，需仅展示三条可读的纵向记录。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M09-v1.png",
+    "sha256": "ddec44dae0dfac8377ed689a20fd396a52c35b10b6c701f4eb25dfe9bd6e4ba8",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-875b62ec-2d49-412c-af04-db8037834029.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M10-v1.png",
+    "sha256": "c0ff98c4c3b099cedaefc875226cce8e87b95644c57f4faa3d1005f511e15586",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M11",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-455c0ab1-e30d-4eb7-bd7f-6aa6a794ce3b.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "生成器未执行手机面板切换，目录与PDF仍左右并列；须改为单列目录编辑，原文由面板切换访问。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M11-v1.png",
+    "sha256": "00668745ab4775c360512d6e4008b2dc61e6ba19ec4e6b4d6766ad6247a849c6",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M12",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e4c885b6-c9b6-4860-8104-b9be0960709c.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "标签与说明仍按桌面双列呈现，须改为每项标题在上、解释在下的手机纵排；六项实际保留类别不变。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M12-v1.png",
+    "sha256": "6f5efa74467bb189e6417762e6306f3960b1d06ec322a95c82f536cfe2bdbfe8",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M13",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2e032764-e7d8-436d-8939-1024135e80fd.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M13-v1.png",
+    "sha256": "f20e167a3bcc4d0f296f73a0b140d8e4424a04845ae8bd64c384abc9e0b1c2d5",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M14",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d06bca00-2c0b-423b-8a12-bcf8aea962d6.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M14-v1.png",
+    "sha256": "b7ee177da8f942cd1165fdd963677eec370a7152d39400a083d728a9ecd1952e",
+    "dimensions": [
+      1536,
+      1024
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
+  },
+  {
+    "id": "M15",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-5ce3f2cc-e257-489b-afa5-daba1378aaed.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已填写示例邮箱却显示不能为空，需纠正为与空密码对应的错误位置/提示。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json",
+    "path": "output/public-visual-20261110/design/M15-v1.png",
+    "sha256": "d90edc6d60a7e47fb204e64cae97b3454eb086ce3fe1134b39353d7852e60f72",
+    "dimensions": [
+      1024,
+      1536
+    ],
+    "generator": "built-in image_gen",
+    "synthetic_content": true
   }
 ]

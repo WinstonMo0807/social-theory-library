@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T04:30:45.393Z",
+  "title": "Design System: Social Theory Library",
+  "extensions": {
+    "colorMeta": {
+      "stl-surface-paper": {
+        "role": "neutral",
+        "displayName": "全站纸白 · inherited",
+        "canonical": "#f7f4ee"
+      },
+      "workbench-paper": {
+        "role": "neutral",
+        "displayName": "中心纸面 · inherited",
+        "canonical": "#f7f6f2"
+      },
+      "workbench-sheet": {
+        "role": "neutral",
+        "displayName": "中心内容层 · inherited",
+        "canonical": "#fffefa"
+      },
+      "workbench-ink": {
+        "role": "neutral",
+        "displayName": "中心文字 · inherited",
+        "canonical": "#292b28"
+      },
+      "stl-readable-muted": {
+        "role": "neutral",
+        "displayName": "可读灰字 · inherited",
+        "canonical": "#5c6267"
+      },
+      "workbench-rule": {
+        "role": "neutral",
+        "displayName": "中心细边界 · inherited",
+        "canonical": "#dedfd8"
+      },
+      "workbench-wash": {
+        "role": "neutral",
+        "displayName": "中心淡色层 · inherited",
+        "canonical": "#eeeee7"
+      },
+      "workbench-accent": {
+        "role": "primary",
+        "displayName": "中心砂金 · inherited",
+        "canonical": "#98702e"
+      },
+      "night-gold": {
+        "role": "primary",
+        "displayName": "既有金色别名 · inherited",
+        "canonical": "#aa854d"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "展示字体 · inherited",
+        "purpose": "typeface.css 中默认 A 内容展示栈；没有记录新的全站 display 字号。品牌独立。"
+      },
+      "headline": {
+        "displayName": "管理标题 · inherited",
+        "purpose": "workbench-editorial.css 中管理正文 h1；小屏与模块覆盖继续优先，不改字体或尺寸。"
+      },
+      "reader-headline": {
+        "displayName": "读者中心标题 · inherited",
+        "purpose": "workbench-editorial.css 中 reader-center-heading h1 的既有默认。"
+      },
+      "body": {
+        "displayName": "中心根容器正文 · inherited",
+        "purpose": "现有中心根字号，不等同所有正文的计算字号。实际正文沿用 --stl-readable-body 等规则。"
+      },
+      "ui": {
+        "displayName": "操作与字段 · inherited",
+        "purpose": "既有 --stl-readable-ui 下限；标准、舒适、大号偏好继续生效。"
+      },
+      "label": {
+        "displayName": "标签与元信息 · inherited",
+        "purpose": "既有 --stl-readable-meta 下限；不重定义所有组件标签。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "center-panel",
+        "value": "none",
+        "purpose": "本轮 center-layout.css 明确匹配的主体面板；不适用于导航、浮层、加载、公开预览。"
+      },
+      {
+        "name": "stl-shadow-sticky",
+        "value": "0 -4px 16px rgb(0 0 0 / 5%)",
+        "purpose": "inherited；design.css 与 admin-primitives.css 的既有 sticky action bar，不重做。"
+      },
+      {
+        "name": "stl-shadow-dialog",
+        "value": "0 24px 80px rgb(0 0 0 / 28%)",
+        "purpose": "inherited 基础 token；具体 dialog 可有既有覆盖，本轮所有 dialog 排除。"
+      },
+      {
+        "name": "stl-shadow-toast",
+        "value": "0 12px 35px rgba(31, 29, 25, .14)",
+        "purpose": "inherited 基础 token；本轮不改变 toast 或全局反馈。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "stl-motion-ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "inherited，源 design.css。本轮不增加动效。"
+      },
+      {
+        "name": "stl-motion-press",
+        "value": "130ms",
+        "purpose": "inherited 基础 token；控件真实按下及后续级联以源码为准。"
+      },
+      {
+        "name": "stl-motion-control",
+        "value": "160ms",
+        "purpose": "inherited 基础 token；中心已有局部 transition 覆盖保留。"
+      },
+      {
+        "name": "stl-motion-navigation",
+        "value": "180ms",
+        "purpose": "inherited 基础 token；导航在本轮保留范围内。"
+      },
+      {
+        "name": "stl-motion-panel",
+        "value": "220ms",
+        "purpose": "inherited 基础 token；不授权重做现有面板或加载动画。"
+      },
+      {
+        "name": "workbench-control-feedback",
+        "value": "background-color 150ms ease,color 150ms ease,box-shadow 150ms ease",
+        "purpose": "inherited，workbench-editorial.css 中仅 prefers-reduced-motion:no-preference 启用的控件反馈。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "center-wide-detail-min",
+        "value": "1600px"
+      },
+      {
+        "name": "center-detail-columns-min",
+        "value": "1201px"
+      },
+      {
+        "name": "center-library-two-columns-max",
+        "value": "1200px"
+      },
+      {
+        "name": "center-audit-upload-min-and-issues-max",
+        "value": "1100px"
+      },
+      {
+        "name": "reader-overview-block-max",
+        "value": "900px"
+      },
+      {
+        "name": "center-compact-max",
+        "value": "700px"
+      },
+      {
+        "name": "today-work-compact-max",
+        "value": "640px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "中心主按钮 · inherited",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "来源 button.css、workbench-editorial.css、action-feedback.css。既有主按钮外观；展示片段不执行业务。源码没有统一的额外 hover 换色，未为预览发明。",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">按钮样式示例</button>",
+      "css": ".ds-button-primary { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:40px; padding:9px 16px; border:1px solid var(--ink, #292b28); border-radius:6px; background:var(--ink, #292b28); color:var(--surface, #fffefa); font-family:var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); font-size:max(14px, var(--stl-readable-ui, 1rem)); font-weight:680; line-height:1.4; cursor:pointer; } .ds-button-primary:focus-visible { outline:2px solid var(--workbench-accent, #98702e); outline-offset:3px; } .ds-button-primary:not(:disabled):not([aria-disabled=\"true\"]):not([aria-busy=\"true\"]):not(:focus-visible):active { transform:scale(.98); } @media(prefers-reduced-motion:no-preference) { .ds-button-primary { transition:background-color 150ms ease,color 150ms ease,box-shadow 150ms ease; } }"
+    },
+    {
+      "name": "中心次按钮 · inherited",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "来源同主按钮；沿用内容层背景和细边框，保留真实生产组件的状态处理。",
+      "html": "<button class=\"ds-button-secondary\" type=\"button\">次按钮样式示例</button>",
+      "css": ".ds-button-secondary { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:40px; padding:9px 16px; border:1px solid var(--line, #dedfd8); border-radius:6px; background:var(--surface, #fffefa); color:var(--ink, #292b28); font-family:var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); font-size:max(14px, var(--stl-readable-ui, 1rem)); font-weight:680; line-height:1.4; cursor:pointer; } .ds-button-secondary:focus-visible { outline:2px solid var(--workbench-accent, #98702e); outline-offset:3px; } .ds-button-secondary:not(:disabled):not([aria-disabled=\"true\"]):not([aria-busy=\"true\"]):not(:focus-visible):active { transform:scale(.98); } @media(prefers-reduced-motion:no-preference) { .ds-button-secondary { transition:background-color 150ms ease,color 150ms ease,box-shadow 150ms ease; } }"
+    },
+    {
+      "name": "工作区文本字段 · inherited",
+      "kind": "input",
+      "refersTo": "workspace-field",
+      "description": "来源 workspace-polish.css 的 workspace-field 与 workbench-editorial.css 既有控制覆盖。示例 label/value 仅作样式展示。",
+      "html": "<label class=\"ds-field\">字段样式示例<input type=\"text\" placeholder=\"示例文本\" /></label>",
+      "css": ".ds-field { display:grid; gap:8px; max-width:620px; margin:24px 0; color:var(--ink, #292b28); font:max(14px, var(--stl-readable-meta, .875rem))/1.6 var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); } .ds-field input { width:100%; min-width:0; padding:10px 12px; border:1px solid var(--line, #dedfd8); border-radius:6px; background:var(--surface, #fffefa); color:var(--ink, #292b28); font-family:var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); font-size:max(14px, var(--stl-readable-ui, 1rem)); line-height:1.6; } .ds-field input::placeholder { color:var(--muted, #5c6267); opacity:1; } .ds-field input:focus-visible { outline:2px solid var(--workbench-accent, #98702e); outline-offset:3px; }"
+    },
+    {
+      "name": "读者概览分类链接 · inherited / 保留",
+      "kind": "nav",
+      "refersTo": "overview-navigation",
+      "description": "来源 reader-overview.module.css 的现有链接、hover、选中态与最后一层布局。只呈现材料，不复制导航功能；本轮任务分类栏全部禁止改动，完整响应式以原组件为准。",
+      "html": "<nav class=\"ds-overview-nav\" aria-label=\"样式示例\"><a href=\"#ds-nav-current\" data-overview-current=\"true\">当前分类示例</a><a href=\"#ds-nav-other\">其他分类示例</a></nav>",
+      "css": ".ds-overview-nav { display:flex; flex-wrap:wrap; gap:6px 12px; min-width:0; color:var(--ink, #292b28); } .ds-overview-nav a { display:flex; align-items:center; justify-content:center; flex:0 1 auto; min-width:0; gap:8px; padding:10px 12px; border-radius:6px; white-space:normal; text-decoration:none; font:max(14px, var(--stl-readable-meta, .875rem))/1.5 var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); color:inherit; } .ds-overview-nav a:hover { background:var(--night-tint,#f3e8d4); } .ds-overview-nav a[data-overview-current=\"true\"] { background:var(--night-tint,#fae9d4); color:var(--night-gold,#8c5f27); } .ds-overview-nav a:focus-visible { outline:2px solid var(--night-gold,#a48146); outline-offset:3px; }"
+    },
+    {
+      "name": "证据标签 · inherited",
+      "kind": "chip",
+      "refersTo": "evidence-chip",
+      "description": "来源 admin-primitives.css。展示为既有非交互标签；可交互变体与真实权限保持原组件实现。",
+      "html": "<span class=\"ds-evidence-chip\"><span>证据标签样式示例</span></span>",
+      "css": ".ds-evidence-chip { display:inline-flex; max-width:100%; min-height:28px; align-items:center; gap:6px; padding:4px 8px; border:1px solid var(--line, #dedfd8); background:var(--surface, #fffefa); color:var(--ink, #292b28); font-family:var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); font-size:max(15px,var(--stl-readable-meta,.875rem)); line-height:1.6; } .ds-evidence-chip > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }"
+    },
+    {
+      "name": "阅读资料卡片 · inherited 组件 / 本轮 spacing",
+      "kind": "card",
+      "refersTo": "reading-card",
+      "description": "来源 reader-overview.module.css。已有图文结构与内容保留，本轮仅小圆角和 padding。空封面位置与文案明确为样式示例，不是假馆藏。",
+      "html": "<article class=\"ds-reading-card\"><div class=\"ds-cover-slot\" aria-hidden=\"true\"></div><div class=\"ds-reading-copy\"><h3>阅读卡片样式示例</h3><p>此处仅展示既有标题与元信息位置。</p><a class=\"ds-continue\" href=\"#ds-reading-example\">继续阅读样式示例</a></div></article>",
+      "css": ".ds-reading-card { display:grid; grid-template-columns:80px minmax(0,1fr); gap:20px; min-width:0; background:var(--surface, #fffefa); color:var(--ink, #292b28); border:0; border-radius:3px; padding:20px; } .ds-cover-slot { width:80px; height:125px; min-height:0; } .ds-reading-copy { min-width:0; } .ds-reading-card h3 { margin:0 0 6px; font:600 16px/1.5 var(--content-display, \"STL Display Serif\", \"Noto Serif SC\", \"Songti SC\", SimSun, serif); } .ds-reading-card p { margin:0 0 6px; color:var(--muted, #5c6267); font:max(13px, var(--stl-readable-meta, .875rem))/1.6 var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); } .ds-continue { display:flex; justify-content:space-between; align-items:center; text-decoration:none; background:var(--wash, #eeeee7); color:inherit; font:max(14px, var(--stl-readable-meta, .875rem))/1.5 var(--content-text, \"STL Text Sans\", \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif); padding:10px 12px; border-radius:6px; } .ds-continue:focus-visible { outline:2px solid var(--night-gold,#a48146); outline-offset:3px; } @media(max-width:900px) { .ds-reading-card { padding:16px; } } @media(max-width:760px) { .ds-reading-card { grid-template-columns:72px minmax(0,1fr); border:0; background:transparent; } .ds-cover-slot { width:72px; height:105px; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "沿用本站纸白、白色内容层和黑金品牌",
+    "overview": "这是既有系统的源码记录。品牌与类型选择来自现有实现及用户锁定要求；本轮仅调整管理台和读者中心主体的列宽、间距、密度、对齐与内容边界。该说明沿用 [DIRECTION.md](docs/stl4/public-visual-20261110/DIRECTION.md) 的 OWN-WORLD，不命名新的视觉风格，不替换产品身份。\n\n本文 frontmatter 是已核实值的机器可读快照，不新增运行时变量，也不授权把快照覆盖到整站。标为 **inherited** 的内容为本轮沿用规则，标为 **本轮主体排版** 的内容才是此次新增布局约定。现有 CSS 级联、用户外观和字体偏好、[SCOPE.json](docs/stl4/public-visual-20261110/SCOPE.json) 的边界优先；模块中的具体覆盖仍须就地核对。记录依据为本工作区源码，不代表公网发布、全站验收或所有动态状态通过。",
+    "keyCharacteristics": [
+      "既有黑金书页／人物符号与双语名称保持。",
+      "标题、字段、真实预览和操作沿用原有组件与业务顺序。",
+      "主体通过间距与列宽分组，纸面、内容层和细边界继续使用既有变量。",
+      "窄屏由 CSS 自然换行和已有面板规则适配，不生成手机图片。"
+    ],
+    "rules": [
+      {
+        "name": "The Inherited Color Rule",
+        "body": "本轮主体规则只调整布局，不设置 color、字体颜色别名或新的主题值。",
+        "section": "colors"
+      },
+      {
+        "name": "The Type Preservation Rule",
+        "body": "对主体做响应式适配时，改变列宽、换行和间距，不缩小已批准的文字来容纳内容。",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "**Do** 先按 SCOPE.json 判断表面是否允许修改，再复用已有组件与变量。",
+      "**Do** 将本轮主体 spacing 与 inherited 品牌、字体、色彩明确分开维护。",
+      "**Do** 使用 min-width: 0、minmax(0, …)、自然换行和局部滚动保留全部内容与操作。",
+      "**Do** 核对祖先布局对任务导航的影响；读者概览在 900px 及以下保持普通文档流。",
+      "**Do** 保持现有主题、字号、字体、焦点、键盘和减少动态效果偏好。",
+      "**Do** 将源码实现、隔离预览结果与公网批准分别记录。"
+    ],
+    "donts": [
+      "**Don't** 根据生成图重做品牌、导航、字体、字色、文案、字段或操作。",
+      "**Don't** 将本轮样式扩散到登录、公开页、独立阅读器、公开预览正文、弹窗、抽屉、菜单或加载动画。",
+      "**Don't** 把当前主体的小圆角与去阴影策略提升为所有页面和浮层的通用规则。",
+      "**Don't** 发明新色阶、字体等级、图标、业务状态、数据或新的手机设计稿。",
+      "**Don't** 将历史 data-workbench 属性名、旧对比 B 排版或生成图的替代品牌当成当前设计授权。",
+      "**Don't** 把文档、构建、静态片段或单项复核结论当成全站验收或生产切换批准。"
+    ]
+  }
+}

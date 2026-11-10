@@ -15,7 +15,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P01-v2.png",
-    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。"
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P02",
@@ -32,7 +34,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P02-v2.png",
-    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。"
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P03",
@@ -50,7 +54,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P03-v2.png",
-    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。"
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P04",
@@ -68,7 +74,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P04-v1.png",
-    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P05",
@@ -86,7 +94,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P05-v2.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P06",
@@ -103,7 +113,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P06-v1.png",
-    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P07",
@@ -120,7 +132,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P07-v1.png",
-    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P08",
@@ -137,7 +151,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P08-v1.png",
-    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P09",
@@ -156,7 +172,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P09-v1.png",
-    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P10",
@@ -173,7 +191,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P10-v1.png",
-    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P11",
@@ -191,7 +211,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P11-work-detail-v1.png",
-    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。"
+    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P12",
@@ -210,7 +232,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P12-v1.png",
-    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P13",
@@ -233,7 +257,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P13-v1.png",
-    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P14",
@@ -252,7 +278,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P14-v1.png",
-    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P15",
@@ -270,7 +298,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P15-v1.png",
-    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P16",
@@ -287,7 +317,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P16-v1.png",
-    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P17",
@@ -305,7 +337,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P17-v1.png",
-    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。"
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P18",
@@ -323,7 +357,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P18-v2.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P19",
@@ -341,7 +377,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P19-v2.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P20",
@@ -359,7 +397,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P20-v1.png",
-    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。"
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P21",
@@ -379,7 +419,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P21-v2.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P22",
@@ -396,7 +438,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P22-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P23",
@@ -413,7 +457,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P23-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P24",
@@ -430,7 +476,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P24-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P25",
@@ -447,7 +495,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P25-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P26",
@@ -464,7 +514,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P26-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "R01",
@@ -481,7 +533,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R01-reader-center-v1.png",
-    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。"
+    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R02",
@@ -499,7 +553,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R02-v2.png",
-    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。"
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R03",
@@ -516,7 +572,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R03-v2.png",
-    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。"
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R04",
@@ -534,7 +592,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R04-v2.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R05",
@@ -551,7 +611,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R05-v1.png",
-    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R06",
@@ -568,7 +630,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R06-v1.png",
-    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R07",
@@ -585,7 +649,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R07-v1.png",
-    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R08",
@@ -602,7 +668,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R08-v2.png",
-    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。"
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R09",
@@ -619,7 +687,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R09-v1.png",
-    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。"
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R10",
@@ -636,7 +706,9 @@
     "version": "v3",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R10-v3.png",
-    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R11",
@@ -653,7 +725,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R11-v2.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R12",
@@ -670,7 +744,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R12-v2.png",
-    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。"
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R13",
@@ -687,7 +763,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R13-v2.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R14",
@@ -704,7 +782,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R14-v2.png",
-    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。"
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R15",
@@ -721,7 +801,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R15-v2.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R16",
@@ -738,7 +820,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R16-v2.png",
-    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R17",
@@ -755,7 +839,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R17-v2.png",
-    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R18",
@@ -772,7 +858,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R18-v1.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R19",
@@ -789,7 +877,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R19-v2.png",
-    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R20",
@@ -806,7 +896,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R20-v2.png",
-    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。"
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R21",
@@ -823,7 +915,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R21-v1.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R22",
@@ -840,7 +934,9 @@
     "version": "v3",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R22-v3.png",
-    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "R23",
@@ -857,7 +953,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R23-v2.png",
-    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。"
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "R24",
@@ -874,7 +972,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R24-v2.png",
-    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。"
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "A01",
@@ -893,7 +993,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A01-v1.png",
-    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A02",
@@ -910,7 +1012,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A02-v1.png",
-    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A03",
@@ -928,7 +1032,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A03-v2.png",
-    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A04",
@@ -946,7 +1052,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A04-v2.png",
-    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。"
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A05",
@@ -964,7 +1072,9 @@
     "version": "v3",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A05-v3.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A06",
@@ -981,7 +1091,9 @@
     "version": "v3",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A06-v3.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A07",
@@ -998,7 +1110,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A07-v2.png",
-    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A08",
@@ -1015,7 +1129,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A08-v1.png",
-    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A09",
@@ -1032,7 +1148,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A09-v2.png",
-    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。"
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A10",
@@ -1049,7 +1167,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A10-v1.png",
-    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A11",
@@ -1066,7 +1186,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A11-v1.png",
-    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。"
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A12",
@@ -1084,7 +1206,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A12-v2.png",
-    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A13",
@@ -1101,7 +1225,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A13-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A14",
@@ -1118,7 +1244,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A14-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A15",
@@ -1135,7 +1263,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A15-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A16",
@@ -1152,7 +1282,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A16-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A17",
@@ -1170,7 +1302,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A17-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A18",
@@ -1187,7 +1321,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A18-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A19",
@@ -1204,7 +1340,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A19-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A20",
@@ -1221,7 +1359,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A20-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A21",
@@ -1238,7 +1378,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A21-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A22",
@@ -1255,7 +1397,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A22-v1.png",
-    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A23",
@@ -1272,7 +1416,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A23-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A24",
@@ -1290,7 +1436,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A24-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A25",
@@ -1307,7 +1455,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A25-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A26",
@@ -1324,7 +1474,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A26-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A27",
@@ -1341,7 +1493,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A27-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A28",
@@ -1359,7 +1513,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A28-theory-editor-v1.png",
-    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。"
+    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A29",
@@ -1376,7 +1532,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A29-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A30",
@@ -1393,7 +1551,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A30-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A31",
@@ -1410,7 +1570,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A31-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A32",
@@ -1428,7 +1590,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A32-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A33",
@@ -1445,7 +1609,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A33-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A34",
@@ -1462,7 +1628,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A34-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A35",
@@ -1479,7 +1647,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A35-v1.png",
-    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A36",
@@ -1494,7 +1664,11 @@
     ],
     "brief": "左body_blocks目录与选材，中标题/slug/issue_label/导语/署名/时间/封面和正文块编辑，右实际公开文章预览；10秒自动存草稿状态、冲突/未知结果恢复、手动保存与发布不同；评论审核入口。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A36-v1.png",
+    "inspection_notes": "主体编辑/预览同屏可采用。图中红色星号与字符数字仅样例，必填与上限以serializer及现有字段校验为准；不会全部设为必填。正文编辑继续复用已有块编辑器，不增加产品未支持的格式按钮。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A37",
@@ -1508,8 +1682,12 @@
       1024
     ],
     "brief": "网站文案分组/字段与公开关于页等实际预览同屏，当前草稿/已保存/已发布、历史和发布前整份草稿影响范围；不可暗中发布其他编辑者修改。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A37-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A38",
@@ -1523,8 +1701,12 @@
       1024
     ],
     "brief": "三版原文优先/问题出发/思想交锋切换，主标题/引言/演示文字/真实选书与下面介绍字段；右实际欢迎页当前版本预览，顺序和选书一致；整份网站草稿发布范围清楚。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A38-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A39",
@@ -1539,8 +1721,12 @@
       1024
     ],
     "brief": "队列选中作品或知识对象，已保存版本、校验/阻塞与具体字段、真实公开预览；返回编辑/刷新核对/发布动作，待处理/已发布/撤回状态；不能发布未保存草稿。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A39-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A40",
@@ -1554,8 +1740,12 @@
       1024
     ],
     "brief": "来源类型/状态/操作人/原因/日期筛选，最多20批量选择；右恢复影响预览keep_separate与历史，确认恢复/原请求回执，原件和公开撤回语义不混。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A40-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A41",
@@ -1569,8 +1759,12 @@
       1024
     ],
     "brief": "EvidenceCurationEditor fullPreview：准确版本/文件/原文检索只读，分组/标题/推荐理由/排序编排，保存草稿与发布已保存编排分开，来源权限保留。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A41-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "M01",
@@ -1586,7 +1780,9 @@
     ],
     "brief": "390px手机欢迎，品牌不挤缩，进入按钮与示例演示纵向，介绍自然滚动。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M02",
@@ -1612,7 +1808,11 @@
     ],
     "brief": "390px作品详情：封面缩小但正文可读，元数据换行，动作折行，简介/版本/章节导航与正文依序。共用知识/人物/路径窄屏骨架，保留差异字段。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M02-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M03",
@@ -1634,7 +1834,11 @@
     ],
     "brief": "390px结果列表，搜索与筛选按钮，上方已选条件；筛选抽屉可滚动、确认和清除，结果标题可长，分页可操作。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M03-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M04",
@@ -1655,7 +1859,11 @@
     ],
     "brief": "390px读者中心，紧凑品牌/菜单和继续阅读，资料筛选滚动、列表逐行、选中批量工具，底部现有读者导航。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M04-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M05",
@@ -1672,7 +1880,11 @@
     ],
     "brief": "390px笔记正文和来源选用面板切换，保存固定可达，原文抽屉关闭回到原编辑位置，键盘不遮主要操作。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M05-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M06",
@@ -1695,7 +1907,11 @@
     ],
     "brief": "390px连续研究，问题/材料/证据/笔记tabs切换，单列长文阅读，当前来源可展开，任务状态保留；矩阵用局部横向滚动。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M06-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M07",
@@ -1710,7 +1926,11 @@
     ],
     "brief": "390px全宽原文PDF画布、紧凑两行页码缩放工具；目录/引用/笔记为可切换底部抽屉，不能把PDF挤成窄条，关闭抽屉保留页码。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M07-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M08",
@@ -1725,7 +1945,11 @@
     ],
     "brief": "390px左右版本用明确左文/右文/对齐tabs，显示当前两版名称和配对页码，同步选择，笔记保存不丢两侧定位。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M08-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M09",
@@ -1756,7 +1980,9 @@
     ],
     "brief": "390px管理任务目录：导航抽屉，过滤按钮，关键状态与主操作可见，详情整页抽屉，长表格局部滚动不缩小字体。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M10",
@@ -1785,7 +2011,11 @@
     ],
     "brief": "390px理论编辑：对象标题/草稿状态，编辑/页面预览两个面板，表单单列，底部保存草稿和更多发布；切换保留内容与焦点。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M10-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M11",
@@ -1807,7 +2037,9 @@
     ],
     "brief": "390px目录校准：目录/原文面板切换，条目字段可达、物理页定位提示在页外，底部保存和生成中下载状态。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M12",
@@ -1832,7 +2064,9 @@
     ],
     "brief": "390px隐私/配置表单单列，标签不被截断，影响说明与确认按钮在滚动弹层内可达；长权限列表仍可核对。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M13",
@@ -1853,7 +2087,11 @@
     ],
     "brief": "390px文章长标题、署名、导语、正文舒适行高、图片全宽；评论区输入与确认，不缩成卡片海。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M13-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M14",
@@ -1875,7 +2113,11 @@
     ],
     "brief": "768px平板编辑，收窄导航，目录可抽屉，表单与预览切换或可用双栏，文本不被挤窄，主要动作始终可达。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M14-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "M15",
@@ -1894,7 +2136,9 @@
     ],
     "brief": "320px登录表单，大字号200%情境，品牌自然折行、输入满宽、按钮不截断，错误文字不横向溢出。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
   },
   {
     "id": "S01",
@@ -1911,7 +2155,9 @@
     ],
     "brief": "完整单页错误状态：来源已撤回/无权访问的阅读入口，清楚原因、返回作品/登录或重试按实际原因，不能将404/403混作空库。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S02",
@@ -1929,7 +2175,9 @@
     ],
     "brief": "单个检索页无结果状态，保留当前搜索和条件、清除筛选；顶部有失败重读样式说明仅此真实状态，无假数据。加载骨架作为同页面次要未加载栏示意，非无限转圈。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S03",
@@ -1945,7 +2193,9 @@
     ],
     "brief": "一张真实作品页上打开引用弹窗，格式选择、可选引用文字、复制/手动选择备用、当前版本和物理页/印刷页区别；明确示例引用，无真实学术引文。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S04",
@@ -1969,7 +2219,9 @@
     ],
     "brief": "理论编辑页上的离开确认模态，说明当前对象未保存，留在编辑/放弃本次修改，清楚焦点，不能暗中自动发布；后面当前输入仍可见。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S05",
@@ -1990,7 +2242,9 @@
     ],
     "brief": "真实编辑页非破坏性未知保存状态：请求已发送但结果未确认，保留输入；核对原保存结果/继续等待，不显示已保存或新建第二请求，原版本冲突另行处理。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S06",
@@ -2009,7 +2263,9 @@
     ],
     "brief": "发布工作台当前已保存版本和实际页面预览，侧边发布范围/阻塞/权限，明确发布按钮与取消返回编辑；网站整份草稿范围不能隐藏。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S07",
@@ -2027,7 +2283,9 @@
     ],
     "brief": "编辑页素材抽屉：图片裁切视口、alt/来源/授权/署名，展示位置列表和实际页面局部预览，保存草稿/取消。示例图片非真实人物。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S08",
@@ -2044,7 +2302,9 @@
     ],
     "brief": "本人隐私擦除预览模态，类别/数量/范围和保留项、版本变化错误位置、明确确认擦除与取消，不混淆公开来源撤回。全部为示例资料。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S09",
@@ -2062,7 +2322,9 @@
     ],
     "brief": "任务提交页面未配置模型状态，输入保留，实际原因/可用功能/管理员设置入口按权限；禁用无法运行操作，不伪造成功或绿色进度。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S10",
@@ -2079,7 +2341,9 @@
     ],
     "brief": "PDF读者页选中合成段落，浮动选文工具复制/引用/笔记，右笔记编辑正文和原文引文分开，保存中/未保存可见；标记不覆盖正文。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S11",
@@ -2094,7 +2358,9 @@
     ],
     "brief": "文章阅读底部评论区，已审核评论示例、本人待审核评论分组；署名80、正文3000、同意公开、提交，版本更新冲突保留输入；本人删除独立。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S12",
@@ -2109,7 +2375,9 @@
     ],
     "brief": "文章管理评论审核面板，待审核/已公开/未公开状态，署名和正文、审核说明240，核对后公开/不公开或撤下；旧版评论不可迁到新版。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S13",
@@ -2126,7 +2394,9 @@
     ],
     "brief": "已确认笔记页上的研究或计划使用范围弹窗，选择一个本人项目/计划，当前已选列表，授权给此范围/撤销/停止全部，未确认禁用授权，修改笔记需重授权。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "S14",
@@ -2141,7 +2411,9 @@
     ],
     "brief": "账户管理预览确认抽屉：当前与修改后角色，新增/保留/失去能力，账号激活与会话撤销影响，确认执行/返回修改；没有馆长授予选项，不泄露密码或邮箱。",
     "version": "v1",
-    "status": "pending"
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P27",
@@ -2158,7 +2430,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P27-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P28",
@@ -2175,7 +2449,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P28-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P29",
@@ -2192,7 +2468,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P29-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "P30",
@@ -2209,7 +2487,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/P30-v1.png",
-    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。"
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   },
   {
     "id": "R25",
@@ -2226,7 +2506,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/R25-v2.png",
-    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。"
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A42",
@@ -2243,7 +2525,9 @@
     "version": "v1",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A42-v1.png",
-    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。"
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A43",
@@ -2260,7 +2544,9 @@
     "version": "v2",
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A43-v2.png",
-    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A44",
@@ -2275,7 +2561,11 @@
     ],
     "brief": "MediaLibraryCatalog默认目录与ObjectMediaWorkspace裁切实质不同，独立图。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A44-v1.png",
+    "inspection_notes": "素材目录/来源表单/使用位置/历史布局可采用，来源、许可证值仅示例；字段类型、权利枚举和焦点坐标继续使用真实组件，不照图硬编码许可选择。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A45",
@@ -2290,7 +2580,11 @@
     ],
     "brief": "usages/relations/materials/impact/history，概念用法与人工关系不同。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A45-v1.png",
+    "inspection_notes": "概念归属/来源原文只读布局可采用，源文都是明确示例。来源状态由接口决定，缺失原文不输出假引文。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A46",
@@ -2304,8 +2598,12 @@
       1024
     ],
     "brief": "正式版本/历史对比/影响/恢复草稿，不直接恢复公开。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A46-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A47",
@@ -2320,7 +2618,11 @@
     ],
     "brief": "view=legacy已有文章目录，非新模块。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A47-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A48",
@@ -2335,7 +2637,11 @@
     ],
     "brief": "view=home既有RecommendationsAdmin，规则预览与15分钟内确认发布。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A48-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A49",
@@ -2350,7 +2656,11 @@
     ],
     "brief": "与子学科字段不同，code/介绍/排序及实际公开预览。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A49-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A50",
@@ -2364,8 +2674,12 @@
       1024
     ],
     "brief": "AIRuntimeEditor实际用途、参数、凭据动作/权限与保存，不把服务总览当编辑完成。",
-    "version": "v1",
-    "status": "pending"
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A50-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A51",
@@ -2380,7 +2694,11 @@
     ],
     "brief": "OcrRuntimeEditor运行方式/远程回退/文档发送确认及连接检查。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A51-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A52",
@@ -2395,7 +2713,11 @@
     ],
     "brief": "ResearchSourceRegistryPanel现有来源启用、别名、凭据与实际观察。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A52-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
   },
   {
     "id": "A53",
@@ -2410,6 +2732,28 @@
     ],
     "brief": "PromptRegistryAdmin实际TaskProfile、提示词key/content、JSON对象schema/guidance，新修订与启用版本；不增加预演、评估或直接回滚按钮。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A53-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "S15",
+    "title": "本机选材与批量引用导出",
+    "coverage": [
+      "PV121",
+      "PV152"
+    ],
+    "domain": "关键状态与弹层",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "SharedCitationOverlay本机选材展开、重新核对来源、选中转存到明确研究、逐格式导出部分失败及只重试失败项；与引用弹窗普通态有实质差异。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
   }
 ]
