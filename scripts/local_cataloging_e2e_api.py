@@ -9,7 +9,7 @@ import sys
 import tempfile
 
 
-def main(*, api_port=8105, web_port=3105, offline=False, ready_file=None):
+def main(*, api_port=8105, web_port=3105, offline=False, ready_file=None, resume_ready_file=None):
     if not all(isinstance(port, int) and 1024 <= port <= 65535 for port in (api_port, web_port)):
         raise ValueError("Fixture ports must be unprivileged local ports")
     if offline:
@@ -22,7 +22,29 @@ def main(*, api_port=8105, web_port=3105, offline=False, ready_file=None):
         socket.socket.connect = deny_connect
         socket.socket.connect_ex = deny_connect
     repository = Path(__file__).resolve().parents[1]
-    fixture_directory = Path(tempfile.mkdtemp(prefix="stl-v305-e2e-")).resolve()
+    if resume_ready_file:
+        from contextlib import closing
+        import json
+        import sqlite3
+        if not offline:
+            raise ValueError("Resuming a preview requires --offline")
+        runtime = json.loads(Path(resume_ready_file).read_text(encoding="utf-8"))
+        fixture_directory = Path(runtime["fixture_directory"]).resolve()
+        if (runtime.get("offline") is not True
+                or runtime.get("api_url") != f"http://127.0.0.1:{api_port}/api"
+                or runtime.get("web_url") != f"http://127.0.0.1:{web_port}"
+                or fixture_directory.parent != Path(tempfile.gettempdir()).resolve()
+                or not fixture_directory.name.startswith("stl-v305-e2e-")):
+            raise ValueError("Only the recorded offline temporary fixture can be resumed")
+        fixture_database = fixture_directory / "local_fixture.sqlite3"
+        if not fixture_database.is_file() or fixture_database.is_symlink():
+            raise ValueError("The recorded fixture database must already exist")
+        with closing(sqlite3.connect(f"{fixture_database.as_uri()}?mode=ro", uri=True)) as connection:
+            accounts = connection.execute("SELECT email FROM accounts_user").fetchall()
+            if not accounts or any(not email.endswith("@example.test") for (email,) in accounts):
+                raise ValueError("Only synthetic fixture accounts may be resumed")
+    else:
+        fixture_directory = Path(tempfile.mkdtemp(prefix="stl-v305-e2e-")).resolve()
     os.environ.update({
         "DJANGO_SETTINGS_MODULE": "config.settings",
         "DATABASE_URL": f"sqlite:///{(fixture_directory / 'local_fixture.sqlite3').as_posix()}",
@@ -65,6 +87,10 @@ def main(*, api_port=8105, web_port=3105, offline=False, ready_file=None):
     database.setdefault("OPTIONS", {}).update(timeout=20, transaction_mode="IMMEDIATE")
     django.setup()
     from django.core.management import call_command
+    if resume_ready_file:
+        print("Resuming existing offline fixture; no migration, reseeding or credential reset.", flush=True)
+        call_command("runserver", f"127.0.0.1:{api_port}", use_reloader=False)
+        return
     from accounts.models import User
     call_command("migrate", interactive=False, verbosity=0)
     for email, role in (("curator-v305@example.test", "editor"), ("reader-v305@example.test", "reader"), ("administrator-v305@example.test", "admin"), ("owner-v305@example.test", "admin")):
@@ -139,6 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--web-port", type=int, default=3105)
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--ready-file")
+    parser.add_argument("--resume-ready-file", help="Resume only an existing recorded offline temporary fixture")
     arguments = parser.parse_args()
     main(api_port=arguments.api_port, web_port=arguments.web_port,
-         offline=arguments.offline, ready_file=arguments.ready_file)
+         offline=arguments.offline, ready_file=arguments.ready_file, resume_ready_file=arguments.resume_ready_file)
