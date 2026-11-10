@@ -49,15 +49,26 @@ def build_server(actor_id):
     def catalog_search(query: str = "", limit: int = 20) -> dict:
         """Find accessible published editions. Returns bibliography, never private notes."""
         actor()
-        rows = public_editions().filter(work__title__icontains=query[:300]).select_related("work").order_by("work__title")[:max(1,min(limit,50))]
-        return {"editions": [{"work_id":str(r.work_id),"edition_id":str(r.pk),"title":r.work.title} for r in rows]}
+        rows = public_editions().filter(active_catalog_revision__snapshot__work__title__icontains=query[:300]).select_related("active_catalog_revision").order_by("pk")[:max(1,min(limit,50))]
+        return {"editions": [{"work_id":str(r.work_id),"edition_id":str(r.pk),"title":r.active_catalog_revision.snapshot.get("work", {}).get("title", "")} for r in rows]}
 
     @tool
     def knowledge_search(query: str = "", limit: int = 20) -> dict:
         """Find published knowledge identities; names never imply the same identity."""
         actor()
-        return {"entities":[entity_data(e) for e in m.Entity.objects.filter(status="published",merged_into__isnull=True,
+        from catalog.services.knowledge_public import public_entities
+        return {"entities":[entity_data(e, public=True) for e in public_entities().filter(
             label__icontains=query[:300]).order_by("label")[:max(1,min(limit,50))]]}
+
+    @tool
+    def unified_search(query: str, source_types: list[str] | None = None, work_id: str | None = None, limit: int = 20) -> dict:
+        """Search original text, bibliography, identities and Wiki pages with explicit source types.
+
+        Wiki compilations are never verbatim source quotes. Original text uses
+        keyword recall; optional deep retrieval remains in the existing sessions.
+        """
+        from catalog.services.retrieval.objects import search
+        return search(query, actor(), source_types=source_types, work_id=work_id, limit=limit)
 
     @tool
     def original_search(query: str, filters: dict | None = None, limit: int = 20) -> dict:

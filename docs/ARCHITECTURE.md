@@ -1,3 +1,7 @@
+## 2026-11-10 查询协议与公开投影
+
+检索入口services/retrieval/objects.search由DRF /api/search/query/、MCP unified_search及管理台已发布知识查询共用。返回分组状态与source_type，Wiki正文、书目/身份说明和原文引用保持语义区别。原文/人工策展复用既有Meilisearch，正文定位沿EvidenceAnchor DTO；作品、实体、知识页以PostgreSQL已发布投影执行有界文本匹配，返回has_more及coverage，不宣称全量语义召回。公开Entity资料使用确认异名及发布的人物快照，内部来源备注仅在管理端返回。查询不创建正式知识、不回写私人研究。
+
 ## 2026-11-10 学者关系兼容边界
 
 ScholarRelation只保留历史身份、来源、已发布与未发布修订。旧HTTP保存转换到ChangeSet，公开关系及学者消费者统一读取来源独立的Assertion。旧取消回执与请求锁保留；回收站撤回转审核，旧直接发布返回明确替代入口。Django后台WorkKnowledgeRelation/PersonKnowledgeRelation只读。回填命令backfill_knowledge_core --relations --human-pages --batch-size 100按当前公开修订保留来源，数量与备份见CURRENT_PROGRESS；无ScholarRelation真实候选数据，测试夹具不能代替实书迁移。

@@ -17,15 +17,31 @@ def require_editor(actor):
         raise PermissionDenied("当前账户不能编辑知识草稿。")
 
 
-def entity_data(entity):
+def entity_data(entity, *, public=False):
     from catalog.services.knowledge_identity import canonical_entity
-    return {"id": str(entity.pk), "kind": entity.kind, "label": entity.label,
+    result = {"id": str(entity.pk), "kind": entity.kind, "label": entity.label,
         "canonical_id": str(canonical_entity(entity).pk),
         "definition": entity.definition, "context": entity.context, "status": entity.status,
         "aliases": list(entity.aliases.values("text", "language", "script", "review_status", "source")),
         "identifiers": list(entity.identifiers.values("namespace", "value", "review_status", "source")),
         "person": {"birth_year": entity.person.birth_year, "death_year": entity.person.death_year,
             "biography": entity.person.biography, "authority_status": entity.person.authority_status} if entity.person_id else None}
+    if public:
+        result["aliases"] = [v for v in result["aliases"] if v["review_status"] == "confirmed"]
+        result["identifiers"] = [v for v in result["identifiers"] if v["review_status"] == "confirmed"]
+        # Match the original public components' activated profile, never the
+        # current Person fields being edited behind that published snapshot.
+        if entity.person_id:
+            from catalog.services.public_scholars import _base, _formal_profile
+            profile = _base().filter(person_id=entity.person_id).first()
+            if profile:
+                person = _formal_profile(profile, profile.public_snapshot or {}).person
+                result.update(label=person.preferred_name, definition=person.biography,
+                    person={"birth_year": person.birth_year, "death_year": person.death_year,
+                        "biography": person.biography, "authority_status": "verified"})
+        for value in result["aliases"] + result["identifiers"]:
+            value.pop("source", None)  # Editorial provenance may contain private review notes.
+    return result
 
 
 def match_entities(label, kind, *, limit=12):

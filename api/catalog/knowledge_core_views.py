@@ -171,7 +171,7 @@ class KnowledgeSpecialView(APIView):
 
     def get(self, request, slug):
         from catalog.services.knowledge_public import page_data
-        page = get_object_or_404(KnowledgePage, slug=slug, work=None, entity=None, status="published")
+        page = get_object_or_404(KnowledgePage, slug=slug, status="published")
         return Response(page_data(page, request.user))
 
 
@@ -211,7 +211,7 @@ class EntitiesView(APIView):
         query = request.query_params.get("q", "")[:300]
         if query:
             rows = rows.filter(label__icontains=query)
-        return Response({"entities": [entity_data(row) for row in rows.order_by("label")[:50]]})
+        return Response({"entities": [entity_data(row, public=request.query_params.get("preview") != "1") for row in rows.order_by("label")[:50]]})
 
 
 class EntityKnowledgeView(APIView):

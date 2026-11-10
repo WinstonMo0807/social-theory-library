@@ -241,7 +241,7 @@ def public_page_url(page):
     if entity and entity.person_id:
         profile = m.ScholarProfile.objects.filter(person_id=entity.person_id).first()
         return f"/scholars/{profile.slug}" if profile else None
-    return f"/knowledge/{page.slug}" if not entity else None
+    return f"/knowledge/{page.slug}"
 
 
 @transaction.atomic

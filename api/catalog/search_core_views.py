@@ -9,6 +9,17 @@ from common.permissions import CanEditMetadata
 from catalog.services import source_workspace
 
 
+class UnifiedSearch(APIView):
+    from common.permissions import CanReadLibrary
+    permission_classes = [CanReadLibrary]
+
+    def post(self, request):
+        from catalog.services.retrieval.objects import search
+        result = search(request.data.get("q"), request.user, source_types=request.data.get("source_types"),
+            work_id=request.data.get("work_id"), limit=request.data.get("limit", 20), mode=request.data.get("mode", "keyword"))
+        return Response(result, status=503 if result["status"] == "failed" else 200)
+
+
 class SourceDirectory(APIView):
     permission_classes = [CanEditMetadata]
 
@@ -30,6 +41,7 @@ class InspectRetrieval(APIView):
             return Response({"code": exc.code, "detail": str(exc)}, status=503)
 
 urlpatterns = [
+    path("query/", UnifiedSearch.as_view()),
     path("sources/", SourceDirectory.as_view()),
     path("inspect/", InspectRetrieval.as_view()),
     path("sessions/", DiscoverySearchView.as_view()),
