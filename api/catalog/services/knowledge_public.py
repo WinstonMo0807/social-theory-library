@@ -4,7 +4,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from catalog import models as m
-from catalog.services.knowledge_core import require_editor, page_content, page_metadata
+from catalog.services.knowledge_core import require_editor, page_content, page_metadata, entity_data
 from catalog.services.knowledge_sources import require_revision_access, locator
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
@@ -25,6 +25,10 @@ def public_entities():
         standalone &= Q(**{f"{field}__isnull": True})
     scope |= Q(theory_school__editorial_status="published")
     standalone &= Q(theory_school__isnull=True)
+    scope |= Q(organization__authority_status="verified")
+    scope |= Q(timeline_event__review_status="approved", timeline_event__merged_into__isnull=True)
+    scope |= Q(research_object__isnull=False, status="published")
+    standalone &= Q(organization__isnull=True, timeline_event__isnull=True, research_object__isnull=True)
     return m.Entity.objects.filter(scope | standalone, merged_into__isnull=True).exclude(status__in=["withdrawn", "archived"])
 
 
@@ -87,15 +91,22 @@ def publication_entities(page, statements):
 
 def publish_reviewed_identity(entity, actor):
     """Publish only an explicitly reviewed new identity, never revive a legacy draft."""
-    creation = m.ChangeItem.objects.filter(kind="entity", decision="accepted", application__id=str(entity.pk))
+    creation = m.ChangeItem.objects.filter(kind="entity", decision="accepted", application__type="entity", application__id=str(entity.pk))
     creation = next((v for v in creation if not v.payload.get("existing_id")), None)
     if creation is None or entity.status not in {"draft", "published"} or entity.merged_into_id:
         raise ValidationError(f"实体“{entity.label}”尚未公开，请先从其资料页审核发布。")
-    from catalog.services.editorial_revision import create_editorial_revision, publish_editorial_revision
+    from catalog.services.editorial_revision import create_editorial_revision, publish_editorial_revision, EditorialRevisionError
     target, kind, patch = None, None, None
     if entity.person_id:
         target, _ = m.ScholarProfile.objects.get_or_create(person_id=entity.person_id, defaults={"slug": f"scholar-{entity.person_id}"})
         kind, patch = "scholar_profile", {"editorial_status":"published"}
+    elif entity.organization_id:
+        target, kind, patch = entity.organization, "organization_profile", {"authority_status": "verified"}
+    elif entity.timeline_event_id:
+        target, kind = entity.timeline_event, "timeline_event"
+        # The accepted identity item records the administrator's source review;
+        # the original timeline publication validator still checks its evidence.
+        patch = {"review_status": "approved", "editorial_details": {**target.editorial_details, "confirmed": True}}
     else:
         for field, target_kind, status_field in (("node","knowledge_node","status"), ("topic","topic","editorial_status"),
                                                 ("discipline","discipline","editorial_status")):
@@ -105,9 +116,12 @@ def publish_reviewed_identity(entity, actor):
     if target:
         if m.EditorialRevision.objects.filter(target_type=kind, target_id=target.pk, status="draft").exists():
             raise ValidationError(f"“{entity.label}”另有资料编辑稿，请先核对该稿，避免连带发布未预览的修改。")
-        edit = create_editorial_revision(target_type=kind, target_id=target.pk, patch=patch, actor=actor,
-            idempotency_key=f"knowledge-identity-publish:{creation.pk}", change_note="随知识页发布已审核的新身份")
-        publish_editorial_revision(edit.pk, actor=actor)
+        try:
+            edit = create_editorial_revision(target_type=kind, target_id=target.pk, patch=patch, actor=actor,
+                idempotency_key=f"knowledge-identity-publish:{creation.pk}", change_note="随知识页发布已审核的新身份")
+            publish_editorial_revision(edit.pk, actor=actor)
+        except EditorialRevisionError as exc:
+            raise ValidationError(f"{entity.label}：{exc}") from exc
     entity.status = "published"
     entity.save(update_fields=["status", "updated_at"])
 
@@ -158,10 +172,17 @@ def page_data(page, actor, *, draft=False):
             anchors.update(block_anchors)
             references.update(block_sources)
     from catalog.services.academic_relations import pending_withdrawals
+    from catalog.services.knowledge_profiles import pending_profiles
     withdrawals = pending_withdrawals(page, blocks) if draft else []
+    identity = entity_data(page.entity, public=not draft) if page.entity_id else None
+    if draft and identity:
+        for item in pending_profiles(page).order_by("created_at"):
+            identity["profile"] = {**(identity.get("profile") or {}), **item.payload["profile"]}
     return {"id": str(page.pk), **page_metadata(page, draft=draft), "status": revision.status if draft and revision else page.status,
+        "identity": identity,
         "revision_id": str(revision.pk) if revision else None, "blocks": visible, "assertions": list(assertions.values()), "anchors": list(anchors.values()), "references": list(references.values()),
         "publication_scope": {"page_id": str(page.pk), "assertion_ids": list(assertions),
+            "profiles": [{"id": v.application["id"], "label": v.payload["label"], "kind": v.payload["kind"]} for v in pending_profiles(page)] if draft else [],
             "withdrawals": [{"id": v.application["id"], "text": v.payload["text"], "reason": v.payload["reason"]} for v in withdrawals],
             "entities": [{"id":str(v.pk), "label":v.label, "kind":v.kind} for v in publication_entities(page, assertions)] if draft else []}}
 
@@ -203,6 +224,9 @@ def publish_page(page_id, revision_id, actor):
     blocks, current = page_content(page)
     if not current or current.pk != latest.pk:
         raise ValidationError("知识页草稿已变化，请重新预览再发布。")
+    from catalog.services.knowledge_profiles import publish_profiles
+    publish_profiles(page, actor)
+    page.refresh_from_db()
     statement_ids = [ref["id"] for block in blocks for ref in block.get("references", []) if ref.get("type") == "assertion"]
     from catalog.services.academic_relations import publish_withdrawals
     publish_withdrawals(page, blocks, actor)

@@ -32,7 +32,7 @@ def digest(value):
 def scope_queries(source_id, target_id):
     ids = [source_id, target_id]
     revisions = models.EditorialRevision.objects.annotate(merge_text=Cast("materialized_preview", TextField()))
-    return {
+    rows = {
         "events": models.TheoryTimelineEvent.objects.filter(Q(pk__in=ids) | Q(merged_into_id__in=ids)),
         "relations": models.TimelineEventRelation.objects.filter(event_id__in=ids),
         "images": models.TimelineEvidenceImage.objects.filter(event_id__in=ids),
@@ -42,6 +42,11 @@ def scope_queries(source_id, target_id):
         "canonical": models.CanonicalObjectRevision.objects.filter(object_type="timeline_event", object_id__in=ids),
         "bundles": models.PublicationBundleItem.objects.filter(object_type="timeline_event", object_id__in=ids, bundle__status__in=["draft", "publishing", "failed"]),
     }
+    from catalog.services.knowledge_identity import identity_scope
+    entities = models.Entity.objects.filter(timeline_event_id__in=ids)
+    if entities.exists():
+        rows.update(identity_scope(entities))
+    return rows
 
 
 def scope_state(source, target, *, lock=False):
@@ -170,7 +175,7 @@ def merge_preview(source, target):
     state = scope_state(source, target)
     blockers = []
     expected = {("catalog.TheoryTimelineEvent", "merged_into"), ("catalog.TimelineEventRelation", "event"),
-                ("catalog.TimelineEvidenceImage", "event"), ("catalog.TimelineMergeRecord", "source"), ("catalog.TimelineMergeRecord", "target")}
+                ("catalog.TimelineEvidenceImage", "event"), ("catalog.TimelineMergeRecord", "source"), ("catalog.TimelineMergeRecord", "target"), ("catalog.Entity", "timeline_event")}
     if any((row.related_model._meta.label, row.field.name) not in expected for row in models.TheoryTimelineEvent._meta.related_objects):
         blockers.append("出现尚未纳入预览的事件引用，需先完善归并范围。")
     from catalog.timeline_editor import ensure_timeline_publication
@@ -199,6 +204,9 @@ def merge_preview(source, target):
         blockers.append("相关事件或编排仍有待处理草稿，请先保存并处理原修订。")
     if state["bundles"]:
         blockers.append("相关事件正在发布队列中，请先处理原发布任务。")
+    from catalog.services.knowledge_identity import pending_identity_edits
+    if pending_identity_edits(models.Entity.objects.filter(timeline_event__in=[source, target])):
+        blockers.append("事件身份或知识页仍有待审内容，请先处理这些修改。")
     source_page, target_page = _placement_snapshot(source), _placement_snapshot(target)
     if len(source_page["items"]) + len(target_page["items"]) > 100:
         blockers.append("合并后页面引用超过100项，请先整理原编排。")
@@ -272,6 +280,8 @@ def merge_events(source_id, target_id, *, actor, fingerprint, request_id, confir
     if preview["fingerprint"] != fingerprint or not preview["can_merge"]:
         raise AuthorityConflict({"detail": "事件或引用已变化，请重新预览。", "blockers": preview["blockers"]})
     before = {"source": _snapshot(source), "target": _snapshot(target), "source_page": _placement_snapshot(source), "target_page": _placement_snapshot(target)}
+    from catalog.services.knowledge_identity import merge_identity
+    before["knowledge_identity"] = merge_identity(source, target)
     proposal = _proposal(source, target)
     _apply(target, proposal, actor, "人工确认重复事件归并，保留来源与原事件历史")
     if before["source_page"]["items"] or before["source_page"]["groups"]:
@@ -313,6 +323,8 @@ def rollback_merge(record_id, *, actor, fingerprint, confirmed):
         raise AuthorityConflict("归并后已有修改，请重新预览；不会覆盖后续资料。")
     source.merged_into = None
     source.save(update_fields=["merged_into", "updated_at"])
+    from catalog.services.knowledge_identity import restore_identity
+    restore_identity(record.before.get("knowledge_identity"))
     _apply(source, record.before["source"], actor, "回退重复事件归并")
     _apply(target, record.before["target"], actor, "回退重复事件归并")
     if record.before["source_page"]["items"] or record.before["source_page"]["groups"]:

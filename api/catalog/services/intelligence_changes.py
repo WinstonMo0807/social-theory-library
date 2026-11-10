@@ -243,8 +243,14 @@ def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
                 for item in _ordered(group):
                     payload = _resolved(deepcopy(item.payload), local)
                     if item.kind == "entity":
-                        obj = create_entity(payload, actor)
-                        result = {"type": "entity", "id": str(obj.pk), "status": obj.status}
+                        if payload.get("operation") == "profile_patch":
+                            if changeset.origin != "human":
+                                raise ValidationError("类型资料修改须由管理员在知识工作区提出。")
+                            from .knowledge_profiles import stage_profile
+                            result = stage_profile(payload, actor, request_key=f"change:{item.pk}")
+                        else:
+                            obj = create_entity(payload, actor, source_work=changeset.document_revision.asset.edition.work if changeset.document_revision_id else changeset.subject_work)
+                            result = {"type": "entity", "id": str(obj.pk), "status": obj.status}
                     elif item.kind == "assertion":
                         if payload.get("operation") == "withdraw":
                             if changeset.origin != "human":

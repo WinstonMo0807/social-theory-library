@@ -136,6 +136,26 @@ class EvidenceSegment(ImmutableSource):
                        models.CheckConstraint(condition=models.Q(end__gt=models.F("start")), name="knowledge_anchor_segment_range")]
 
 
+class ResearchObjectProfile(UUIDTimeStampedModel):
+    class ObjectKind(models.TextChoices):
+        COMMUNITY = "community", "社区或群体"
+        POPULATION = "population", "人群"
+        INSTITUTION = "institution", "制度"
+        PROCESS = "process", "社会过程"
+        PRACTICE = "practice", "实践"
+        PLACE = "place", "地区"
+        OTHER = "other", "其他研究对象"
+
+    object_kind = models.CharField(max_length=24, choices=ObjectKind.choices, default=ObjectKind.OTHER)
+    geographic_scope = models.CharField(max_length=600, blank=True)
+    temporal_scope = models.CharField(max_length=600, blank=True)
+    population = models.CharField(max_length=600, blank=True)
+    unit_of_analysis = models.CharField(max_length=600, blank=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(object_kind__in=["community", "population", "institution", "process", "practice", "place", "other"]), name="research_object_kind_valid")]
+
+
 class Entity(UUIDTimeStampedModel):
     class Kind(models.TextChoices):
         PERSON = "person", "人物"
@@ -162,7 +182,17 @@ class Entity(UUIDTimeStampedModel):
     subdiscipline = models.OneToOneField("catalog.Subdiscipline", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
     theory_school = models.OneToOneField("catalog.TheorySchool", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
     concept = models.OneToOneField("catalog.Concept", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
+    organization = models.OneToOneField("catalog.OrganizationAuthority", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
+    timeline_event = models.OneToOneField("catalog.TheoryTimelineEvent", null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
+    research_object = models.OneToOneField(ResearchObjectProfile, null=True, blank=True, on_delete=models.PROTECT, related_name="entity")
     merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="merged_identities")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(organization__isnull=True) | models.Q(kind="organization"), name="entity_organization_kind"),
+            models.CheckConstraint(condition=models.Q(timeline_event__isnull=True) | models.Q(kind="event"), name="entity_event_kind"),
+            models.CheckConstraint(condition=models.Q(research_object__isnull=True) | models.Q(kind="research_object"), name="entity_research_object_kind"),
+        ]
 
 
 class EntityAlias(UUIDTimeStampedModel):

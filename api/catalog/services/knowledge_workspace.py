@@ -18,6 +18,9 @@ ENTITY_PROFILES = {
     "discipline": ("discipline", m.Discipline, ["name", "description", "editorial_status", "introduction"]),
     "subdiscipline": ("subdiscipline", m.Subdiscipline, ["name", "description", "editorial_status", "research_object", "core_questions", "research_directions", "methods", "representative_issues"]),
     "theory_school": ("theory_school", m.TheorySchool, ["name", "description", "editorial_status", "entity_level", "formation_period", "core_questions", "key_themes"]),
+    "organization_profile": ("organization", m.OrganizationAuthority, ["preferred_name", "original_name", "organization_type", "country", "authority_status"]),
+    "timeline_event": ("timeline_event", m.TheoryTimelineEvent, ["title", "description", "event_type", "start_year", "end_year", "start_date", "end_date", "date_precision", "date_label", "source", "review_status"]),
+    "research_object_profile": ("research_object", m.ResearchObjectProfile, ["object_kind", "geographic_scope", "temporal_scope", "population", "unit_of_analysis"]),
 }
 
 
@@ -137,7 +140,8 @@ def invalidate_source(kind, key):
     """Called by the existing canonical change coordinator, without model work."""
     targets = [(kind, key)]
     legacy = {"person": "person_id", "knowledge_node": "node_id", "topic": "topic_id",
-              "discipline": "discipline_id", "subdiscipline": "subdiscipline_id", "theory_school": "theory_school_id"}
+              "discipline": "discipline_id", "subdiscipline": "subdiscipline_id", "theory_school": "theory_school_id",
+              "organization_profile": "organization_id", "timeline_event": "timeline_event_id", "research_object_profile": "research_object_id"}
     if kind in legacy:
         targets += [("entity", value) for value in m.Entity.objects.filter(**{legacy[kind]: key}).values_list("pk", flat=True)]
     if kind in {"edition", "asset", "document_revision"}:

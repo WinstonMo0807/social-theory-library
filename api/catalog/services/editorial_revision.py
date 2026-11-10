@@ -18,6 +18,8 @@ from catalog.models import (
     EditorialRevision,
     KnowledgeNode,
     KnowledgePage,
+    OrganizationAuthority,
+    ResearchObjectProfile,
     KnowledgeNodeAlias,
     KnowledgeNodeDiscipline,
     KnowledgeNodeSubdiscipline,
@@ -57,6 +59,8 @@ class EditorialTargetPolicy:
 
 
 TARGET_POLICIES = {
+    "organization_profile": EditorialTargetPolicy(OrganizationAuthority, frozenset({"preferred_name", "original_name", "organization_type", "country", "authority_status"})),
+    "research_object_profile": EditorialTargetPolicy(ResearchObjectProfile, frozenset({"object_kind", "geographic_scope", "temporal_scope", "population", "unit_of_analysis"})),
     "knowledge_page": EditorialTargetPolicy(KnowledgePage, frozenset({"title", "scope", "body_blocks", "status"})),
     EditorialRevision.TargetType.KNOWLEDGE_RELATION: EditorialTargetPolicy(
         KnowledgeRelation, frozenset({"source_node", "target_node", "relation_type", "direction", "description", "evidence_source", "evidence_span", "source_document_revision", "confidence", "status"}),

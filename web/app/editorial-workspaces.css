@@ -5068,6 +5068,23 @@ dialog.field-assistant-dialog article,
   color: #6a4a22;
 }
 
+.knowledge-identity-profile {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1.1rem 2rem;
+  padding: 1.2rem 0;
+  margin: 0 0 1.4rem;
+}
+.knowledge-identity-profile dt {
+  color: var(--muted-foreground, #655f55);
+  font-size: .8rem;
+  margin-bottom: .35rem;
+}
+.knowledge-identity-profile dd {
+  margin: 0;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
 .admin-knowledge-page-preview-body {
   position: relative;
 }

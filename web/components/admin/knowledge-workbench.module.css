@@ -1,5 +1,8 @@
 .workbench { --accent: #8b6b3d; --wash: #f1ece2; color: var(--ink, #292822); min-width: 0; }
 .searchLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.profileFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.profileFields input, .profileFields select { width: 100%; }
+@media (max-width: 600px) { .profileFields { grid-template-columns: minmax(0, 1fr); } }
 .toolbar.searchForm { align-items: end; }
 .toolbar.searchForm > label:first-child { flex: 3; }
 .toolbar.searchForm > button { min-height: 48px; }
@@ -116,3 +119,4 @@
 @media (max-width: 1280px) { .workspace { grid-template-columns: 145px minmax(0, 1fr) 290px; } .main { padding: 24px 22px; } .evidence { padding-left: 16px; } }
 @media (max-width: 1050px) { .workspace { grid-template-columns: 150px minmax(0, 1fr); } .evidence { display: none; } .mobileOnly { display: inline-flex !important; } .evidenceOpen { display: block; position: fixed; inset: 80px 12px 12px auto; width: min(540px, calc(100vw - 24px)); background: var(--paper, #f7f4ee); padding: 22px; border: 1px solid var(--line, #d9d2c6); z-index: 70; overflow: auto; } }
 @media (max-width: 620px) { .navigation { gap: 22px; margin-bottom: 20px; font-size: .9375rem; } .heading { gap: 18px; } .workspace { display: block; } .rail { position: static; max-height: 200px; padding: 15px 0; border-bottom: 1px solid var(--line, #d9d2c6); } .main { border: 0; padding: 24px 16px; } .toolbar { gap: 10px; } .preview { padding: 18px; } .evidenceOpen { inset: 65px 8px 8px; width: auto; padding: 18px; } .table td { padding: 16px 10px; } }
+.profileWide { grid-column: 1 / -1; }

@@ -12,6 +12,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--revision")
         parser.add_argument("--identities", action="store_true")
+        parser.add_argument("--typed-profiles", action="store_true")
         parser.add_argument("--claims", action="store_true")
         parser.add_argument("--relations", action="store_true")
         parser.add_argument("--human-pages", action="store_true")
@@ -26,6 +27,23 @@ class Command(BaseCommand):
         size = options["batch_size"]
         if not 1 <= size <= 500:
             raise CommandError("batch-size须为1至500")
+        if options["typed_profiles"]:
+            from catalog.services.knowledge_profiles import PROFILES, create_profile
+            for kind, (field, _, _) in PROFILES.items():
+                count = 0
+                for entity in m.Entity.objects.filter(kind=kind, **{f"{field}__isnull": True}).order_by("pk")[:size]:
+                    with transaction.atomic():
+                        entity = m.Entity.objects.select_for_update().get(pk=entity.pk)
+                        if getattr(entity, f"{field}_id"):
+                            continue
+                        for name, target in create_profile(kind, entity.label, entity.definition, {}).items():
+                            setattr(entity, name, target)
+                        entity.save(update_fields=[field, "updated_at"])
+                        m.KnowledgeLegacyMapping.objects.get_or_create(source_type="catalog.entity", source_id=entity.pk,
+                            target_type=f"{kind}_profile", defaults={"target_id": target.pk, "quality": "missing_fields_preserved",
+                            "provenance": {"migration": "typed-profiles-v1", "unknown_fields_left_empty": True}})
+                        count += 1
+                self.stdout.write(f"{kind} profiles: {count}")
         if options["human_pages"]:
             from rest_framework.exceptions import ValidationError
             from catalog.services.knowledge_migration import migrate_assertion_page
@@ -95,7 +113,7 @@ class Command(BaseCommand):
                 last = str(span.pk)
             self.stdout.write(str({"structure_id": str(structure.pk), "evidence": counts, "next_after": last}))
         if options["identities"]:
-            for model in [m.Person, m.KnowledgeNode, m.Topic, m.Discipline, m.Subdiscipline, m.TheorySchool, m.Concept]:
+            for model in [m.Person, m.KnowledgeNode, m.Topic, m.Discipline, m.Subdiscipline, m.TheorySchool, m.Concept, m.OrganizationAuthority, m.TheoryTimelineEvent]:
                 mapped = m.KnowledgeLegacyMapping.objects.filter(source_type=model._meta.label_lower, target_type="entity").values("source_id")
                 rows = model.objects.exclude(pk__in=mapped).order_by("pk")[:size]
                 count = sum(1 for row in rows if entity_for_legacy(row))

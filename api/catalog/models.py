@@ -1405,12 +1405,8 @@ class OrganizationAuthority(UUIDTimeStampedModel):
 
     class Meta:
         ordering = ["preferred_name"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["preferred_name", "organization_type"],
-                name="unique_organization_authority_name_type",
-            ),
-        ]
+        # A translated name and category do not establish institutional identity.
+        # Explicit selection/external identifiers disambiguate catalog candidates.
 
     def clean(self):
         super().clean()
@@ -6618,6 +6614,6 @@ from .knowledge_models import (  # noqa: E402,F401
     RevisionPage, DocumentStructure, DocumentNode, DocumentNodeSegment,
     DocumentNodeReference, EvidenceAnchor, EvidenceSegment, Entity, EntityAlias,
     EntityIdentifier, Assertion, AssertionParticipant, AssertionSource,
-    AssertionEvidence, KnowledgePage, KnowledgeLegacyMapping, KnowledgeBlockDependency,
+    AssertionEvidence, KnowledgePage, KnowledgeLegacyMapping, KnowledgeBlockDependency, ResearchObjectProfile,
 )
 from .intelligence_models import CurationRun, CurationArtifact, ChangeSet, ChangeItem, ChangeReceipt  # noqa: E402,F401

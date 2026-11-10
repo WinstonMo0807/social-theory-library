@@ -19,9 +19,10 @@ def require_editor(actor):
 
 def entity_data(entity, *, public=False):
     from catalog.services.knowledge_identity import canonical_entity
+    from catalog.services.knowledge_profiles import profile_data
     result = {"id": str(entity.pk), "kind": entity.kind, "label": entity.label,
         "canonical_id": str(canonical_entity(entity).pk),
-        "definition": entity.definition, "context": entity.context, "status": entity.status,
+        "definition": entity.definition, "context": entity.context, "status": entity.status, "profile": profile_data(entity),
         "aliases": list(entity.aliases.values("text", "language", "script", "review_status", "source")),
         "identifiers": list(entity.identifiers.values("namespace", "value", "review_status", "source")),
         "person": {"birth_year": entity.person.birth_year, "death_year": entity.person.death_year,
@@ -76,7 +77,9 @@ def entity_for_legacy(row):
     types = {"Person": ("person", "person", "preferred_name"), "KnowledgeNode": ("node", row.node_type if isinstance(row, m.KnowledgeNode) else "concept", "canonical_name_zh"),
         "Topic": ("topic", "topic", "name"), "Discipline": ("discipline", "discipline", "name"),
         "Subdiscipline": ("subdiscipline", "discipline", "name"), "TheorySchool": ("theory_school", "school", "name"),
-        "Concept": ("concept", "concept", "name")}
+        "Concept": ("concept", "concept", "name"),
+        "OrganizationAuthority": ("organization", "organization", "preferred_name"),
+        "TheoryTimelineEvent": ("timeline_event", "event", "title")}
     field, kind, label = types[type(row).__name__]
     kind = {"theory_tradition": "tradition", "research_problem": "question", "subdiscipline": "discipline"}.get(kind,kind)
     if kind not in m.Entity.Kind.values:
@@ -101,19 +104,24 @@ def entity_for_legacy(row):
                 defaults={"review_status":"legacy", "source":{"legacy_type":row._meta.label_lower,"legacy_id":str(row.pk)}})
     m.KnowledgeLegacyMapping.objects.get_or_create(source_type=row._meta.label_lower, source_id=row.pk, target_type="entity",
         defaults={"target_id": entity.pk, "quality": "identity_preserved", "provenance": {"legacy_id": str(row.pk)}})
-    if created and isinstance(row, m.Person):
+    if isinstance(row, m.TheoryTimelineEvent) and row.merged_into_id:
+        target = entity_for_legacy(row.merged_into)
+        entity.merged_into, entity.status = target, "merged"
+        entity.save(update_fields=["merged_into", "status", "updated_at"])
+    if created and isinstance(row, (m.Person, m.OrganizationAuthority)):
+        source = {"legacy_type": row._meta.label_lower, "legacy_id": str(row.pk)}
         for alias in row.aliases:
             if isinstance(alias, str) and alias:
-                m.EntityAlias.objects.create(entity=entity, text=alias, source={"person_id": str(row.pk)}, review_status="legacy")
+                m.EntityAlias.objects.get_or_create(entity=entity, text=alias, defaults={"source": source, "review_status": "legacy"})
         for namespace, value in row.external_ids.items():
             if isinstance(value, str) and value:
                 m.EntityIdentifier.objects.create(entity=entity, namespace=namespace, value=value,
-                    source={"person_id": str(row.pk), "legacy_source": row.identifier_sources.get(namespace)}, review_status="legacy")
+                    source={**source, "legacy_source": getattr(row, "identifier_sources", {}).get(namespace)}, review_status="legacy")
     return entity
 
 
 @transaction.atomic
-def create_entity(payload, actor):
+def create_entity(payload, actor, *, source_work=None):
     require_editor(actor)
     if payload.get("existing_id"):
         entity = m.Entity.objects.filter(pk=payload["existing_id"], merged_into__isnull=True).first()
@@ -136,6 +144,14 @@ def create_entity(payload, actor):
     elif kind == "discipline":
         slug = f"discipline-{uuid4().hex}"
         identity["discipline"] = m.Discipline.objects.create(name=label,slug=slug,code=slug,editorial_status="draft")
+    elif kind in {"organization", "event", "research_object"}:
+        from catalog.services.knowledge_profiles import create_profile
+        identity = create_profile(kind, label, payload.get("definition", ""), payload.get("profile", {}))
+        if kind == "event" and source_work:
+            # This links the document being analyzed, not a publication event's
+            # subject edition or an assumed claimant/scholar.
+            identity["timeline_event"].work = source_work
+            identity["timeline_event"].save(update_fields=["work", "updated_at"])
     return m.Entity.objects.create(kind=kind, label=label, definition=payload.get("definition", ""),
         context=payload.get("context", ""), **identity)
 

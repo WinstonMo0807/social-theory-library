@@ -1,3 +1,7 @@
+## 2026-11-10 Entity类型资料
+
+Entity以受约束的一对一外键复用OrganizationAuthority、TheoryTimelineEvent，研究对象使用ResearchObjectProfile。资料字段只在既有EditorialRevision中编纂，ChangeSet.entity/profile_patch记录审核、基准与应用回执；知识页发布事务激活对应类型修订，公开读取仍执行原类型和来源权限。事件保留原关联与合并历史；同名组织不再被名称唯一约束视为同一身份。管理入口/knowledge/entities/{id}/profile/和原事件资料工作区协同，Markdown与页面正文的唯一权威不变。
+
 ## 2026-11-10 查询协议与公开投影
 
 检索入口services/retrieval/objects.search由DRF /api/search/query/、MCP unified_search及管理台已发布知识查询共用。返回分组状态与source_type，Wiki正文、书目/身份说明和原文引用保持语义区别。原文/人工策展复用既有Meilisearch，正文定位沿EvidenceAnchor DTO；作品、实体、知识页以PostgreSQL已发布投影执行有界文本匹配，返回has_more及coverage，不宣称全量语义召回。公开Entity资料使用确认异名及发布的人物快照，内部来源备注仅在管理端返回。查询不创建正式知识、不回写私人研究。

@@ -1,3 +1,7 @@
+## 2026-11-10 类型资料检查点与尚待关闭项
+
+类型资料审核、幂等保存、公开激活、事件归并和候选0099迁移已有实际结果，见CURRENT_PROGRESS。旧生产者/远程客户端/理论审核测试仍断言已退役入口会生成知识，本次47项19通过、19失败、9个旧mock入口错误；需逐项换成新协议或退役保护断言，保留租约、权限、文件与私人引用约束。真实模型配置空缺由用户自行接入，不记录为模型验证成功。没有新增生产发布授权。
+
 ## 2026-11-10 统一对象查询与公开资料边界
 
 - /api/search/query/与MCP unified_search共用查询服务，明确original_text、bibliography、knowledge_object、knowledge_page、curated_content。原文与人工策展继续用已有Meilisearch召回；书目、身份和Wiki使用PostgreSQL已发布投影的有界关键词查询，不增加向量库或模型。旧首屏/深检索服务保持同源。

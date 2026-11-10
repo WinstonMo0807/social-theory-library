@@ -74,8 +74,10 @@ def merge_identity(source, target):
     if isinstance(source, m.KnowledgeNode):
         queries = [m.PersonNodeRelation.objects.filter(node=source), m.WorkNodeRelation.objects.filter(node=source),
             m.KnowledgeRelation.objects.filter(Q(source_node=source) | Q(target_node=source))]
-    else:
+    elif isinstance(source, m.Person):
         queries = [m.PersonNodeRelation.objects.filter(person=source)]
+    else:
+        queries = []
     for rows in queries:
         for row in rows.filter(status__in=["published", "confirmed", "approved"]).order_by("pk"):
             migrate_relation(row)

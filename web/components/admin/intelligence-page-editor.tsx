@@ -6,10 +6,12 @@ import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { KnowledgePageContent, type KnowledgePageData, type KnowledgeBlock } from "@/components/public/knowledge-page-content";
 import { IssueTextEditor } from "./curation/issue-text-editor";
 import styles from "./intelligence-workspace.module.css";
+import type { IdentityProfile } from "@/lib/knowledge-profiles";
 
 type Patch = { title?: string; scope?: string; page_id?: string; block_id?: string; operation?: string; reason?: string; human_protected?: boolean; human_edited?: boolean; block?: Partial<KnowledgeBlock> };
 
-export function IntelligencePageEditor({ patch, title, version, applied, onBlock, onHumanReview, onMetadata, anchors = [] }: {
+export function IntelligencePageEditor({ patch, title, version, applied, onBlock, onHumanReview, onMetadata, profilePatch, anchors = [] }: {
+  profilePatch?: IdentityProfile;
   onMetadata?: (value: { title?: string; scope?: string }) => void;
   patch: Patch; title: string; version: number; applied: boolean; onBlock: (block: Partial<KnowledgeBlock>) => void; onHumanReview?: (confirmed: boolean) => void; anchors?: KnowledgePageData["anchors"];
 }) {
@@ -55,7 +57,7 @@ export function IntelligencePageEditor({ patch, title, version, applied, onBlock
         : <div className={styles.previewPaper} data-ui-scope="stl4" data-type-mode="expressive">
           {!metadataEdit && <h3>{current?.title || title}</h3>}
           {metadataEdit && <header><h2>{perspective === "current" ? current?.title : patch.title}</h2><p>{perspective === "current" ? current?.scope : patch.scope}</p></header>}
-          <KnowledgePageContent page={{ blocks: shown, assertions: current?.assertions || [], anchors: [...(current?.anchors || []), ...anchors] }} renderBlock={(block, content) =>
+          <KnowledgePageContent page={{ identity: current?.identity && perspective === "proposed" && profilePatch ? { ...current.identity, profile: { ...current.identity.profile, ...profilePatch } } : current?.identity, blocks: shown, assertions: current?.assertions || [], anchors: [...(current?.anchors || []), ...anchors] }} renderBlock={(block, content) =>
             block.id === key && !applied && perspective === "proposed" && patch.operation !== "delete"
               ? <div key={block.id} className={styles.activeBlock} role="button" tabIndex={0} aria-label="返回编辑这个区块"
                   onClick={focusField} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); focusField(); } }}>

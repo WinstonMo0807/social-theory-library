@@ -15,6 +15,7 @@ import { EvidencePanel, KnowledgeNavigation, knowledgeCall, type LibrarySource, 
 import { KnowledgeAssertionEditor, type EditableAssertion } from "./knowledge-assertion-editor";
 import { AcademicRelations } from "./academic-relations";
 import { KnowledgeSearch } from "./knowledge-search";
+import { EntityProfileEditor } from "./entity-profile-editor";
 import s from "./knowledge-workbench.module.css";
 
 type Ref = { type: string; id: string; edition_id?: string };
@@ -24,7 +25,7 @@ type Workspace = KnowledgePageData & { metadata_hash: string; kind: string; work
   dependencies: { block_id: string; source_type: string; source_id: string; stale: boolean }[]; references: (Ref & { title: string; locator?: SourceLocator; unavailable?: boolean })[];
   backlinks: { page_id: string; title: string; block_id: string }[]; revisions: { id: string; revision: number; status: string; created_at: string }[];
   assertion_hashes: Record<string, string>; pending_changesets: { id: string; origin: string; status: string }[] };
-const kinds: Record<string, string> = { work: "作品", person: "人物", concept: "概念", school: "理论流派", tradition: "理论传统", theory_school: "理论流派", topic: "主题", discipline: "学科", special: "专题" };
+const kinds: Record<string, string> = { work: "作品", person: "人物", concept: "概念", school: "理论流派", tradition: "理论传统", theory_school: "理论流派", topic: "主题", discipline: "学科", special: "专题", organization: "组织", event: "事件", research_object: "研究对象", debate: "争论", question: "研究问题" };
 const date = (value: string) => new Date(value).toLocaleString("zh-CN", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
 export function KnowledgeWorkspace() {
@@ -100,7 +101,7 @@ function PageWorkspace() {
     });
   }
   async function publish() {
-    if (!data?.revision_id || dirty || !await confirmAction(`发布《${data.title}》当前已保存的知识页修订？此操作也会发布该页引用且已审核保存的陈述。${data.publication_scope?.withdrawals?.length ? `同时撤回 ${data.publication_scope.withdrawals.length} 条陈述。` : ""}${data.publication_scope?.entities.length ? `同时发布已审核的新身份：${data.publication_scope.entities.map(v => v.label).join("、")}。` : ""}`, { title: "发布知识页", confirmLabel: "发布当前修订" })) return;
+    if (!data?.revision_id || dirty || !await confirmAction(`发布《${data.title}》当前已保存的知识页修订？此操作也会发布该页引用且已审核保存的陈述。${data.publication_scope?.withdrawals?.length ? `同时撤回 ${data.publication_scope.withdrawals.length} 条陈述。` : ""}${data.publication_scope?.profiles?.length ? `同时更新已审核的类型资料：${data.publication_scope.profiles.map(v => v.label).join("、")}。` : ""}${data.publication_scope?.entities.length ? `同时发布已审核的新身份：${data.publication_scope.entities.map(v => v.label).join("、")}。` : ""}`, { title: "发布知识页", confirmLabel: "发布当前修订" })) return;
     await action(async () => { await knowledgeCall(`/knowledge/pages/${pageId}/`, { revision_id: data.revision_id }); setAttempt(v => v + 1); setNotice("当前知识页已发布。"); });
   }
   async function exportMarkdown() {
@@ -132,6 +133,7 @@ function PageWorkspace() {
       </section>
     </> : !data ? !error && <p role="status" className={s.empty}>正在读取正文、来源与修订…</p> : <>
       <div className={s.toolbar}><Link href="/admin/knowledge"><ArrowLeft size={15} />全部知识页</Link><button className={s.primary} disabled={busy || !dirty} onClick={() => void submit()}>提交修改并审核</button><button disabled={busy || dirty || data.status === "published" || !data.revision_id} onClick={() => void publish()}>发布已保存稿</button><button disabled={busy || dirty || !data.revision_id} onClick={() => void exportMarkdown()}>导出 Markdown</button><button className={s.mobileOnly} onClick={() => setEvidenceOpen(true)}><PanelRightOpen size={16} />核对证据</button></div>
+      {data.entity_id && <EntityProfileEditor entityId={data.entity_id} />}
       <details data-disclosure="collection"><summary>编辑标题与编纂范围</summary><div className={s.editor}>
         <label>知识页标题<input maxLength={600} value={metadata.title} onChange={e => { setSubmitted(""); setMetadata(v => ({ ...v, title: e.target.value })); }} /></label>
         <label>编纂范围<textarea maxLength={6000} value={metadata.scope} onChange={e => { setSubmitted(""); setMetadata(v => ({ ...v, scope: e.target.value })); }} /></label>
