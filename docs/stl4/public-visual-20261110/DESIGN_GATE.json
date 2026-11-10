@@ -1,20 +1,8 @@
 {
   "status": "pending",
-  "planned_designs": 127,
-  "generated_inspected": 80,
+  "planned_designs": 137,
+  "generated_inspected": 92,
   "pending": [
-    "A23",
-    "A24",
-    "A25",
-    "A26",
-    "A27",
-    "A29",
-    "A30",
-    "A31",
-    "A32",
-    "A33",
-    "A34",
-    "A35",
     "A36",
     "A37",
     "A38",
@@ -49,7 +37,17 @@
     "S11",
     "S12",
     "S13",
-    "S14"
+    "S14",
+    "A44",
+    "A45",
+    "A46",
+    "A47",
+    "A48",
+    "A49",
+    "A50",
+    "A51",
+    "A52",
+    "A53"
   ],
   "meaning": "Image existence and explicit mapping only; full design/business correspondence and responsive review still required before UI implementation."
 }

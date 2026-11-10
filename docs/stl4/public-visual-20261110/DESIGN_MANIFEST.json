@@ -1270,7 +1270,9 @@
     ],
     "brief": "素材目录cover/recommendation/portrait/hero筛选，当前/PDF/上传/复用来源；选中图片裁切，alt/source/rights/license/credit字段和display_uses，右实际保存页预览390/1280/fit，草稿裁切与已保存预览状态分开。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A23-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A24",
@@ -1286,7 +1288,9 @@
     ],
     "brief": "人物列表与搜索/重复项；中标准名、原文名、语言、国别、简介、异名、外部标识，右关联学者/作品职责、相似人物、历史；保存先preview_hash影响确认，合并独立。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A24-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A25",
@@ -1301,7 +1305,9 @@
     ],
     "brief": "搜索/状态/学科/分页，学者表含中外文名、公开/草稿状态、关联人物；右选中简介和打开编辑/关系/素材/发布准备操作，创建入口。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A25-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A26",
@@ -1316,13 +1322,14 @@
     ],
     "brief": "左section导航，表单中外文名/简介/生平/研究领域/材料/人物图；右真实学者公开页草稿预览（肖像、导读、作品）；正文与来源相邻，保存/已保存预览/发布独立。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A26-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A27",
     "title": "关系编辑",
     "coverage": [
-      "PV073",
       "PV092"
     ],
     "domain": "关系核对",
@@ -1332,7 +1339,9 @@
     ],
     "brief": "可筛选关系列表，关系两端实体选择、类型、时间/说明、证据和来源版本；草稿修订与现有公开关系对照，保存不直接覆盖公开；未保存离开保护。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A27-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A28",
@@ -1354,9 +1363,8 @@
   },
   {
     "id": "A29",
-    "title": "学科子学科编辑",
+    "title": "子学科编辑",
     "coverage": [
-      "PV089",
       "PV093"
     ],
     "domain": "分类编辑",
@@ -1366,7 +1374,9 @@
     ],
     "brief": "左学科/子学科目录，中code/name/foreign_name/slug/aliases/description/introduction/sort与父级，子学科研究对象/核心问题/方向/方法；右实际学科页面预览，父级环防止，发布状态分开。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A29-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A30",
@@ -1381,7 +1391,9 @@
     ],
     "brief": "左路径目录和阶段，中标题/slug/目标/受众/难度/预计量，阶段材料排序与必读/先修/替代/版本/页码；右真实公开路径预览。validate/preview不保存，保存和发布分开。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A30-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A31",
@@ -1396,7 +1408,9 @@
     ],
     "brief": "事件目录/日期筛选，中事件标题/日期及精度/类型/参与者/作品/图像/证据页码，右实际时间线当前事件与已存事件预览；保存发布合并独立。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A31-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A32",
@@ -1412,7 +1426,9 @@
     ],
     "brief": "主题目录，标题/slug/简介/问题/关联作品/学者/理论/图片，右真实主题页草稿预览；字段定位高亮，保存/预览/发布按edit_version。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A32-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A33",
@@ -1427,7 +1443,9 @@
     ],
     "brief": "按页面类型和对象搜索的入口列表，显示对象名称与可编辑展示区域/发布状态；点击进入实际编排，避免新建第二套建站库。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A33-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A34",
@@ -1442,7 +1460,9 @@
     ],
     "brief": "左实际groups/area区块树，中position/target/reason/local_text/reading_target/concept_usage/display_fields编辑，右同草稿实际页面效果；排序/多选/undo/redo，点击区块定位字段，dirty/conflict/history/publish/withdraw。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A34-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A35",
@@ -1457,7 +1477,9 @@
     ],
     "brief": "左项目搜索scope/page，中articles/materials/missing/settings tabs；项目title/question/introduction/visibility/collaborators/cover/planned_for，文章列表和排序、新建/附加/复制/归档/恢复；项目保存不等于文章发布。",
     "version": "v1",
-    "status": "pending"
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A35-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。"
   },
   {
     "id": "A36",
@@ -1508,9 +1530,8 @@
     "id": "A39",
     "title": "发布工作台",
     "coverage": [
-      "PV061",
-      "PV062",
-      "PV063"
+      "PV063",
+      "PV061"
     ],
     "domain": "发布核对",
     "viewport": [
@@ -1547,7 +1568,7 @@
       1536,
       1024
     ],
-    "brief": "已保存对象与出处原文相邻，版本/物理页/印刷页/引用/来源状态和返回编辑位置；受权限保护，预览不执行公开保存或下载操作。",
+    "brief": "EvidenceCurationEditor fullPreview：准确版本/文件/原文检索只读，分组/标题/推荐理由/排序编排，保存草稿与发布已保存编排分开，来源权限保留。",
     "version": "v1",
     "status": "pending"
   },
@@ -2240,5 +2261,155 @@
     "status": "generated_inspected",
     "image": "output/public-visual-20261110/design/A43-v2.png",
     "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。"
+  },
+  {
+    "id": "A44",
+    "title": "素材目录与来源维护",
+    "coverage": [
+      "PV047"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "MediaLibraryCatalog默认目录与ObjectMediaWorkspace裁切实质不同，独立图。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A45",
+    "title": "学者概念用法与关联",
+    "coverage": [
+      "PV073"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "usages/relations/materials/impact/history，概念用法与人工关系不同。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A46",
+    "title": "知识发布历史与撤回",
+    "coverage": [
+      "PV062"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "正式版本/历史对比/影响/恢复草稿，不直接恢复公开。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A47",
+    "title": "策划文章目录",
+    "coverage": [
+      "PV068"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "view=legacy已有文章目录，非新模块。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A48",
+    "title": "首页推荐位置编排",
+    "coverage": [
+      "PV068"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "view=home既有RecommendationsAdmin，规则预览与15分钟内确认发布。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A49",
+    "title": "学科编辑",
+    "coverage": [
+      "PV089"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "与子学科字段不同，code/介绍/排序及实际公开预览。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A50",
+    "title": "模型配置编辑",
+    "coverage": [
+      "PV078"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "AIRuntimeEditor实际用途、参数、凭据动作/权限与保存，不把服务总览当编辑完成。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A51",
+    "title": "OCR运行配置",
+    "coverage": [
+      "PV059"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "OcrRuntimeEditor运行方式/远程回退/文档发送确认及连接检查。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A52",
+    "title": "外部书目来源配置",
+    "coverage": [
+      "PV078"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "ResearchSourceRegistryPanel现有来源启用、别名、凭据与实际观察。",
+    "version": "v1",
+    "status": "pending"
+  },
+  {
+    "id": "A53",
+    "title": "AI提示词管理",
+    "coverage": [
+      "PV059"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "PromptRegistryAdmin实际TaskProfile、提示词key/content、JSON对象schema/guidance，新修订与启用版本；不增加预演、评估或直接回滚按钮。",
+    "version": "v1",
+    "status": "pending"
   }
 ]
