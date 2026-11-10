@@ -50,6 +50,17 @@ def request_structure(revision, actor, *, pages, request_id):
     return job
 
 
+def record_structure_release(demand):
+    """Mirror the leased task outcome without reviving a terminal document job."""
+    from django.utils import timezone
+    from ingestion.models import ProcessingJob
+    retry = demand.state in {"ready", "waiting_for_capability"}
+    return ProcessingJob.objects.filter(pk=demand.owner_key, job_type="document_structure",
+        stats__demand_id=str(demand.pk), status__in=["pending", "running"]).update(
+        status="pending" if retry else "failed", finished_at=None if retry else timezone.now(),
+        error_code=demand.last_error_code, error_message=demand.last_error_message, updated_at=timezone.now())
+
+
 def control_structure(job_id,actor,action):
     from django.db import transaction
     from django.utils import timezone
@@ -64,6 +75,9 @@ def control_structure(job_id,actor,action):
         job=ProcessingJob.objects.get(pk=job_id,job_type="document_structure")
         demand=m.CapabilityDemand.objects.select_for_update().get(pk=job.stats["demand_id"])
         job=ProcessingJob.objects.select_for_update().get(pk=job_id)
+        if demand.state == "failed" and job.status in {"pending", "running"}:
+            record_structure_release(demand)
+            job.refresh_from_db()
         if action=="cancel" and job.status in {"pending","running","failed"}:
             if demand.state=="claimed": _release_executor_load(demand)
             demand.state="canceled";demand.claimed_by=None;demand.lease_token=None;demand.lease_expires_at=None;demand.save()

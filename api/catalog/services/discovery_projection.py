@@ -320,7 +320,8 @@ def discovery_coverage(access_statuses, filters=None, *, contribution_cache=None
             continue
         count = counts.get(key, {})
         n = count.get("keywords", 0)
-        if n and n == state["expected_count"]:
+        # Fully written replacement slices may coexist with valid old vectors.
+        if n and n >= state["expected_count"]:
             ready += 1
             text_count += n
             vector += int(count.get("vectors", 0) == n)

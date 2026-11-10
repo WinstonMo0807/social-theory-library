@@ -95,6 +95,7 @@ const administratorOnlyRoutes = new Set([
 const staffRoles = ["admin", "editor"] as const;
 
 export function AdminShell({ children }: { children: ReactNode }) {
+  const topbarRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const scope = adminTaskScope(pathname);
@@ -186,6 +187,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
     }
   }, [pathname, searchParams, session.status]);
 
+  useEffect(() => {
+    const topbar = topbarRef.current, shell = topbar?.closest<HTMLElement>(".admin-shell");
+    if (!topbar || !shell) return;
+    const measure = () => shell.style.setProperty("--admin-topbar-height", `${topbar.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(topbar); measure();
+    return () => { observer.disconnect(); shell.style.removeProperty("--admin-topbar-height"); };
+  }, [session.status, focusMode]);
+
   if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
     return (
       <div className="admin-auth-loading">
@@ -265,7 +275,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <footer><Link className="stl4-admin-help" href="/help"><CircleHelp size={17} />帮助</Link><span className="sr-only">{ADMIN_VERSION_LABEL}</span></footer>
       </aside> : null}
       <div className="admin-main" inert={compactNavigation && open}>
-        {!focusMode ? <header className="admin-topbar">
+        {!focusMode ? <header ref={topbarRef} className="admin-topbar">
           <button
             ref={menuButtonRef}
             className="admin-menu-button"

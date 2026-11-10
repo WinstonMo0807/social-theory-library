@@ -1,3 +1,5 @@
+2026-11-10 候选新增Windows常驻Docling节点与仅内网HTTPS执行器入口18491。启动、证书信任、固定依赖、实际解析、容器/环境备份及恢复安排见[STRUCTURE_WORKER_20261110.md](stl4/STRUCTURE_WORKER_20261110.md)。标准证书与主机名校验保留，凭据/私钥不入Git。Windows尚无开机自启；候选API、Nginx和队列worker为unless-stopped，前一容器和环境文件仍在。正式环境、公网/DNS/隧道未变。
+
 2026-11-10 候选worker已消费`intelligence,discovery_index`，solo/concurrency=1、prefetch=1，512MiB内存/768MiB含swap上限、CPU0.5。显式`DISCOVERY_INDEX_KEYWORD_ONLY=true`使此worker只补关键词；已存在向量不作为外呼许可，语义补齐需要正常模型执行器。来源结构更新默认请求关键词任务。Dockerfile.intelligence的默认队列同步更新，API不加载重模型。新候选worker为unless-stopped；原容器以`stl-intelligence-demo-worker-before-index-20261110`停止保留。回退需先等当前任务完成或受控停机，将新worker改名保留，再恢复旧容器名和启动；不删除队列、索引或数据库。正式服务未变。原文校正备份与真实样本见CURRENT_PROGRESS。
 
 2026-11-10 候选Web可用`powershell -File scripts/start_intelligence_demo.ps1 -NodePath <node.exe绝对路径>`启动独立隐藏进程，日志/PID写入忽略的tmp/intelligence-web。限定5174→18091；占用端口时拒绝启动，不自动杀其他进程。进程不随工具会话退出，但机器重启后需重新启动；仍为Vite开发候选，不是公网发行部署。0098迁移及受影响表备份见知识核心记录。

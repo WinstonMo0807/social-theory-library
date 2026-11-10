@@ -29,6 +29,7 @@ def indexing_source():
 
 def test_logical_replacement_retains_history_and_verifies_snapshot(monkeypatch):
     edition,asset,revision,generation,job,old = indexing_source()
+    m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in old]).update(vector_ready=False)
     deleted = []
     def meili(method,path,data=None,**kw):
         if path.endswith("/search"): return {"hits":[]}
@@ -48,6 +49,30 @@ def test_logical_replacement_retains_history_and_verifies_snapshot(monkeypatch):
     assert all(r["anchor_id"] for r in attach_locators(rows))
     asset.access_status = "private";asset.save(update_fields=["access_status"])
     assert projection.validate_discovery_results("passages",[{"id":str(d.pk)} for d in new],["public"]) == []
+
+
+def test_keywords_preserve_valid_old_vectors_until_semantic_replacement(monkeypatch):
+    edition,asset,revision,generation,job,old = indexing_source()
+    deleted=[]
+    def meili(method,path,data=None,**kw):
+        if path.endswith("/search"): return {"hits":[]}
+        if path.endswith("/delete-batch"): deleted.extend(data)
+        return {"taskUid":1}
+    monkeypatch.setattr(indexing,"meili",meili)
+    monkeypatch.setattr(indexing,"wait_index_task",lambda *a,**kw:None)
+    assert indexing.process_source(job,generation)
+    old_ids=[d.pk for d in old]
+    assert m.DiscoveryDocument.objects.filter(pk__in=old_ids,keyword_ready=True,vector_ready=True).count()==2
+    assert not set(map(str,old_ids)).intersection(deleted)
+    assert len(projection.validate_discovery_results("passages",[{"id":str(d)} for d in old_ids],["public"]))==2
+    assert projection.discovery_coverage(["public"])["indexed_editions"]==1
+    new=m.DiscoveryDocument.objects.filter(generation=generation).exclude(pk__in=old_ids)
+    assert new.exists()
+    new.update(vector_ready=True)
+    assert indexing.process_source(job,generation)
+    assert set(map(str,old_ids)).issubset(deleted)
+    assert m.DiscoveryDocument.objects.filter(pk__in=old_ids,keyword_ready=False,vector_ready=False).count()==2
+    assert projection.discovery_coverage(["public"])["vector_editions"]==1
 
 
 def test_failed_new_projection_keeps_previous_ready_rows(monkeypatch):
@@ -86,7 +111,7 @@ def test_keyword_batches_wait_for_external_success(monkeypatch):
 
 
 def test_keyword_worker_does_not_invoke_configured_embedding(monkeypatch, settings):
-    _,_,_,generation,job,_ = indexing_source()
+    _,_,_,generation,job,old = indexing_source()
     generation.config_snapshot["embedding_artifact"] = "configured-but-not-on-this-worker"
     generation.save()
     settings.DISCOVERY_INDEX_KEYWORD_ONLY = True
@@ -99,4 +124,5 @@ def test_keyword_worker_does_not_invoke_configured_embedding(monkeypatch, settin
     job.refresh_from_db()
     assert job.stats["semantic_waiting"]["code"] == "keyword_worker"
     assert m.DiscoveryDocument.objects.filter(generation=generation,keyword_ready=True).exists()
-    assert not m.DiscoveryDocument.objects.filter(generation=generation,vector_ready=True).exists()
+    assert not m.DiscoveryDocument.objects.filter(generation=generation,vector_ready=True).exclude(pk__in=[d.pk for d in old]).exists()
+    assert m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in old],vector_ready=True).count() == len(old)

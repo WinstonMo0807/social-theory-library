@@ -53,7 +53,26 @@ def match_entities(label, kind, *, limit=12):
     rows = entity_query(m.Entity.objects.filter(kind=kind), query=label, exact=True)[:min(limit, 30)]
     from catalog.services.knowledge_identity import canonical_entity
     candidates = {value.pk: value for row in rows if (value := canonical_entity(row))}
-    return [{**entity_data(row), "reason": "名称或已确认异名匹配，身份仍须审核", "automatic_same_identity": False} for row in candidates.values()]
+    return [matching_candidate(row) for row in candidates.values()]
+
+
+def matching_candidate(entity):
+    """Bounded catalogue context; responsibility is distinct from a claim role."""
+    works = []
+    if entity.person_id:
+        contributions = m.Contribution.objects.filter(person_id=entity.person_id, approved=True).select_related("edition__work").order_by("edition__work__title", "order", "pk")[:12]
+        for row in contributions:
+            works.append({"work_id": str(row.edition.work_id), "edition_id": str(row.edition_id), "title": row.edition.work.title,
+                "source_type": "contribution", "role": row.role, "role_label": row.get_role_display(), "citation": row.source})
+    sources = m.AssertionSource.objects.filter(Q(assertion__participants__entity=entity) | Q(attribution=entity),
+        assertion__status__in=["confirmed", "published"], work__isnull=False).select_related("work", "assertion").distinct().order_by("work__title", "pk")[:12]
+    for row in sources:
+        works.append({"work_id": str(row.work_id), "edition_id": str(row.edition_id) if row.edition_id else None,
+            "title": row.work.title, "source_type": "assertion_source", "role": row.assertion.predicate,
+            "role_label": row.assertion.predicate, "assertion_id": str(row.assertion_id), "text": row.assertion.text,
+            "citation": row.citation, "status": row.assertion.status})
+    return {**entity_data(entity), "related_works": works, "related_works_scope": "up_to_12_contributions_and_12_confirmed_assertion_sources",
+        "reason": "名称或已确认异名匹配，身份仍须审核", "automatic_same_identity": False}
 
 
 @transaction.atomic

@@ -26,6 +26,22 @@ def changeset_data(changeset, actor):
     require_changeset_access(changeset, actor)
     items = list(changeset.items.values("id", "kind", "payload", "dependencies", "decision", "decision_note", "application", "conflict", "reviewed_at"))
     for item in items:
+        if item["kind"] == "entity" and item["payload"].get("operation") != "profile_patch":
+            from uuid import UUID
+            from catalog.services.knowledge_core import matching_candidate
+            ids = []
+            candidates = item["payload"].get("candidates")
+            candidates = candidates[:30] if isinstance(candidates, list) else []
+            if item["payload"].get("existing_id"):
+                candidates = [*candidates, {"id": item["payload"]["existing_id"]}]
+            for candidate in candidates:
+                try:
+                    ids.append(UUID(str(candidate.get("id"))))
+                except (ValueError, AttributeError):
+                    continue
+            # External proposals are untrusted: display current library context,
+            # never caller-invented aliases, identifiers or associated works.
+            item["payload"]["candidates"] = [matching_candidate(entity) for entity in m.Entity.objects.filter(pk__in=ids)]
         if item["kind"] == "alias":
             from uuid import UUID
             from catalog.services.knowledge_core import entity_data

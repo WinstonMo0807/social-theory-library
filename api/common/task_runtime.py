@@ -798,7 +798,7 @@ def release_demand(
     demand.lease_expires_at = None
     demand.last_error_code = str(error_code or "task_failed")[:120]
     demand.last_error_message = str(error_message or "")[:4000]
-    if _demand_task_kind(demand) == "curation_stage":
+    if _demand_task_kind(demand) in {"curation_stage", "document_structure"}:
         # Capacity waits do not consume model attempts; other failures have an
         # explicit ceiling and remain visible for an administrator to resume.
         capacity_wait=error_code in {"resource_busy","ai_provider_rate_limited","server_http_429"}
@@ -829,6 +829,9 @@ def release_demand(
         CurationRun.objects.filter(pk=demand.payload.get("run_id"),version=demand.payload.get("run_version")).exclude(status="canceled").update(
             status=("waiting_resource" if capacity_wait else "waiting_remote") if retry else "failed",
             error={"code":demand.last_error_code,"message":demand.last_error_message})
+    elif _demand_task_kind(demand) == "document_structure":
+        from catalog.services.document_structure import record_structure_release
+        record_structure_release(demand)
     return demand
 
 

@@ -54,7 +54,7 @@ export function ParagraphCorrection({ revision, pages, onPage, onSaved }: {
       </article>)}</div>
       {!ranges.paragraphs.length && <p>所选页面尚无可校正的段落。请先准备正文结构。</p>}
       {chosen.length > 0 && <section className={s.paragraphPreview} aria-label="校正后段落预览"><h3>校正后的一段正文</h3>
-        <p className={s.muted}>{chosen.length} 个段落片段 · 页面标记保留实际来源</p>
+        <p className={s.muted}>{chosen.length} 个段落 · {chosen.reduce((total, item) => total + item.segments.length, 0)} 个页面片段</p>
         <p className={s.paragraph}>{chosen.flatMap(p => p.segments).map((segment, i) => <span key={i}><small>〔PDF {segment.page_number}〕</small>{segment.exact}</span>)}</p>
       </section>}
       {(chosen.length > 0 || ranges.last_correction) && <>

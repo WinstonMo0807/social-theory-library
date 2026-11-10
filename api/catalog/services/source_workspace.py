@@ -71,7 +71,7 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
         current_hash = edition_revision(public.active_catalog_revision_id, revision.pk, revision.text_checksum, asset.access_status) if active else None
         count = counts.get((str(revision.pk), current_hash), {})
         indexed = bool(active and state and state.source_revision == current_hash and state.indexed_at and not state.error and expected > 0
-            and state.completed_count == expected and count.get("keywords") == expected)
+            and state.completed_count == expected and count.get("keywords", 0) >= expected)
         run, structure = runs.get(revision.pk), structures.get(revision.pk)
         structure_job = structure_jobs.get(str(revision.pk))
         sync_job=sync_jobs.get(str(revision.pk))
@@ -80,7 +80,7 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
             "revision_number": revision.revision, "pages": asset.page_count,
             "readable": asset.status == "ready" and bool(asset.file), "published": active,
             "keywords": "unavailable" if index_error else "ready" if indexed else "partial" if count.get("keywords") else "pending",
-            "semantic": "unavailable" if index_error else "ready" if indexed and count.get("vectors") == expected else "partial" if count.get("vectors") else "pending",
+            "semantic": "unavailable" if index_error else "ready" if indexed and count.get("vectors") == count.get("keywords") else "partial" if count.get("vectors") else "pending",
             "index_counts": {**count, "expected": expected}, "index_error": index_error or (state.error if state else ""),
             "index_job": {"id": str(state.job_id), "status": state.job.status} if state and state.job else None,
             "curation": {"id": str(run.pk), "status": run.status} if run else None,

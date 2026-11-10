@@ -522,6 +522,11 @@ def process_source(job, generation):
         old = DiscoveryDocument.objects.filter(generation=generation,source_type=kind,source_id=source_id,
             source_revision=header["source_revision"],keyword_ready=True).filter(
                 Q(payload__structure_id__isnull=True) | ~Q(payload__structure_id=structure_id))
+        # A logical resegmentation does not invalidate vectors for the same
+        # published text. Keep those searchable until the new slices have vectors.
+        # Source withdrawal/revision checks still apply to every returned row.
+        if docs.filter(vector_ready=True).count() != expected:
+            old = old.filter(vector_ready=False)
         while ids := list(old.values_list("pk",flat=True)[:200]):
             if not _is_current(job,generation,header):
                 raise DiscoveryIndexError("superseded","来源已更新，停止旧投影清理。")

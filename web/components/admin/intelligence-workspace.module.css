@@ -127,3 +127,12 @@
   .fieldHeading > span { width: 100%; }
   .evidence.open { padding: 20px 16px; }
 }
+
+.candidateWorks { margin-block: 22px; padding-top: 18px; border-top: 1px solid var(--line, #d9d2c6); }
+.candidateWorks h4 { margin: 0 0 12px; font-weight: 500; }
+.candidateWorks ul { padding: 0; margin: 0; list-style: none; }
+.candidateWorks li { padding: 12px 0; border-bottom: 1px solid var(--line, #d9d2c6); }
+.candidateWorks li > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 18px; }
+.candidateWorks a { color: var(--ink, #292822); text-decoration-color: var(--accent, #b18d4b); text-underline-offset: .25em; }
+.candidateWorks span, .candidateWorks small { color: var(--muted, #6b655a); font-size: .8125rem; }
+.candidateWorks > small { display: block; margin-top: 12px; }

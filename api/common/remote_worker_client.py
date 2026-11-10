@@ -12,6 +12,7 @@ import json
 import os
 import re
 import socket
+import ssl
 import sys
 import threading
 import time
@@ -76,6 +77,7 @@ class RemoteWorkerClientConfig:
     poll_seconds: int = 10
     keepalive_seconds: int = 30
     allow_insecure_server_http: bool = False
+    server_ca_file: str = ""
 
     @classmethod
     def from_environment(cls) -> "RemoteWorkerClientConfig":
@@ -97,6 +99,7 @@ class RemoteWorkerClientConfig:
             poll_seconds=int(os.getenv("STL_WORKER_POLL_SECONDS", "10")),
             keepalive_seconds=int(os.getenv("STL_WORKER_KEEPALIVE_SECONDS", "30")),
             allow_insecure_server_http=os.getenv("STL_WORKER_ALLOW_HTTP", "false").strip().casefold() == "true",
+            server_ca_file=os.getenv("STL_WORKER_CA_FILE", ""),
         ).validated()
 
     def validated(self) -> "RemoteWorkerClientConfig":
@@ -111,6 +114,8 @@ class RemoteWorkerClientConfig:
             raise RemoteWorkerClientError("https_required", "远程 Worker 服务端必须使用 HTTPS。", retryable=False)
         if len(str(self.worker_token or "")) < 32:
             raise RemoteWorkerClientError("worker_token_missing", "STL_WORKER_TOKEN 至少需要 32 个字符。", retryable=False)
+        if self.server_ca_file and parsed.scheme != "https":
+            raise RemoteWorkerClientError("https_required", "指定信任证书的执行接口必须使用HTTPS。", retryable=False)
         executor_id = str(self.executor_id or "").strip()
         if not re.fullmatch(r"[A-Za-z0-9._:-]{1,160}", executor_id):
             raise RemoteWorkerClientError("executor_id_invalid", "STL_WORKER_EXECUTOR_ID 格式无效。", retryable=False)
@@ -156,6 +161,7 @@ class RemoteWorkerClientConfig:
             poll_seconds=max(10, min(int(self.poll_seconds), 60)),
             keepalive_seconds=max(1, min(int(self.keepalive_seconds), 60)),
             allow_insecure_server_http=bool(self.allow_insecure_server_http),
+            server_ca_file=str(self.server_ca_file or ""),
         )
 
 
@@ -201,10 +207,17 @@ class RemoteAIWorkerClient:
         sleep: Callable[[float], None] = time.sleep,
     ):
         self.config = config.validated()
+        verify = True
+        if self.config.server_ca_file:
+            try:
+                verify = ssl.create_default_context(cafile=self.config.server_ca_file)
+            except (OSError, ssl.SSLError) as exc:
+                raise RemoteWorkerClientError("invalid_server_ca", "执行接口的信任证书无法读取或解析。", retryable=False) from exc
         self.server_client = server_client or httpx.Client(
             timeout=30,
             headers={"X-Library-Worker-Token": self.config.worker_token},
             trust_env=False,
+            verify=verify,
         )
         self.model_client = model_client or httpx.Client(
             timeout=self.config.request_timeout_seconds,

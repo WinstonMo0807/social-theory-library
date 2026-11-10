@@ -24,6 +24,26 @@ class _Response:
         return self._payload
 
 
+def test_custom_executor_ca_keeps_tls_verification(monkeypatch, tmp_path):
+    import certifi
+    import ssl
+    clients=[]
+    class Client:
+        def __init__(self, **kwargs): clients.append(kwargs)
+        def close(self): pass
+    monkeypatch.setattr(httpx,"Client",Client)
+    worker=RemoteAIWorkerClient(_config(server_ca_file=certifi.where()))
+    context=clients[0]["verify"]
+    assert isinstance(context,ssl.SSLContext)
+    assert context.check_hostname and context.verify_mode==ssl.CERT_REQUIRED
+    worker.close()
+    bad=tmp_path/"bad.crt";bad.write_text("not a certificate")
+    with pytest.raises(RemoteWorkerClientError,match="信任证书"):
+        RemoteAIWorkerClient(_config(server_ca_file=str(bad)))
+    with pytest.raises(RemoteWorkerClientError,match="HTTPS"):
+        _config(server_url="http://localhost:18093",allow_insecure_server_http=True,server_ca_file=certifi.where()).validated()
+
+
 class _ServerClient:
     def __init__(self, claim_payload=None):
         self.claim_payload = claim_payload

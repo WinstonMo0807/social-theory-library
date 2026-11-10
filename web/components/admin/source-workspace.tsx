@@ -30,17 +30,20 @@ export function SourceWorkspace() {
   const [assertionOpen,setAssertionOpen]=useState(false), [assertion,setAssertion]=useState<AssertionFieldsValue>({expression:"editorial_judgment",direction:"directed",participants:[],conditions:{}}), [stance,setStance]=useState("supports");
   const [draftRequest,setDraftRequest]=useState(() => createRequestKey());
   const source = rows.find(v => v.revision_id === revision);
+  useEffect(() => { setRows([]); }, [search, revision, work]);
   useEffect(() => {
-    const controller = new AbortController(); setError(""); setLoaded(false); setRows([]);
+    const controller = new AbortController(); setError(""); setLoaded(false);
     const params = new URLSearchParams({ q: search }); if (revision) params.set("revision_id", revision); else if (work) params.set("work_id", work);
     void knowledgeCall<{ sources: LibrarySource[] }>(`/search/sources/?${params}`, undefined, controller.signal).then(r => { setRows(r.sources); setLoaded(true); }).catch(e => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
   }, [search, revision, work, attempt]);
   useEffect(() => {
     setNodes([]); setContext(null); setNodeId(""); setOffset(0); setSelection([]); setVerified(null); setLocator(null); setResults(null); setPage(1);
+  }, [revision]);
+  useEffect(() => {
     if (!revision) return; const controller = new AbortController();
     void knowledgeCall<{ nodes: Node[] }>(`/knowledge/revisions/${revision}/structure/?preview=1`, undefined, controller.signal)
-      .then(r => { setNodes(r.nodes); setNodeId(r.nodes.find(n => n.kind !== "document")?.id || r.nodes[0]?.id || ""); })
+      .then(r => { setNodes(r.nodes); setNodeId(previous => r.nodes.some(n => n.id === previous) ? previous : r.nodes.find(n => n.kind !== "document")?.id || r.nodes[0]?.id || ""); })
       .catch(e => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
   }, [revision, attempt]);
@@ -56,6 +59,14 @@ export function SourceWorkspace() {
     setVerified(null); setSelection(old => [...old.filter(v => !(v.page_number === segment.page_number && v.start === segment.start && v.end === segment.end)), segment].sort((a, b) => a.page_number - b.page_number || a.start - b.start));
   }
   async function searchText() { setResults(null); await action(async () => setResults(await knowledgeCall<Results>("/search/inspect/", { q, mode, revision_id: revision || undefined }))); }
+  async function controlParse(operation: "retry" | "cancel") {
+    if (!source?.structure_job) return;
+    await action(async () => {
+      await knowledgeCall("/ingestion/processing-center/", { action: operation, source: "processing_job", job_id: source.structure_job!.id });
+      setParseNotice(operation === "retry" ? "已恢复该范围，原失败记录保留。" : "已取消该解析任务。");
+      setAttempt(v => v + 1);
+    });
+  }
   async function useInPage() {
     if (!verified || !source) return;
     await action(async () => {
@@ -108,7 +119,7 @@ export function SourceWorkspace() {
           {source && <details className={s.notice}><summary>补充段落与脚注结构</summary><p>选择结构缺失或不准确的范围。计算节点只解析所选页，保留已有原文与人工目录；不能核对的片段会留待校准。</p>
             <form onSubmit={e => { e.preventDefault(); void action(async () => { const result = await knowledgeCall<{ job_id: string; status: string }>(`/knowledge/revisions/${revision}/structure/parse/`, { pages: [parseStart,parseEnd], request_id: createRequestKey() }); setParseNotice(`解析任务已保存，等待计算节点执行。`); setAttempt(v => v + 1); }); }}>
               <div className={s.toolbar}><label>PDF 起页<input type="number" min={1} max={source.pages} value={parseStart} onChange={e => setParseStart(Number(e.target.value))} required /></label><label>PDF 止页<input type="number" min={parseStart} max={Math.min(source.pages,parseStart+49)} value={parseEnd} onChange={e => setParseEnd(Number(e.target.value))} required /></label><button disabled={busy || ["pending","running"].includes(source.structure_job?.status || "")}>解析所选范围</button></div>
-            </form>{source.structure_job && <p>最近范围 PDF {source.structure_job.pages.join("—")} · {{pending:"等待计算节点",running:"正在解析",succeeded:"结构已保存",failed:"解析失败",canceled:"已取消"}[source.structure_job.status] || source.structure_job.status}{source.structure_job.error && ` · ${source.structure_job.error}`} <button onClick={() => setAttempt(v => v + 1)}>刷新结果</button></p>}
+            </form>{source.structure_job && <div role="status"><p>最近范围 PDF {source.structure_job.pages.join("—")} · {{pending:"等待计算节点",running:"正在解析",succeeded:"结构已保存",failed:"解析失败",canceled:"已取消"}[source.structure_job.status] || source.structure_job.status}{source.structure_job.error && ` · ${source.structure_job.error}`}</p><div className={s.toolbar}><button disabled={busy} onClick={() => { setParseNotice(""); setAttempt(v => v + 1); }}>刷新结果</button>{["failed","canceled"].includes(source.structure_job.status) && <button disabled={busy} onClick={() => void controlParse("retry")}>恢复这一范围</button>}{["pending","running"].includes(source.structure_job.status) && <button disabled={busy} onClick={() => void controlParse("cancel")}>取消解析</button>}</div></div>}
             {!!source.structure_coverage.alignment_gaps?.length && <p>有 {source.structure_coverage.alignment_gaps.length} 个解析片段尚不能与原文唯一对应，相关原文已保留。</p>}
           </details>}
           {source && <ParagraphCorrection key={revision} revision={revision} pages={source.pages} onPage={number => { setPage(number); setLocator(null); setEvidenceOpen(true); }} onSaved={value => void refreshStructure(value)} />}

@@ -103,6 +103,38 @@ def test_structure_remote_completion_is_versioned_and_idempotent(source,admin_us
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("retry,attempts,expected", [(True,1,"pending"),(False,1,"failed"),(True,3,"failed")])
+def test_structure_release_preserves_failure_and_allows_recovery(source, admin_user, monkeypatch, retry, attempts, expected):
+    from catalog.intelligence_tasks import execute_structure
+    from catalog.services.document_structure import request_structure, control_structure
+    from common.task_runtime import register_executor_heartbeat, claim_specific_demand, release_demand
+    monkeypatch.setattr(execute_structure, "apply_async", lambda **kwargs: None)
+    job = request_structure(source, admin_user, pages=[1, 2], request_id=uuid4())
+    register_executor_heartbeat(executor_id="structure-release", capabilities=["document_parse"], kind="remote_gpu",
+        concurrency=1, metadata={"task_kinds":["document_structure"]})
+    lease = claim_specific_demand(demand_id=job.stats["demand_id"], executor_id="structure-release", lease_seconds=300)
+    m.CapabilityDemand.objects.filter(pk=lease.demand_id).update(attempts=attempts)
+    job.status="running"; job.save()
+    release_demand(lease.demand_id, lease.lease_token, executor_id="structure-release",
+        error_code="structure_failed", error_message="Native parser resources unavailable", retry=retry)
+    job.refresh_from_db()
+    assert job.status == expected
+    assert job.error_code == "structure_failed"
+    assert bool(job.finished_at) == (expected == "failed")
+    if expected == "failed":
+        from rest_framework.test import APIClient
+        client=APIClient(); client.force_authenticate(admin_user)
+        response=client.post("/api/ingestion/processing-center/", {"action":"retry","source":"processing_job","job_id":str(job.pk)},format="json")
+        assert response.status_code == 202, response.data
+        from ingestion.models import ProcessingJob
+        replacement=ProcessingJob.objects.get(pk=response.data["job_id"])
+        assert replacement.pk != job.pk and replacement.status == "pending"
+        assert control_structure(job.pk, admin_user, "retry").pk == replacement.pk
+        job.refresh_from_db(); assert job.error_code == "structure_failed"
+    assert m.CapabilityExecutor.objects.get(executor_id="structure-release").current_load == 0
+
+
+@pytest.mark.django_db
 def test_wiki_targets_work_and_identity_without_overwriting_human_blocks(source,admin_user,monkeypatch):
     from catalog.services import intelligence
     entity_id,assertion_id=str(uuid4()),str(uuid4())
