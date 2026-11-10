@@ -399,6 +399,7 @@ QUERY_LEXICON_TASK_QUEUE = os.getenv("QUERY_LEXICON_TASK_QUEUE", "celery").strip
 DISCOVERY_ENABLED = env_bool("DISCOVERY_ENABLED", False)
 DISCOVERY_QUERY_TASK_QUEUE = os.getenv("DISCOVERY_QUERY_TASK_QUEUE", "discovery_query").strip() or "discovery_query"
 DISCOVERY_INDEX_TASK_QUEUE = os.getenv("DISCOVERY_INDEX_TASK_QUEUE", "discovery_index").strip() or "discovery_index"
+DISCOVERY_INDEX_KEYWORD_ONLY = env_bool("DISCOVERY_INDEX_KEYWORD_ONLY", False)
 DISCOVERY_MAX_QUEUED_QUERIES = max(2, min(24, int(os.getenv("DISCOVERY_MAX_QUEUED_QUERIES", "12"))))
 DISCOVERY_INFERENCE_URL = os.getenv("DISCOVERY_INFERENCE_URL", "http://discovery-inference:8091")
 DISCOVERY_INFERENCE_ALLOWED_HOSTS = os.getenv("DISCOVERY_INFERENCE_ALLOWED_HOSTS", "discovery-inference,127.0.0.1,localhost")

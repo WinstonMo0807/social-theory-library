@@ -9,6 +9,7 @@ import s from "./knowledge-workbench.module.css";
 import { createRequestKey } from "@/lib/request-key";
 import { AssertionFields, type AssertionFieldsValue } from "./assertion-fields";
 import { KnowledgeAssertionContent } from "../public/knowledge-page-content";
+import { ParagraphCorrection } from "./paragraph-correction";
 
 type Node = { id: string; title: string; kind: string; parent_id: string | null };
 type Context = { title: string; segments: SourceSegment[]; chapter_path: string[]; offset: number; next_offset: number | null; returned_characters: number; total_characters: number; references: { target_id: string; kind: string; label: string }[] };
@@ -46,7 +47,7 @@ export function SourceWorkspace() {
   useEffect(() => {
     setContext(null); setContextError(""); if (!nodeId) return; const controller = new AbortController();
     void knowledgeCall<Context>(`/knowledge/nodes/${nodeId}/context/?preview=1&scope=${scope}&offset=${offset}`, undefined, controller.signal)
-      .then(r => { setContext(r); setPage(r.segments[0]?.page_number || 1); setLocator(null); })
+      .then(r => { setContext(r); setPage(r.segments[0]?.page_number || 1); setLocator(old => old?.segments.some(segment => segment.node_id === nodeId) ? old : null); })
       .catch(e => { if (!controller.signal.aborted) setContextError(e.message); });
     return () => controller.abort();
   }, [nodeId, offset, scope]);
@@ -60,6 +61,14 @@ export function SourceWorkspace() {
     await action(async () => {
       const target = query.get("page") || (await knowledgeCall<{ id: string }>("/knowledge/workspace/", { work_id: source.work_id })).id;
       router.push(`/admin/knowledge?page=${target}&anchor=${verified.anchor_id}&revision=${revision}&work_id=${source.work_id}`);
+    });
+  }
+  async function refreshStructure(value: SourceLocator | null) {
+    await action(async () => {
+      const result = await knowledgeCall<{ nodes: Node[] }>(`/knowledge/revisions/${revision}/structure/?preview=1`);
+      setNodes(result.nodes); setNodeId(value?.segments[0]?.node_id || result.nodes.find(n => n.kind !== "document")?.id || "");
+      setOffset(0); setScope("node"); setLocator(value); setSelection([]); setVerified(null);
+      if (value) { setPage(value.segments[0]?.page_number || 1); setEvidenceOpen(true); }
     });
   }
   return <div className={s.workbench}>
@@ -102,6 +111,7 @@ export function SourceWorkspace() {
             </form>{source.structure_job && <p>最近范围 PDF {source.structure_job.pages.join("—")} · {{pending:"等待计算节点",running:"正在解析",succeeded:"结构已保存",failed:"解析失败",canceled:"已取消"}[source.structure_job.status] || source.structure_job.status}{source.structure_job.error && ` · ${source.structure_job.error}`} <button onClick={() => setAttempt(v => v + 1)}>刷新结果</button></p>}
             {!!source.structure_coverage.alignment_gaps?.length && <p>有 {source.structure_coverage.alignment_gaps.length} 个解析片段尚不能与原文唯一对应，相关原文已保留。</p>}
           </details>}
+          {source && <ParagraphCorrection key={revision} revision={revision} pages={source.pages} onPage={number => { setPage(number); setLocator(null); setEvidenceOpen(true); }} onSaved={value => void refreshStructure(value)} />}
           {contextError && <p className={s.error} role="alert">{contextError}</p>}
           {nodeId && <div className={s.toolbar}><select aria-label="上下文范围" value={scope} onChange={e => { setScope(e.target.value); setOffset(0); }}><option value="node">所选正文节点</option><option value="section">所在小节</option><option value="chapter">所在章节</option></select><span className={s.muted}>{context ? `已展示 ${context.offset + 1}—${context.offset + context.returned_characters} / ${context.total_characters} 字符` : "正在读取…"}</span></div>}
           {context?.segments.map((part, i) => <article key={`${part.page_number}-${part.start}-${i}`}><p className={s.muted}>PDF {part.page_number}{part.printed_label ? ` · 书页 ${part.printed_label}` : ""}</p><div className={s.paragraph}>{part.exact}</div><div className={s.toolbar}><button onClick={() => { setPage(part.page_number); setLocator(null); setEvidenceOpen(true); }}>核对这一页</button><button onClick={() => addSegment(part)}>选用这段原文</button></div></article>)}

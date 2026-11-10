@@ -467,6 +467,9 @@ def request_source_reindex(revision, *, keyword_only=False):
 
 
 def process_source(job, generation):
+    if getattr(settings, "DISCOVERY_INDEX_KEYWORD_ONLY", False) and not job.stats.get("semantic_waiting"):
+        _guard_job(job, stats={**job.stats, "semantic_waiting": {"code": "keyword_worker",
+            "message": "此执行器仅准备关键词，向量等待已配置的语义计算节点。"}})
     kind, source_id = job.stats["source_type"], job.stats["source_id"]
     source, header = get_source(kind, source_id)
     if not header or header["source_revision"] != job.stats["source_revision"]:

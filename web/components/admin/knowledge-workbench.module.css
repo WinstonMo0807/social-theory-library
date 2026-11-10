@@ -120,6 +120,17 @@
 @media (max-width: 1050px) { .workspace { grid-template-columns: 150px minmax(0, 1fr); } .evidence { display: none; } .mobileOnly { display: inline-flex !important; } .evidenceOpen { display: block; position: fixed; inset: 80px 12px 12px auto; width: min(540px, calc(100vw - 24px)); background: var(--paper, #f7f4ee); padding: 22px; border: 1px solid var(--line, #d9d2c6); z-index: 70; overflow: auto; } }
 @media (max-width: 620px) { .navigation { gap: 22px; margin-bottom: 20px; font-size: .9375rem; } .heading { gap: 18px; } .workspace { display: block; } .rail { position: static; max-height: 200px; padding: 15px 0; border-bottom: 1px solid var(--line, #d9d2c6); } .main { border: 0; padding: 24px 16px; } .toolbar { gap: 10px; } .preview { padding: 18px; } .evidenceOpen { inset: 65px 8px 8px; width: auto; padding: 18px; } .table td { padding: 16px 10px; } }
 .profileWide { grid-column: 1 / -1; }
+.paragraphCorrection { margin: 24px 0; padding: 20px 0; border-block: 1px solid var(--line, #d9d2c6); }
+.paragraphCorrection > summary { font-family: var(--font-serif); font-size: 1.125rem; }
+.paragraphChoices { max-height: 520px; overflow-y: auto; scrollbar-width: thin; margin: 20px 0; padding: 0 12px 0 0; }
+.paragraphChoices article { padding: 18px 16px; border-left: 2px solid transparent; border-bottom: 1px solid var(--line, #d9d2c6); }
+.paragraphChoices article[data-selected=true] { border-left-color: var(--accent, #b18d4b); background: var(--wash, #f1ece2); }
+.paragraphChoices .paragraphChoice { display: flex; align-items: center; gap: 12px; margin: 0; cursor: pointer; }
+.paragraphChoices input[type=checkbox] { width: 18px; height: 18px; min-height: 18px; margin: 0; accent-color: #8a704b; }
+.paragraphChoices .pageLink { min-height: 30px; padding: 4px 0; margin-top: 12px; background: transparent; border: 0; color: var(--muted, #686257); font-size: .8125rem; }
+.paragraphPreview { padding: 24px; margin-block: 24px; background: var(--surface, #fff); border-top: 2px solid var(--accent, #b18d4b); }
+.paragraphPreview .paragraph { text-indent: 2em; }
+.paragraphPreview small { color: var(--muted, #686257); font: .75rem var(--font-sans, sans-serif); margin-inline: .3em; }
 
 .aliasCompose { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 36px; align-items: start; }
 .aliasPreview { min-height: 160px; padding: 22px 28px; border-left: 2px solid var(--accent, #b18d4b); background: var(--surface, #fffdfa); }

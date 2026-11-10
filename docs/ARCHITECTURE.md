@@ -1,3 +1,7 @@
+## 2026-11-10 人工正文结构与证据依赖
+
+paragraph_corrections统一处理完整段落连续关系及最近校正撤销，基于不可变DocumentStructure/Node/Segment，不另建正文或证据表。请求标识、操作者、依据、基准结构、原节点及新节点进入结构来源；旧锚点不改绑。Docling重解析保护human_corrected节点，目录变化仅重映射层级。知识页证据依赖只比较固定正文哈希与active状态，兼容旧结构哈希但不能接受正文变动；章节推理仍按实际范围和解析版本缓存。
+
 2026-11-10 `knowledge_entity_queries`以原约束资料和人物发布快照为名称/异名的读取权威，Entity迁移副本保留历史；DRF/MCP/检索/匹配共用。`knowledge_aliases`只在ChangeSet应用时形成未公开草稿，知识页预览列明异名发布范围，原有publish_page事务统一确认，草稿不参与公开查询。
 
 ## 2026-11-10 Entity类型资料

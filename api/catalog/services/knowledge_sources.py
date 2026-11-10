@@ -195,7 +195,7 @@ def build_structure(revision):
             start, end = base + match.start(), base + match.end()
             parent = next((r for a, b, r in reversed(chapter_ranges) if a <= start and end <= b), root)
             node("paragraph", start, end, parent=parent, source={"method": "raw_blank_lines", "continuity": "page_bounded"})
-    previous = revision.structures.filter(parser__startswith="docling").exclude(outline_revision=outline).order_by("-created_at").first()
+    previous = revision.structures.filter(parser__in=["docling", "docling_outline_remap", "human_correction", "human_outline_remap"]).exclude(outline_revision=outline).order_by("-created_at").first()
     if previous:
         return _retain_parsed_leaves(previous, structure, starts)
     return structure
@@ -217,7 +217,7 @@ def _retain_parsed_leaves(previous, baseline, starts):
     if preserved.get("alignment_gaps") or preserved.get("unmatched_ranges"):
         coverage["structure_status"]="needs_structure_review"
     structure=DocumentStructure.objects.create(document_revision=baseline.document_revision,
-        outline_revision=baseline.outline_revision,parser="docling_outline_remap",parser_version=previous.parser_version,
+        outline_revision=baseline.outline_revision,parser="human_outline_remap" if any(n.source.get("human_corrected") for n in leaves) else "docling_outline_remap",parser_version=previous.parser_version,
         input_hash=key,coverage=coverage)
     headings=list(baseline.nodes.exclude(kind="paragraph").prefetch_related("segments__page"))
     def bounds(n):

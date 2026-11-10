@@ -83,3 +83,20 @@ def test_keyword_batches_wait_for_external_success(monkeypatch):
     assert batches and all(1 <= len(batch) <= 20 for batch in batches)
     assert any(len(batch)>1 for batch in batches)
     assert all(m.DiscoveryDocument.objects.get(pk=row["id"]).keyword_ready for batch in batches for row in batch)
+
+
+def test_keyword_worker_does_not_invoke_configured_embedding(monkeypatch, settings):
+    _,_,_,generation,job,_ = indexing_source()
+    generation.config_snapshot["embedding_artifact"] = "configured-but-not-on-this-worker"
+    generation.save()
+    settings.DISCOVERY_INDEX_KEYWORD_ONLY = True
+    def forbidden(*args, **kwargs):
+        raise AssertionError("keyword worker must not invoke a semantic model")
+    monkeypatch.setattr(indexing,"embed_texts",forbidden)
+    monkeypatch.setattr(indexing,"meili",lambda method,path,data=None,**kw: {"hits":[]} if path.endswith("/search") else {"taskUid":1})
+    monkeypatch.setattr(indexing,"wait_index_task",lambda *a,**kw:None)
+    assert indexing.process_source(job,generation)
+    job.refresh_from_db()
+    assert job.stats["semantic_waiting"]["code"] == "keyword_worker"
+    assert m.DiscoveryDocument.objects.filter(generation=generation,keyword_ready=True).exists()
+    assert not m.DiscoveryDocument.objects.filter(generation=generation,vector_ready=True).exists()

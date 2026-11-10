@@ -62,11 +62,9 @@ def source_value(kind, key):
             row["revisions"] = list(m.DocumentRevision.objects.filter(asset__edition__work_id=key, is_active=True)
                 .order_by("id").values("id", "text_checksum"))
     elif kind == "document_revision":
+        # Citations pin immutable ranges. Restructuring the same text does not
+        # change their evidence; Intelligence separately fingerprints its ranges.
         row = m.DocumentRevision.objects.filter(pk=key).values("text_checksum", "is_active").first()
-        if row is not None:
-            from catalog.services.knowledge_sources import current_structure
-            structure=current_structure(m.DocumentRevision.objects.get(pk=key))
-            row["structure_hash"]=structure.input_hash if structure else None
     elif kind == "anchor":
         row = m.EvidenceAnchor.objects.filter(pk=key).values("content_hash", "validation").first()
     else:
@@ -78,6 +76,15 @@ def source_hash(kind, key):
     # UUIDs inside ORM values need a stable, non-secret JSON representation.
     import json
     return digest(json.loads(json.dumps(source_value(kind, key), default=str, ensure_ascii=False)))
+
+
+def revision_evidence_hashes(key):
+    """Read old fingerprints only when their text and active state still match."""
+    value = source_value("document_revision", key)
+    if value is None:
+        return {digest(None)}
+    structures = m.DocumentStructure.objects.filter(document_revision_id=key).values_list("input_hash", flat=True)
+    return {digest(value), *[digest({**value, "structure_hash": h}) for h in [None, *structures]]}
 
 
 def reference_sources(ref):
@@ -162,6 +169,11 @@ def invalidate_source(kind, key):
         if not m.KnowledgeBlockDependency.objects.filter(source_type=source_type, source_id=source_id).exists():
             continue
         current = source_hash(source_type, source_id)
+        if source_type == "document_revision":
+            # Normalize the old structure-sensitive projection, never accepting
+            # a changed text checksum or a withdrawn/inactive revision.
+            m.KnowledgeBlockDependency.objects.filter(source_type=source_type, source_id=source_id,
+                source_hash__in=revision_evidence_hashes(source_id)).update(source_hash=current, stale=False)
         m.KnowledgeBlockDependency.objects.filter(source_type=source_type, source_id=source_id).exclude(source_hash=current).update(stale=True)
 
 
@@ -201,7 +213,8 @@ def page_workspace(page, actor):
     dependencies = list(page.dependencies.values("block_id", "source_type", "source_id", "source_hash", "stale"))
     # This also catches an older producer that has not emitted a canonical event yet.
     for row in dependencies:
-        row["stale"] = row["stale"] or row["source_hash"] != source_hash(row["source_type"], row["source_id"])
+        row["stale"] = (row["source_hash"] not in revision_evidence_hashes(row["source_id"]) if row["source_type"] == "document_revision"
+            else row["stale"] or row["source_hash"] != source_hash(row["source_type"], row["source_id"]))
     links = m.KnowledgeBlockDependency.objects.filter(source_type="knowledge_page", source_id=page.pk).select_related("page")
     revisions = m.EditorialRevision.objects.filter(target_type="knowledge_page", target_id=page.pk).order_by("-revision")[:20]
     data.update({"kind": page.entity.kind if page.entity_id else "work" if page.work_id else "special",

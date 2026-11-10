@@ -189,6 +189,9 @@ def install_structure(revision, parsed):
         batches = list(previous.coverage.get("parse_batches", []))
         if any(batch["hash"] == parsed_hash for batch in batches):
             return previous
+        for node in previous.nodes.filter(source__human_corrected=True).prefetch_related("segments__page"):
+            if any(bounds[0] <= s.page.page_number <= bounds[1] for s in node.segments.all()):
+                raise ValidationError("所选范围含人工校正段落，自动解析不能覆盖。请排除此范围，或在段落校正中撤销本次校正后重试。")
         pages = list(revision.page_snapshots.all())
         key = digest([ADAPTER_VERSION, previous.input_hash, parsed_hash])
         existing = m.DocumentStructure.objects.filter(document_revision=revision, input_hash=key).first()
@@ -262,7 +265,7 @@ def install_structure(revision, parsed):
         # A scoped reparse retains verified nodes from earlier scopes. It must
         # include a whole existing cross-page item if that item is affected.
         for node in previous.nodes.filter(kind__in=["paragraph","footnote","table","references"]).prefetch_related("segments__page"):
-            if not node.source.get("docling_ref"):
+            if not node.source.get("docling_ref") and not node.source.get("human_corrected"):
                 continue
             segments = [(s.page,s.start,s.end) for s in node.segments.all()]
             affected = [bounds[0] <= p.page_number <= bounds[1] for p,_,_ in segments]
@@ -270,7 +273,8 @@ def install_structure(revision, parsed):
                 if not all(affected):
                     raise ValidationError("解析范围切断了已核验的跨页段落，请将该段落的全部页面纳入。")
                 continue
-            mapped.append({"ref":node.source["docling_ref"],"label":node.source.get("label","text"),
+            mapped.append({"ref":node.source.get("docling_ref",str(node.pk)),"label":node.source.get("label","text"),
+                "retained_source":node.source,
                 "prov":node.source.get("provenance",[]),"segments":segments,
                 "start":starts[segments[0][0].page_number]+segments[0][1]})
         occupied = {}
@@ -321,7 +325,8 @@ def install_structure(revision, parsed):
             kind = {"footnote":"footnote","reference":"references","table":"table"}.get(row["label"],"paragraph")
             parent = next((n for a,b,n in reversed(ranges) if a <= row["start"] < b),root)
             node = make(f"leaf:{i}",kind,row["segments"],parent=parent,source={"docling_ref":row["ref"],"label":row["label"],
-                "provenance":row["prov"],"geometry_precision":"unverified_docling_coordinates","alignment":"typography_to_raw_codepoints"})
+                "provenance":row["prov"],"geometry_precision":"unverified_docling_coordinates","alignment":"typography_to_raw_codepoints",
+                **row.get("retained_source",{})})
             leaves.append((node,row["segments"]))
         # Never omit unmatched original material or pretend parsing covered it.
         for i,(page,a,b) in enumerate(unmatched):

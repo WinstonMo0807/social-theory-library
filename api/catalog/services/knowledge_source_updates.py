@@ -49,7 +49,7 @@ def execute_source_update(job_id,task_id):
         header=get_source("edition",revision.asset.edition_id)[1]
         index_job=None
         if active_generation() and header and header.get("document_revision_id")==str(revision.pk):
-            index_job=request_source_reindex(revision)
+            index_job=request_source_reindex(revision,keyword_only=True)
         ProcessingJob.objects.filter(pk=job.pk,task_id=task_id,status="running").update(status="succeeded",progress=100,
             finished_at=timezone.now(),stats={**job.stats,"structure_id":str(structure.pk),"model_calls":0,
                 "index_job_id":str(index_job.pk) if index_job else None,"index_state":"queued" if index_job else "unpublished_or_no_active_index"})

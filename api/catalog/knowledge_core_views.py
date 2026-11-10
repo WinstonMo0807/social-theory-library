@@ -71,6 +71,24 @@ class VerifyAnchorView(APIView):
         return Response(verify_selection(request.user, revision, request.data.get("segments")), status=201)
 
 
+class ParagraphCorrectionView(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def get(self, request, revision_id):
+        from rest_framework import serializers
+        from catalog.services.paragraph_corrections import paragraph_ranges
+        page = serializers.IntegerField(min_value=1).run_validation(request.query_params.get("page", 1))
+        end = serializers.IntegerField(min_value=page).run_validation(request.query_params.get("end", page))
+        return Response(paragraph_ranges(get_object_or_404(DocumentRevision, pk=revision_id), request.user, [page, end]))
+
+    def post(self, request, revision_id):
+        from catalog.services.paragraph_corrections import correct_paragraph
+        result = correct_paragraph(get_object_or_404(DocumentRevision, pk=revision_id), request.user,
+            node_ids=request.data.get("node_ids", []), base_hash=request.data.get("base_hash"),
+            reason=request.data.get("reason"), request_id=request.data.get("request_id"), operation=request.data.get("operation", "join"))
+        return Response(result, status=201)
+
+
 class NodeContextView(APIView):
     permission_classes = [CanReadLibrary]
 
@@ -382,6 +400,7 @@ urlpatterns = [
     path("revisions/<uuid:revision_id>/structure/", RevisionStructureView.as_view()),
     path("revisions/<uuid:revision_id>/assertions/draft/", AssertionDraftView.as_view()),
     path("revisions/<uuid:revision_id>/structure/parse/", ParseStructureView.as_view()),
+    path("revisions/<uuid:revision_id>/structure/paragraphs/", ParagraphCorrectionView.as_view()),
     path("revisions/<uuid:revision_id>/pages/<int:page_number>/", RevisionPageView.as_view()),
     path("anchors/<uuid:anchor_id>/", AnchorView.as_view()),
     path("nodes/<uuid:node_id>/context/", NodeContextView.as_view()),
