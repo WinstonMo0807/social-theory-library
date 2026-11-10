@@ -217,8 +217,16 @@ def schedule_sources(generation, *, max_queued=8):
                     and state.completed_count == state.expected_count):
                 continue
             pending += 1
+            # A manually requested logical update owns this source until it
+            # finishes. The older fingerprint coordinator must not displace it.
+            if state and state.job_id and ProcessingJob.objects.filter(pk=state.job_id, status__in=OPEN,
+                    stats__source_revision=header["source_revision"]).exists():
+                continue
             key = fingerprint([str(generation.pk), kind, str(source.pk), header["source_revision"]])
-            job = ProcessingJob.objects.filter(idempotency_key="discovery:" + key).first()
+            job = ProcessingJob.objects.filter(pk=state.job_id,
+                stats__source_revision=header["source_revision"]).first() if state and state.job_id else None
+            if job is None:
+                job = ProcessingJob.objects.filter(idempotency_key="discovery:" + key).first()
             if job and job.status in OPEN:
                 continue
             if (job and job.status == "failed" and job.finished_at and
@@ -302,6 +310,9 @@ def _is_current(job, generation, header):
     if not ProcessingJob.objects.filter(pk=job.pk, task_id=job.task_id, status="running").exists():
         return False
     if not SemanticIndexVersion.discovery_objects.filter(pk=generation.pk, status__in=["building", "ready", "active"]).exists():
+        return False
+    if not DiscoverySourceState.objects.filter(generation=generation, source_type=job.stats["source_type"],
+            source_id=job.stats["source_id"], job_id=job.pk).exists():
         return False
     if job.stats["source_type"] == "edition":
         row = source_queryset("edition").filter(pk=job.stats["source_id"]).values_list(

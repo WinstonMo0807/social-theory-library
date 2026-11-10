@@ -519,6 +519,13 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"expires": 50},
     },
 }
+# Optional deployment scope for an isolated scheduler. Task definitions and
+# recovery semantics remain those of the existing Celery application.
+if os.getenv("CELERY_BEAT_ENTRIES", "").strip():
+    _beat_entries = {entry.strip() for entry in os.environ["CELERY_BEAT_ENTRIES"].split(",") if entry.strip()}
+    if _beat_entries - CELERY_BEAT_SCHEDULE.keys():
+        raise ImproperlyConfigured("CELERY_BEAT_ENTRIES contains an unknown schedule entry.")
+    CELERY_BEAT_SCHEDULE = {key: value for key, value in CELERY_BEAT_SCHEDULE.items() if key in _beat_entries}
 PROCESS_INGESTION_INLINE = env_bool("PROCESS_INGESTION_INLINE", DEBUG)
 CELERY_TASK_ALWAYS_EAGER = env_bool(
     "CELERY_TASK_ALWAYS_EAGER",

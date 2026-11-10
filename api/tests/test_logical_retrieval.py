@@ -75,6 +75,38 @@ def test_keywords_preserve_valid_old_vectors_until_semantic_replacement(monkeypa
     assert projection.discovery_coverage(["public"])["vector_editions"]==1
 
 
+def test_old_source_job_cannot_write_or_retire_new_owner(monkeypatch):
+    edition,_,_,generation,job,old=indexing_source()
+    newer=ProcessingJob.objects.create(job_type="discovery_index",status="pending",stats=job.stats)
+    m.DiscoverySourceState.objects.filter(generation=generation,source_id=edition.pk).update(job=newer)
+    writes=[]
+    monkeypatch.setattr(indexing,"meili",lambda *args,**kwargs:writes.append(args))
+    with pytest.raises(indexing.DiscoveryIndexError) as error:
+        indexing.process_source(job,generation)
+    assert error.value.code == "superseded" and not writes
+    assert m.DiscoveryDocument.objects.filter(pk__in=[row.pk for row in old],keyword_ready=True).count()==2
+
+
+def test_coordinator_does_not_replace_an_active_logical_job(monkeypatch):
+    edition,_,_,generation,job,_=indexing_source()
+    from catalog.services.discovery_sources import get_source
+    source,header=get_source("edition",edition.pk)
+    monkeypatch.setattr(indexing,"iter_source_headers",lambda kind: [(source,header)] if kind=="edition" else [])
+    assert indexing.schedule_sources(generation)>0
+    state=m.DiscoverySourceState.objects.get(generation=generation,source_id=edition.pk)
+    assert state.job_id==job.pk
+    assert ProcessingJob.objects.filter(job_type="discovery_index").count()==1
+
+    # Failure recovery must retain the same current structure and checkpoints,
+    # instead of selecting an older fingerprint job for the same text revision.
+    job.status="failed"; job.stats={**job.stats,"structure_id":str(uuid4()),"completed_units":1}; job.save()
+    monkeypatch.setattr(indexing,"_dispatch",lambda *args,**kwargs:None)
+    assert indexing.schedule_sources(generation)>0
+    state.refresh_from_db(); job.refresh_from_db()
+    assert state.job_id==job.pk and job.status=="pending" and job.stats["completed_units"]==1
+    assert ProcessingJob.objects.filter(job_type="discovery_index").count()==1
+
+
 def test_failed_new_projection_keeps_previous_ready_rows(monkeypatch):
     _,_,_,generation,job,old = indexing_source()
     monkeypatch.setattr(indexing,"meili",lambda *a,**kw:{"taskUid":1})

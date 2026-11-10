@@ -323,7 +323,10 @@ def locator_payload(anchor, *, editorial=False):
     asset = revision.asset
     result = []
     path = []
-    for segment in anchor.segments.select_related("page", "node").all():
+    segments = getattr(anchor, "locator_segments", None)
+    if segments is None:
+        segments = anchor.segments.select_related("page", "node").all()
+    for segment in segments:
         page = segment.page
         exact = page.text[segment.start:segment.end]
         if page.document_revision_id != revision.pk or digest(exact) != segment.content_hash or digest(page.text) != page.content_hash:

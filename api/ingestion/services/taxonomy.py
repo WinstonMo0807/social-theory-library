@@ -8,7 +8,6 @@ from catalog.models import (
     Subdiscipline,
     TheorySchool,
     Topic,
-    WorkNodeRelation,
     WorkTopicRelation,
 )
 from catalog.services.canonical_identity import (
@@ -208,7 +207,7 @@ def _persist_unmapped_candidates(upload_item, candidates) -> None:
 
 
 def suggest_relations(work, text: str, *, upload_item=None) -> list:
-    """Create review-only normalized relations when identity is already safe.
+    """Suggest catalog terms without writing academic relations.
 
     Keyword rules are discovery leads. They never create a TheorySchool,
     KnowledgeNode, Topic, or legacy WorkKnowledgeRelation. A theory must have
@@ -250,21 +249,10 @@ def suggest_relations(work, text: str, *, upload_item=None) -> list:
                 )
             )
             continue
-        relation, _ = WorkNodeRelation.objects.get_or_create(
-            work=work,
-            node=target,
-            role=WorkNodeRelation.Role.GENERAL_MENTION,
-            defaults={
-                "source": "keyword_classifier_v3",
-                "confidence": confidence,
-                "status": KnowledgePublicationStatus.PENDING,
-                "is_primary": not any(
-                    isinstance(item, WorkNodeRelation) for item in created
-                ),
-                "strength": "high" if confidence >= 0.9 else "medium",
-            },
-        )
-        created.append(relation)
+        # A keyword match is a catalog lead, not an academic Assertion or a
+        # hidden formal relation. Adoption uses the shared Knowledge ChangeSet.
+        unmapped_candidates.append(("knowledge_nodes", target.canonical_name_zh, confidence,
+            "keyword_match_requires_knowledge_review"))
     for name, slug, count in sorted(topic_matches, key=lambda item: item[2], reverse=True)[:5]:
         confidence = min(0.97, 0.78 + count * 0.08)
         target = Topic.objects.filter(slug=slug).first()

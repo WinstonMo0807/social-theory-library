@@ -64,6 +64,37 @@ def test_keyword_inspection_does_not_call_reranker(admin_user):
 
 
 @pytest.mark.django_db
+def test_incomplete_keyword_coverage_is_not_a_completed_zero_result(admin_user):
+    coverage = {"eligible_editions": 1, "index_pending_editions": 1, "text_pending_editions": 0}
+    with patch("catalog.services.discovery_projection.discovery_candidates", return_value={
+            "sparse": [], "dense": [], "warnings": [], "coverage": coverage}):
+        result = inspect_retrieval(admin_user, "有原文但仍在索引", mode="keyword")
+    assert result["results"] == [] and result["status"] == "waiting_index"
+    assert result["warnings"][0]["code"] == "coverage_pending"
+    assert result["index_coverage"] == coverage
+
+
+@pytest.mark.django_db
+def test_locator_batch_keeps_history_and_shared_chapter_path(source, django_assert_max_num_queries):
+    from catalog.services.knowledge_sources import create_anchor, locator_payload
+    from catalog.services.retrieval.locators import attach_locators
+    build_structure(source)
+    page = source.page_snapshots.get(page_number=1)
+    anchors = [create_anchor(source, [{"page_number": 1, "start": i, "end": i+1, "exact": page.text[i:i+1]}])
+        for i in range(12)]
+    expected = {str(a.pk): locator_payload(a) for a in anchors}
+    rows = []
+    for anchor in anchors:
+        key = uuid4()
+        m.KnowledgeLegacyMapping.objects.create(source_type="discovery_document", source_id=key,
+            target_type="anchor", target_id=anchor.pk, quality="verified_text")
+        rows.append({"id": str(key), "asset_id": str(source.asset_id), "document_revision_id": str(source.pk)})
+    with django_assert_max_num_queries(7):
+        result = attach_locators(rows)
+    assert [r["locator"] for r in result] == [expected[str(a.pk)] for a in anchors]
+
+
+@pytest.mark.django_db
 def test_page_reuses_identity_and_preserves_rich_text(source, admin_user):
     page = open_page(admin_user, work_id=source.asset.edition.work_id)
     assert open_page(admin_user, work_id=source.asset.edition.work_id)["id"] == page["id"]

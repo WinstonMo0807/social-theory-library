@@ -1,3 +1,7 @@
+## 2026-11-10 检索覆盖和编目审核写入
+
+旧元数据复核的学术关联统一经academic_relations.propose_work_relations进入ChangeSet，关键词仅产生MetadataCandidate；WorkTopicRelation继续承担书目分类。检索结果返回实际关键词覆盖，未完整索引不得显示成功零命中。来源索引任务以DiscoverySourceState.job为当前归属，旧任务不能退休新结构投影；locator按批次加载片段/章节路径，原文与版本校验保持。
+
 ## 2026-11-10 结构执行失败与检索投影接续
 
 document_structure继续复用CapabilityDemand租约及ProcessingJob。远程release原子保存失败/等待状态、原因和重试上限，恢复复用原ProcessingCenter服务与确定性任务ID，不另建调度系统。客户端可指定信任CA文件，仍校验证书和主机名。相同已发布正文仅重组结构时，旧有效向量保留到新投影语义就绪；关键词完成状态以当前完整来源回执判定，旧/新结果均重新执行来源权限校验。实体匹配预览由Knowledge规范查询补责任者和陈述作品来源，客户端候选ID不授予资料写入权限。

@@ -1800,61 +1800,14 @@ class MetadataReviewView(APIView):
                 selected_keys.add(key)
 
         reviewed_at = timezone.now()
-        for relation in work.node_relations.select_for_update().filter(
-            node__node_type=KnowledgeNode.NodeType.THEORY_TRADITION,
-            source="metadata_review_v3",
-        ):
-            if (relation.node_id, relation.role) not in selected_keys:
-                relation.status = KnowledgePublicationStatus.REJECTED
-                relation.reviewed_by = request.user
-                relation.reviewed_at = reviewed_at
-                relation.save(
-                    update_fields=["status", "reviewed_by", "reviewed_at", "updated_at"]
-                )
-
+        from catalog.services.academic_relations import propose_work_relations
+        knowledge_changesets = propose_work_relations(work,
+            [{**assignment, "node": node} for node, assignment in selected_theories], request.user)
+        # Existing confirmed academic relations remain immutable. Deselecting a
+        # catalog selector cannot withdraw another editor's scholarly content.
         evidence_asset = edition.assets.filter(
-            kind=Asset.Kind.NORMALIZED,
-            status=Asset.Status.READY,
-            is_current=True,
+            kind=Asset.Kind.NORMALIZED, status=Asset.Status.READY, is_current=True,
         ).first()
-        for index, (node, assignment) in enumerate(selected_theories):
-            relation, _created = WorkNodeRelation.objects.update_or_create(
-                work=work,
-                node=node,
-                role=assignment["role"],
-                defaults={
-                    "source": "metadata_review_v3",
-                    "confidence": 1,
-                    "status": KnowledgePublicationStatus.PUBLISHED,
-                    "reviewed_by": request.user,
-                    "reviewed_at": reviewed_at,
-                    "is_primary": assignment.get("is_primary", index == 0),
-                    "strength": assignment.get("strength", "medium"),
-                },
-            )
-            if (
-                evidence_asset
-                and assignment.get("evidence_page")
-                and assignment.get("evidence_text")
-            ):
-                EvidenceSnippet.objects.update_or_create(
-                    work=work,
-                    file=evidence_asset,
-                    node=node,
-                    work_node_relation=relation,
-                    page_number=assignment["evidence_page"],
-                    defaults={
-                        "printed_page_label": assignment.get(
-                            "evidence_printed_label", ""
-                        ),
-                        "quote": assignment["evidence_text"],
-                        "extraction_method": EvidenceSnippet.ExtractionMethod.MANUAL,
-                        "semantic_confidence": 1,
-                        "review_status": RelationReviewStatus.APPROVED,
-                        "reviewed_by": request.user,
-                        "reviewed_at": reviewed_at,
-                    },
-                )
         topic_assignments = {
             entry["id"]: entry
             for entry in data.get("topic_assignments", [])
@@ -2182,9 +2135,11 @@ class MetadataReviewView(APIView):
                 lambda: _enqueue_review_processing(str(item.id)),
                 robust=True,
             )
-        return Response(
-            UploadItemSerializer(item, context={"request": request}).data
-        )
+        result = dict(UploadItemSerializer(item, context={"request": request}).data)
+        result["knowledge_review"] = [{"changeset_id": str(value.pk),
+            "status": value.status, "workspace_url": f"/admin/intelligence?changeset={value.pk}"}
+            for value in knowledge_changesets]
+        return Response(result)
 
 
 class PublicationPlaceReviewView(APIView):

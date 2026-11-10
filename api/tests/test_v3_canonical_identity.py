@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from catalog.models import (
+    ChangeItem,
     DocumentType,
     Discipline,
     Edition,
@@ -34,7 +35,7 @@ from ingestion.services.taxonomy import suggest_relations
 pytestmark = pytest.mark.django_db
 
 
-def test_workflow_legacy_theory_input_writes_only_canonical_relations(admin_user):
+def test_workflow_legacy_theory_input_proposes_shared_knowledge_draft(admin_user):
     work = Work.objects.create(
         document_type=DocumentType.BOOK,
         title="3.0 规范关系写入",
@@ -77,9 +78,10 @@ def test_workflow_legacy_theory_input_writes_only_canonical_relations(admin_user
         actor=admin_user,
     )
 
-    relation = WorkNodeRelation.objects.get(work=work, node=node)
-    assert relation.role == WorkNodeRelation.Role.FOUNDATIONAL
-    assert relation.status == "published"
+    assert not WorkNodeRelation.objects.filter(work=work, node=node).exists()
+    proposal=ChangeItem.objects.get(changeset__subject_work=work,kind="assertion")
+    assert proposal.payload["predicate"] == WorkNodeRelation.Role.FOUNDATIONAL
+    assert proposal.decision == "pending"
     assert WorkTopicRelation.objects.filter(work=work, topic=topic).exists()
     assert WorkKnowledgeRelation.objects.filter(work=work).count() == 0
 
@@ -188,7 +190,7 @@ def test_node_uses_independent_subdiscipline_and_topic_relations(
     assert public.data["topic_links"][0]["topic"]["id"] == str(topic.id)
 
 
-def test_ingestion_taxonomy_only_writes_safe_normalized_relations(admin_user):
+def test_ingestion_taxonomy_preserves_catalog_leads_without_academic_relations(admin_user):
     work = Work.objects.create(
         document_type=DocumentType.BOOK,
         title="马克思主义与权力",
@@ -213,12 +215,9 @@ def test_ingestion_taxonomy_only_writes_safe_normalized_relations(admin_user):
 
     suggest_relations(work, "马克思主义讨论权力与阶级斗争。", upload_item=item)
 
-    assert WorkNodeRelation.objects.filter(
-        work=work,
-        node=node,
-        status="pending",
-        source="keyword_classifier_v3",
-    ).exists()
+    assert not WorkNodeRelation.objects.filter(work=work,node=node).exists()
+    candidate=MetadataCandidate.objects.get(upload_item=item,field_name="knowledge_nodes",value=node.canonical_name_zh)
+    assert candidate.evidence["reason"] == "keyword_match_requires_knowledge_review"
     assert WorkTopicRelation.objects.filter(
         work=work,
         topic=topic,

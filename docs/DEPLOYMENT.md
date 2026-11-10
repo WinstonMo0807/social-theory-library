@@ -1,3 +1,7 @@
+## 2026-11-10 内网关键词协调器
+
+候选 stl-intelligence-demo-index-beat 使用原worker镜像、独立候选Redis及数据库，无宿主端口。CELERY_BEAT_ENTRIES=reconcile-discovery-index，仅运行现有5分钟索引协调任务；单worker消费intelligence,discovery_index，DISCOVERY_INDEX_KEYWORD_ONLY=true。beat限制256MiB/384MiB swap、CPU0.15，restart unless-stopped；调度文件在容器/tmp，不与正式beat共用。恢复时停止此候选beat即可；正式beat配置未改。该变量未设置时原调度表保持，未知任务名启动失败，不静默忽略。
+
 2026-11-10 候选新增Windows常驻Docling节点与仅内网HTTPS执行器入口18491。启动、证书信任、固定依赖、实际解析、容器/环境备份及恢复安排见[STRUCTURE_WORKER_20261110.md](stl4/STRUCTURE_WORKER_20261110.md)。标准证书与主机名校验保留，凭据/私钥不入Git。Windows尚无开机自启；候选API、Nginx和队列worker为unless-stopped，前一容器和环境文件仍在。正式环境、公网/DNS/隧道未变。
 
 2026-11-10 候选worker已消费`intelligence,discovery_index`，solo/concurrency=1、prefetch=1，512MiB内存/768MiB含swap上限、CPU0.5。显式`DISCOVERY_INDEX_KEYWORD_ONLY=true`使此worker只补关键词；已存在向量不作为外呼许可，语义补齐需要正常模型执行器。来源结构更新默认请求关键词任务。Dockerfile.intelligence的默认队列同步更新，API不加载重模型。新候选worker为unless-stopped；原容器以`stl-intelligence-demo-worker-before-index-20261110`停止保留。回退需先等当前任务完成或受控停机，将新worker改名保留，再恢复旧容器名和启动；不删除队列、索引或数据库。正式服务未变。原文校正备份与真实样本见CURRENT_PROGRESS。

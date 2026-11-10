@@ -56,7 +56,11 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
     if channel == "passages":
         from .locators import attach_locators
         rows = attach_locators(rows)
+    coverage = result.get("coverage") or {}
+    if channel == "passages" and (coverage.get("index_pending_editions") or coverage.get("text_pending_editions")):
+        warnings.append(_warning("coverage_pending", "所选来源仍有原文或关键词索引待完成。当前结果仅覆盖已就绪的片段，零条结果不代表原文中不存在。", channel))
     return {"rows": rows, "warnings": warnings, "version": str(result.get("version") or ""),
+            "coverage": coverage,
             "index_uid": str(result.get("index_uid") or getattr(request_context.get("generation"), "uid", "")),
             "embedding_artifact": str(result.get("embedding_artifact") or ""),
             "embedding_dimensions": result.get("embedding_dimensions"),

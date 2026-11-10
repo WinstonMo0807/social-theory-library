@@ -23,6 +23,26 @@ def payload(**updates):
             "publication_year": 2026, "publisher": "人工出版社", "retry_publication": False, **updates}
 
 
+def test_catalog_review_creates_knowledge_draft_and_preserves_prior_human_relation(api_client,admin_user,settings,tmp_path):
+    from catalog import models as m
+    item,work,edition=review_item(admin_user,settings,tmp_path)
+    node=m.KnowledgeNode.objects.create(node_type="theory_tradition",canonical_name_zh="理论甲",slug="review-theory",status="published")
+    old=m.WorkNodeRelation.objects.create(work=work,node=node,role="general_mention",status="published",source="metadata_review_v3")
+    api_client.force_authenticate(admin_user)
+    data=payload(knowledge_node_assignments=[{"id":str(node.pk),"role":"criticism","evidence_page":1,"evidence_text":"人工编目提出的批评关系，待原文核验"}])
+    response=api_client.put(f"/api/ingestion/items/{item.pk}/review/",data,format="json")
+    assert response.status_code==200,response.data
+    assert len(response.data["knowledge_review"])==1
+    changeset_id=response.data["knowledge_review"][0]["changeset_id"]
+    proposal=m.ChangeItem.objects.get(changeset_id=changeset_id,kind="assertion")
+    assert proposal.decision=="pending" and not m.Assertion.objects.exists()
+    assert "精确原文尚待核验" in proposal.payload["source_citation"]
+    old.refresh_from_db(); assert old.status=="published"
+    assert m.WorkNodeRelation.objects.filter(work=work).count()==1
+    repeated=api_client.put(f"/api/ingestion/items/{item.pk}/review/",data,format="json")
+    assert repeated.status_code==200 and repeated.data["knowledge_review"][0]["changeset_id"]==changeset_id
+
+
 def test_editor_review_confirms_explicit_language_and_registers_only_draft_authors(api_client, admin_user, settings, tmp_path):
     admin_user.role = "editor"
     admin_user.save(update_fields=["role"])

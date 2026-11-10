@@ -1,5 +1,6 @@
 """Enrich already-authorized retrieval rows without inventing raw offsets."""
-from catalog.models import EvidenceAnchor, KnowledgeLegacyMapping
+from django.db.models import Prefetch
+from catalog.models import DocumentNode, EvidenceAnchor, EvidenceSegment, KnowledgeLegacyMapping
 from catalog.services.knowledge_sources import locator_payload
 
 
@@ -37,7 +38,22 @@ def attach_locators(rows):
         source_type="evidence_span", source_id__in=span_ids, target_type="anchor", quality="verified_text")}
     documents = {str(row.source_id): row.target_id for row in KnowledgeLegacyMapping.objects.filter(
         source_type="discovery_document", source_id__in=[r["id"] for r in rows], target_type="anchor", quality="verified_text")}
-    anchors = {a.pk: a for a in EvidenceAnchor.objects.filter(pk__in=[*mapping.values(), *documents.values()]).select_related("document_revision__asset__edition")}
+    anchors = {a.pk: a for a in EvidenceAnchor.objects.filter(pk__in=[*mapping.values(), *documents.values()])
+        .select_related("document_revision__asset__edition")
+        .prefetch_related(Prefetch("segments", queryset=EvidenceSegment.objects.select_related("page", "node"), to_attr="locator_segments"))}
+    # Fetch the shared chapter ancestry once per level, rather than once per hit.
+    nodes = {s.node_id: s.node for a in anchors.values() for s in a.locator_segments if s.node_id}
+    missing = {n.parent_id for n in nodes.values() if n.parent_id and n.parent_id not in nodes}
+    while missing:
+        parents = list(DocumentNode.objects.filter(pk__in=missing).only("id", "title", "parent_id"))
+        nodes.update((n.pk, n) for n in parents)
+        missing = {n.parent_id for n in parents if n.parent_id and n.parent_id not in nodes}
+    for node in nodes.values():
+        node.parent = nodes.get(node.parent_id)
+    for anchor in anchors.values():
+        for segment in anchor.locator_segments:
+            if segment.node_id:
+                segment.node = nodes[segment.node_id]
     for row in rows:
         row["source_type"] = "original_text" if row.get("asset_id") else "knowledge_object"
         anchor = anchors.get(documents.get(str(row["id"])) or mapping.get(str(row.get("evidence_span_id"))))
