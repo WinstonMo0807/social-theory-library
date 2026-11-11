@@ -1,3 +1,7 @@
+## 2026-11-11 候选索引恢复
+
+候选API、单worker和限定beat已完成温和重载；正式环境未变。reconcile-discovery-index仍每5分钟派发，有效期从240秒改为3600秒，避免排在最多8个约4分钟切片之后被当作过期丢弃。跨单元关键词批次最多20条，未确认写入不推进断点。不清空Redis或活动索引，不启动额外并行重型worker。Windows5174和Docling节点本轮已恢复；开机自启尚未设置。
+
 ## 2026-11-10 内网关键词协调器
 
 候选 stl-intelligence-demo-index-beat 使用原worker镜像、独立候选Redis及数据库，无宿主端口。CELERY_BEAT_ENTRIES=reconcile-discovery-index，仅运行现有5分钟索引协调任务；单worker消费intelligence,discovery_index，DISCOVERY_INDEX_KEYWORD_ONLY=true。beat限制256MiB/384MiB swap、CPU0.15，restart unless-stopped；调度文件在容器/tmp，不与正式beat共用。恢复时停止此候选beat即可；正式beat配置未改。该变量未设置时原调度表保持，未知任务名启动失败，不静默忽略。

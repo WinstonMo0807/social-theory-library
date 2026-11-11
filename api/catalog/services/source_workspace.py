@@ -79,7 +79,7 @@ def source_directory(actor, *, query="", work_id=None, revision_id=None):
             "work_id": str(edition.work_id), "title": edition.work.title, "edition_label": edition.version_label,
             "revision_number": revision.revision, "pages": asset.page_count,
             "readable": asset.status == "ready" and bool(asset.file), "published": active,
-            "keywords": "unavailable" if index_error else "ready" if indexed else "partial" if count.get("keywords") else "pending",
+            "keywords": "unavailable" if index_error else "ready" if indexed else "partial" if count.get("keywords") else "blocked" if state and state.error else "pending",
             "semantic": "unavailable" if index_error else "ready" if indexed and count.get("vectors") == count.get("keywords") else "partial" if count.get("vectors") else "pending",
             "index_counts": {**count, "expected": expected}, "index_error": index_error or (state.error if state else ""),
             "index_job": {"id": str(state.job_id), "status": state.job.status} if state and state.job else None,

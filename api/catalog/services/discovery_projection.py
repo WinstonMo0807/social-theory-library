@@ -119,6 +119,10 @@ def _matches(header, filters, *, edition=None, contribution_cache=None, access_s
 
 def _edition_scope_queryset(access_statuses, filters):
     rows = source_queryset("edition", access_statuses)
+    if filters.get("work_ids"):
+        rows = rows.filter(work_id__in=filters["work_ids"])
+    if filters.get("_asset_id"):
+        rows = rows.filter(active_catalog_revision__reader_asset_id=filters["_asset_id"])
     if filters.get("_primary_only"):
         rows = rows.filter(is_primary=True)
     if filters.get("authors"):
@@ -263,6 +267,10 @@ def _published_coverage(access_statuses, filters, eligible_ids, *, contribution_
     # OCR or bibliographic-only records to retrieval. Never inspect draft text.
     rows = public_editions().filter(Q(active_catalog_revision__reader_asset__isnull=True)
         | Q(active_catalog_revision__reader_asset__access_status__in=access_statuses))
+    if filters.get("work_ids"):
+        rows = rows.filter(work_id__in=filters["work_ids"])
+    if filters.get("_asset_id"):
+        rows = rows.filter(active_catalog_revision__reader_asset_id=filters["_asset_id"])
     if filters.get("_primary_only"):
         rows = rows.filter(is_primary=True)
     totals = {"published_editions": 0, "bibliographic_editions": 0, "text_pending_editions": 0}

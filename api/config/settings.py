@@ -462,7 +462,9 @@ CELERY_BEAT_SCHEDULE = {
     },
     "reconcile-discovery-index": {
         "task": "catalog.tasks.reconcile_discovery_index", "schedule": 5 * 60,
-        "options": {"queue": DISCOVERY_INDEX_TASK_QUEUE, "expires": 240},
+        # Up to eight four-minute source slices may precede recovery on the
+        # shared single-writer queue; one-slice expiry starves the coordinator.
+        "options": {"queue": DISCOVERY_INDEX_TASK_QUEUE, "expires": 60 * 60},
     },
     "record-claim-executor-heartbeat": {
         "task": "catalog.tasks.heartbeat_claim_executor",

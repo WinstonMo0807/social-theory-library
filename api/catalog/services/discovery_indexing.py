@@ -14,6 +14,7 @@ from django.conf import settings
 from django.db import connection, transaction
 from django.db.models import F, Q
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from catalog.discovery_index_models import DiscoveryDocument, DiscoverySourceState
 from catalog.models import SemanticIndexVersion
@@ -228,6 +229,8 @@ def schedule_sources(generation, *, max_queued=8):
             if job is None:
                 job = ProcessingJob.objects.filter(idempotency_key="discovery:" + key).first()
             if job and job.status in OPEN:
+                continue
+            if job and job.status == "failed" and job.error_kind == "manual_intervention":
                 continue
             if (job and job.status == "failed" and job.finished_at and
                     job.finished_at + timedelta(seconds=min(1800, 60 * (2 ** job.attempt))) > timezone.now()):
@@ -491,10 +494,16 @@ def process_source(job, generation):
     structure_id = job.stats.get("structure_id")
     if kind == "edition" and not structure_id:
         from catalog.services.knowledge_sources import current_structure
-        structure = current_structure(source.active_catalog_revision.document_revision,prepare=True)
+        try:
+            structure = current_structure(source.active_catalog_revision.document_revision,prepare=True)
+        except ValidationError as exc:
+            detail = "；".join(str(value) for value in exc.detail) if isinstance(exc.detail, list) else str(exc.detail)
+            raise DiscoveryIndexError("source_structure_unavailable",
+                f"{detail} 请在正文处理核对来源并保存新修订；已有有效索引与历史引用保留。") from exc
         structure_id = str(structure.pk)
         _guard_job(job,stats={**job.stats,"structure_id":structure_id,"completed_units":0})
     completed_units = int(job.stats.get("completed_units", 0))
+    finished_units = completed_units
     keyword_batch = [] if not generation.config_snapshot.get("embedding_artifact") or job.stats.get("semantic_waiting") else None
     for unit_index, unit in enumerate(source_units(kind, source, header,structure_id=structure_id)):
         if unit_index < completed_units:
@@ -515,8 +524,13 @@ def process_source(job, generation):
                     _guard_job(job, stats={**job.stats, "completed_units": unit_index})
                     return False
         # A checkpoint never advances over an unacknowledged keyword write.
-        _commit_keyword_batch(job, generation, header, keyword_batch)
-        _guard_job(job, stats={**job.stats, "completed_units": unit_index + 1, "active_unit": None})
+        # OCR often has one short line per unit. Keep a bounded 20-document
+        # batch across those units, and checkpoint only acknowledged writes.
+        finished_units = unit_index + 1
+        if not keyword_batch:
+            _guard_job(job, stats={**job.stats, "completed_units": finished_units, "active_unit": None})
+    _commit_keyword_batch(job, generation, header, keyword_batch)
+    _guard_job(job, stats={**job.stats, "completed_units": finished_units, "active_unit": None})
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")
     docs = DiscoveryDocument.objects.filter(generation=generation, source_type=kind, source_id=source_id, source_revision=header["source_revision"])
@@ -710,7 +724,8 @@ def _run_job(job_id, task_id):
         message = str(exc) if isinstance(exc, (DiscoveryIndexError, DiscoveryInferenceError)) else "索引任务失败，已完成文字保留，请重试或查看服务日志。"
         changed = ProcessingJob.objects.filter(pk=job.pk, task_id=task_id, status="running").update(
             status="canceled" if superseded else "failed", error_code=code, error_message=message[:500],
-            error_kind="retryable", attempt=job.attempt + 1, finished_at=timezone.now())
+            error_kind="manual_intervention" if code == "source_structure_unavailable" else "retryable",
+            attempt=job.attempt + 1, finished_at=timezone.now())
         if changed and job.stats.get("action") == "source":
             DiscoverySourceState.objects.filter(generation_id=job.stats["generation_id"], source_type=job.stats["source_type"],
                 source_id=job.stats["source_id"], job_id=job.pk).update(error=message[:500])

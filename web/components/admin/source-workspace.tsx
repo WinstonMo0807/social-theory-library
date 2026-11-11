@@ -15,7 +15,7 @@ type Node = { id: string; title: string; kind: string; parent_id: string | null 
 type Context = { title: string; segments: SourceSegment[]; chapter_path: string[]; offset: number; next_offset: number | null; returned_characters: number; total_characters: number; references: { target_id: string; kind: string; label: string }[] };
 type Hit = { id: string; title?: string; work_title?: string; excerpt: string; locator?: SourceLocator; node_id?: string; pdf_page?: number; page_start?: number; coverage?: string };
 type Results = { status: string; results: Hit[]; warnings: { code: string; message: string }[]; elapsed_ms: number };
-const ready: Record<string, string> = { ready: "可检索", partial: "部分就绪", pending: "待索引", unavailable: "服务待恢复" };
+const ready: Record<string, string> = { ready: "可检索", partial: "部分就绪", pending: "待索引", unavailable: "服务待恢复", blocked: "需处理" };
 const runStates: Record<string, string> = { waiting_configuration: "待配置模型", waiting: "等待执行", running: "分析中", succeeded: "待审核", partial: "部分完成", empty: "完成 · 无建议", failed: "执行失败", canceled: "已取消" };
 
 export function SourceWorkspace() {
@@ -101,6 +101,7 @@ export function SourceWorkspace() {
         <button disabled={busy || !source.published || ["pending","running"].includes(source.index_job?.status || "")} onClick={() => void action(async () => { const result=await knowledgeCall<{job_id:string;status:string}>(`/knowledge/revisions/${revision}/reindex/`,{}); setParseNotice(result.status === "succeeded" ? "此结构的关键词索引已完成。" : "关键词更新已排队，上一有效索引继续可用。"); setAttempt(v=>v+1); })}>更新关键词索引</button>
         {source.index_job && <Link href={`/admin/processing?job=${source.index_job.id}`}>查看索引任务</Link>}</>}
       <button className={s.mobileOnly} onClick={() => setEvidenceOpen(true)}><PanelRightOpen size={16} />核对原文</button></div>}
+    {source?.index_error && <div className={s.notice} role="alert"><p>{source.index_error}</p><div className={s.toolbar}><Link href={source.ocr_url}>核对正文来源</Link><Link href={`/admin/processing${source.index_job ? `?job=${source.index_job.id}` : ""}`}>任务与恢复</Link></div></div>}
     {(revision || view === "search") && <div className={s.workspace}>
       <aside className={s.rail}><h2>{view === "text" ? "正文目录" : "检索范围"}</h2>{view === "text" ? nodes.filter(n => ["document","part","chapter","section","preface","appendix","references"].includes(n.kind) && (n.title || n.kind === "document")).map(n => <button key={n.id} aria-current={nodeId === n.id} onClick={() => { setNodeId(n.id); setOffset(0); }}>{n.kind === "document" ? "全部正文" : n.title}</button>) : <p className={s.muted}>{source?.title || "全部已发布馆藏"}<br />与登录读者使用相同权限和检索服务。</p>}</aside>
       <main className={s.main}>

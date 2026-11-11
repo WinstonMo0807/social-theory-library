@@ -1,3 +1,7 @@
+## 2026-11-11 来源错误与索引批次
+
+关键词执行跨短正文单元聚合最多20条，Meilisearch确认后才推进正文断点。已提交但未确认的当前单元重放使用稳定索引ID；同一版本有效旧投影继续保留。指定作品/资产在SQL范围内筛选后再加载已发布资料和关系，不改变来源权限。缺失历史快照的结构校验错误保存为manual_intervention；协调器不自动重试相同输入，修复来源后可通过现有任务恢复或新修订任务继续。API/管理台展示失败及正文处理入口，无schema变化。
+
 ## 2026-11-10 检索覆盖和编目审核写入
 
 旧元数据复核的学术关联统一经academic_relations.propose_work_relations进入ChangeSet，关键词仅产生MetadataCandidate；WorkTopicRelation继续承担书目分类。检索结果返回实际关键词覆盖，未完整索引不得显示成功零命中。来源索引任务以DiscoverySourceState.job为当前归属，旧任务不能退休新结构投影；locator按批次加载片段/章节路径，原文与版本校验保持。

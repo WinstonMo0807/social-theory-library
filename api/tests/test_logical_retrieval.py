@@ -158,3 +158,71 @@ def test_keyword_worker_does_not_invoke_configured_embedding(monkeypatch, settin
     assert m.DiscoveryDocument.objects.filter(generation=generation,keyword_ready=True).exists()
     assert not m.DiscoveryDocument.objects.filter(generation=generation,vector_ready=True).exclude(pk__in=[d.pk for d in old]).exists()
     assert m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in old],vector_ready=True).count() == len(old)
+
+
+def test_short_ocr_units_batch_and_resume_only_after_acknowledgement(monkeypatch):
+    _,asset,revision,generation,job,old=indexing_source()
+    m.Page.objects.filter(asset=asset,index=1).update(text="\n\n".join(f"原文第{i}行" for i in range(45)))
+    m.Page.objects.filter(asset=asset,index=2).update(text="")
+    revision.text_checksum=document_text_checksum(asset);revision.save()
+    job.stats["source_revision"]=get_source("edition",asset.edition_id)[1]["source_revision"];job.save()
+    batches=[]
+    def meili(method,path,data=None,**kw):
+        if path.endswith("/search"):return {"hits":[]}
+        if path.endswith("/documents"):batches.append(list(data))
+        return {"taskUid":len(batches)}
+    def acknowledge(result):
+        if len(batches)==2:raise projection.DiscoveryIndexError("write_failed")
+    monkeypatch.setattr(indexing,"meili",meili)
+    monkeypatch.setattr(indexing,"wait_index_task",acknowledge)
+    with pytest.raises(projection.DiscoveryIndexError):indexing.process_source(job,generation)
+    job.refresh_from_db()
+    assert job.stats["completed_units"]==20
+    assert m.DiscoveryDocument.objects.exclude(pk__in=[v.pk for v in old]).filter(keyword_ready=True).count()==20
+    batches.clear()
+    monkeypatch.setattr(indexing,"wait_index_task",lambda result:None)
+    assert indexing.process_source(job,generation)
+    assert [len(v) for v in batches]==[20,5]
+    job.refresh_from_db()
+    assert job.stats["completed_units"]==45
+
+
+def test_exact_source_scope_filters_before_loading_published_headers(monkeypatch):
+    edition,asset,_,_,_,_=indexing_source()
+    other,_,_,_=fixture_source(1)
+    original=projection.iter_edition_metadata_headers
+    seen=[]
+    def headers(queryset):
+        seen.extend(queryset.values_list("pk",flat=True))
+        yield from original(queryset)
+    monkeypatch.setattr(projection,"iter_edition_metadata_headers",headers)
+    filters={"work_ids":[str(edition.work_id)],"_asset_id":str(asset.pk),"_keyword_only":True}
+    coverage=projection.discovery_coverage(["public"],filters)
+    assert coverage["eligible_editions"]==1
+    assert seen==[edition.pk] and other.pk not in seen
+    assert list(projection._edition_scope_queryset(["public"],filters).values_list("pk",flat=True))==[edition.pk]
+
+
+def test_unrecoverable_historical_snapshot_requires_source_repair(monkeypatch, admin_user):
+    edition,asset,revision,generation,job,old=indexing_source()
+    m.Page.objects.filter(asset=asset,index=1).update(text="后续内容不能冒充原修订",normalized_text="后续内容不能冒充原修订")
+    job.status="pending"
+    job.stats={**job.stats,"action":"source","generation_id":str(generation.pk)}
+    job.save()
+    indexing.run_job(job.pk,job.task_id)
+    job.refresh_from_db()
+    assert job.status=="failed" and job.error_kind=="manual_intervention", (job.error_code,job.error_message)
+    assert job.error_code=="source_structure_unavailable" and "历史修订" in job.error_message
+    assert not revision.page_snapshots.exists() and not revision.structures.exists()
+    assert m.DiscoveryDocument.objects.filter(pk__in=[v.pk for v in old],keyword_ready=True).count()==2
+    monkeypatch.setattr(indexing,"iter_source_headers",lambda kind:[get_source(kind,edition.pk)] if kind=="edition" else [])
+    monkeypatch.setattr(indexing,"_dispatch",lambda *a,**kw:pytest.fail("must not automatically retry missing history"))
+    assert indexing.schedule_sources(generation)>0
+    job.refresh_from_db()
+    assert job.status=="failed" and job.attempt==1
+    from catalog.services import source_workspace
+    monkeypatch.setattr(source_workspace,"meili",lambda *a,**kw:{})
+    row=source_workspace.source_directory(admin_user,revision_id=revision.pk)["sources"][0]
+    assert row["keywords"]=="partial" and "历史修订" in row["index_error"]
+    m.DiscoveryDocument.objects.filter(generation=generation).update(keyword_ready=False)
+    assert source_workspace.source_directory(admin_user,revision_id=revision.pk)["sources"][0]["keywords"]=="blocked"
