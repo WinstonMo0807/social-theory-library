@@ -5,13 +5,13 @@ import type { EvidenceReference, ResolvedEvidence } from "./research.client";
 
 export type SharedCitationInput = { editionId?: string; reference?: EvidenceReference; selectedText?: string };
 export const citationFormats = [
-  ["quote", "引用文本"], ["apa", "APA"], ["mla", "MLA"], ["gbt7714-2025", "GB/T 7714"],
-  ["chicago", "Chicago"], ["harvard", "Harvard"], ["csl", "CSL JSON"],
+  ["gbt7714-2025", "GB/T 7714—2025"], ["apa", "APA"], ["mla", "MLA"], ["quote", "原文与引用"],
+  ["chicago", "Chicago"], ["harvard", "Harvard（Leeds）"], ["csl", "CSL JSON"],
 ] as const;
 export type CitationFormat = typeof citationFormats[number][0];
 export type SharedCitationPreview = {
   reference: ResolvedEvidence | null;
-  source: { edition_id: string; work_id: string; title: string; authors: string[]; publication_year: number | null;
+  source: { edition_id: string; work_id: string; title: string; document_type?: string; authors: string[]; publication_year: number | null;
     publisher: string; cover_url: string | null; cover_media?: components["schemas"]["PublicCoverMedia"] | null; work_url: string; reader_url: string | null; pdf_page: number | null; printed_label: string; source_status: "available" };
   citations: Record<Exclude<CitationFormat, "quote" | "csl">, string> & { csl: Record<string, unknown> };
 };
@@ -24,9 +24,4 @@ export function citationText(preview: SharedCitationPreview, format: CitationFor
   if (format === "csl") return JSON.stringify(preview.citations.csl, null, 2);
   if (format === "quote") return [formatSourceText(preview.reference?.quote || ""), preview.citations["gbt7714-2025"]].filter(Boolean).join("\n\n");
   return preview.citations[format];
-}
-export function citationDownload(text: string, filename = "书库引用.txt") {
-  const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-  const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

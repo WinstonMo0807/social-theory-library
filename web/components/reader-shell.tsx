@@ -62,7 +62,7 @@ import { AskLibraryLink } from "./ask-library-link";
 import { Dialog } from "./ui/dialog";
 import { SharedCitationOverlay } from "./shared-citation-overlay";
 import type { SharedCitationInput } from "@/lib/api/shared-citation.client";
-import type { CitationStyle, SidebarTab, SelectionSnapshot } from "./reader/types";
+import type { SidebarTab, SelectionSnapshot } from "./reader/types";
 import { useReaderNavigation } from "./reader/use-reader-navigation";
 import { useReaderSelection } from "./reader/use-reader-selection";
 import { useReaderRecords } from "./reader/use-reader-records";
@@ -227,7 +227,7 @@ function ReaderWorkspace({
 
   const selectedText = access ? annotationDraft ? { ...annotationDraft, x: 0, y: 0 } : selectionTools || retainedSelection : null;
   const citationPage = selectedText?.pageIndex ?? page;
-  const { citationStyle, setCitationStyle, citations, citationError, copyCitation, retryCitation } = useReaderCitation({
+  const { citations, citationError, copyCitation, retryCitation } = useReaderCitation({
     editionId: work.editionId ?? access?.edition_id, page: citationPage, setCopyStatus, setCopyStatusState,
   });
 
@@ -375,12 +375,10 @@ function ReaderWorkspace({
     <div className="reader-source-card"><strong>{work.title}</strong><p>{work.author || "作者信息未提供"}</p><small>{[work.version?.publisher, work.version?.publication_year, work.version?.edition_statement].filter(Boolean).join(" · ") || "版本信息未提供"}</small></div>
     <p className="citation-page-map">PDF 第 {citationPage} 页{sourcePage?.printed_label && sourcePage.printed_label !== String(citationPage) ? ` · 书页 ${sourcePage.printed_label}` : ""}</p>
     {sourcePage?.chapter_title ? <p>{sourcePage.chapter_title}</p> : null}
-    <label className="reader-format-label">引用格式<select data-stl-select value={citationStyle} onChange={event => setCitationStyle(event.target.value as CitationStyle)} aria-label="引用格式">
-      <option value="gbt7714-2025">GB/T 7714—2025</option><option value="apa">APA</option><option value="chicago">Chicago</option><option value="mla">MLA</option><option value="harvard">Harvard</option>
-    </select></label>
-    <p className="reader-citation-text" role={citationError ? "alert" : "status"}>{citations?.[citationStyle] || citationError || "正在读取本页引用…"}</p>
+    <p className="reader-format-label">GB/T 7714—2025</p>
+    <p className="reader-citation-text" style={{ userSelect: "text", whiteSpace: "pre-wrap" }} role={citationError ? "alert" : "status"}>{citations?.["gbt7714-2025"] || citationError || "正在读取本页引用…"}</p>
     {citationError ? <button type="button" onClick={retryCitation}>重试读取引用</button> : null}
-    <div className="reader-inline-actions"><button className="button secondary" type="button" disabled={!citations?.[citationStyle]} onClick={copyCitation}><Copy size={14} />复制引用</button><button className="button secondary" type="button" onClick={() => sharedSource()}><Quote size={14} />引用与导出</button></div>
+    <div className="reader-inline-actions"><button className="button secondary" type="button" disabled={!citations?.["gbt7714-2025"]} onClick={copyCitation}><Copy size={14} />复制引用</button><button className="button secondary" type="button" onClick={() => sharedSource()}><Quote size={14} />其他引用格式</button></div>
   </section>;
   function recoveryControls(inPanel = false) {
     return annotationSaveUnknown ? <div className={`reader-save-recovery ${inPanel ? "in-panel" : ""}`} role="alert"><strong>保存结果尚待确认</strong><p>{copyStatus || "输入已保留。请先核对这次保存，避免重复创建。"}</p><ActionButton type="button" state={pendingAction === "save-annotation" ? "pending" : "idle"} disabled={Boolean(pendingAction)} onClick={() => { void retryAnnotationSave().then(saved => { if (saved) setTagInput(""); }); }}>核对保存结果</ActionButton></div> : null;

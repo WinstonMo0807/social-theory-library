@@ -6,7 +6,7 @@ import { MediaPlacement } from "@/components/media-placement";
 import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, Copy, Download, Info, LoaderCircle, MoreHorizontal, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Check, Copy, Info, LoaderCircle, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ApiRequestError, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -14,18 +14,18 @@ import { readAllPages } from "@/lib/api/read-all-pages";
 import { booklistRequest, type BooklistDirectory, type BooklistSummary, type BooklistResult, type BooklistWorkspace, type CitationBooklistInput, type CitationBooklistResult } from "@/lib/api/booklists.client";
 import { changeResearchSelection, createResearchProject, readResearchRecord, type ProjectData, type ResearchRecord } from "@/lib/api/research.client";
 import { researchEvidenceKey, researchEvidenceReference } from "@/lib/api/research-evidence";
-import { citationDownload, citationFormats, citationText, previewSharedCitation, type CitationFormat, type SharedCitationInput, type SharedCitationPreview } from "@/lib/api/shared-citation.client";
+import { citationFormats, citationText, previewSharedCitation, type CitationFormat, type SharedCitationInput, type SharedCitationPreview } from "@/lib/api/shared-citation.client";
 import { localMaterialEvent, readLocalCitationMaterials, saveLocalCitationMaterial, writeLocalCitationMaterials, type LocalCitationMaterial } from "@/lib/local-citation-materials";
 import { bootstrapSession } from "@/lib/session";
 import { useSessionBootstrap } from "@/lib/use-session-bootstrap";
 import { SourceText } from "./source-text";
+import { CitationText } from "./citation-text";
 import { Dialog } from "./ui/dialog";
 import styles from "./shared-citation-overlay.module.css";
 
 type Props = SharedCitationInput & { open: boolean; onClose: () => void };
-type ExportRow = { format: CitationFormat; state: "pending" | "running" | "completed" | "failed"; text?: string; error?: string };
 
-export function SharedCitationButton({ children = "引用、选材与导出", className, ...input }: SharedCitationInput & { children?: ReactNode; className?: string }) {
+export function SharedCitationButton({ children = "引用与选材", className, ...input }: SharedCitationInput & { children?: ReactNode; className?: string }) {
   const { t } = useEvidenceLanguage();
   const [open, setOpen] = useState(false);
   return <><button type="button" className={className} onClick={() => setOpen(true)}><Copy size={14} />{typeof children === "string" ? t(children) : children}</button>{open ? <SharedCitationOverlay {...input} open onClose={() => setOpen(false)} /> : null}</>;
@@ -38,7 +38,7 @@ export function SharedCitationOverlay({ open, onClose, ...input }: Props) {
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
   // Keep the modal visible when its source inspector hides at a mobile breakpoint.
   if (typeof document === "undefined") return null;
-  return createPortal(<Dialog open={open} onRequestClose={() => { if (!locked) onClose(); }} className={styles.dialog} aria-label={t("引用、选材与导出")}>
+  return createPortal(<Dialog open={open} onRequestClose={() => { if (!locked) onClose(); }} className={styles.dialog} aria-label={t("引用与选材")}>
     <Workspace key={`${JSON.stringify(input)}:${epoch}`} input={input} onClose={onClose} onLocked={setLocked} />
   </Dialog>, document.body);
 }
@@ -71,11 +71,9 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
   const [recoveryReviewed, setRecoveryReviewed] = useState(false);
   const [bookRetryReady, setBookRetryReady] = useState(false);
   const [savedList, setSavedList] = useState<string | null>(null);
-  const [formats, setFormats] = useState<CitationFormat[]>(["quote"]);
-  const [moreFormats, setMoreFormats] = useState(false);
+  const [format, setFormat] = useState<CitationFormat>("gbt7714-2025");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const [manualCopy, setManualCopy] = useState("");
   const [pending, setPending] = useState(false);
   const [unknown, setUnknown] = useState(false);
   const [undo, setUndo] = useState<{ projectId?: string; booklistId?: string; token?: string; id: string; action: "remove" | "undo"; local?: LocalCitationMaterial; position?: number } | null>(null);
@@ -84,14 +82,11 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
   const [basketPage, setBasketPage] = useState(0);
   const [basketPreview, setBasketPreview] = useState<Record<string, SharedCitationPreview | null>>({});
   const [selectedLocal, setSelectedLocal] = useState<string[]>([]);
-  const [exportRows, setExportRows] = useState<ExportRow[] | null>(null);
-  const [exporting, setExporting] = useState(false);
   const alive = useRef(true);
   const busyRef = useRef(false);
   const validatedInput = useRef<SharedCitationInput | null>(null);
   const quoteBase = useRef<SharedCitationInput | null>(null);
   const pendingBook = useRef<{ listId: string; data: CitationBooklistInput } | null>(null);
-  const exportAbort = useRef<AbortController | null>(null);
   const failedOperation = useRef<(() => Promise<void>) | null>(null);
   const request = useRef({ fingerprint: "", id: "" });
   const ownerId = session.status === "authenticated" ? session.user?.id : undefined;
@@ -102,18 +97,18 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
   const listLoading = target === "booklist" && loadedListKey !== listKey;
   const activeList = !listLoading ? lists?.results.find(row => row.id === listId) : undefined;
   const hasReference = Boolean(preview?.reference);
-  const busy = pending || exporting;
+  const busy = pending;
   useEffect(() => { onLocked(busy || unknown); }, [busy, unknown, onLocked]);
   const stableInput = JSON.stringify(input);
 
-  useEffect(() => { alive.current = true; return () => { alive.current = false; exportAbort.current?.abort(); }; }, []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
     const controller = new AbortController();
     let sequence = 0;
     const revalidate = () => {
       if (document.visibilityState !== "visible" || busyRef.current) return;
       const current = ++sequence;
-      setPreview(null); setSourceLoading(true); setSourceError(""); setManualCopy(""); setExportRows(null);
+      setPreview(null); setSourceLoading(true); setSourceError("");
       setBasketPreview({}); setValidationTick(value => value + 1);
       void previewSharedCitation(validatedInput.current || JSON.parse(stableInput), controller.signal).then(value => {
         if (!controller.signal.aborted && current === sequence) {
@@ -199,7 +194,7 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
       if (!alive.current) throw new Error("操作已关闭。");
       if (value.reference) validatedInput.current = { reference: researchEvidenceReference(value.reference) };
       setPreview(value); setSourceError(""); return value;
-    } catch (reason) { if (alive.current) { setPreview(null); setManualCopy(""); setSourceError(reason instanceof Error ? reason.message : "来源暂不可用。"); } throw reason; }
+    } catch (reason) { if (alive.current) { setPreview(null); setSourceError(reason instanceof Error ? reason.message : "来源暂不可用。"); } throw reason; }
   }
   async function run(operation: () => Promise<void>, retry = false) {
     if (busyRef.current || unknown && !retry) return;
@@ -214,12 +209,6 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
         setError(`${reason instanceof Error ? reason.message : "操作未完成。"}${uncertain && request.current.id ? " 原请求已保留，请保持目标与输入并重试。" : ""}`);
       }
     } finally { busyRef.current = false; if (alive.current) setPending(false); }
-  }
-  async function copy(prepared?: SharedCitationPreview) {
-    const value = prepared || await fresh();
-    const text = formats.map(format => citationText(value, format)).join("\n\n");
-    try { await navigator.clipboard.writeText(text); if (alive.current) { setManualCopy(""); setNotice("引用已复制。"); } }
-    catch { if (alive.current) { setManualCopy(text); setNotice("浏览器未允许复制，可在下方选择引用文字手动复制。"); } }
   }
   function rememberBook(value: { listId: string; requestId: string } | null) {
     setBookRecovery(value);
@@ -242,7 +231,7 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
     const saved = await booklistRequest<CitationBooklistResult>(String(ownerId), `/reading/lists/${bookRecovery.listId}/citation/?request_id=${bookRecovery.requestId}`);
     await assertOwner(); finishBook(saved);
   }
-  async function addBook(copyAfter: boolean) {
+  async function addBook() {
     await assertOwner();
     let value: SharedCitationPreview | undefined;
     if (!pendingBook.current) {
@@ -268,10 +257,6 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
       throw reason;
     }
     await assertOwner(); finishBook(saved);
-    if (copyAfter && saved.exists && !saved.undone) {
-      await copy(value || await fresh());
-      setNotice(current => `书单与所选阅读记录已保存。${current}`);
-    }
   }
   async function editQuote() {
     if (!quoteBase.current || !editedQuote.trim()) throw new Error("请保留能在原文中唯一定位的文字。");
@@ -279,11 +264,11 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
     if (!alive.current) return;
     if (!value.reference) throw new Error("来源没有可保存的选文。");
     validatedInput.current = { reference: researchEvidenceReference(value.reference) };
-    setPreview(value); setEditingQuote(false); setUndo(null); setManualCopy(""); setExportRows(null);
+    setPreview(value); setEditingQuote(false); setUndo(null);
     setNotice("已按原文核对选文范围，之后复制和保存均使用这段原文。");
   }
-  async function add(copyAfter = false) {
-    if (target === "booklist" && ownerId) return addBook(copyAfter);
+  async function add() {
+    if (target === "booklist" && ownerId) return addBook();
     const value = await fresh();
     const reference = value.reference;
     if (!reference) throw new Error("请先在原文中选择材料。");
@@ -304,7 +289,6 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
       setNotice(exists ? "该研究已包含这段原文，未重复添加；可以查看已有选材。" : "已加入所选研究。原文与来源修订已核对。");
       if (!exists) setUndo({ projectId, id: reference.reference_id!, action: "remove" });
     }
-    if (copyAfter) { await copy(value); }
   }
   async function undoLast() {
     if (!undo) return;
@@ -357,34 +341,9 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
     await assertOwner(); setProjects(items => items.map(row => row.id === saved.id ? saved : row));
     setNotice(`已向所选研究转存 ${rows.length} 条材料；重复项自动去重，本机记录继续保留。`); setSelectedLocal([]);
   }
-  async function exportFormats(retryOnly = false) {
-    if (busyRef.current || unknown || !formats.length) return;
-    busyRef.current = true;
-    const jobs: ExportRow[] = retryOnly && exportRows ? exportRows.map(row => row.state === "failed" ? { format: row.format, state: "pending" } : row)
-      : formats.map(format => ({ format, state: "pending" }));
-    setExporting(true); setError(""); setExportRows([...jobs]);
-    const controller = new AbortController(); exportAbort.current = controller;
-    for (const row of jobs) {
-      if (!alive.current || row.state === "completed") continue;
-      if (controller.signal.aborted) { row.state = "failed"; row.error = "已取消，可单独重试。"; setExportRows([...jobs]); continue; }
-      row.state = "running"; setExportRows([...jobs]);
-      try { const value = await fresh(controller.signal); row.text = citationText(value, row.format); row.state = "completed"; }
-      catch (reason) { row.state = "failed"; row.error = controller.signal.aborted ? "已取消，可单独重试。" : reason instanceof Error ? reason.message : "导出失败。"; }
-      if (alive.current) setExportRows([...jobs]);
-    }
-    busyRef.current = false;
-    if (alive.current) { setExporting(false); if (controller.signal.aborted) setNotice("导出已取消，完成的格式仍然保留。"); }
-  }
-  async function downloadCompleted() {
-    const current = await fresh();
-    const completed = (exportRows || []).filter(row => row.state === "completed");
-    if (!completed.length) return;
-    citationDownload(completed.map(row => `【${t(citationFormats.find(format => format[0] === row.format)?.[1] || row.format)}】\n${citationText(current, row.format)}`).join("\n\n"));
-    setNotice(`已准备 ${completed.length} 种格式的合并文本下载。`);
-  }
   const source = preview?.source;
   return <div className={styles.workspace}>
-    <header className={styles.heading}><h2>{t("引用、选材与导出")}</h2><button aria-label={t("关闭引用浮层")} disabled={busy || unknown} onClick={onClose}><X size={18} /></button></header>
+    <header className={styles.heading}><h2>{t("引用与选材")}</h2><button aria-label={t("关闭引用浮层")} disabled={busy || unknown} onClick={onClose}><X size={18} /></button></header>
     <div className={styles.body}>
       {sourceLoading ? <div className={styles.state} role="status"><LoaderCircle size={24} /><strong>{t("正在生成引用…")}</strong><p>{t("请稍候，暂时禁用复制，以免复制上一页内容。")}</p></div> : sourceError ? <div className={styles.error} role="alert"><strong>{t("来源暂不可用")}</strong><p>{t(sourceError)}</p><button onClick={() => setAttempt(value => value + 1)}><RefreshCw size={14} />{t("重新核对来源")}</button><Link href="/explore/original">{t("查找其他版本")}</Link></div> : null}
       {preview?.reference?.quote ? <section><h3><span>1</span>{t("所选原文")}<button className={styles.editQuote} disabled={busy || unknown || Boolean(preview.reference.anchors)} onClick={() => { setEditingQuote(true); setEditedQuote(preview.reference!.quote || ""); }}>{t("编辑")}</button></h3>
@@ -392,7 +351,12 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
         {preview.reference.anchors ? <p className={styles.hint}>{t("跨页引文按完整来源保存；调整文字时请回到原文逐页选择。")}</p> : null}
       </section> : null}
       {source ? <section><h3><span>2</span>{t("来源信息")}</h3><div className={styles.source}>{source.cover_url ? <MediaPlacement uses={source.cover_media?.display_uses} fallback={<DefaultCover className={styles.noCover} title={source.title} />}><Image unoptimized width={68} height={96} src={source.cover_url} alt={t("{title}封面", { title: source.title })} /></MediaPlacement> : <DefaultCover className={styles.noCover} title={source.title} />}<div><strong>{source.title}</strong><p>{source.authors.join("、")}</p><p>{[source.publisher, source.publication_year].filter(Boolean).join(" · ")}</p>{source.pdf_page ? <p>{source.printed_label ? `${t("书页 {page}", { page: source.printed_label })} · ` : ""}{t("PDF 第 {page} 页", { page: source.pdf_page })}</p> : <p>{t("书目引用，不包含具体页码。")}</p>}<Link href={source.reader_url || source.work_url}>{t("查看详情")}</Link></div></div></section> : null}
-      <section><h3><span>3</span>{t("加入与保存")}</h3>
+      {preview ? <section className={styles.citationDisplay} aria-label={t("引用格式")}>
+        <h3>{t("引用格式")}</h3>
+        <div className={styles.formats}>{citationFormats.filter(([format]) => format !== "csl" && (format !== "quote" || hasReference)).map(([value, label]) => <button type="button" key={value} aria-pressed={format === value} disabled={busy || unknown} onClick={() => setFormat(value)}>{t(label)}</button>)}</div>
+        <CitationText className={styles.citationText} text={citationText(preview, format)} italicTitle={source?.document_type === "book" && !["gbt7714-2025", "quote"].includes(format) ? source.title : ""} />
+      </section> : null}
+      <section><h3>{t("加入与保存")}</h3>
         {ownerId ? <>
           <div className={styles.targetTabs} aria-label={t("保存目标")}>{(["research", "booklist"] as const).map(kind => <button key={kind} aria-pressed={target === kind} disabled={busy || unknown || Boolean(bookRecovery)} onClick={() => { setTarget(kind); setCreating(false); setUndo(null); }}>{kind === "research" ? t("加入研究") : t("加入书单")}</button>)}</div>
           {target === "research" ? <>
@@ -407,19 +371,16 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
             {activeList ? <p className={styles.hint}>{t("{count} 部作品", { count: activeList.item_count })}<Link href={`/account/collections/${activeList.id}`}>{t("查看书单")}</Link></p> : null}
           </>}
           {creating ? <div className={styles.newProject}><label>{target === "booklist" ? t("书单名称") : t("研究名称")}<input maxLength={240} value={newTitle} disabled={busy || unknown} onChange={event => setNewTitle(event.target.value)} /></label><button disabled={busy || unknown || !newTitle.trim()} onClick={() => void run(create)}><Plus size={14} />{t(target === "booklist" ? "创建书单" : "创建研究")}</button></div> : null}
-        </> : <div className={styles.info}><Info size={16} /><div><strong>{session.status === "loading" ? t("正在核对登录状态") : t("未登录，仅本机保存")}</strong><p>{t("可复制和导出公开引用。登录后需明确选择研究，再转存本机选材。")}</p>{session.status === "temporary_error" ? <button onClick={retrySession}>{t("重新验证登录")}</button> : <Link href={`/login?next=${encodeURIComponent(typeof window === "undefined" ? "/" : window.location.pathname + window.location.search)}`}>{t("登录后继续")}</Link>}</div></div>}
+        </> : <div className={styles.info}><Info size={16} /><div><strong>{session.status === "loading" ? t("正在核对登录状态") : t("未登录，仅本机保存")}</strong><p>{t("可选择引用文字复制。登录后可将选材保存到本人的研究。")}</p>{session.status === "temporary_error" ? <button onClick={retrySession}>{t("重新验证登录")}</button> : <Link href={`/login?next=${encodeURIComponent(typeof window === "undefined" ? "/" : window.location.pathname + window.location.search)}`}>{t("登录后继续")}</Link>}</div></div>}
         <label className={styles.note}>{t("添加备注（可选）")}<textarea maxLength={200} value={note} disabled={busy || unknown || Boolean(bookRecovery)} onChange={event => setNote(event.target.value)} /><small>{note.length}/200</small></label>
         {target === "booklist" && ownerId ? <><label className={styles.saveSource}><input type="checkbox" checked={saveExcerpt} disabled={busy || unknown || Boolean(bookRecovery)} onChange={event => setSaveExcerpt(event.target.checked)} />{t("同时保存原文与来源信息")}</label><p className={styles.hint}>{t("勾选后，摘录与备注进入本人的阅读记录。未勾选时只加入书目；备注需清空后再保存。")}</p></> : <label className={styles.saveSource}><input type="checkbox" checked disabled readOnly/>{t("同时保存原文与来源信息")}</label>}
-        {!hasReference && !sourceLoading ? <p className={styles.hint}>{t("当前为书目引用。选择原文后才能保存摘录；也可取消保存原文，仅加入书单。")}</p> : null}
+        {preview && !hasReference && !sourceLoading ? <p className={styles.hint}>{t("当前为书目引用。选择原文后才能保存摘录；也可取消保存原文，仅加入书单。")}</p> : null}
       </section>
-      <section><h3><span>4</span>{t("导出格式")}</h3><div className={styles.formats}>{citationFormats.filter((_, index) => index < 4 || moreFormats).map(([format, label]) => <label key={format}><input type="checkbox" checked={formats.includes(format)} disabled={busy || unknown} onChange={event => setFormats(rows => event.target.checked ? [...rows, format] : rows.filter(row => row !== format))} />{t(label)}</label>)}</div>{!moreFormats && formats.some(value => !citationFormats.slice(0, 4).some(([format]) => value === format)) ? <p className={styles.hint}>{t("还选中了更多格式，可展开查看。")}</p> : null}</section>
-      <div className={styles.actions}><button className={styles.primary} disabled={busy || unknown || editingQuote || !preview || !formats.length || session.status === "loading" || session.status === "temporary_error" || Boolean(bookRecovery) || (target === "booklist" && ownerId ? listLoading || !activeList || saveExcerpt && !hasReference || !saveExcerpt && Boolean(note) : !hasReference || Boolean(ownerId && !projectId))} onClick={() => void run(() => add(true))}>{pending ? t("处理中…") : ownerId ? t("加入并复制引用") : t("本机保存并复制")}</button><button disabled={busy || unknown || editingQuote || !preview || !formats.length} onClick={() => void exportFormats()}><Download size={14} />{t("导出")}</button><details data-action-menu className={styles.moreActions}><summary aria-label={t("更多引用操作")}><MoreHorizontal size={18}/></summary><div data-menu-panel><button disabled={busy || unknown || editingQuote || !preview || !formats.length} onClick={() => void run(() => copy())}><Copy size={14} />{t("复制引用")}</button><button aria-label={t("更多引用格式")} aria-expanded={moreFormats} disabled={busy || unknown} onClick={() => setMoreFormats(value => !value)}><MoreHorizontal size={16} />{moreFormats ? t("收起") : t("更多")}</button></div></details></div>
-      {bookRecovery ? <div className={styles.info}><div><strong>{t("有一项书单保存需要核对")}</strong><p>{t("已保留原请求标识，页面刷新后也可查询。没有查到操作结果时请先核对书单与阅读记录。")}</p><div className={styles.actions}><button disabled={busy} onClick={() => void run(recoverBook, true)}>{t("查询原结果")}</button>{bookRetryReady ? <button disabled={busy} onClick={() => void run(() => addBook(false), true)}>{t("重试原保存")}</button> : null}<Link href={`/account/collections/${bookRecovery.listId}`}>{t("查看书单")}</Link><Link href="/account/notes">{t("查看阅读记录")}</Link></div>{!bookRetryReady ? <><label className={styles.saveSource}><input type="checkbox" checked={recoveryReviewed} onChange={event => setRecoveryReviewed(event.target.checked)} />{t("我已核对原结果，结束这次恢复")}</label><button disabled={busy || !recoveryReviewed} onClick={() => { rememberBook(null); setUnknown(false); setRecoveryReviewed(false); request.current = { fingerprint: "", id: "" }; }}>{t("结束恢复")}</button></> : null}</div></div> : null}
+      <div className={styles.actions}><button className={styles.primary} disabled={busy || unknown || editingQuote || !preview || session.status === "loading" || session.status === "temporary_error" || Boolean(bookRecovery) || (target === "booklist" && ownerId ? listLoading || !activeList || saveExcerpt && !hasReference || !saveExcerpt && Boolean(note) : !hasReference || Boolean(ownerId && !projectId))} onClick={() => void run(() => add())}>{pending ? t("处理中…") : ownerId ? t(target === "booklist" ? "加入书单" : "加入研究") : t("保存到本机")}</button></div>
+      {bookRecovery ? <div className={styles.info}><div><strong>{t("有一项书单保存需要核对")}</strong><p>{t("已保留原请求标识，页面刷新后也可查询。没有查到操作结果时请先核对书单与阅读记录。")}</p><div className={styles.actions}><button disabled={busy} onClick={() => void run(recoverBook, true)}>{t("查询原结果")}</button>{bookRetryReady ? <button disabled={busy} onClick={() => void run(() => addBook(), true)}>{t("重试原保存")}</button> : null}<Link href={`/account/collections/${bookRecovery.listId}`}>{t("查看书单")}</Link><Link href="/account/notes">{t("查看阅读记录")}</Link></div>{!bookRetryReady ? <><label className={styles.saveSource}><input type="checkbox" checked={recoveryReviewed} onChange={event => setRecoveryReviewed(event.target.checked)} />{t("我已核对原结果，结束这次恢复")}</label><button disabled={busy || !recoveryReviewed} onClick={() => { rememberBook(null); setUnknown(false); setRecoveryReviewed(false); request.current = { fingerprint: "", id: "" }; }}>{t("结束恢复")}</button></> : null}</div></div> : null}
       {notice ? <div className={styles.success} role="status"><Check size={16} /><p>{t(notice)}</p>{undo ? <button disabled={busy || unknown} onClick={() => void run(undoLast)}>{t("撤销")}</button> : null}</div> : null}
       {savedList ? <p className={styles.hint}><Link href={`/account/collections/${savedList}`}>{t("查看已保存书单")}</Link><Link href="/account/notes">{t("查看我的摘录与笔记")}</Link></p> : null}
       {error ? <div className={styles.error} role="alert"><p>{t(error)}</p>{unknown ? <button disabled={pending} onClick={() => { if (failedOperation.current) void run(failedOperation.current, true); }}>{t("重试原操作")}</button> : null}{unknown ? <button onClick={onClose}>{t("关闭后到研究核对结果")}</button> : null}</div> : null}
-      {manualCopy ? <label className={styles.manual}>{t("手动复制引用")}<textarea readOnly value={manualCopy} onFocus={event => event.currentTarget.select()} /></label> : null}
-      {exportRows ? <section className={styles.export}><h3>{t("导出进度（{done}/{total}）", { done: exportRows.filter(row => row.state === "completed").length, total: exportRows.length })}</h3><progress max={exportRows.length} value={exportRows.filter(row => row.state === "completed" || row.state === "failed").length} />{exportRows.map(row => <div key={row.format}><strong>{t(citationFormats.find(format => format[0] === row.format)?.[1] || row.format)}</strong><span>{row.state === "completed" ? t("已完成") : row.state === "failed" ? t("导出失败") : row.state === "running" ? t("正在准备…") : t("等待中")}</span>{row.error ? <small>{t(row.error)}</small> : null}</div>)}<p>{t("已完成的格式会保留，失败项可单独重试。")}</p><div className={styles.actions}>{exporting ? <button onClick={() => exportAbort.current?.abort()}>{t("取消导出")}</button> : null}<button disabled={busy || unknown || !exportRows.some(row => row.state === "completed")} onClick={() => void run(downloadCompleted)}>{t("下载已完成格式")}</button><button disabled={busy || unknown || !exportRows.some(row => row.state === "failed")} onClick={() => void exportFormats(true)}>{t("重试失败项")}</button></div></section> : null}
       <section className={styles.basket}><button className={styles.basketHeading} aria-expanded={basketOpen} onClick={() => setBasketOpen(value => !value)}>{t("本机选材（{count}）", { count: localRows.length })}</button>{basketOpen ? <><p>{t("只保存来源位置与本人备注，原文会在打开时重新核对。")}</p>{localRows.slice(basketPage * 10, basketPage * 10 + 10).map((row, index) => <article key={row.id}><label><input type="checkbox" disabled={busy || unknown || !basketPreview[row.id]} checked={selectedLocal.includes(row.id)} onChange={event => setSelectedLocal(items => event.target.checked ? [...items, row.id] : items.filter(id => id !== row.id))} /><span><strong>{basketPreview[row.id]?.source.title || (row.id in basketPreview ? t("来源暂不可用") : t("正在核对来源…"))}</strong><small>{basketPreview[row.id]?.reference?.quote}</small>{row.note ? <em>{row.note}</em> : null}</span></label><button disabled={busy || unknown} aria-label={t("移除第 {count} 条本机选材", { count: basketPage * 10 + index + 1 })} onClick={() => { try { const rows = readLocalCitationMaterials(); const position = rows.findIndex(item => item.id === row.id); writeLocalCitationMaterials(rows.filter(item => item.id !== row.id)); setUndo({ id: row.id, action: "undo", local: row, position }); setNotice("已移除本机选材，可撤销恢复原位置。"); } catch (reason) { setError(reason instanceof Error ? reason.message : "本机保存失败。"); } }}><Trash2 size={14} /></button></article>)}{localRows.length > 10 ? <div className={styles.actions}><button disabled={basketPage === 0} onClick={() => setBasketPage(value => value - 1)}>{t("上一页")}</button><span>{basketPage + 1}/{Math.ceil(localRows.length / 10)}</span><button disabled={(basketPage + 1) * 10 >= localRows.length} onClick={() => setBasketPage(value => value + 1)}>{t("下一页")}</button></div> : null}{ownerId ? <button className={styles.primary} disabled={busy || unknown || !projectId || !selectedLocal.length} onClick={() => void run(transfer)}>{t("将已选 {count} 条转存到所选研究", { count: selectedLocal.length })}</button> : null}{!localRows.length ? <p>{t("尚无本机选材。")}</p> : null}</> : null}</section>
     </div>
   </div>;

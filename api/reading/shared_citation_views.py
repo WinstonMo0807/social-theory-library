@@ -1,7 +1,6 @@
 """Transient public citation preview. No private text is accepted as an authority."""
 import json
 
-from django.contrib.auth.models import AnonymousUser
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
@@ -56,19 +55,19 @@ class PublicCitationPreviewView(APIView):
         serializer = PublicCitationInput(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        # Even administrators get the public snapshot here; draft/editor permissions
-        # never turn an anonymous local selection into a private-source export.
+        # Published snapshots and normal reader access apply even to administrators.
+        reader = research.citation_reader(request.user)
         reference = None
         if data.get("reference"):
             raw = json.loads(json.dumps(data["reference"], default=str))
-            reference = research.resolve_reference(raw, AnonymousUser(), strict=True)
+            reference = research.resolve_reference(raw, reader, strict=True)
             if data.get("selected_text"):
                 if reference.get("anchors"):
                     raise ValidationError({"selected_text": "跨页证据请按完整来源引用，或逐页选择文字。"})
                 start, end = selection_range(reference["quote"], data["selected_text"])
                 offset = reference.get("selection_start", 0)
                 raw = {**research.compact_reference(reference), "selection_start": start + offset, "selection_end": end + offset}
-                reference = research.resolve_reference(raw, AnonymousUser(), strict=True)
+                reference = research.resolve_reference(raw, reader, strict=True)
             edition_id = reference.get("edition_id")
             if data.get("edition_id") and str(data["edition_id"]) != edition_id:
                 raise ValidationError({"edition_id": "所选原文与出版版本不一致。"})
@@ -92,7 +91,7 @@ class PublicCitationPreviewView(APIView):
             # PDF position is a locator, not an unverified printed page number.
             citations = {key: f"{value}（PDF 第 {page} 页）" if isinstance(value, str) else value
                          for key, value in citations.items()}
-        source = {"edition_id": str(edition.id), "work_id": str(edition.work_id), "title": work.get("title") or "未题名",
+        source = {"edition_id": str(edition.id), "work_id": str(edition.work_id), "title": work.get("title") or "未题名", "document_type": work.get("document_type") or "",
             "authors": [str((row.get("person") or {}).get("preferred_name") or row.get("name") or "")
                 for row in snapshot.get("contributions", []) if isinstance(row, dict) and row.get("role") == "author"],
             "publication_year": edition_values.get("publication_year"), "publisher": edition_values.get("publisher") or "",

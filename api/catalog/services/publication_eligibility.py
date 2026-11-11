@@ -159,14 +159,16 @@ def active_document_revision_q(*, revision_prefix: str) -> Q:
     )
 
 
-def current_retrieval_source_q(*, asset_prefix: str, access_statuses) -> Q:
+def current_retrieval_source_q(*, asset_prefix: str, access_statuses, require_fulltext: bool = True) -> Q:
     """Exact readable source for retrieval; None access is reserved for index workers.
 
     Metadata-only publication keeps its separate eligibility. An explicit empty
     access set matches no source, including when restoring an older search.
+    Exact reader references may opt out of search readiness, but still require
+    the active document, matching file checksum, and the caller's access set.
     """
     revision_prefix = _path(asset_prefix, "edition__active_catalog_revision__document_revision")
-    condition = active_document_q(asset_prefix=asset_prefix) & Q(**{
+    condition = active_asset_q(asset_prefix=asset_prefix, require_fulltext=require_fulltext) & Q(**{
         _path(asset_prefix, "kind"): "normalized",
         _path(asset_prefix, "status"): "ready",
         _path(asset_prefix, "validation_status"): "valid",

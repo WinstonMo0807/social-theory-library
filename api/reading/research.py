@@ -106,6 +106,11 @@ def access_for(user):
     return request_access(SimpleNamespace(user=user))
 
 
+def citation_reader(user):
+    """Keep reader login access without granting editorial access to citations."""
+    return SimpleNamespace(is_authenticated=bool(user and user.is_authenticated), is_staff=False, role="reader")
+
+
 def resolve_reference(raw, user, *, strict=False):
     """Return current text only for the exact serving file and document revision."""
     if not isinstance(raw, dict):
@@ -152,7 +157,8 @@ def resolve_reference(raw, user, *, strict=False):
         page_number = raw.get("pdf_page")
         if not isinstance(page_number, int) or isinstance(page_number, bool) or page_number < 1:
             raise ValidationError({"pdf_page": "PDF 页序从 1 开始。"})
-    edition = source_queryset("edition", access_for(user)).filter(
+    # Exact canonical text does not depend on the asynchronous search projection.
+    edition = source_queryset("edition", access_for(user), require_fulltext=False).filter(
         active_catalog_revision__reader_asset_id=asset_id,
         active_catalog_revision__document_revision_id=revision_id).first() if asset_id else None
     page = span.page if span else Page.objects.filter(asset_id=asset_id, index=page_number).first() if edition else None

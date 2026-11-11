@@ -31,15 +31,15 @@ def text_values(value):
     return ""
 
 
-def source_queryset(kind, access_statuses=None):
+def source_queryset(kind, access_statuses=None, *, require_fulltext=True):
     if kind == "edition":
-        rows = public_editions(require_fulltext=True).filter(
+        rows = public_editions(require_fulltext=require_fulltext).filter(
             active_catalog_revision__reader_asset__kind="normalized",
             active_catalog_revision__reader_asset__status="ready",
             active_catalog_revision__reader_asset__validation_status="valid",
             active_catalog_revision__reader_asset__edition_id=F("pk"),
             active_catalog_revision__document_revision__asset_id=F("active_catalog_revision__reader_asset_id"))
-        return rows.filter(current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=access_statuses))
+        return rows.filter(current_retrieval_source_q(asset_prefix="active_catalog_revision__reader_asset", access_statuses=access_statuses, require_fulltext=require_fulltext))
     if kind == "scholar":
         return public_scholar_queryset()
     if kind == "node":
