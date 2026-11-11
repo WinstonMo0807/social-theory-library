@@ -1,3 +1,8 @@
+## 2026-11-11 公网对比发现的视觉与验证缺口
+
+- A / PV-VISUAL-03：today-work.module.css只形成标题微调和圆角变化；curation-project-workspace.module.css的page padding已与公网相同、columns仅gap变化。三个主要页面实时比较确认管理台主体改造不足，不能称视觉目标已完成。仅在允许的中心主体布局内修正，不扩展业务或保护区。
+- A / PV-VISUAL-04：PV068的候选/历史审核为emptyDirectory空列表，block容器gap变化被计作一个改动节点；有项目、文章编辑与预览状态未由该截图证明。后续在隔离合成对象补证，不对生产写入。详docs/stl4/public-visual-20261110/PUBLIC_COMPARISON_20261111.md。
+
 补充已核实既有问题 PV-NOTE-CITE-01：按页笔记导出引用带evidence_span_id:null，被既有UUIDField拒绝400。关闭本轮CSS仍复现；创建/编辑/刷新/回到原文通过。详情见docs/stl4/public-visual-20261110/BUSINESS_FINDINGS.md。按最新用户范围不改业务契约。
 
 ## 2026-11-10 最新排版范围与关闭项
