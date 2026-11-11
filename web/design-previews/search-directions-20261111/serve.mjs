@@ -1,0 +1,18 @@
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {resolve,extname,sep} from 'node:path';
+import {mkdir,readFile,writeFile,copyFile} from 'node:fs/promises';
+import {createServer} from 'node:http';
+const here=fileURLToPath(new URL('.',import.meta.url));
+const repo=resolve(here,'../../..');
+const require=createRequire(resolve(repo,'web/package.json'));
+const {build}=require('esbuild');
+const out=resolve(repo,'output/design/search-directions-20261111');
+const pub=resolve(repo,'web/public');
+await mkdir(out,{recursive:true});
+await build({entryPoints:[resolve(here,'main.tsx')],bundle:true,outfile:resolve(out,'app.js'),format:'esm',jsx:'automatic',external:['/fonts/*'],define:{'process.env.NODE_ENV':'"development"'},logLevel:'warning'});
+await copyFile(resolve(repo,'tmp/search-directions-20261111/public-sample.json'),resolve(out,'public-sample.json'));
+await writeFile(resolve(out,'index.html'),'<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>检索排版 · 三版交互预览</title><link rel="stylesheet" href="/app.css"><div id="root"></div><script type="module" src="/app.js"></script></html>');
+if(process.argv.includes('--build-only'))process.exit(0);
+const mime={'.html':'text/html;charset=utf-8','.css':'text/css;charset=utf-8','.js':'text/javascript;charset=utf-8','.json':'application/json;charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.woff2':'font/woff2'};
+createServer(async(req,res)=>{try{const url=new URL(req.url,'http://localhost');const base=/^\/(fonts|brand)\//.test(url.pathname)?pub:out;const path=resolve(base,'.'+decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname));if(!path.startsWith(base+sep)||!mime[extname(path)]){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':mime[extname(path)],'Cache-Control':'no-store'});res.end(await readFile(path));}catch{res.writeHead(404);res.end('Not found');}}).listen(18781,'127.0.0.1',()=>console.log('Local preview: http://127.0.0.1:18781/?v=a'));
