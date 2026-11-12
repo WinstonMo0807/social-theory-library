@@ -312,6 +312,89 @@ def creation_serializer(op, user):
     return serializer
 
 
+def catalog_edit_guard(op, data, current, user):
+    """Resolve wrappers to the exact edited Edition before checking its locks."""
+    from catalog.services.field_locks import scoped_locks
+    from catalog.contracts.fields import FIELDS
+    from catalog.services.editorial_revision import _work_edition_section_snapshot
+    kind = op["target_type"]
+    selected = op.get("edition_id") or (op["target_id"] if kind == "edition" else None)
+    edition = edition_for(op["work_id"], selected)
+    if kind == "edition" and str(edition.pk) != identity(op["target_id"]):
+        raise PermissionError("编辑版本提示与实际目标不一致，不能借其他版本绕过人工锁。")
+    affected = set(data)
+    for section in ("bibliography", "contributors", "reader"):
+        if kind != "work" or section not in data:
+            continue
+        wrapper = data[section]
+        if not isinstance(wrapper, dict) or str(wrapper.get("edition_id")) != str(edition.pk) or not isinstance(wrapper.get("values"), dict):
+            raise ValueError("版本分区必须明确指向本次选定版本。")
+        affected.update(wrapper["values"])
+        if section == "contributors":
+            previous = current.get(section)
+            if not isinstance(previous, dict) or str(previous.get("edition_id")) != str(edition.pk):
+                previous = {"values": _work_edition_section_snapshot(edition, section)}
+            preserve_collections(previous["values"], wrapper["values"])
+    for section in ("contributors", "classification", "knowledge"):
+        if section in data:
+            affected.update(field.name for field in FIELDS if field.section == section)
+    if "publisher_authority" in affected:
+        affected.add("publisher_authority_id")
+    if "isbn" in affected:
+        affected.update({"isbn10", "isbn13"})
+    if affected & set(scoped_locks(edition).values_list("field_name", flat=True)):
+        raise ValueError("修改涉及人工锁定字段，不能自动覆盖。")
+
+
+def authorized_spans():
+    from catalog.models import EvidenceSpan
+    from django.db.models import F
+    return EvidenceSpan.objects.select_related("document_revision", "page__asset").filter(
+        is_stale=False, document_revision__is_active=True,
+        document_revision__source_checksum=F("page__asset__sha256"),
+        page__asset__kind="normalized", page__asset__is_current=True, page__asset__status="ready",
+        page__asset__validation_status="valid", page__asset__access_status__in=["public", "registered"])
+
+
+def redact_sources(value):
+    """Historical receipts and curation reads recheck current source access."""
+    identifiers = set()
+    def collect(row):
+        if isinstance(row, dict):
+            candidates = [row.get("span_id")]
+            if row.get("source_type") == "span":
+                candidates.append(row.get("source_id"))
+            for candidate in candidates:
+                try:
+                    identifiers.add(identity(candidate))
+                except (ValueError, TypeError):
+                    pass
+            for item in row.values():
+                collect(item)
+        elif isinstance(row, list):
+            for item in row:
+                collect(item)
+    collect(value)
+    from catalog.relation_source_anchor import valid_locator
+    allowed = {str(row.pk) for row in authorized_spans().filter(pk__in=identifiers) if valid_locator(row, row.document_revision_id)} if identifiers else set()
+    def clean(row):
+        if isinstance(row, list):
+            return [clean(item) for item in row]
+        if not isinstance(row, dict):
+            return row
+        result = {key: clean(item) for key, item in row.items()}
+        if row.get("source_type") and "source_id" in row and "source" in row:
+            if row["source_type"] != "span" or str(row["source_id"]) not in allowed:
+                result["source"] = {"available": False, "detail": "来源当前不在MCP原文访问范围，原引用身份保留。"}
+        if row.get("span_id") and "text" in row and str(row["span_id"]) not in allowed:
+            result.update(text="", valid_locator=False, source_unavailable=True)
+        reference = row.get("source_anchor")
+        if isinstance(reference, dict) and str(reference.get("span_id")) not in allowed and "source_material" in result:
+            result["source_material"] = {"available": False, "detail": "来源当前不可用。"}
+        return result
+    return clean(value)
+
+
 def validate_operation(op, user):
     from common.capabilities import Capability
     work = scope(op["work_id"])
@@ -336,15 +419,7 @@ def validate_operation(op, user):
         if others:
             raise ValueError("此对象有其他编辑者的草稿，不能自动合并。")
         if kind in {"work", "edition"}:
-            from catalog.services.field_locks import scoped_locks
-            edition = edition_for(work.pk, op.get("edition_id") or (str(target.pk) if kind == "edition" else None))
-            locks = set(scoped_locks(edition).values_list("field_name", flat=True))
-            affected = set(data)
-            aliases = {"contributors": {"authors", "translators", "editors"}, "classification": {"disciplines", "subdisciplines"}, "knowledge": {"theories", "topics", "nodes"}}
-            for field in list(affected):
-                affected.update(aliases.get(field, set()))
-            if affected & locks:
-                raise ValueError("修改涉及人工锁定字段，不能自动覆盖。")
+            catalog_edit_guard(op, data, current["data"], user)
         clean = changed_editorial_patch(target_type=kind, target=target, patch=data)
         preserve_collections(current["data"], data)
         return {"current": {key: current["data"].get(key) for key in data}, "proposed": data, "changed_fields": sorted(clean),
@@ -372,6 +447,8 @@ def validate_operation(op, user):
             if (not row.document_revision.is_active or row.document_revision.source_checksum != row.page.asset.sha256
                     or not valid_locator(row, row.document_revision_id)):
                 raise ValueError("来源的当前修订或原文定位已失效。")
+            if not authorized_spans().filter(pk=row.pk).exists():
+                raise PermissionError("所选原文不在MCP允许的访问范围。")
             source_payload("span", row)
         current = curation_payload(op["target_type"], op["target_id"])
         if current.get("id"):
@@ -407,10 +484,11 @@ def validate_operation(op, user):
 def preserve_collections(current, proposed):
     """Draft editing must not silently drop collection members on replacement."""
     protected = {"contributors", "disciplines", "subdisciplines", "topics", "theories", "nodes", "aliases",
-                 "discipline_links", "subdiscipline_links", "topic_links", "representative_works", "items", "timeline_relations"}
+                 "discipline_links", "subdiscipline_links", "topic_links", "representative_works", "items", "timeline_relations",
+                 "discipline_relations", "theory_relations", "subdiscipline_relations", "stage_groups", "stages"}
     def key(row):
         if isinstance(row, dict):
-            for name in ("person_id", "source_id", "work_id", "node_id", "topic_id", "discipline_id", "subdiscipline_id", "id"):
+            for name in ("person_id", "source_id", "work_id", "node_id", "topic_id", "discipline_id", "subdiscipline_id", "theory_school_id", "id"):
                 if name in row:
                     return (name, str(row[name]), str(row.get("role", "")))
             return fingerprint(row)
@@ -421,6 +499,9 @@ def preserve_collections(current, proposed):
             if name in protected and isinstance(previous, list) and isinstance(value, list):
                 if {key(v) for v in previous} - {key(v) for v in value}:
                     raise ValueError(f"{name}是整组保存；本轮不能隐式移除已有成员。请保留原成员或交由原编辑器明确处理。")
+                old_by_key = {key(item): item for item in previous}
+                for item in value:
+                    preserve_collections(old_by_key.get(key(item)), item)
             preserve_collections(previous, value)
 
 
@@ -455,7 +536,11 @@ def target_in_scope(op, user):
     if op["kind"] == "evidence_curation":
         kind = {"node": "knowledge_node", "scholar": "scholar_profile", "topic": "topic"}.get(kind)
     if op["kind"] == "scholar_relation":
-        return  # endpoints are checked against existing profiles in validation
+        if key:
+            original = ScholarRelation.objects.get(pk=identity(key))
+            if not Contribution.objects.filter(edition__work_id=op["work_id"], person__scholar_profile__pk__in=[original.source_scholar_id, original.target_scholar_id]).exists():
+                raise PermissionError("原学者关系不属于授权作品，不能通过更换端点纳入范围。")
+        return  # new endpoints are checked in validation as well
     work_id = op["work_id"]
     if kind in {"work", "edition"}:
         return  # exact Work/Edition membership is checked in validation
@@ -738,6 +823,7 @@ def main():
             # Library/framework diagnostics must not corrupt the line protocol.
             with contextlib.redirect_stdout(sys.stderr):
                 result = ACTIONS[action](request.get("arguments", {}), actor())
+                result = redact_sources(result)
         except Exception as error:
             result = {"ok": False, "code": "domain_error", "detail": safe_error(error)}
         print(json.dumps({"id": request.get("id"), "result": result}, cls=DjangoJSONEncoder, ensure_ascii=False), flush=True)

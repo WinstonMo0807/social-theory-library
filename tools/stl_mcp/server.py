@@ -8,7 +8,8 @@ from typing import Any, Literal
 from typing_extensions import NotRequired, TypedDict
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from bridge import Bridge
+from bridge import Bridge, DjangoBridge
+import os
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
@@ -67,7 +68,7 @@ class Requirement(TypedDict):
 def bridge():
     global _bridge
     if _bridge is None:
-        _bridge = Bridge()
+        _bridge = DjangoBridge() if os.environ.get("STL_MCP_BACKEND") == "django" else Bridge()
     return _bridge
 
 

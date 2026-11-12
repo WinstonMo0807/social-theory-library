@@ -1,3 +1,7 @@
+## 2026-11-12 公网 MCP 已部署
+
+用户已明确开启公网。独立stl-mcp复用现有API镜像，384MiB/0.5CPU，无宿主端口，backend网络经现有HTTPS/Nginx进入/mcp；电脑打包依赖，NAS只核验解包运行，无构建/迁移。deploy/mcp/deploy.py提供stage/expose/带模板哈希保护的rollback；原模板/编译配置和21服务身份备份已核对，nginx -t后reload，原服务未重建。令牌摘要、env及journal仅在受限目录，NAS不持有SSH密钥；本机凭据为DPAPI密文，不写TOML或Git。公网真实协议及拒绝路径通过，详stl4/PUBLIC_MCP_SECURITY_20261112.md。
+
 # STL 部署与运行入口
 
 当前运行说明在[架构文档第13章](architecture/13_DEPLOYMENT_AND_OPERATIONS.md)，当前镜像与版本证据在[审计基线](architecture/AUDIT_BASELINE.md)。本页保持既有文档链接有效，不再复制第二份会漂移的部署手册。

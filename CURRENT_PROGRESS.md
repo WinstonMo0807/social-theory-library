@@ -1,3 +1,9 @@
+## 2026-11-12 公网 MCP、安全审查与独立推送
+
+用户最新明确开启公网，替代此前只接本机的范围限制。https://books.winstonmo.com/mcp 已部署受保护的单用户Streamable HTTP，Codex stl改为HTTPS/DPAPI凭据helper，原stdio保留stl_local停用备用。三旧计划六回执已迁移并公网查回，原请求ID保持；三书查重/取证、两种协议七工具及匿名401/错误令牌401/错误Origin403实际通过，越权作品/发布prepare拒绝，未新增业务保存。
+
+安全审查修复嵌套字段锁/版本提示绕过、隐式集合删除、旧学者关系越界及受限原文/历史回执泄露，29项领域安全+7项HTTP+1项journal检查通过；OSV复查独立MCP环境30包无当前报告命中。NAS仅新增384MiB/0.5CPU容器及最小MCP代理规则，原21服务ID/镜像/启动时间保持，nginx -t后reload，无DNS/Tunnel/数据库/OCR/索引变更。原配置备份与候选哈希已核对。仅MCP分支codex/stl-mcp-security-20261112基于main独立复测通过，保留为独立推送分支，不合并main。详docs/stl4/PUBLIC_MCP_SECURITY_20261112.md；原两项暂存及其他工作区修改保留。配置注册和真实SDK连通分别记录，当前聊天工具热更新未观察。
+
 ## 2026-11-09 vNext 架构与文档已归并 GitHub main
 
 - 以公网curation-publish-r1为准整合25份运行源码差异，检查点f5406339。API791份、OCR5份、Web1847项运行证据已核对；15:06镜像身份复查相同。原工作区和其暂存内容保持。

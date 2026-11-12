@@ -1,3 +1,7 @@
+## 2026-11-12 公网 MCP 单用户入口
+
+用户最新授权增加受保护Streamable HTTP。tools/stl_mcp/public_server.py经DjangoBridge复用同七工具/领域服务；固定账户能力、token_version、三书写入范围、锁/版本/回执仍在服务端执行。独立NAS容器复用API镜像，Nginx仅代理/mcp，源库/文件系统不分叉。Bearer摘要/到期/Host/Origin在协议前校验，本机DPAPI helper供应认证；NAS journal持久保存计划，原三计划已迁移验证。原stdio仍可备用，下文“无远程监听”为此前本机阶段记录。部署、修复和边界见stl4/PUBLIC_MCP_SECURITY_20261112.md。
+
 ## 2026-11-12 本机 Codex MCP 策展
 
 tools/stl_mcp 是本机stdio接口，通过现有严格主机校验的SSH通道在原API容器内启动固定Django命令分派，复用原编目、编辑修订、规范实体、EvidenceCuration与AuditEvent。没有远程MCP监听、第二套馆藏或数据库schema变更。模型仅可调用白名单读取/草稿命令；固定账户、token_version、作品范围、对象关联、人工锁、版本与逐项回执在服务端重核。独立本机SQLite仅存不可变计划、原请求编号及耗时，不承担正式业务状态；机器待审与人工确认/正式发布分开。三书6项维护增补已真实保存并跨进程回放验证。边界与实测见 `stl4/LOCAL_MCP_CURATION_20261112.md`。

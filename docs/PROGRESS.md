@@ -1,3 +1,7 @@
+## 2026-11-12 公网 MCP 与安全修复
+
+D：用户授权的单用户HTTPS MCP已上线，本机stl改HTTP、原stdio备用；三计划六回执迁移后公网查回。修复已重现的嵌套字段锁/版本、集合保留、旧学者关系范围和受限原文回显问题；37项定向检查、两种真实HTTP/stdio协议及公网三书批量读/查重/取证通过。无令牌/错误令牌401，错误Origin403，越权作品/发布prepare拒绝，未新增业务写入。仅新增隔离网关和MCP代理规则，原21服务保持，无DNS/Tunnel/库表/OCR变更。基于main的MCP独立分支交付，不混入其他工作区；详情stl4/PUBLIC_MCP_SECURITY_20261112.md。
+
 ## 2026-11-09 vNext源码归并与文档体系
 
 运行源码整合f5406339，以公网当前4.0为依据；新版README及docs/architecture共16章、完整管理页面/组件/接口/数据清单、22张Mermaid与6张代表截图已完成。旧ARCHITECTURE、CURRENT_STATE、DEPLOYMENT改为统一当前入口，历史内容保留Git快照。验证与限制见[VALIDATION](architecture/VALIDATION.md)，未部署、未处理持续策展内容。本轮GitHub main整合在隔离工作区完成，原工作区保留。

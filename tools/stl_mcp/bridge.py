@@ -29,13 +29,16 @@ class Bridge:
     def __init__(self, config_path=None):
         self.config_path = Path(config_path or os.environ.get("STL_MCP_CONFIG", DEFAULT_CONFIG))
         self.config = json.loads(self.config_path.read_text(encoding="utf-8"))
-        for name in ("host", "identity_file", "container", "actor_id", "token_version", "allowed_work_ids"):
+        required = ["actor_id", "token_version", "allowed_work_ids"]
+        if os.environ.get("STL_MCP_BACKEND", "ssh") != "django":
+            required += ["host", "identity_file", "container"]
+        for name in required:
             if name not in self.config:
                 raise ValueError(f"Missing local STL configuration: {name}")
         self.lock = threading.RLock()
         self.process = None
         self.responses = queue.Queue()
-        self.directory = self.config_path.parent
+        self.directory = Path(os.environ.get("STL_MCP_STATE_DIR", self.config_path.parent))
         self.directory.mkdir(parents=True, exist_ok=True)
         self.db_path = self.directory / "journal.sqlite3"
         with self.db() as db:
@@ -174,3 +177,43 @@ class Bridge:
         fingerprint, plan = self.plan(plan_id)
         result = self.call("receipts", {"operations": plan["operations"]})
         return {**result, "plan_id": plan_id, "plan_digest": fingerprint, "requirements": plan["requirements"]}
+
+
+class DjangoBridge(Bridge):
+    """NAS HTTP gateway: same tools/services, without SSH or an HTTP API bypass."""
+    def __init__(self, config_path=None):
+        super().__init__(config_path)
+        import contextlib
+        import sys
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+        import django
+        with contextlib.redirect_stdout(sys.stderr):
+            django.setup()
+        import domain
+        self.domain = domain
+        domain.CONFIG = {key: self.config[key] for key in ("actor_id", "token_version", "allowed_work_ids")}
+
+    def call(self, action, arguments):
+        import contextlib
+        import sys
+        from django.db import close_old_connections
+        started = time.monotonic()
+        with self.lock:
+            try:
+                if action not in self.domain.ACTIONS:
+                    raise PermissionError("此通道未开放该命令。")
+                close_old_connections()
+                with contextlib.redirect_stdout(sys.stderr):
+                    result = self.domain.ACTIONS[action](arguments, self.domain.actor())
+                    result = self.domain.redact_sources(result)
+            except Exception as error:
+                result = {"ok": False, "code": "domain_error", "detail": self.domain.safe_error(error)}
+            finally:
+                close_old_connections()
+        # Standardize dates/UUIDs before the public JSON schema is applied.
+        from django.core.serializers.json import DjangoJSONEncoder
+        result = json.loads(json.dumps(result, cls=DjangoJSONEncoder, ensure_ascii=False))
+        elapsed = round(time.monotonic() - started, 3)
+        with self.db() as db:
+            db.execute("INSERT INTO calls(action, started, elapsed, ok) VALUES(?,?,?,?)", (action, time.time(), elapsed, bool(result.get("ok"))))
+        return {**result, "elapsed_seconds": elapsed}
