@@ -50,6 +50,7 @@ release为 `/volume2/library/stl-releases/20261112-mcp-public-r1`，配置/计�
 - 公网另查三计划六回执、批量人物查重、三书指定页原文；非授权作品及发布状态prepare均拒绝，无计划ID、无业务保存。
 - 本轮公网验证没有重新写入六项引用。原三书19.763秒为已有馆藏维护的结构化执行时间，审读在计时前；不能称从零整书策展耗时，也未测得token节省比例。
 - 推送用独立worktree从`origin/main`的`2f151a86`建立，仅移入MCP修改；在该干净主线代码上重新建立隔离SQLite，29项领域/安全和8项HTTP/journal检查全部通过。推送差异27个文件另查凭据模式无命中，部署的四个运行源码与本轮提交文件逐字节一致。该模式检查不取代人工审查。
+- 从Codex TOML读取实际helper命令，经Windows命令管道取认证头，再做公网legacy协商、七工具清单及真实书目查询通过，未输出令牌。首次helper联调在tools/list收到一次SDK通用HTTP错误；加入响应状态观测后原配置复测全部200/202。同期Nginx的MCP记录无5xx/限流、MCP无异常日志，未能确定出错层，没有据此放宽认证或Cloudflare防护。此项保留为B运行观察，不能声称公网零失败。
 
 保护目录 `.local/stl-mcp/public-build`保存public-probe、resume-security-probe、deployment-check等原始报告；未提交。Git使用基于当前main的独立 `codex/stl-mcp-security-20261112` 分支，仅含本机MCP和本轮安全/公网交付。没有将工作区其他未提交源码、设计或馆藏资料一并推送，也没有合并main。
 
