@@ -77,7 +77,7 @@ function RelationEditor({
     setMessage("正在确认关系……");
     setMessageState("pending");
     try {
-      await apiRequest(`/catalog/admin/knowledge-relations/${resource}/`, {
+      const result = await apiRequest<{ editorial_revision?: unknown; publication_required?: boolean }>(`/catalog/admin/knowledge-relations/${resource}/`, {
         method: "POST",
         body: JSON.stringify({
           [ownerField]: ownerId,
@@ -89,7 +89,7 @@ function RelationEditor({
       }, token);
       setTarget("");
       setDraft({});
-      setMessage("关系已经确认并同步前台。");
+      setMessage(result?.editorial_revision || result?.publication_required ? "关系草稿已保存，发布主题后更新读者页面。" : "关系已经确认并同步前台。");
       setMessageState("success");
       refresh();
     } catch (reason) {
@@ -102,14 +102,14 @@ function RelationEditor({
 
   async function remove(id: string) {
     const token = getServerSessionCredential();
-    if (!token || !(await confirmAction("删除这条已确认关系吗？相关前台模块会同步更新。"))) return;
+    if (!token || !(await confirmAction("删除这条关系吗？已发布主题的修改会先保存为草稿。"))) return;
     const actionKey = `delete-relation:${id}`;
     if (!startAction(actionKey)) return;
     setMessage("正在删除关系……");
     setMessageState("pending");
     try {
-      await apiRequest(`/catalog/admin/knowledge-relations/${resource}/${id}/`, { method: "DELETE" }, token);
-      setMessage("关系已删除，相关前台页面会同步更新。");
+      const result = await apiRequest<{ editorial_revision?: unknown; publication_required?: boolean } | null>(`/catalog/admin/knowledge-relations/${resource}/${id}/`, { method: "DELETE" }, token);
+      setMessage(result?.editorial_revision || result?.publication_required ? "移除关系的草稿已保存，发布主题后更新读者页面。" : "关系已删除，相关前台页面会同步更新。");
       setMessageState("success");
       refresh();
     } catch (reason) {
