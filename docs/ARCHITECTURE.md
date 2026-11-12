@@ -1,3 +1,7 @@
+## 2026-11-12 本机 Codex MCP 策展
+
+tools/stl_mcp 是本机stdio接口，通过现有严格主机校验的SSH通道在原API容器内启动固定Django命令分派，复用原编目、编辑修订、规范实体、EvidenceCuration与AuditEvent。没有远程MCP监听、第二套馆藏或数据库schema变更。模型仅可调用白名单读取/草稿命令；固定账户、token_version、作品范围、对象关联、人工锁、版本与逐项回执在服务端重核。独立本机SQLite仅存不可变计划、原请求编号及耗时，不承担正式业务状态；机器待审与人工确认/正式发布分开。三书6项维护增补已真实保存并跨进程回放验证。边界与实测见 `stl4/LOCAL_MCP_CURATION_20261112.md`。
+
 ## 2026-11-08 NAS 资源执行模式
 
 现有 Django/前端/PostgreSQL/Redis/Celery/Meilisearch/OCR 架构保留。API 与各任务角色共用单一运行镜像；ingestion 与 discovery_index 由一个单并发 Worker 承担，查询独立按需，普通维护任务独立。NAS root 管理器依赖固定服务白名单、Redis 有期限需求及 queued/unacked 状态启动/温和退出；应用无 Docker 权限。旧预览模型不恢复。本批策展临时经既有 OCR 接口使用电脑，范围由 job/upload 白名单限定，显式绑定优先，结果仍回到同一数据库和存储。网站无本机 OCR 新功能；完成状态来自原数据管道。详 `stl4/NAS_RESOURCE_OPTIMIZATION_20261108.md` 和 `stl4/CURATION_OCR_HANDOFF_20261108.md`。
