@@ -1,0 +1,140 @@
+# STL 阅读器与多场景加载设计候选 · 2026-11-12
+
+## 当前边界
+
+用户要求阅读器、原文选取工具、我的研究及全站加载统一设计，并明确加载方案须先供选择，再替换正式页面。本轮交付本地动效原型、五张组件参考图和源码覆盖清单。**没有将加载候选接入产品，没有发布公网。** 此约束不撤销此前已接受的引文修复和 C 检索工作台发布授权；它们仍未发布，待完成原先剩余格式核验及发布收尾。
+
+本地可播放入口：http://127.0.0.1:18884/
+源文件：`design-previews/reader-loading-system-20261112/`
+完整资产及检查证据：`output/design/reader-loading-system-20261112/`
+
+本轮沿用 Ponytail full、Apple Design 和 ImageGen 技能。原生 SVG/CSS 制作实际动效；内置 Image Gen 生成组件概念图。没有增加依赖、替换技术栈或新增一套阅读数据服务。
+
+## 已读取的实现与审计口径
+
+- 实际前端为 React 19、Next 路由 / Vinext、TypeScript、pdfjs-dist、lucide-react。界面通过现有 Django API 读取书目、原文、研究、笔记及任务。SwiftUI 可提供交互设计启发，但浏览器实现继续用当前 Web 栈。
+- 品牌资产为 `web/public/brand/stl-symbol-20261027.svg`，黑色人物与书页、金色人物与书页、中部连接均有现成矢量路径。候选只改变显隐与线条活动，不移动或改写原路径。
+- 现有 `web/components/ui/loading-state.tsx` 叠放两份同一 SVG，浅底透明度 .18；`workspace-polish.css:1–17` 对上层做 clip-path 渐进显现，配 1.9 秒不定进度细线。保留该动效为 L1。
+- 静态检索覆盖 `web/app`、`web/components`、`web/lib` 的 **774 个 TS/TSX 源文件**（排除生成契约及测试），识别 **267 个候选文件、713 个代码位置**。另扫描 **198 个 CSS 文件**，命中 **22 个样式文件、103 个位置**。
+- 126 个文件直接引用 LoadingState；28 个文件出现旋转指示；25 个文件涉及 progress/onProgress/stage_progress；37 个文件使用原生图片懒加载。这些是有重叠的静态命中，不是缺陷数，也不是逐页运行验收数。
+- 全部候选位置已列入 CSV，并标明未提交状态和待核对状态。自动归类只用来分配场景，不代替对实际调用者的核对。关键共用组件、两张截图对应路径、PDF、研究、长任务和相关未提交改动已实际阅读。
+
+机器可复核清单：
+- `output/design/reader-loading-system-20261112/loading-source-inventory.csv`
+- `output/design/reader-loading-system-20261112/loading-style-inventory.csv`
+- `output/design/reader-loading-system-20261112/loading-audit.json`
+
+## A · 已有证据、选择设计后需要修复
+
+| 触发与问题 | 具体位置 | 影响 | 最小修复范围 |
+|---|---|---|---|
+| 任意公共路由首次等待都显示两条横线和三块矩形 | `web/app/loading.tsx`；`web/styles/components/route-states.css` | 占位不对应真实内容，58vh 与大纵向内边距造成截图中的空白 | 通用兜底用紧凑品牌；已知列表、详情、阅读路由按实际内容比例占位 |
+| 今日工作首次等待和刷新都清空列表并居中等待 | `admin-dashboard.tsx:74–85`；`admin/today-work.module.css:53`；`use-api-resource.ts` | 等待容器最小高 340px，刷新时已有记录消失 | 首次使用真实行列比例占位；只对同账户、同查询、同 context 的刷新保留结果，绝不跨身份或筛选复用 |
+| Skeleton 名称实际返回整块品牌加载 | `web/components/ui/feedback.tsx` | 调用方无法得到匹配内容的占位，局部容易堆大 Logo | 保留 LoadingState，独立实现少量按布局使用的占位；核对现有 Skeleton 调用者后迁移 |
+| 同一块研究页面有转圈和品牌两个等待视觉 | `research-session-detail.tsx:40`；`research-session-compare.tsx:28` | 重复动效与重复状态表达 | 各区域只留一个主反馈，保留真实错误与原有读取机制 |
+| 观点检索路由 fallback 在 900ms 后宣称开始比较候选原文 | `web/app/explore/opinions/loading.tsx` | 文案阶段并非后端任务阶段，页面跳转也可能显示“检索/比较” | 取消计时器推定的业务阶段；路由只说正在打开；实际检索组件继续读取服务状态 |
+| 阅读器选择笔记/搜索会改变整套页面模式 | `reader-shell.tsx` 的 readerView；`styles/features/reader/stl4-reader.css:246` 起 | 来源/笔记切换导致页头、标题、目录标签及内容位置明显改变 | 已有本地稳定 workspace 候选；选项切换只更换侧栏内容，保留 PDF 几何、原文与工具栏 |
+
+上述定位不表示已替换完所有页面。加载产品改动仍等待用户选择设计。
+
+## B · 已有实现应复用的行为
+
+| 已有能力 | 源码 | 设计时保留 |
+|---|---|---|
+| PDF 连续渲染、单页错误与重载 | `pdf-continuous-viewer.tsx`、`pdf-canvas.tsx` | 文档首次打开与逐页渲染分开；错误在具体页；已读页面不因下一页失败清空 |
+| 保存按钮 pending / success / error | `action-feedback.tsx` | 固定宽度，锁定重复提交，只在明确回执后成功；不加品牌大图 |
+| 上传/识别真实进度 | `admin-upload.tsx`、`admin/library/ocr-workspace.tsx` | completed_pages / total_pages 和实际阶段；没有总量只显示活动状态 |
+| 私人研究保留有效内容、轮询暂停、原请求恢复 | `research/use-research-project.ts`、`use-persistent-workspace.ts` | 同身份与修订边界；暂停/失败不变成空列表；未知保存结果核对原请求 |
+| 检索部分结果可读、分通道真实阶段 | `discovery-search-workspace.tsx` | 服务返回的排队、进行中、部分完成、取消和完成；不换成假计时阶段 |
+| 图片比例与自然懒加载 | `responsive-media-image.tsx` 及各卡片 | 固定宽高、失败回退；不用 Logo 占满每张书封或人物图 |
+| 内容预览的身份、版本、权限核对 | `admin/curation/placement-page-preview.tsx` | 旧版不能冒充本次预览；草稿不向其他身份泄露 |
+
+## 全场景覆盖与拟用组件
+
+仅需扩展少量共用原件：品牌等待、布局占位、行内状态、真实任务进度，继续复用 ActionButton。以下名称是职责说明，尚未创建另一套业务实现。
+
+| 场景 | 涉及入口/组件族 | 首次等待 | 后续更新 / 错误 |
+|---|---|---|---|
+| 页面首次进入、SSR/Suspense | app/loading、各路由 Suspense、route-transition | 内容区小型品牌或相应页面轮廓 | 导航不消失；普通站内跳转不反复播完整品牌 |
+| 搜索、公共目录与详情 | catalog-search-workspace、search-reading-workbench、公开学者/主题/作品 | 书目行、肖像比例、标题与详情结构占位 | 同查询保留内容；新查询明确等待；不冒充无结果 |
+| 管理列表、工作区与表单 | admin-dashboard、各 admin workspaces | 筛选区稳定，行列占位 | 原数据仅在同身份同范围刷新时保留；错误可重读 |
+| 登录和账户权限核验 | auth/session 边界、管理员入口 | 紧凑身份核验状态 | 不提前展示私人资料，不将核验错误变成无限加载 |
+| PDF 首次文件获取 | reader-shell、use-reader-document、两种 PDF viewer | 页纸中品牌；书目标题、工具栏可见 | 鉴权失效明确退出；暂时网络问题按原有有效访问策略保留 |
+| PDF 分页渲染、目录和查找 | pdf-continuous-viewer、pdf-canvas、目录/搜索/平行预览 | 固定纸页比例；页外小状态 | 每页独立重试；无全文时保持 PDF 可读，不把 OCR 状态当阅读阻断 |
+| 来源、引用、选段 | reader-shell、shared-citation-overlay | 引文行占位 / 行内核对状态 | 选段和页码保留；GB/T 默认直接显示；其他格式在原对话框选择 |
+| 研究、作者、来源、媒体选择器 | 各 picker、authority、原文来源选择器 | 输入与已选项保留，结果列表占位 | 请求乱序不覆盖新查询；结果数量真实；没有结果和请求失败分开 |
+| 笔记、收藏、书单与提交 | ActionButton、save-work、save-topic、书单与研究保存 | 当前按钮内反馈 | 已保存、失败、结果待核对分开；输入不丢失 |
+| 上传、OCR、索引、发布等长任务 | upload、ocr、index、publication、system-status | 任务行与真实阶段 | 实际计数；排队、暂停、部分完成、取消、失败均有语义 |
+| 我的研究、生成与资料读取 | research/*、discovery、ask | 输入与资料保持；就地等待 | 等待响应、生成、已停止按真实服务；不虚构推理内容 |
+| 图片、书封、肖像和文件下载 | media、ResponsiveMediaImage、asset-download | 固定比例/按钮内准备状态 | 图片失败提供替代或重试；下载准备和浏览器下载分别表达 |
+
+## 未提交改动核对
+
+没有将当前工作区所有改动打包或覆盖。与加载有关的既有变动应如下保留：
+
+| 文件 | 实际变动与处理 |
+|---|---|
+| `reader/use-reader-document.ts` | 短暂 408/429/5xx/网络错误保留尚未过期、同 asset 的已授权 PDF；401/403/404/409/410、到期和源变更仍清理。加载方案不能退回“每次轮询失败清空 PDF”。 |
+| `web/lib/api.ts` | TimeoutError 明确表示“结果尚未确认”。视觉不能把请求超时展示成保存失败后自动重发。 |
+| `system-status-center.tsx` | 增补部分就绪、待建立、模型准备/加载等状态文案。它们表达实际状态，不应被动画遮盖。 |
+| `reader-shell.tsx`、新增 `reader-workspace.module.css` | 本地稳定阅读工作区，来源、笔记、我的研究、相关切换不改整个外壳。最新样式仍属待选候选，未作生产验收。 |
+| `shared-citation-overlay.tsx` | 直接显示引用、项目搜索、来源核对。加载仅作用于当前引文/研究列表，不遮挡 PDF。 |
+| `catalog-search-workspace.tsx`、`app/explore/page.tsx`、新增 search-reading-workbench | 用户已接受 C 排版的正式路由本地接入；保留排序、搜索多选、整卡选择与黑色在线阅读。加载应按其真实布局适配。 |
+| `admin/curation/inline-media-picker.tsx` | 上传/普通读取分别调整超时，原账户边界仍在；不为动效回退该修复。 |
+| `admin/knowledge/person-authority-workspace.tsx` | 新增引用姓名字段与原审阅链；不是加载改造，不借设计重写人物流程。 |
+| `styles/tokens/design.css` | 当前纸白改为 #F7F4EE。候选沿用当前令牌，不恢复绿色或旧蓝色操作体系。 |
+| `styles/features/admin/workspace-v307.css`、`scripts/style-source.mjs` | 有其他未提交工作，后续发布须逐项分离，不整份混入本次加载变更。 |
+
+静态加载条件直接命中的未提交文件为 6 个；上表还包含状态基础、样式及新布局依赖，因此不以“6 个”限定改动影响面。
+
+## 可组合的设计方向
+
+- **D · 书页与书签**：公共入口与整体基调，轻纸白内容层，砂金定位线，首屏品牌与内容占位有清楚层次。
+- **E · 目录与行列**：管理端、筛选和高密度列表。保留行、列、标题与滚动位置，刷新反馈沿列表上边缘。
+- **F · 页边与光标**：阅读、原文引用与笔记。把反馈限制在页边、引文行和保存按钮，不让 Logo 在阅读过程中反复抢占注意。
+- 可以组合为 D 公共页 + E 管理端 + F 阅读局部。此为建议，不是用户已确认选择。
+
+### Logo 动效候选
+
+| 编号 | 做法 | 建议用途 | 动态参数 |
+|---|---|---|---|
+| L1 渐进显现 | 复用现有双层 Logo 与水平 reveal | 书库首次进入、PDF 首次打开 | 1.9s 原 CSS 节奏 |
+| L2 分层显影 | 原路径不移动，书页、人物、中部连接依次显现 | 研究工作区进入、有独立空间的准备 | 3.2s opacity 序列 |
+| L3 书签短线 | Logo 完整静止，下方小书签沿短线来回 | 窄面板、较短的等待 | 2.8s |
+| L4 页缘流线 | 保留整体 Logo，沿原有书页路径描边活动 | PDF/文档准备的替代方向 | 2.8s stroke-dashoffset |
+
+一个网站可以同时使用多组，但按固定场景选择，不随机轮换同一种操作。按钮只用轻量局部反馈，OCR 使用真实进度。动画周期不代表任务百分比，不人为等待动画播完。减少动态效果时显示静态完整 Logo 与文字，不闪烁或无限旋转。
+
+## 阅读器组件参考
+
+- `reader-b.png`：白色紧凑页头，以阅读和我的研究为主；固定右侧栏包含资料、项目搜索、备注与加入操作。
+- `reader-c.png`：炭黑紧凑页头，以选段和笔记为主；引用、锚点、标签、保存组成连续工作区。
+- 选取工具保留复制、引用、高亮、划线、记笔记、原文选取六项；窄屏收纳而非删除。
+- 来源、笔记、我的研究和相关内容共享同一几何尺寸；仅切换内容，不隐藏/恢复整块网站页头。
+- 图中书目、引文、页码是设计示意，不是文献证据。生成图里的隐私选框不落地：实际“仅自己可见”是固定锁定状态。关联学者/主题也不提供普通读者改写公开知识的假控件。
+- 品牌始终采用仓库真实 SVG；生成图中文字与人物图形微小偏差不作为代码资产。
+
+## 本轮验证记录
+
+- `node --check design-previews/reader-loading-system-20261112/preview.js`：退出 0。
+- `.venv/Scripts/python.exe tmp/citation-release-20261112/audit_loading.py`：退出 0，生成 TS/TSX 和 CSS 两份覆盖清单。
+- Edge 实际打开本地比较页：4 组 Logo、9 类场景、D/E/F 切换、首次/刷新/失败/完成状态均可见。
+- 实际填写笔记后切换读取失败，输入保留；减少动态效果后四组 active 层计算样式均为 animation-name:none；暂停后均为 paused，再恢复播放。
+- 桌面正常窗口与 390px 手机宽度检查，相关组件未发现横向溢出；临时 viewport 已复原。
+- 保存了 `desktop-logo-preview.png`、`desktop-scenes-preview.png`、`mobile-preview.png`。这是设计原型验证，不等于正式网站全场景验收。
+- 不接真实业务 API，不保存账户/研究数据，不使用自动计时器把演示伪装成成功。演示完成由用户点“完成”模拟回执。
+
+## 此前工作接续（与新设计分开）
+
+- 已有 80 项定向引文 API/格式检查和限定 TypeScript 检查通过。实际本地 PDF 第 138 页 / 印刷页 93，用鼠标选择两行原文，再点击“引用”，已出现正确来源与引文界面，没有此前红色来源不可用提示。
+- 上述实际流程只证明选段到引用预览这段链路；没有完成所有引文格式的浏览器逐项检查、私人保存与公网新版本验证。
+- 仍需核对作者规范数据和剩余格式细节，包括非图书译者与部分 APA 强调样式；不称全部馆藏都已符合。
+- 没有推送、生产迁移或部署。新加载/阅读候选等待用户选定；原引文和 C 检索发布另继续原授权范围。
+
+## 状态与下一步
+
+- D：本轮源码盘点、未提交相关改动核对、三组场景概念图、两组阅读器组件参考、四组 Logo 可播放候选已交付。
+- B：设计原型可查看，尚待用户选择；不是已同意上线。
+- A：上表有证据的产品加载/模式跳变问题保留，选定后按共享组件与调用点修复。
+- C：只在选定方案需要时增加其他动效；不为“全站统一”重写已有任务系统或引入 Swift/第二套前端。
+- 用户可分别选择 Logo L1–L4 与场景 D/E/F；可混用。确认后根据两份 CSV 按场景逐项迁移，再验证首次、刷新、错误、恢复、窄屏与减少动态效果。完成一个示例页不算覆盖全站。
