@@ -1,3 +1,7 @@
+## 2026-11-12 MCP动态馆藏草稿范围
+
+可信配置work_scope=catalog替代本人的固定作品清单，按原Work表实时判断存在，不缓存馆藏ID快照或建立同步任务。新Work/Edition自然纳入；领域服务仍校验本次Work与关联对象、账户能力、版本和锁。selected保留为默认有限范围、未知模式拒绝；该配置不进入工具参数。NAS只有桥接/领域两个模块与范围更新，角色/令牌/正式发布/私人资料边界保持。详stl4/PUBLIC_MCP_SECURITY_20261112.md。
+
 ## 2026-11-12 公网 MCP 单用户入口
 
 用户最新授权增加受保护Streamable HTTP。tools/stl_mcp/public_server.py经DjangoBridge复用同七工具/领域服务；固定账户能力、token_version、三书写入范围、锁/版本/回执仍在服务端执行。独立NAS容器复用API镜像，Nginx仅代理/mcp，源库/文件系统不分叉。Bearer摘要/到期/Host/Origin在协议前校验，本机DPAPI helper供应认证；NAS journal持久保存计划，原三计划已迁移验证。原stdio仍可备用，下文“无远程监听”为此前本机阶段记录。部署、修复和边界见stl4/PUBLIC_MCP_SECURITY_20261112.md。

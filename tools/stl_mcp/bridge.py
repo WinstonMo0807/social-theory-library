@@ -35,6 +35,11 @@ class Bridge:
         for name in required:
             if name not in self.config:
                 raise ValueError(f"Missing local STL configuration: {name}")
+        mode = self.config.get("work_scope", "selected")
+        if mode not in {"selected", "catalog"}:
+            raise ValueError("work_scope must be selected or catalog")
+        self.domain_config = {key: self.config[key] for key in ("actor_id", "token_version", "allowed_work_ids")}
+        self.domain_config["work_scope"] = mode
         self.lock = threading.RLock()
         self.process = None
         self.responses = queue.Queue()
@@ -67,7 +72,7 @@ class Bridge:
     def _start(self):
         source = Path(__file__).with_name("domain.py").read_text(encoding="utf-8")
         # Only trusted local configuration is injected, never a tool argument.
-        settings = {key: self.config[key] for key in ("actor_id", "token_version", "allowed_work_ids")}
+        settings = self.domain_config
         source = "CONFIG = " + repr(settings) + "\n" + source
         encoded = base64.b64encode(zlib.compress(source.encode())).decode("ascii")
         bootstrap = f"import base64,zlib;exec(compile(zlib.decompress(base64.b64decode('{encoded}')),'<stl-mcp-domain>','exec'))"
@@ -191,7 +196,7 @@ class DjangoBridge(Bridge):
             django.setup()
         import domain
         self.domain = domain
-        domain.CONFIG = {key: self.config[key] for key in ("actor_id", "token_version", "allowed_work_ids")}
+        domain.CONFIG = self.domain_config
 
     def call(self, action, arguments):
         import contextlib

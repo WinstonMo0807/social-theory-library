@@ -40,7 +40,8 @@ def main():
         token_path.write_bytes(win32crypt.CryptProtectData(token, "STL MCP", None, None, None, 0))
     token = win32crypt.CryptUnprotectData(token_path.read_bytes(), None, None, None, 0)[1]
     config = json.loads((ROOT / ".local/stl-mcp/config.json").read_text(encoding="utf-8"))
-    config = {key: config[key] for key in ("actor_id", "token_version", "allowed_work_ids", "required_sections")}
+    config = {**{key: config[key] for key in ("actor_id", "token_version", "allowed_work_ids", "required_sections")},
+              "work_scope": config.get("work_scope", "selected")}
     expires = int(time.time()) + 30 * 86400
     (BUILD / "runtime-config.json").write_text(json.dumps(config), encoding="utf-8")
     (BUILD / "gateway-auth.json").write_text(json.dumps({

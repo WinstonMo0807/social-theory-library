@@ -45,11 +45,18 @@ def require(user, capability):
         raise PermissionError("账户没有当前业务操作权限。")
 
 
+def write_allowed(work_id):
+    mode = CONFIG.get("work_scope", "selected")
+    if mode not in {"selected", "catalog"}:
+        raise PermissionError("未知的策展授权模式，停止写入。")
+    return mode == "catalog" or str(work_id) in CONFIG["allowed_work_ids"]
+
+
 def scope(work_id):
     from catalog.models import Work
     work_id = identity(work_id)
-    if work_id not in CONFIG["allowed_work_ids"]:
-        raise PermissionError("该作品未列入本机策展写入范围。")
+    if not write_allowed(work_id):
+        raise PermissionError("该作品未列入策展写入范围。")
     return Work.objects.get(pk=work_id)
 
 
@@ -73,7 +80,7 @@ def search(args, user):
         rows = list(qs.order_by("title", "id")[:limit + 1])
         result.append({"query": query, "has_more": len(rows) > limit, "results": [
             {"id": str(row.pk), "title": row.title, "editions": list(row.editions.values("id", "version_label", "publication_year", "state", "is_primary")),
-             "write_allowed": str(row.pk) in CONFIG["allowed_work_ids"]} for row in rows[:limit]]})
+             "write_allowed": write_allowed(row.pk)} for row in rows[:limit]]})
     return {"ok": True, "queries": result}
 
 
@@ -183,7 +190,7 @@ def context(args, user):
                "workflow": workflow, "scholars": scholars, "assets": assets,
                "drafts": [{"id": str(r.pk), "created_by": str(r.created_by_id), "changed_fields": r.changed_fields} for r in drafts],
                "claims": list(CuratedClaim.objects.filter(work=work).values("id", "kind", "proposition", "status")),
-               "write_allowed": key in CONFIG["allowed_work_ids"], "review_url": f"/admin/library/works/{key}?edition={edition.pk}",
+               "write_allowed": write_allowed(key), "review_url": f"/admin/library/works/{key}?edition={edition.pk}",
                "semantic_review": "not_evaluated"}
         if args.get("include_candidates", True):
             from ingestion.models import UploadItem

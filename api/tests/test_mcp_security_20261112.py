@@ -2,7 +2,7 @@
 from uuid import uuid4
 import pytest
 
-from catalog.models import (Edition, Person, Contribution, ScholarProfile, ScholarRelation, Topic,
+from catalog.models import (Work, Edition, Person, Contribution, ScholarProfile, ScholarRelation, Topic,
     Discipline, TopicDisciplineRelation, WorkTopicRelation, EditorialRevision, Asset, Page, DocumentRevision, EvidenceSpan)
 from catalog.editorial_read import current_editorial_version
 from catalog.services.workspace_edits import workspace_edit_version
@@ -102,3 +102,52 @@ def test_old_curation_response_does_not_reveal_now_private_source(admin_user):
     safe = domain.redact_sources(saved)
     assert "非公开原文" not in str(safe)
     assert safe["results"][0]["result"]["items"][0]["source"]["available"] is False
+
+
+def test_catalog_scope_follows_future_books_and_still_only_saves_drafts(admin_user):
+    original, _, op, baseline = setup(admin_user)
+    selected = domain.CONFIG["allowed_work_ids"][:]
+    domain.CONFIG["work_scope"] = "catalog"
+    # Created after authorization: no allowlist update or gateway restart.
+    future = Work.objects.create(title="授权后新增的合成文献", abstract="新馆藏原简介")
+    edition = Edition.objects.create(work=future, publication_mode="bibliographic")
+    assert domain.scope(future.pk).pk == future.pk
+    found = domain.search({"queries": [future.title]}, domain.actor())
+    assert found["queries"][0]["results"][0]["write_allowed"] is True
+    op.update(work_id=str(future.pk), target_id=str(future.pk), edition_id=str(edition.pk),
+              expected_version=workspace_edit_version(edition), data={"abstract": "有依据的待审建议"})
+    assert domain.prepare({"operations": [op]}, domain.actor())["ok"]
+    saved = domain.save({"operations": [op]}, domain.actor())
+    assert saved["ok"] and saved["published"] is False
+    future.refresh_from_db()
+    assert future.abstract == "新馆藏原简介"
+    assert EditorialRevision.objects.get(target_type="work", target_id=future.pk).status == "draft"
+    assert EditorialRevision.objects.count() == baseline + 1
+    assert domain.CONFIG["allowed_work_ids"] == selected == [str(original.pk)]
+    with pytest.raises(Work.DoesNotExist):
+        domain.scope(str(uuid4()))
+
+
+@pytest.mark.parametrize("blocked", ["publish", "locked", "unrelated"])
+def test_catalog_scope_does_not_bypass_operation_guards(admin_user, blocked):
+    work, edition, op, baseline = setup(admin_user)
+    domain.CONFIG["work_scope"] = "catalog"
+    if blocked == "publish":
+        op["data"]["status"] = "published"
+    elif blocked == "locked":
+        FieldLock.objects.create(edition=edition, field_name="abstract", locked_by=admin_user, locked_value=work.abstract)
+        op["expected_version"] = workspace_edit_version(edition)
+    else:
+        topic = Topic.objects.create(name="与所选作品无关的主题", slug="mcp-catalog-unrelated")
+        op.update(target_type="topic", target_id=str(topic.pk),
+                  expected_version=current_editorial_version("topic", topic.pk), data={"description": "不能借作品范围改写"})
+    assert not domain.prepare({"operations": [op]}, domain.actor())["ok"]
+    assert not domain.save({"operations": [op]}, domain.actor())["ok"]
+    assert EditorialRevision.objects.count() == baseline
+
+
+def test_unknown_catalog_scope_fails_closed(admin_user):
+    work, _, _, _ = setup(admin_user)
+    domain.CONFIG["work_scope"] = "catlog"
+    with pytest.raises(PermissionError):
+        domain.scope(work.pk)

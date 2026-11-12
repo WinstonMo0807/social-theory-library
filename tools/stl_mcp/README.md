@@ -1,5 +1,7 @@
 # STL 策展 MCP
 
+最新授权：本人使用的网关已配置`work_scope = "catalog"`，草稿权限覆盖现有及以后入库的Work，不再逐书更新清单。每次操作仍在原库确认作品存在、账户能力、关联目标、人工锁与版本，不能发布或访问私人笔记；获得权限不等于自动启动策展或OCR。保留`selected`模式用于明确的有限试用，未配置时默认`selected`，未知模式拒绝初始化业务适配；`allowed_work_ids`在catalog模式下只保留为回退清单和抽样依据，不限制新书。范围配置只由受信运维修改，不是MCP工具参数。
+
 2026-11-12追加：按用户最新授权，已增加受保护的公网Streamable HTTP方式。本机默认`stl`现连接HTTPS，原stdio配置保留为停用的`stl_local`。两种方式使用同一工具和领域服务。部署、安全审查与实际验证见 [公网交付记录](../../docs/stl4/PUBLIC_MCP_SECURITY_20261112.md)。下文的“不监听HTTP”仅描述原stdio方式。
 
 本机 Codex → 本机 stdio MCP → 固定 SSH 主机/密钥 → 现有 API 容器内短生命令分派进程 → 原 Django 领域服务。
