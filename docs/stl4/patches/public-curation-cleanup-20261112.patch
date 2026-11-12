@@ -1,0 +1,213 @@
+--- a/web/components/public/scholar-profile.tsx
++++ b/web/components/public/scholar-profile.tsx
+@@ -22,7 +22,6 @@
+       <h1>{data.person.preferred_name}</h1><p className={styles.identityLine}>{data.person.original_name ? <span>{data.person.original_name}</span> : null}<span>{scholarYears(data.person)}</span></p>{data.nationalities.length || data.occupations.length ? <p className={styles.identityDescription}>{[...data.nationalities, ...data.occupations].join(" · ")}</p> : null}
+       {data.short_description ? <div className={styles.profileDescription}><IssueProse block={scholarProseBlock(data.short_description,data.profile_prose?.short_description)}/></div> : <p className={styles.profileDescription}>此学者的简介仍待补充，可从已收录的作品、问题与来源展开研究。</p>}
+       {data.profile_state === "sparse" ? <span className={styles.sparseBadge}>资料仍待补充</span> : null}
+-      {data.sources.results.length ? <p className={styles.profileSources} data-edit-section="sources">资料来源：{data.sources.results.slice(0, 3).map((source, index) => <span key={source.id}>{index ? "、" : ""}{source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a> : source.title}</span>)}<Link prefetch={false} href={scholarSectionHref(data.slug, "sources")}>查看全部（{data.sources.count}）</Link></p> : null}
+       {data.person.aliases.length ? <section data-content-section className={styles.aliases}><header data-section-heading>已确认的异名与译名（{data.person.aliases.length}）</header><p>{data.person.aliases.join("、")}</p></section> : null}
+     </div>{quote ? <blockquote className={styles.featuredQuote} data-module-id="scholar-quote" data-edit-section="sources"><span aria-hidden="true">“</span><p>{quote.text}</p><cite>《{quote.work_title}》{quote.edition_label ? ` · ${quote.edition_label}` : ""}{quote.page_start ? ` · PDF 第 ${quote.page_start} 页` : ""}</cite>{quote.reader_url ? <CollectionLink prefetch={false} href={quote.reader_url}>核对原文<ExternalLink size={13} /></CollectionLink> : null}</blockquote> : <div className={styles.quoteEmpty}><BookProfileLinks data={data} /></div>}
+       <div className={styles.profileActions}>{preview ? <button type="button" disabled className={styles.primaryButton}><Search size={17} />围绕此学者开展研究</button> : <Link prefetch={false} className={styles.primaryButton} href={data.research_href}><Search size={17} />围绕此学者开展研究</Link>}{preview || !data.graph_href ? <button type="button" disabled className={styles.outlineButton}><Network size={17} />查看学术关系图</button> : <Link prefetch={false} className={styles.outlineButton} href={data.graph_href}><Network size={17} />查看学术关系图</Link>}<ScholarFollowButton profileId={data.id} href={data.href} className={styles.outlineButton} preview={preview} /></div>
+@@ -37,7 +36,7 @@
+   </main>;
+ }
+ function BookProfileLinks({ data }: { data: PublicScholarDetail }) {
+-  return <><h2>从作品与来源了解学者</h2><p>{data.key_concerns.join(" · ") || "已确认的馆藏与关联内容"}</p><Link prefetch={false} href={scholarSectionHref(data.slug, "works")}>馆藏作品 · {data.work_count}<ArrowRight size={14} /></Link><Link prefetch={false} href={scholarSectionHref(data.slug, "sources")}>人物资料来源 · {data.sources.count}<ArrowRight size={14} /></Link></>;
++  return <><h2>研究领域与作品</h2><p>{data.key_concerns.join(" · ") || "已确认的馆藏与关联内容"}</p><Link prefetch={false} href={scholarSectionHref(data.slug, "works")}>馆藏作品 · {data.work_count}<ArrowRight size={14} /></Link><Link prefetch={false} href={scholarSectionHref(data.slug, "sources")}>人物简介<ArrowRight size={14} /></Link></>;
+ }
+ function ScholarSectionFilters({ data, section, params }: { data: PublicScholarDetail; section: ScholarSection; params: ScholarSearchParams }) {
+   const work = section === "works", facets = work ? data.facets.roles : data.facets.relation_types, selected = work ? data.filters.role : data.filters.relation_type;
+--- a/web/components/public/scholar-content.tsx
++++ b/web/components/public/scholar-content.tsx
+@@ -30,7 +30,7 @@
+   return <div className={styles.knowledgeRows}>{rows.map(row => <article key={row.id}><Link prefetch={false} href={row.href}><strong>{row.name}</strong><span>{row.source_count} 项来源 · {row.scholar_count} 位相关学者<ArrowRight size={14} /></span></Link>{row.summary ? <p>{row.summary}</p> : null}<small>{row.relation_label}{row.relation_source === "published_work_relation" ? " · 作品关联，不表示由此学者首创" : ""}</small></article>)}</div>;
+ }
+ export function ScholarRelations({ rows, candidate = false, selectedId = "" }: { rows: ScholarRelationRow[]; candidate?: boolean; selectedId?: string }) {
+-  return <div className={`${styles.relations} ${candidate ? styles.candidateRelations : ""}`}>{rows.map(row => <section data-content-section key={row.id} data-relation-id={row.id}><header data-section-heading><span className={styles.relationType}>{candidate ? "关系未确认" : row.relation_label}</span><strong>{row.source_name} {row.direction === "directed" ? "→" : row.direction === "bidirectional" ? "↔" : "—"} {row.target_name}</strong><ArrowRight size={16} /></header><div><p>{row.summary || "关系说明尚未补充。"}</p><h3>关系依据</h3><p className={styles.relationSource}>{row.source || (row.source_material?.available ? "依据下列准确原文。" : "尚未提供可公开的依据说明。")}</p><RelationSourceQuote material={row.source_material}/>{candidate ? <p className={styles.notice}>待编辑核对，不构成已确认的影响、师承或争论。</p> : null}<nav><Link prefetch={false} href={`/scholars/${encodeURIComponent(row.source_slug)}`}>{row.source_name}<ArrowRight size={13} /></Link><Link prefetch={false} href={`/scholars/${encodeURIComponent(row.target_slug)}`}>{row.target_name}<ArrowRight size={13} /></Link></nav></div></section>)}</div>;
++  return <div className={`${styles.relations} ${candidate ? styles.candidateRelations : ""}`}>{rows.map(row => <section data-content-section key={row.id} data-relation-id={row.id}><header data-section-heading><span className={styles.relationType}>{candidate ? "关系未确认" : row.relation_label}</span><strong>{row.source_name} {row.direction === "directed" ? "→" : row.direction === "bidirectional" ? "↔" : "—"} {row.target_name}</strong><ArrowRight size={16} /></header><div><p>{row.summary || "关系说明尚未补充。"}</p><RelationSourceQuote material={row.source_material}/>{candidate ? <p className={styles.notice}>待编辑核对，不构成已确认的影响、师承或争论。</p> : null}<nav><Link prefetch={false} href={`/scholars/${encodeURIComponent(row.source_slug)}`}>{row.source_name}<ArrowRight size={13} /></Link><Link prefetch={false} href={`/scholars/${encodeURIComponent(row.target_slug)}`}>{row.target_name}<ArrowRight size={13} /></Link></nav></div></section>)}</div>;
+ }
+ export function ScholarContent({ data, section, params = {}, preview = false }: { data: PublicScholarDetail; section: ScholarSection; params?: ScholarSearchParams; preview?: boolean }) {
+   const overview = section === "overview", shown = (...ids: ScholarSection[]) => overview || ids.includes(section);
+@@ -40,9 +40,9 @@
+   return <div className={overview ? styles.overviewGrid : styles.sectionContent}>
+     {shown("works") ? <section className={styles.worksSection} data-module-id="scholar-works" data-edit-section="works">{heading("works", "主要作品")}{data.works.results.length ? <div className={styles.workGrid}>{slice(data.works.results).map(work => <ScholarWorkCard key={work.edition_id} work={work} personId={data.person.id} />)}</div> : <p className={styles.empty}>尚无与这位学者明确关联的公开出版版本。</p>}{pagination("works")}</section> : null}
+     {shown("concepts") ? <section className={styles.conceptsSection} data-module-id="scholar-concepts" data-edit-section="concepts">{heading("concepts", "核心概念")}{data.concepts.results.length ? <KnowledgeRows rows={slice(data.concepts.results)} /> : <p className={styles.empty}>尚未确认相关概念，保留为空。</p>}{pagination("concepts")}</section> : null}
+-    {shown("sources") ? <section className={styles.biographySection} data-module-id="scholar-biography" data-edit-section="biography"><header className={styles.sectionHeading}><h2>人物简介</h2>{overview ? <Link prefetch={false} href={scholarSectionHref(data.slug, "sources")}>资料来源<ArrowRight size={14} /></Link> : null}</header>{data.person.biography ? <div className={styles.biography}><IssueProse block={scholarProseBlock(data.person.biography,data.profile_prose?.biography)}/></div> : <p className={styles.empty}>人物生平资料仍待补充，可从已收录作品与正式来源继续了解。</p>}{data.affiliations.length ? <div><h3>机构与经历</h3><ul>{data.affiliations.map(value => <li key={value}>{value}</li>)}</ul></div> : null}<div className={styles.sources} data-module-id="scholar-sources" data-edit-section="sources"><h3>资料来源 · {data.sources.count}</h3>{data.sources.results.length ? slice(data.sources.results, 3).map(source => <article key={source.id}>{source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}<ExternalLink size={13} /></a> : <strong>{source.title}</strong>}{source.note ? <p>{source.note}</p> : null}</article>) : <p className={styles.muted}>尚未填写可公开的资料出处。</p>}</div>{pagination("sources")}</section> : null}
++    {shown("sources") ? <section className={styles.biographySection} data-module-id="scholar-biography" data-edit-section="biography"><header className={styles.sectionHeading}><h2>人物简介</h2>{overview ? <Link prefetch={false} href={scholarSectionHref(data.slug, "sources")}>查看人物简介<ArrowRight size={14} /></Link> : null}</header>{data.person.biography ? <div className={styles.biography}><IssueProse block={scholarProseBlock(data.person.biography,data.profile_prose?.biography)}/></div> : <p className={styles.empty}>人物简介待补充。</p>}{data.affiliations.length ? <div><h3>机构与经历</h3><ul>{data.affiliations.map(value => <li key={value}>{value}</li>)}</ul></div> : null}</section> : null}
+     {shown("timeline") ? <section className={styles.timelineSection} data-module-id="scholar-timeline" data-edit-section="timeline">{heading("timeline", "生平与时间线")}<Link prefetch={false} className={styles.inlineLink} href={`/theories/timeline?author=${encodeURIComponent(data.id)}`}>打开完整时间线<ArrowRight size={14} /></Link>{data.timeline.results.length ? <ol className={styles.timeline}>{slice(data.timeline.results, 6).map(event => <li key={event.id}><time>{timelineDate(event)}</time><div><Link prefetch={false} href={`/theories/events/${event.id}`}>{event.title}</Link><small>{timelineTypeLabels[event.event_type] || "学术事件"}</small>{!overview && event.description ? <p>{event.description}</p> : null}{event.evidence_source?.reader_href ? <CollectionLink prefetch={false} href={event.evidence_source.reader_href}>核对事件原文<ExternalLink size={12} /></CollectionLink> : null}</div></li>)}</ol> : <p className={styles.empty}>暂无已确认的生平事件。</p>}{pagination("timeline")}</section> : null}
+-    {shown("paths") && data.recommended_works?.length ? <section className={styles.worksSection} data-edit-section="paths"><header className={styles.sectionHeading}><h2>推荐阅读<small>{data.recommended_works.length}</small></h2></header><p className={styles.muted}>由本页编者选入，作品的作者与贡献职责以馆藏记录为准。</p><div className={styles.workGrid}>{slice(data.recommended_works).map(work => <ScholarWorkCard key={work.edition_id} work={work} personId={data.person.id} />)}</div>{overview && data.recommended_works.length > 4 ? <Link href={scholarSectionHref(data.slug, "paths")}>查看全部推荐阅读</Link> : null}</section> : null}
++    {shown("paths") && data.recommended_works?.length ? <section className={styles.worksSection} data-edit-section="paths"><header className={styles.sectionHeading}><h2>推荐阅读<small>{data.recommended_works.length}</small></h2></header><div className={styles.workGrid}>{slice(data.recommended_works).map(work => <ScholarWorkCard key={work.edition_id} work={work} personId={data.person.id} />)}</div>{overview && data.recommended_works.length > 4 ? <Link href={scholarSectionHref(data.slug, "paths")}>查看全部推荐阅读</Link> : null}</section> : null}
+     {shown("questions") ? <section className={styles.questionsSection} data-module-id="scholar-questions" data-edit-section="questions">{heading("questions", "理论问题")}{data.questions.results.length ? <KnowledgeRows rows={slice(data.questions.results)} /> : <p className={styles.empty}>尚无明确关联并公开的理论问题。</p>}{pagination("questions")}</section> : null}
+     {shown("relations") ? <section className={styles.relationsSection} data-module-id="scholar-network" data-edit-section="network">{heading("relations", "相关争论与学者")}{data.graph_href ? <Link prefetch={false} className={styles.inlineLink} href={data.graph_href}>查看学术关系图<ArrowRight size={14} /></Link> : null}{data.relations.results.length ? <ScholarRelations rows={slice(data.relations.results)} selectedId={typeof params.relation === "string" ? params.relation : ""} /> : <p className={styles.empty}>当前范围尚无已确认并公开的学术关系。</p>}{pagination("relations")}</section> : null}
+     {shown("evidence") ? <section className={styles.evidenceSection} data-module-id="scholar-curated-claims" data-edit-section="passages">{heading("evidence", "代表原文")}{data.evidence.results.length ? <EvidenceCurationView items={slice(data.evidence.results, 2)} preview={preview} /> : <p className={styles.empty}>尚无已策展且当前可公开核对的原文。</p>}{pagination("evidence")}</section> : null}
+@@ -50,4 +50,4 @@
+     {shown("paths") ? <section className={styles.pathsSection} data-module-id="scholar-reading-paths" data-edit-section="paths">{heading("paths", "阅读路径")}{data.paths.results.length ? <ol className={styles.pathRows}>{slice(data.paths.results, 3).map(path => <li key={path.id}><Link prefetch={false} href={`/theories/reading-paths/${encodeURIComponent(path.slug)}`}><div><strong>{path.title}</strong><p>{path.introduction}</p><small>{path.counts.stages} 个阶段 · {path.counts.items} 项材料{path.estimated_reading ? ` · ${path.estimated_reading}` : ""}</small></div><ArrowRight size={16} /></Link></li>)}</ol> : <p className={styles.empty}>尚无包含此学者明确关联材料的公开阅读路径。</p>}{pagination("paths")}</section> : null}
+   </div>;
+ }
+-function scholarSectionsLabel(section: string) { return ({ works: "学者作品", concepts: "学者概念", questions: "学者问题", timeline: "学者事件", relations: "学术关系", topics: "关联主题", paths: "阅读路径", sources: "人物资料来源", evidence: "学者原文" } as Record<string, string>)[section] || "学者栏目"; }
++function scholarSectionsLabel(section: string) { return ({ works: "学者作品", concepts: "学者概念", questions: "学者问题", timeline: "学者事件", relations: "学术关系", topics: "关联主题", paths: "阅读路径", sources: "人物简介", evidence: "学者原文" } as Record<string, string>)[section] || "学者栏目"; }
+--- a/web/lib/api/scholars.params.ts
++++ b/web/lib/api/scholars.params.ts
+@@ -4,7 +4,7 @@
+   { id: "overview", label: "概览", editor: "identity" }, { id: "works", label: "主要作品", editor: "works" },
+   { id: "concepts", label: "核心概念", editor: "concepts" }, { id: "questions", label: "理论问题", editor: "questions" },
+   { id: "timeline", label: "生平与时间线", editor: "timeline" }, { id: "relations", label: "相关争论与学者", editor: "network" },
+-  { id: "paths", label: "专题与阅读路径", editor: "paths" }, { id: "sources", label: "人物资料来源", editor: "sources" },
++  { id: "paths", label: "专题与阅读路径", editor: "paths" }, { id: "sources", label: "人物简介", editor: "sources" },
+   { id: "evidence", label: "代表原文", editor: "passages" },
+ ];
+ const aliases: Record<string, ScholarSection> = { network: "relations", biography: "sources", theories: "concepts", "concept-map": "concepts", "frequently-read": "relations", passages: "evidence", reading: "paths", "reading-paths": "paths", identity: "overview" };
+--- a/web/components/public/scholar-section-public-view.tsx
++++ b/web/components/public/scholar-section-public-view.tsx
+@@ -3,7 +3,7 @@
+ import { ScholarPublicView } from "./scholar-public-view";
+ 
+ export const scholarSectionTitles: Record<string, string> = {
+-  overview: "学者概览", biography: "人物资料来源", sources: "人物资料来源", evidence: "代表原文", passages: "代表原文",
++  overview: "学者概览", biography: "人物简介", sources: "人物简介", evidence: "代表原文", passages: "代表原文",
+   timeline: "生平与时间线", works: "主要作品与版本", concepts: "核心概念", questions: "理论问题", "concept-map": "概念与图谱",
+   network: "相关争论与学者", relations: "相关争论与学者", theories: "相关理论", "frequently-read": "相关学者",
+   topics: "专题策划", paths: "阅读路径", "reading-paths": "阅读路径",
+--- a/web/components/public/theory-detail-interactions.tsx
++++ b/web/components/public/theory-detail-interactions.tsx
+@@ -145,8 +145,7 @@
+         <div className={mode === "evidence" ? styles.fullWidth : styles.relationList}>
+           {mode !== "evidence" ? <div className={styles.relationChoices}>{rows.map(row => <button key={row.id} type="button" aria-pressed={row.id === selected?.id} onClick={() => setSelectedId(row.id)}><span>{target(row).name}</span><small>{row.relation_label}</small><ChevronDown size={14} /></button>)}</div> : <label className={styles.relationSelect}>选择关系<select data-stl-select value={selected?.id || ""} onChange={event => setSelectedId(event.target.value)}>{rows.map(row => <option key={row.id} value={row.id}>{target(row).name} · {row.relation_label}</option>)}</select></label>}
+           {selected ? <article className={styles.relationEvidence} aria-live="polite"><header><h3>{selected.source_name} {selected.direction === "undirected" ? "—" : selected.direction === "bidirectional" ? "↔" : "→"} {selected.target_name}</h3><span>{selected.relation_label}</span></header>{selected.description ? <p>{selected.description}</p> : null}
+-            <RelationSourceQuote material={selected.source_material}/>{(selected.evidence || []).length ? selected.evidence!.map(evidence => <div key={evidence.id}><blockquote>{evidence.quote}</blockquote><p>《{evidence.work_title}》 · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">核对这条关系的原文<ExternalLink size={14} /></Link> : null}</div>) : selected.source_material?.available && selected.source_material.public_eligible && selected.source_material.reader_href ? null : <p className={styles.notice}>这条关系尚无可公开定位的原文依据。关系说明与馆藏原文分开展示。</p>}
+-            {selected.evidence_source ? <p className={styles.notice}>关系来源说明：{selected.evidence_source}</p> : null}
++            <RelationSourceQuote material={selected.source_material}/>{(selected.evidence || []).length ? selected.evidence!.map(evidence => <div key={evidence.id}><blockquote>{evidence.quote}</blockquote><p>《{evidence.work_title}》 · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">核对这条关系的原文<ExternalLink size={14} /></Link> : null}</div>) : null}
+             <Link href={`/theories/nodes/${target(selected).slug}`}>查看{target(selected).name}<ArrowRight size={14} /></Link>
+           </article> : null}
+         </div>
+--- a/web/components/public/graph-inspector.tsx
++++ b/web/components/public/graph-inspector.tsx
+@@ -22,9 +22,8 @@
+       <dl className={styles.facts}><dt>关系类型</dt><dd>{edge.relation_label}</dd><dt>方向</dt><dd>{edge.direction === "undirected" ? "无方向关系" : edge.direction === "bidirectional" ? "双向关系" : `${source?.name} → ${target?.name}`}</dd><dt>确认状态</dt><dd>{edge.status === "published" ? "已发布" : "待审核的候选关系"}</dd></dl>
+       {edge.status !== "published" ? <p className={styles.candidateNotice}>此关系尚未公开，不能作为已确认的学术关系使用。{graph.candidate_access.review_href ? <Link href={graph.candidate_access.review_href}>进入后台核对依据</Link> : null}</p> : null}
+       <h3>概要说明</h3><p>{edge.description || "这条关系尚未提供公开说明。"}</p>
+-      <h3>证据与来源</h3>
+-      {edge.evidence_source ? <p>{edge.evidence_source}</p> : null}
+-      {edge.evidence.length ? <ul className={styles.evidenceList}>{edge.evidence.map(item => <li key={item.id}><strong>{item.title}</strong>{item.edition_label ? <small>{item.edition_label}</small> : null}<blockquote>{item.quote}</blockquote><small>{item.printed_page_label ? `印刷页 ${item.printed_page_label} · ` : ""}PDF 第 {item.pdf_page} 页</small><CollectionLink href={item.reader_href}>查看原文<ArrowRight size={13} /></CollectionLink></li>)}</ul> : <p className={styles.muted}>{edge.source_status === "citation_only" ? "仅有来源说明，尚无可定位的原文依据。" : "尚无可公开核对的关系原文。"}</p>}
++      {edge.evidence.length ? <h3>相关原文</h3> : null}
++      {edge.evidence.length ? <ul className={styles.evidenceList}>{edge.evidence.map(item => <li key={item.id}><strong>{item.title}</strong>{item.edition_label ? <small>{item.edition_label}</small> : null}<blockquote>{item.quote}</blockquote><small>{item.printed_page_label ? `印刷页 ${item.printed_page_label} · ` : ""}PDF 第 {item.pdf_page} 页</small><CollectionLink href={item.reader_href}>查看原文<ArrowRight size={13} /></CollectionLink></li>)}</ul> : null}
+       {edge.evidence_truncated ? <p className={styles.muted}>当前展示前 {edge.evidence.length} 条原文依据。</p> : null}
+       <div className={styles.detailActions}>{source ? <button type="button" onClick={() => onNode(source)}>查看{source.name}</button> : null}{target ? <button type="button" onClick={() => onNode(target)}>查看{target.name}</button> : null}</div>
+     </> : node ? <>
+--- a/web/components/public/timeline-event-details.tsx
++++ b/web/components/public/timeline-event-details.tsx
+@@ -65,7 +65,6 @@
+           <dt>时间</dt><dd>{timelineDate(event)}<small>{precisionLabels[event.date_precision]}{event.start_year !== null && event.end_year !== null && event.start_year !== event.end_year ? ` · ${event.start_year}—${event.end_year} 年` : ""}</small></dd>
+           <dt>类型</dt><dd>{timelineTypeLabels[event.event_type] || event.event_type}</dd>
+           <dt>事件版本</dt><dd>{subject ? `${subject.title}${subject.version_label ? ` · ${subject.version_label}` : ""}` : subjectMessage}</dd>
+-          <dt>来源状态</dt><dd>{sourceLabels[event.source_status]}</dd>
+         </dl>
+         <h3>事件介绍</h3>
+         {event.description ? <div className={styles.description}><p>{event.description}</p></div> : <p className={styles.muted}>尚无公开的事件介绍。</p>}
+@@ -74,7 +73,6 @@
+           {event.scholars.length ? <><h3>相关学者</h3><div className={styles.people}>{event.scholars.map(person => <Link href={person.href} key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.personFallback}/>} ><img src={person.portrait_url} alt="" /></MediaPlacement> : <ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.personFallback}/>}<span>{person.name}</span></Link>)}</div></> : null}
+           {event.topics.length ? <><h3>相关主题</h3><div className={styles.chips}>{event.topics.map(topic => <Link href={topic.href} key={topic.id}>{topic.name}</Link>)}</div></> : null}
+           {event.relations.length ? <><h3>涉及对象</h3><ul className={styles.objectList}>{event.relations.map((row, rowIndex) => <li key={`${row.type}-${row.id}-${rowIndex}`}>{row.href ? <Link href={row.href}>{row.name}<ArrowRight size={12} aria-hidden="true" /></Link> : <span>{row.name}</span>}{row.description ? <p>{row.description}</p> : null}</li>)}</ul></> : <p className={styles.muted}>没有可公开的关联对象。</p>}
+-          {event.source ? <><h3>来源说明</h3><p>{event.source}</p></> : null}
+         </section>
+         {!standalone ? <Link className={styles.textLink} href={`/theories/events/${event.id}`}>查看事件完整页面<ArrowRight size={13} aria-hidden="true" /></Link> : null}
+       </> : index === 1 ? <>
+@@ -84,13 +82,11 @@
+         {event.related_count > event.related_events.length ? <Link className={styles.textLink} href={timelineHref("/theories/timeline", {}, { related_to: event.id })}>查看全部 {event.related_count} 个相关事件<ArrowRight size={13} aria-hidden="true" /></Link> : null}
+       </> : index === 2 ? <>
+         <h3>已确认的引用与影响关系</h3>
+-        <p className={styles.muted}>仅列出本事件明确关联的理论对象之间已发布的关系；关系依据与事件出处分别核验。</p>
+         {event.knowledge_relations.length ? <>
+           <p className={styles.rangeNote}>展示 {event.knowledge_relations.length} / {event.knowledge_relation_count} 条正式关系</p>
+           <ul className={styles.influences}>{event.knowledge_relations.map(relation => <li key={relation.id}>
+             <div><Link href={`/theories/nodes/${relation.source_slug}`}>{relation.source_name}</Link><span>{relation.direction === "undirected" ? "—" : "→"} {relation.relation_label} {relation.direction === "undirected" ? "—" : "→"}</span><Link href={`/theories/nodes/${relation.target_slug}`}>{relation.target_name}</Link></div>
+             {relation.description ? <p>{relation.description}</p> : null}
+-            {relation.evidence_source ? <p className={styles.muted}>{relation.evidence_source}</p> : null}
+             {relation.evidence?.length ? relation.evidence.map(evidence => <blockquote key={evidence.id}><p>{evidence.quote}</p>{evidence.reader_href ? <CollectionLink href={evidence.reader_href}>{evidence.work_title} · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</CollectionLink> : <span>关系原文当前不可用</span>}</blockquote>) : <p className={styles.muted}>这条关系尚无可阅读的原文片段。</p>}
+             <Link className={styles.textLink} href={`/theories/nodes/${relation.source_slug}/relations`}>查看该理论对象的关系</Link>
+           </li>)}</ul>
+@@ -105,7 +101,6 @@
+           <CollectionLink className={styles.sourceButton} href={source.reader_href}>打开来源原文<BookOpen size={15} aria-hidden="true" /></CollectionLink>
+           <div className={styles.downloadActions} role="group" aria-label="证据版本下载"><AssetDownloadButton assetId={source.asset_id} /></div>
+         </> : <p className={styles.emptySmall}>{sourceLabels[event.source_status]}。</p>}
+-        {event.source ? <p className={styles.muted}>来源说明：{event.source}</p> : null}
+         <Link className={styles.textLink} href={feedbackHref}>{source ? "反馈来源问题" : "提交来源线索"}<ArrowRight size={13} aria-hidden="true" /></Link>
+       </>}
+     </div>)}
+--- a/web/components/public/theory-timeline-public-view.tsx
++++ b/web/components/public/theory-timeline-public-view.tsx
+@@ -42,7 +42,7 @@
+           <time>{timelineDate(event)}</time>
+           <span className="event-icon">{hasWork ? <BookOpen size={21} /> : <CalendarDays size={21} />}</span>
+           <div className="event-main"><small>{timelineDate(event)}</small><h2>{detailLinks ? <Link href={`/theories/events/${event.id}`}>{event.title}</Link> : event.title}</h2><p>{event.description}</p></div>
+-          <dl>{event.event_type ? <><dt>事件类型</dt><dd>{theoryTimelineEventTypeLabels[event.event_type] || event.event_type}</dd></> : null}{nodeNames.length ? <><dt>相关理论</dt><dd>{nodeNames.join("、")}</dd></> : null}{event.source ? <><dt>信息来源</dt><dd>{event.source}</dd></> : null}</dl>
++          <dl>{event.event_type ? <><dt>事件类型</dt><dd>{theoryTimelineEventTypeLabels[event.event_type] || event.event_type}</dd></> : null}{nodeNames.length ? <><dt>相关理论</dt><dd>{nodeNames.join("、")}</dd></> : null}</dl>
+           {event.reader_href ? <CollectionLink href={event.reader_href}>查看馆藏证据<ExternalLink size={15} /></CollectionLink> : null}
+         </article>;
+       }) : <TheoryEmpty title="没有符合条件的公开事件" detail="调整筛选条件，或等待管理员审核并发布新的时间轴事件。" />}
+--- a/web/components/public/subdiscipline-public-view.tsx
++++ b/web/components/public/subdiscipline-public-view.tsx
+@@ -75,7 +75,7 @@
+               <MediaPlacement uses={theory.cover_media?.display_uses} fallback={<span className={styles.relatedPhoto}/>}><span className={styles.relatedPhoto} style={{ backgroundImage: `url("${theory.cover_url || `${photos}/${relatedPhotos[index % relatedPhotos.length]}`}")` }} aria-hidden="true" /></MediaPlacement>
+               <div><h3>{theory.href ? <Link href={theory.href}>{theory.name}<ArrowRight size={16} aria-hidden="true" /></Link> : theory.name}</h3><p>{theory.summary || theory.role || "介绍尚未发布"}</p></div>
+             </div>
+-            {theory.legacy_identities?.length ? <section data-content-section className={styles.relationSource}><header data-section-heading>查看关联记录</header><ul>{theory.legacy_identities.map(legacy => <li key={legacy.id}>{legacy.name}{legacy.role ? ` · ${legacy.role}` : ""}{legacy.source ? <p>{legacy.source}</p> : null}</li>)}</ul></section> : null}
++            {theory.legacy_identities?.length ? <section data-content-section className={styles.relationSource}><header data-section-heading>查看关联记录</header><ul>{theory.legacy_identities.map(legacy => <li key={legacy.id}>{legacy.name}{legacy.role ? ` · ${legacy.role}` : ""}</li>)}</ul></section> : null}
+           </article>)}</div> : <p className={styles.empty}>尚无已确认并公开的相关理论。</p>}
+         </section>
+         <section className={styles.section} id="scholars" aria-labelledby="subdiscipline-scholars-title" data-edit-section="scholars">
+@@ -84,9 +84,6 @@
+             {person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.portraitPlaceholder}/>}><img src={person.portrait_url} alt={person.name} loading="lazy" /></MediaPlacement> : <ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.portraitPlaceholder}/>}
+             <div><h3>{person.href ? <Link href={person.href}>{person.name}</Link> : person.name}</h3>
+               {person.reason || person.relation_label || person.summary ? <p>{person.reason || person.relation_label || person.summary}</p> : null}
+-              {person.source_href ? <Link className={styles.sourceLink} href={person.source_href} target="_blank" rel="noopener noreferrer">查看来源<ArrowRight size={14} aria-hidden="true" /></Link>
+-                : <span className={styles.unavailable}>原文来源未提供</span>}
+-              {person.source_label ? <section data-content-section className={styles.relationSource}><header data-section-heading>关联说明</header><p>{person.source_label}</p></section> : null}
+             </div>
+           </article>)}</div> : <p className={styles.empty}>尚无已确认并公开的代表性学者。</p>}
+         </section>
+@@ -101,7 +98,7 @@
+               <div><h3>{work.detail_href ? <Link href={work.detail_href}>{work.title}</Link> : work.title}</h3><small>{[work.author, work.year, work.publisher].filter(value => value !== "" && value !== null).join(" · ") || "出版信息未提供"}</small>
+                 {work.relation_label ? <p>{work.relation_label}</p> : null}
+                 <div className={styles.workActions}>{work.detail_href ? <Link className={styles.primary} href={work.detail_href}>查看版本</Link> : null}{work.reader_href ? <Link href={work.reader_href} target="_blank" rel="noopener noreferrer">阅读原文</Link> : <span className={styles.unavailable}>这一版本暂无可读原文</span>}</div>
+-                {work.evidence ? <section data-content-section className={styles.relationSource}><header data-section-heading>查看关联依据</header><SourceExcerpt source={work.evidence} /></section> : work.source ? <section data-content-section className={styles.relationSource}><header data-section-heading>关联说明</header><p>{work.source}</p></section> : null}
++                {work.evidence ? <section data-content-section className={styles.relationSource}><header data-section-heading>查看关联依据</header><SourceExcerpt source={work.evidence} /></section> : null}
+               </div>
+             </article>)}</div> : worksPage?.count ? <div className={styles.empty}><p>当前页没有可展示的文献，公开状态可能已变化。</p><a href={worksHref(worksPage.page)}>重新载入本页文献</a></div> : <p className={styles.empty}>尚无与本子学科建立公开关联的核心文献。</p>}
+             {worksPage && worksPage.total_pages > 1 ? <nav className={styles.pagination} aria-label="核心文献分页">
+@@ -124,7 +121,6 @@
+             : <p className={styles.empty}>尚无包含本子学科已确认条目的公开阅读路径。</p>}
+         </section>
+         {sources.length ? <section data-content-section className={styles.sources} id="sources"><header data-section-heading>本页原文依据（{sources.length}）</header>
+-          <p>包含当前页文献的关联依据与本子学科已公开编排的原文依据。每条来源保留自己的版本与页码。</p>
+           {sources.map(source => <SourceExcerpt key={`${source.source_kind}-${source.id}`} source={source} />)}</section> : null}
+         {item.children?.length || item.discipline || item.parent ? <nav className={styles.hierarchy} aria-label="继续浏览相关学科">
+           {item.discipline ? <Link href={`/theories/disciplines/${encodeURIComponent(item.discipline.slug)}`}>所属学科 · {item.discipline.name}</Link> : null}
+--- a/api/catalog/services/public_topics.py
++++ b/api/catalog/services/public_topics.py
+@@ -428,7 +428,7 @@
+     if legacy_id and not any(row["source_type"] == "passage" and row["source_id"] == legacy_id for row in items):
+         items.append({"id": legacy_id, "source_type": "passage", "source_id": legacy_id, "group_title": "既有主题原文", "reason": "旧编排保留的准确段落身份。", "order": len(items)})
+     current = {kind: {str(row.pk): row for row in sources(kind, public=True, authenticated=authenticated).filter(pk__in=[item["source_id"] for item in items if item["source_type"] == kind]).filter(
+-        current_retrieval_source_q(asset_prefix="page__asset", access_statuses=viewer_access_statuses(authenticated=authenticated)))}
++        current_retrieval_source_q(asset_prefix="page__asset", access_statuses=viewer_access_statuses(authenticated=authenticated), require_fulltext=False))}
+         for kind in ("span", "passage")}
+     output = []
+     for item in items:
+--- a/web/components/public/topic-content.tsx
++++ b/web/components/public/topic-content.tsx
+@@ -24,12 +24,12 @@
+     </div>
+   </article>;
+ }
+-function CurationNote({ text }: { text?: string }) { return text ? <p className={styles.curationNote}><span>编选说明</span>{text}</p> : null; }
++function CurationNote({ text }: { text?: string }) { return text ? <p className={styles.curationNote}>{text}</p> : null; }
+ function Questions({ rows, start = 0 }: { rows: TopicKnowledge[]; start?: number }) { return <div className={styles.questionRows}>{rows.map((row, index) => <article key={row.id} data-question-id={row.id}><Link prefetch={false} href={row.href} className={styles.questionRow}><span className={styles.questionNumber}>{String(start + index + 1).padStart(2, "0")}</span><div><strong>{row.name}</strong><small>{row.discussion_count} 条讨论材料 · {row.work_count} 部相关作品</small></div><ArrowRight size={14} /></Link><section data-content-section><header data-section-heading>展开问题说明</header>{row.summary ? <p>{row.summary}</p> : <p>问题说明仍待补充，可进入条目查看已确认材料。</p>}<CurationNote text={row.curation_note} />{row.relation_label ? <p>{row.relation_label}</p> : null}{row.count_notice ? <p className={styles.muted}>{row.count_notice}</p> : null}<Link prefetch={false} href={row.href}>进入{row.node_type === "debate" ? "争论" : "问题"}<ArrowRight size={13} /></Link></section></article>)}</div>; }
+ function UnavailableRows({ data, kind }: { data: PublicTopicDetail; kind: string }) { const rows = data.unavailable_links.filter(row => row.kind === kind); return rows.length ? <div className={styles.listRows}>{rows.map(row => <article key={`${row.kind}:${row.id}`} data-unavailable-id={row.id}><strong>原关联内容当前不可用</strong><section data-content-section><header data-section-heading>查看说明</header><p>{row.notice}</p><Link href={data.feedback_href}>反馈来源问题<ArrowRight size={12} /></Link></section></article>)}</div> : null; }
+ function EvidenceCard({ item, data, preview, returnTo }: { item: EvidenceCurationItem; data: PublicTopicDetail; preview: boolean; returnTo: string }) {
+   const source = item.source, reference = { asset_id: source.asset_id, document_revision_id: source.document_revision_id || undefined, pdf_page: source.page_start || undefined, ...(item.source_type === "span" ? { evidence_span_id: item.source_id } : {}) };
+-  return <article className={styles.evidenceCard} id={`curated-${item.id || item.source_id}`}><blockquote>{source.text}</blockquote><cite>《{source.work_title}》{source.edition_label ? ` · ${source.edition_label}` : ""}<br />{source.printed_label ? `印刷页 ${source.printed_label} · ` : ""}{source.page_start ? `PDF 第 ${source.page_start}${source.page_end && source.page_end !== source.page_start ? `–${source.page_end}` : ""} 页` : "准确页码待核对"}</cite>{item.reason ? <p className={styles.muted}>策展说明：{item.reason}</p> : null}<div className={styles.evidenceActions}><div>{preview ? <><button disabled className={styles.outlineButton}>加入书架</button><button disabled className={styles.outlineButton}>引用</button></> : <><SaveWorkButton workId={source.work_id} compact /><SharedCitationButton editionId={source.edition_id} reference={reference} selectedText={source.text} className={styles.outlineButton}>引用</SharedCitationButton></>}</div><div><Link className={styles.outlineButton} href={data.research_href}>在主题中提问<ArrowRight size={13} /></Link>{source.reader_url ? <CollectionLink prefetch={false} className={styles.outlineButton} href={readingHref(source.reader_url, returnTo)}>查看完整文献<ArrowRight size={13} /></CollectionLink> : null}</div></div></article>;
++  return <article className={styles.evidenceCard} id={`curated-${item.id || item.source_id}`}><blockquote>{source.text}</blockquote><cite>《{source.work_title}》{source.edition_label ? ` · ${source.edition_label}` : ""}<br />{source.printed_label ? `印刷页 ${source.printed_label} · ` : ""}{source.page_start ? `PDF 第 ${source.page_start}${source.page_end && source.page_end !== source.page_start ? `–${source.page_end}` : ""} 页` : "准确页码待核对"}</cite>{item.reason ? <p className={styles.muted}>{item.reason}</p> : null}<div className={styles.evidenceActions}><div>{preview ? <><button disabled className={styles.outlineButton}>加入书架</button><button disabled className={styles.outlineButton}>引用</button></> : <><SaveWorkButton workId={source.work_id} compact /><SharedCitationButton editionId={source.edition_id} reference={reference} selectedText={source.text} className={styles.outlineButton}>引用</SharedCitationButton></>}</div><div><Link className={styles.outlineButton} href={data.research_href}>在主题中提问<ArrowRight size={13} /></Link>{source.reader_url ? <CollectionLink prefetch={false} className={styles.outlineButton} href={readingHref(source.reader_url, returnTo)}>查看完整文献<ArrowRight size={13} /></CollectionLink> : null}</div></div></article>;
+ }
+ export function TopicContent({ data, section, params = {}, preview = false }: { data: PublicTopicDetail; section: TopicViewSection; params?: TopicSearchParams; preview?: boolean }) {
+   const overview = section === "overview", shown = (name: TopicSection) => overview || section === name;
