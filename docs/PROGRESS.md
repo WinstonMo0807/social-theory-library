@@ -1,3 +1,7 @@
+## 2026-11-12 MCP试用授权扩大至57部作品
+
+用户在本对话要求开放授权，策展对话《读取书库首期60本PDF》另已明确获准57部作品草稿维护并完成NAS范围更新。本对话只复核实际57项清单相等，不重复改NAS/重启服务；已备份并同步本机备用stdio和构建配置。公网三批逐项核对57/57准确ID的write_allowed=true，清单外prepare拒绝且无plan_id；未保存业务内容。令牌、人工锁、版本、机器草稿和原管理端发布边界保持。核验报告在.local/stl-mcp/public-build/authorization-57-*.json，当前范围替代下方三书历史限制。详docs/stl4/PUBLIC_MCP_SECURITY_20261112.md。
+
 ## 2026-11-12 公网 MCP 与安全修复
 
 D：用户授权的单用户HTTPS MCP已上线，本机stl改HTTP、原stdio备用；三计划六回执迁移后公网查回。修复已重现的嵌套字段锁/版本、集合保留、旧学者关系范围和受限原文回显问题；37项定向检查、两种真实HTTP/stdio协议及公网三书批量读/查重/取证通过。无令牌/错误令牌401，错误Origin403，越权作品/发布prepare拒绝，未新增业务写入。仅新增隔离网关和MCP代理规则，原21服务保持，无DNS/Tunnel/库表/OCR变更。基于main的MCP独立分支交付，不混入其他工作区；详情stl4/PUBLIC_MCP_SECURITY_20261112.md。

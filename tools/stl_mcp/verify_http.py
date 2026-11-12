@@ -41,7 +41,7 @@ async def main(url, output, token_stdin=False):
                 data = result.structured_content
                 assert not result.is_error and data and data["ok"], data
                 assert all(row["results"] for row in data["queries"])
-                result = await client.call_tool("stl_get_curation_context", {"targets": [{"type": "work", "id": key} for key in config["allowed_work_ids"]]})
+                result = await client.call_tool("stl_get_curation_context", {"targets": [{"type": "work", "id": key} for key in config["allowed_work_ids"][:3]]})
                 assert not result.is_error and result.structured_content["ok"], result.structured_content
                 results.append({"mode": mode, "tool_count": len(names), "books": 3, "context_ok": True})
     report = {"url": url, "authentication_checks": 3, "protocols": results,
