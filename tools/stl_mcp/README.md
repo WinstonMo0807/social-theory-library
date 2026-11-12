@@ -1,6 +1,6 @@
 # STL 策展 MCP
 
-智能体可以是上传者及馆藏更新者。当前七工具负责已入库对象的策展，直接文件上传MCP尚未实现；后续须复用既有分片/版本工作区，由客户端传输文件、MCP协调计划与状态。已确定的完整入库和更新要求见 [智能体入库接入要求](../../docs/stl4/MCP_AGENT_INTAKE_REQUIREMENTS_20261112.md)，不能把动态馆藏授权等同于文件上传已接通。
+智能体上传已接入：新增`stl_prepare_uploads`和`stl_get_ingestion_status`，共九个工具。文件字节由`upload_client.py`直接传至受保护的上传通道，批次、分片、权限、文件规则、查重和处理策略完全复用网站原接口。MCP不再做本轮拟加的文件哈希预检、格式/大小/数量判断或客户端去重。按用户要求本轮不运行额外测试或文件试传。见 [上传交付](../../docs/stl4/MCP_UPLOAD_DELIVERY_20261112.md)。
 
 最新授权：本人使用的网关已配置`work_scope = "catalog"`，草稿权限覆盖现有及以后入库的Work，不再逐书更新清单。每次操作仍在原库确认作品存在、账户能力、关联目标、人工锁与版本，不能发布或访问私人笔记；获得权限不等于自动启动策展或OCR。保留`selected`模式用于明确的有限试用，未配置时默认`selected`，未知模式拒绝初始化业务适配；`allowed_work_ids`在catalog模式下只保留为回退清单和抽样依据，不限制新书。范围配置只由受信运维修改，不是MCP工具参数。
 
@@ -10,7 +10,7 @@
 
 不监听 HTTP，不创建公网 `/mcp`，不修改 Nginx、Docker 运行配置、数据库 schema 或生产源码，不重启服务。不加载 OCR/大模型，不启动索引。SSH 提供认证和传输加密，`StrictHostKeyChecking=yes`；此方式使用原有运维通道，未来面向多用户才考虑独立作用域令牌/HTTP。
 
-远端只接受8种固定动作，工具不能传 SQL、Python、shell、URL、actor、权限、发布/删除/合并/恢复/人工锁命令。账户、token_version 和能力每次重查，写入作品清单由本机可信配置限定，跨对象编辑须属于该作品的已有或待发布关联。SSH 端本身仍是高权限运维凭据，必须只由可信本机启动器持有；这不是对不可信本机用户的隔离沙箱。
+远端只接受固定动作，工具不能传 SQL、Python、shell、URL、actor、权限、发布/删除/合并/恢复/人工锁命令。账户、token_version 和能力每次重查，写入作品清单由本机可信配置限定，跨对象编辑须属于该作品的已有或待发布关联。SSH 端本身仍是高权限运维凭据，必须只由可信本机启动器持有；这不是对不可信本机用户的隔离沙箱。
 
 ## 安装与注册
 
@@ -73,8 +73,18 @@ sudo -n python3 /volume2/library/stl-releases/RELEASE/deploy.py stage /volume2/l
 sudo -n python3 /volume2/library/stl-releases/RELEASE/deploy.py expose /volume2/library/stl-releases/RELEASE
 ```
 
-脚本核对原镜像和文件哈希，保存现有容器身份及Nginx原模板/编译配置，复用已有API镜像新增`stl-mcp`，无宿主机端口。它只挂载两个只读馆藏目录、只读配置/代码和独立计划目录，无Docker socket、模型、备份或私人文件挂载。API环境中的数据库等凭据只在NAS本地转入受限env文件，不输出、不上传本机。服务限制384MiB/0.5CPU，根文件系统只读、移除capabilities、禁止提权。
+脚本核对原镜像和文件哈希，保存现有容器身份及Nginx原模板/编译配置，复用已有API镜像新增`stl-mcp`，无宿主机端口。它只挂载两个只读馆藏目录、只读配置/代码和独立计划目录，无Docker socket、模型、备份或私人文件挂载。API环境中的数据库等凭据只在NAS本地转入受限env文件，不输出、不上传本机。服务限制512MiB/0.5CPU，根文件系统只读、移除capabilities、禁止提权。
 
 `expose`只在原模板增加两个limit zone及`/mcp`两条location，保留绑定文件inode，经`nginx -t`后reload；不重启现有服务，不改DNS、Tunnel、数据库或索引。回退同脚本的`rollback`动作，只在当前模板哈希仍等于本次候选时恢复，避免覆盖后续变更。关闭令牌可先移走认证文件，使新请求返回503，再撤回代理；保留journal与原业务回执。
 
 `verify_http.py`检查匿名/错误令牌、错误来源，两种协议、工具清单和三书上下文，默认从DPAPI取令牌，仅只读。脚本需本次本机三书配置。已迁移的旧计划仍使用相同ID和digest；NAS journal与原本机journal各保留，迁移不执行业务保存。新计划在当前MCP服务的journal中持久化，跨服务端点切换时必须明确迁移，不能盲目重建。
+
+## 上传文件
+
+```powershell
+& 'F:/agent skills/书库开发3/.local/stl-mcp/venv/Scripts/python.exe' -X utf8 'F:/agent skills/书库开发3/tools/stl_mcp/upload_client.py' 'F:/待上传/文献.pdf'
+```
+
+上述文件为使用示例。可传多个文件，规则及处理策略由网站决定；`--access`、`--ocr`、`--duplicates`仅透传网站策略，不填时使用网站默认值。程序立即输出并保存request_id；中断后使用同一辅助程序的`--resume 请求UUID`，从原网站已接收分片继续。凭据由现有DPAPI辅助程序或STL_MCP_TOKEN环境变量提供，不写入命令参数或回执。
+
+也可直接调用`stl_prepare_uploads(request_id, files=[{name,size}], policy={...})`取得批次和上传路径，再交由客户端传输；`stl_get_ingestion_status(request_id)`返回网站状态及已生成的Work/Edition ID，随后使用原策展工具。此通道新增入库文件；已有阅读文件的替换继续走网站版本与文件工作区。

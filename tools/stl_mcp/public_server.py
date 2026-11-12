@@ -10,17 +10,22 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import secrets
 import time
 
 MAX_BODY = 2_000_000
+MAX_UPLOAD_BODY = 8 * 1024 * 1024
+UPLOAD_PATH = re.compile(r"/mcp/uploads/([0-9a-f-]{36})/([0-9a-f-]{36})(?:/([0-9]{1,4}))?")
 
 
 class ProtectedMCP:
-    def __init__(self, app, config_path):
+    def __init__(self, app, config_path, upload_handler=None, upload_max_body=MAX_UPLOAD_BODY):
         self.app = app
         self.config_path = Path(config_path)
         self.capacity = asyncio.Semaphore(2)
+        self.upload_max_body = upload_max_body
+        self.upload_handler = upload_handler
         self.read_config()  # fail before listening if auth has not been configured
 
     def read_config(self):
@@ -36,8 +41,8 @@ class ProtectedMCP:
             raise ValueError("MCP requires explicit hosts and token expiry")
         return config
 
-    async def response(self, send, status, code):
-        body = json.dumps({"error": code}, separators=(",", ":")).encode()
+    async def response(self, send, status, code, data=None):
+        body = json.dumps(data if data is not None else {"error": code}, ensure_ascii=False, separators=(",", ":")).encode()
         headers = [(b"content-type", b"application/json"), (b"cache-control", b"no-store"),
                    (b"x-content-type-options", b"nosniff")]
         if status == 401:
@@ -50,7 +55,8 @@ class ProtectedMCP:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-        if scope.get("path") != "/mcp":
+        upload = UPLOAD_PATH.fullmatch(scope.get("path", "")) if self.upload_handler else None
+        if scope.get("path") != "/mcp" and not upload:
             return await self.response(send, 404, "not_found")
         try:
             config = self.read_config()
@@ -76,15 +82,38 @@ class ProtectedMCP:
         if origin and origin not in config.get("allowed_origins", []):
             return await self.response(send, 403, "untrusted_origin")
         content_length = values[b"content-length"]
-        if content_length and (len(content_length) > 10 or not content_length.isdigit() or int(content_length) > MAX_BODY):
+        maximum = self.upload_max_body if upload else MAX_BODY
+        if content_length and (len(content_length) > 10 or not content_length.isdigit() or int(content_length) > maximum):
             return await self.response(send, 413, "request_too_large")
-        if scope.get("method") not in {"GET", "POST", "DELETE"}:
+        methods = {"PUT"} if upload and upload[3] is not None else {"GET"} if upload else {"GET", "POST", "DELETE"}
+        if scope.get("method") not in methods:
             return await self.response(send, 405, "method_not_allowed")
         if self.capacity.locked():
             return await self.response(send, 429, "busy")
         # The SDK separately bounds chunked bodies. Session/JSON parsing happens
         # only after token, host and Origin checks, with no browser cookie auth.
         async with self.capacity:
+            if upload:
+                body = bytearray()
+                if scope["method"] == "PUT":
+                    while True:
+                        event = await receive()
+                        if event["type"] == "http.disconnect":
+                            return
+                        body.extend(event.get("body", b""))
+                        if len(body) > self.upload_max_body:
+                            return await self.response(send, 413, "request_too_large")
+                        if not event.get("more_body", False):
+                            break
+                try:
+                    result = await self.upload_handler(upload[1], upload[2], int(upload[3]) if upload[3] is not None else None,
+                                                       bytes(body) if scope["method"] == "PUT" else None)
+                    return await self.response(send, 200, "ok", result)
+                except Exception as error:
+                    status = getattr(error, "status_code", 403 if isinstance(error, PermissionError) else 409 if isinstance(error, ValueError) else 503)
+                    detail = getattr(error, "data", str(error)[:1200] if status in {403, 409} else "上传服务暂时不可用；保留原请求编号并查询续传状态。")
+                    return await self.response(send, status, "upload_failed", {"ok": False, "code": "upload_failed",
+                                               "detail": detail})
             return await self.app(scope, receive, send)
 
 
@@ -96,7 +125,13 @@ def create_app():
     application = mcp.streamable_http_app(streamable_http_path="/mcp", json_response=True, stateless_http=True,
         max_request_body_size=MAX_BODY, transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True, allowed_hosts=config["allowed_hosts"], allowed_origins=config.get("allowed_origins", [])))
-    return ProtectedMCP(application, path)
+    async def upload_handler(request_id, file_id, index, content):
+        from server import bridge
+        return await asyncio.to_thread(bridge().upload_http, request_id, file_id, index, content)
+    from server import bridge
+    from django.conf import settings
+    bridge()  # Use the same configured chunk size as the website.
+    return ProtectedMCP(application, path, upload_handler, settings.MAX_UPLOAD_CHUNK_BYTES)
 
 
 if __name__ == "__main__":

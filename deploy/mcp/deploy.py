@@ -100,15 +100,16 @@ def stage(release):
     write(env_file, "\n".join(f"{key}={value}" for key, value in environment.items()).encode())
     args = ["docker", "run", "-d", "--name", SERVICE, "--restart", "unless-stopped",
             "--network", "social-science-library_backend", "--read-only", "--cap-drop", "ALL",
-            "--security-opt", "no-new-privileges:true", "--memory", "384m", "--memory-swap", "384m",
-            "--cpus", "0.5", "--pids-limit", "96", "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=16m",
+            "--security-opt", "no-new-privileges:true", "--memory", "512m", "--memory-swap", "512m",
+            "--cpus", "0.5", "--pids-limit", "96", "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=32m",
             "--env-file", str(env_file), "--workdir", "/app", "--entrypoint", "python",
             "--mount", f"type=bind,src={release / 'runtime'},dst=/opt/stl-mcp,readonly",
             "--mount", f"type=bind,src={BASE / 'config'},dst=/run/stl-mcp,readonly",
             "--mount", f"type=bind,src={BASE / 'state'},dst=/var/lib/stl-mcp"]
     for mount in api["Mounts"]:
-        if mount["Destination"] in {"/data/archive", "/data/public"}:
-            args += ["--mount", f"type=bind,src={mount['Source']},dst={mount['Destination']},readonly"]
+        if mount["Destination"] in {"/data/archive", "/data/public", "/data/incoming"}:
+            readonly = "" if mount["Destination"] == "/data/incoming" else ",readonly"
+            args += ["--mount", f"type=bind,src={mount['Source']},dst={mount['Destination']}" + readonly]
     args += [api["Image"], "/opt/stl-mcp/public_server.py"]
     container_id = run(*args)
     write(release / "service.json", json.dumps({"id": container_id, "image": api["Image"]}).encode())

@@ -222,3 +222,20 @@ class DjangoBridge(Bridge):
         with self.db() as db:
             db.execute("INSERT INTO calls(action, started, elapsed, ok) VALUES(?,?,?,?)", (action, time.time(), elapsed, bool(result.get("ok"))))
         return {**result, "elapsed_seconds": elapsed}
+
+    def upload_http(self, request_id, file_id, index=None, content=None):
+        from django.db import close_old_connections
+        from django.core.serializers.json import DjangoJSONEncoder
+        with self.lock:
+            try:
+                close_old_connections()
+                user = self.domain.actor()
+                if content is not None:
+                    result = self.domain.receive_upload_chunk(request_id, file_id, index, content, user)
+                else:
+                    manifest = self.domain.upload_manifest(request_id, user)
+                    file = self.domain.upload_file(manifest, file_id)
+                    result = self.domain.upload_file_status(manifest, file, user)
+                return json.loads(json.dumps(result, cls=DjangoJSONEncoder, ensure_ascii=False))
+            finally:
+                close_old_connections()

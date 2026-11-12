@@ -1,3 +1,9 @@
+## 2026-11-12 MCP文件上传已部署，规则沿网站
+
+用户要求加入文件上传，并明确不增加校验/限制和多余测试。已新增stl_prepare_uploads/stl_get_ingestion_status，共九工具，原网站UploadWorkspaceView负责批次、BatchItemChunkUploadView负责传输和处理；MCP不做文件哈希预检、格式/大小/数量/策略限制或客户端去重。upload_client.py只传输与保存续传位置，策略不填沿网站默认。
+
+独立MCP已切到当前API镜像08866216，新增原incoming读写挂载及/mcp/uploads/，原MCP容器停用保留恢复，API/Web未重建。服务已启动，网站代理配置已加载；未运行额外测试、原回归或真实文件试传，运行结果待策展对话使用网站回执确认。详docs/stl4/MCP_UPLOAD_DELIVERY_20261112.md。
+
 ## 2026-11-12 智能体上传与馆藏更新已纳入MCP后续接入要求
 
 用户补充上传及馆藏更新也可能由智能体执行。已审计原上传工作区、断点分片、批次策略和supplement/replace服务，确定新书、不同出版版本、补首份PDF、修正扫描与编目更新分别沿原流程。D：动态catalog授权不区分上传者；C：新增上传准备/状态MCP与受限二进制传输授权尚未实现，不能把七工具说成支持直接传PDF。本轮只记录接入要求，未上传/替换、改生产或部署新工具。详docs/stl4/MCP_AGENT_INTAKE_REQUIREMENTS_20261112.md。

@@ -13,7 +13,7 @@ import re
 import sys
 import time
 import traceback
-from uuid import UUID
+from uuid import UUID, uuid5
 
 
 def fingerprint(value):
@@ -805,8 +805,115 @@ def safe_error(error):
     return "服务端异常；请保留原计划编号，查阅本机bridge.stderr.log后恢复。"
 
 
+UPLOAD_ACTION = "mcp.upload.prepared"
+
+
+class WebsiteUploadError(ValueError):
+    def __init__(self, status_code, data):
+        self.status_code, self.data = status_code, data
+        super().__init__(str(data))
+
+
+def upload_view(view, method, data, user, **kwargs):
+    """Use the website's own permissions, validation and upload behavior."""
+    from rest_framework.test import APIRequestFactory, force_authenticate
+    factory = APIRequestFactory()
+    headers = {"HTTP_X_EDITOR_OWNER": str(user.pk), "HTTP_HOST": "books.winstonmo.com", "HTTP_X_FORWARDED_PROTO": "https"}
+    if method == "get":
+        request = factory.get("/api/ingestion/", data, **headers)
+    else:
+        request = factory.post("/api/ingestion/", data, format="multipart" if "chunk" in data else "json",
+                               **headers)
+    force_authenticate(request, user=user)
+    response = view.as_view()(request, **kwargs)
+    if response.status_code >= 400:
+        raise WebsiteUploadError(response.status_code, response.data)
+    return response.data
+
+
+def prepare_uploads(args, user):
+    from django.conf import settings
+    from django.db import transaction
+    from ingestion.models import AuditEvent
+    from ingestion.upload_workspace import UploadWorkspaceView
+    files = args["files"]
+    policy = {**(args.get("policy") or {}), "expected_count": len(files)}
+    with transaction.atomic():
+        # The original command supplies owner locking, request replay and policy
+        # validation. The MCP record only maps that receipt to the file handles.
+        result = upload_view(UploadWorkspaceView, "post", {"action": "reserve", "request_id": args["request_id"],
+                                                         "policy": policy}, user)
+        request_id = str(result["request_id"])
+        prior = AuditEvent.objects.filter(actor=user, action=UPLOAD_ACTION, request_id=request_id).first()
+        if prior:
+            return {"ok": True, "replayed": True, **prior.after}
+        manifest = {"request_id": request_id, "batch_id": str(result["batch"]["id"]),
+                    "chunk_bytes": settings.MAX_UPLOAD_CHUNK_BYTES, "files": []}
+        for index, row in enumerate(files):
+            key = str(uuid5(UUID(request_id), str(index)))
+            manifest["files"].append({"id": key, "name": row["name"], "size": row["size"],
+                                       "upload_path": f"/mcp/uploads/{request_id}/{key}"})
+        AuditEvent.objects.create(actor=user, action=UPLOAD_ACTION, request_id=request_id,
+                                  object_type="UploadBatch", object_id=manifest["batch_id"], after=manifest)
+    return {"ok": True, "replayed": False, **manifest}
+
+
+def upload_manifest(request_id, user):
+    from ingestion.models import AuditEvent
+    return AuditEvent.objects.get(actor=user, action=UPLOAD_ACTION, request_id=identity(request_id)).after
+
+
+def upload_file(manifest, file_id):
+    result = next((row for row in manifest["files"] if row["id"] == file_id), None)
+    if result is None:
+        raise ValueError("文件不属于此上传计划。")
+    return result
+
+
+def upload_result(data, file):
+    from ingestion.models import UploadItem
+    result = {"ok": data.get("accepted", True), "file_id": file["id"], "name": file["name"], "transfer_complete": bool(data["complete"]),
+              "received_indices": data.get("received_indices", [])}
+    raw = data.get("item")
+    if raw:
+        fields = ("id", "sha256", "byte_size", "status", "workflow_state", "dispatch_status", "error_code", "error_message", "edition")
+        result["item"] = {key: raw.get(key) for key in fields}
+        item = UploadItem.objects.select_related("edition").get(pk=raw["id"])
+        result["item"]["work_id"] = str(item.edition.work_id) if item.edition_id else None
+        result["item"]["edition_id"] = str(item.edition_id) if item.edition_id else None
+    return result
+
+
+def upload_file_status(manifest, file, user):
+    from ingestion.views import BatchItemChunkUploadView
+    data = upload_view(BatchItemChunkUploadView, "get", {"client_token": file["id"]}, user, batch_id=manifest["batch_id"])
+    return upload_result(data, file)
+
+
+def ingestion_status(args, user):
+    manifest = upload_manifest(args["request_id"], user)
+    rows = [upload_file_status(manifest, file, user) for file in manifest["files"]]
+    return {"ok": True, "request_id": manifest["request_id"], "batch_id": manifest["batch_id"], "files": rows,
+            "all_received": all(row["transfer_complete"] for row in rows),
+            "detail": "上传和处理状态由网站返回；收到文件不等于策展或发布完成。"}
+
+
+def receive_upload_chunk(request_id, file_id, index, content, user):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from ingestion.views import BatchItemChunkUploadView
+    manifest = upload_manifest(request_id, user)
+    file = upload_file(manifest, file_id)
+    chunk_size = manifest["chunk_bytes"]
+    data = {"client_token": file["id"], "source_filename": file["name"], "total_size": file["size"],
+            "total_chunks": (file["size"] + chunk_size - 1) // chunk_size, "chunk_size": chunk_size, "chunk_index": index,
+            "chunk": SimpleUploadedFile(file["name"], content, content_type="application/octet-stream")}
+    result = upload_view(BatchItemChunkUploadView, "post", data, user, batch_id=manifest["batch_id"])
+    return upload_result(result, file)
+
+
 ACTIONS = {"search": search, "resolve": resolve, "context": context, "sources": sources, "prepare": prepare,
-           "save": save, "receipts": receipts, "jobs": jobs}
+           "save": save, "receipts": receipts, "jobs": jobs, "upload_prepare": prepare_uploads,
+           "ingestion_status": ingestion_status}
 
 
 def main():

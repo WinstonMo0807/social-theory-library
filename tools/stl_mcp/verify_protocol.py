@@ -15,7 +15,7 @@ async def main():
         async with Client(parameters, mode=mode, read_timeout_seconds=120) as client:
             tools = await client.list_tools()
             names = sorted(tool.name for tool in tools.tools)
-            assert len(names) == 7 and "stl_save_drafts" in names
+            assert len(names) == 9 and "stl_save_drafts" in names and "stl_prepare_uploads" in names
             result = await client.call_tool("stl_search_catalog", {"queries": ["经济与社会"], "limit": 3})
             data = result.structured_content
             assert not result.is_error and data and data["ok"], data
