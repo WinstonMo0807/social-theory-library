@@ -1,3 +1,15 @@
+## 2026-11-13 治理整书审核与发布链路通过回滚实测
+
+- 治理109分析、109顺序综合及106Wiki产物完成，形成ChangeSet 9fa8c249-0159-4a7d-b510-9ba6000763c6：57身份、68陈述、85区块，共210项pending。来源账本含无文本页，run为partial，不隐藏OCR/空白页限制。
+- 候选外层回滚事务调用真实review/apply/publish_page/WorkKnowledgeView：210项应用、blocked为空，24个作品区块发布后进入公开查询，68处读者locator固定原修订；未登录接口不返回locator，原人工区块保持。重复应用/发布同回执。总127.295秒，其中应用54.283秒、首次发布93.163秒（累计）。
+- 已核实回滚：Entity49、Assertion7、KnowledgePage9、ChangeReceipt4、EditorialRevision176、CanonicalObjectRevision84、KnowledgePublicationEvent109均恢复，210项仍pending。正式/候选ready200，0.115/0.907秒。未实际发布草稿，没有公网/MCP/正式库变更。下一步规训68顺序综合、比较和Wiki接续。
+
+## 2026-11-13 身份比较已更新候选
+
+- 0404550d已推送，候选knowledge_core/intelligence_queries两文件哈希核对后更新，回退包backup-surname-comparison-0404550d-20261113232524/source-before.tar.gz。前端读取真实匹配依据，TypeScript退出0。无schema变化。
+- API于15:25:57 UTC重启；首次ready30秒超时，前端随后200/16.470秒。检查未见本次worker超时或OOM，内存峰值255,078,400字节、CPU限额未节流；宿主内存/IO仍有压力，尚无具体阻塞调用栈。随后ready200/0.138秒，未登录me401/0.072秒，才继续有限批次。worker/beat保持停止。
+- 治理76/106Wiki产物；未把当前暂时恢复等同NAS全负荷稳定或公网切换准备完成。Intelligence独立页、MCP、正式库和公网保持。
+
 ## 2026-11-13 姓氏引用与身份审核说明
 
 - 真实《规训与惩罚》引用“韦伯”未命中馆内马克斯·韦伯，原精确匹配把缺少异名误作没有比较对象。人物无精确命中时增加有界姓名片段召回，默认12、最多30，单字及概念不扩展；只提出比较，不自动归并。

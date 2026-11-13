@@ -1,3 +1,9 @@
+## 2026-11-13 治理整书审核与发布链路通过回滚实测
+
+- 治理109分析、109顺序综合及106Wiki产物完成，形成ChangeSet 9fa8c249-0159-4a7d-b510-9ba6000763c6：57身份、68陈述、85区块，共210项pending。来源账本含无文本页，run为partial，不隐藏OCR/空白页限制。
+- 候选外层回滚事务调用真实review/apply/publish_page/WorkKnowledgeView：210项应用、blocked为空，24个作品区块发布后进入公开查询，68处读者locator固定原修订；未登录接口不返回locator，原人工区块保持。重复应用/发布同回执。总127.295秒，其中应用54.283秒、首次发布93.163秒（累计）。
+- 已核实回滚：Entity49、Assertion7、KnowledgePage9、ChangeReceipt4、EditorialRevision176、CanonicalObjectRevision84、KnowledgePublicationEvent109均恢复，210项仍pending。正式/候选ready200，0.115/0.907秒。未实际发布草稿，没有公网/MCP/正式库变更。下一步规训68顺序综合、比较和Wiki接续。
+
 # 整书接续最新状态
 
 2026-11-13：下方三章表为先前检查点，不能代表最新整书状态。《以利为利》259页可用原文完成阅读和必要图表核验，68分析窗口、68有序综合、103Wiki编纂批次已实际保存，整书ChangeSet包含44身份建议、46陈述、68Wiki修改，158项pending。最终综合进入每个Wiki目标的输入，证据仍只接受指定修订原文。

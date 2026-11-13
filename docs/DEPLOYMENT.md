@@ -1,3 +1,9 @@
+## 2026-11-13 身份比较已更新候选
+
+- 0404550d已推送，候选knowledge_core/intelligence_queries两文件哈希核对后更新，回退包backup-surname-comparison-0404550d-20261113232524/source-before.tar.gz。前端读取真实匹配依据，TypeScript退出0。无schema变化。
+- API于15:25:57 UTC重启；首次ready30秒超时，前端随后200/16.470秒。检查未见本次worker超时或OOM，内存峰值255,078,400字节、CPU限额未节流；宿主内存/IO仍有压力，尚无具体阻塞调用栈。随后ready200/0.138秒，未登录me401/0.072秒，才继续有限批次。worker/beat保持停止。
+- 治理76/106Wiki产物；未把当前暂时恢复等同NAS全负荷稳定或公网切换准备完成。Intelligence独立页、MCP、正式库和公网保持。
+
 ## 2026-11-13 确定性回执更新
 
 09d07a20已更新候选intelligence.py并核对SHA256，回退包backup-resume-receipts-09d07a20-20261113224757/source-before.tar.gz；仅API重启，worker/beat仍停止。治理36个Wiki产物已保存，后续按2个产物一批、批次前后检查正式与候选ready。新窗口恢复分支尚未部署。现有SSH禁止端口转发，本轮没有改动SSH策略或发布数据库端口。公网、正式库、MCP未变更。
