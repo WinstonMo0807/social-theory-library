@@ -319,6 +319,29 @@ def validate_analysis(output, source_rows):
                 raise ValidationError("模型引文未通过指定窗口原文回查。")
 
 
+def assertion_evidence(raw, pages):
+    """Join adjacent quote fragments only across literal raw whitespace.
+
+    OCR line boundaries are not separate academic sources. Different stances,
+    pages and non-whitespace gaps remain distinct, with exact offsets retained.
+    """
+    rows = []
+    for evidence in raw:
+        segment = {k:v for k,v in evidence.items() if k != "stance"}
+        previous = rows[-1] if rows else None
+        if previous and previous["stance"] == evidence["stance"]:
+            last = previous["segments"][-1]
+            if last["page_number"] == segment["page_number"] and last["end"] <= segment["start"]:
+                page = pages[segment["page_number"]]
+                gap = page[last["end"]:segment["start"]]
+                if not gap or gap.isspace():
+                    last["end"] = segment["end"]
+                    last["exact"] = page[last["start"]:last["end"]]
+                    continue
+        rows.append({"stance":evidence["stance"], "segments":[segment]})
+    return rows
+
+
 def compile_wiki(run, proposals, config, lease):
     """Bounded, evidence-backed patches to work and affected identity pages.
 
@@ -479,6 +502,8 @@ def execute(run, config, lease):
             names.setdefault(raw["label"],[]).append(item_id)
     _save_artifact(run,4,"matches",{"entities":[p["payload"] for p in entity_proposals]}, {"proposals":entity_proposals},lease=lease)
     proposals = list(entity_proposals)
+    cited_pages = {e["page_number"] for a in analyses for statement in a.output.get("assertions", []) for e in statement.get("evidence", [])}
+    evidence_pages = dict(run.document_revision.page_snapshots.filter(page_number__in=cited_pages).values_list("page_number", "text"))
     for artifact in analyses:
         # Resolve mentions in the window that actually supplied the assertion.
         # A homonymous concept elsewhere in the book must not change attribution.
@@ -499,7 +524,7 @@ def execute(run, config, lease):
                 "category":raw.get("category","proposition"),"direction":raw.get("direction","directed"),"conditions":raw.get("conditions",{}),
                 "unresolved_names":list(dict.fromkeys(label for _,label in roles if label and len(mention_candidates(label)) != 1)),
                 "unresolved_participants":[{"role":role,"label":label} for role,label in roles if label and len(mention_candidates(label))!=1],
-                "evidence":[{"stance":e["stance"],"segments":[{k:v for k,v in e.items() if k != "stance"}]} for e in raw["evidence"]]}
+                "evidence":assertion_evidence(raw["evidence"], evidence_pages)}
             claimant = mention_candidates(raw.get("claimant"))
             if len(claimant)==1: payload["attribution_id"]={"change_item":claimant[0]}
             proposals.append({"id":str(uuid5(run.pk,"assertion:"+digest(payload))),"kind":"assertion","payload":payload,

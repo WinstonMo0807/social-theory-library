@@ -1,5 +1,7 @@
 ## 2026-11-13 内网持续 Wiki 候选
 
+候选API、worker及限定beat已温和重载成功。前端发现node_modules junction共用默认Vite缓存导致pdfjs-dist返回504，现候选`cacheDir=../tmp/intelligence-web/node_modules/.vite`并显式预处理pdfjs-dist，重启后实见同版PDF。该目录在本工作区忽略的tmp中，不清理原工作区依赖/缓存；配置含node_modules路径以兼容当前Vinext/Vite的依赖转换。选项语义核对 [Vite cacheDir](https://vite.dev/config/shared-options#cachedir)。仍为内网Vite候选，无开机自启或正式发行部署变更。
+
 仅候选`stl_intelligence_demo_20261109`执行catalog0100；正式18084及公网无变更。API/worker仍挂载`/volume2/library/stl-previews/intelligence-20261109/source/api`。迁移命令为候选容器内`python manage.py migrate --noinput`，不是正式环境命令。
 
 候选API/worker保持现有凭据配置，生成和向量模型仍关闭。worker solo/concurrency=1，队列intelligence,discovery_index，DISCOVERY_INDEX_KEYWORD_ONLY=true。限定beat现在仅启用reconcile-discovery-index,refresh-knowledge-compilations；旧beat停止保留为stl-intelligence-demo-index-beat-before-wiki-20261113。接续每300秒读取持久化标记，不重新全馆编纂。代理结果仍需要本次交互执行，不是无人值守模型服务。

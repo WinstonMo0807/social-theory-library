@@ -160,3 +160,9 @@
 .compilationProduct h4 { font-family: var(--font-serif), serif; font-size: 1.2rem; }
 .compilationProduct blockquote { margin: 1rem 0; padding: .7rem 1.25rem; border-left: 2px solid #a58b54; background: #f7f4ee; white-space: pre-wrap; }
 .compilationProduct blockquote footer { font-size: .8rem; color: #6d685e; }
+.compilationTargets { grid-column: 1 / -1; padding: 1.25rem 0; border: 0; border-top: 1px solid var(--line, #ddd6c9); }
+.compilationTargets legend { font-family: var(--font-serif), serif; padding-right: 1rem; }
+.compilationTargets .compilationTarget { display: flex; align-items: flex-start; gap: .75rem; padding: .75rem 0; border-bottom: 1px solid var(--line, #ddd6c9); }
+.compilationTarget input[type=checkbox] { flex: 0 0 18px; width: 18px; min-height: 18px; margin-top: 4px; accent-color: #8a704b; }
+.compilationTarget small { display: block; max-width: 72ch; color: var(--muted, #686257); font-weight: 400; margin-top: .4rem; }
+.compilationTargets > p button { min-height: 28px; padding: 2px 6px; background: transparent; border: 0; font-size: .8rem; }

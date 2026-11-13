@@ -146,3 +146,23 @@ def test_outline_mapping_uses_verified_body_title_and_ignores_only_repeated_gene
         "source":"generated_heading","source_locator":{"geometry_status":"validated","normalized_bbox":[.4,.1,.8,.12]}} for i in range(3)]
     nodes.append({**nodes[0],"id":"human","source":"manual"})
     assert _running_headers(nodes)=={"0","1","2"}
+
+def test_assertion_quotes_join_only_verified_raw_whitespace():
+    from catalog.services.intelligence import assertion_evidence
+    text='甲😀\n\n乙，中间句\n丙'
+    def part(start,end,stance='supports'):
+        return dict(page_number=1,start=start,end=end,exact=text[start:end],stance=stance)
+    rows=assertion_evidence([part(0,2),part(4,5),part(10,11),part(0,2,'qualifies')],{1:text})
+    assert rows[0]['segments']==[dict(page_number=1,start=0,end=5,exact='甲😀\n\n乙')]
+    assert len(rows)==3 and rows[-1]['stance']=='qualifies'
+
+def test_compilation_missing_pages_are_limited_to_selected_range(source, admin_user, monkeypatch):
+    monkeypatch.setattr(runner,'schedule',lambda run:None)
+    policy=compilation.configure(source,admin_user,scope={'mode':'pages','start':1,'end':1},execution_mode='agent')
+    run=policy.latest_run
+    run.coverage={'missing_text_pages':[2],'included_nodes':[{'internal':'ledger'}]}
+    run.save(update_fields=['coverage'])
+    data=compilation.compilation_data(policy,admin_user)
+    assert data['coverage']['missing_text_pages']==[] and 'included_nodes' not in data['coverage']
+    run.refresh_from_db()
+    assert run.coverage['missing_text_pages']==[2]

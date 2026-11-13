@@ -101,6 +101,7 @@ class CompilationProduct(APIView):
         require_revision_access(artifact.run.document_revision, request.user, editorial=True)
         return Response({"id":str(artifact.pk), "unit":artifact.unit, "output":artifact.output,
             "document_revision_id":str(artifact.run.document_revision_id),
+            "reader_url":f"/reader/{artifact.run.document_revision.asset_id}?revision={artifact.run.document_revision_id}&preview=1",
             "chapter_path":artifact.input_manifest.get("chapter_path", []),
             "ranges":[{key:value for key,value in row.items() if key != "text"}
                 for row in artifact.input_manifest.get("ranges", [])],

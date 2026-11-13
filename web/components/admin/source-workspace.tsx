@@ -15,7 +15,8 @@ import { KnowledgeCompilationPanel } from "./knowledge-compilation-panel";
 type Node = { id: string; title: string; kind: string; parent_id: string | null };
 type Context = { title: string; segments: SourceSegment[]; chapter_path: string[]; offset: number; next_offset: number | null; returned_characters: number; total_characters: number; references: { target_id: string; kind: string; label: string }[] };
 type Hit = { id: string; title?: string; work_title?: string; excerpt: string; locator?: SourceLocator; node_id?: string; pdf_page?: number; page_start?: number; coverage?: string };
-type Results = { status: string; results: Hit[]; warnings: { code: string; message: string }[]; elapsed_ms: number };
+type Results = { status: string; results: Hit[]; warnings: { code: string; message: string }[]; elapsed_ms: number;
+  retrieval?: { candidates?: { sparse: number; dense: number; contextual: number } } };
 const ready: Record<string, string> = { ready: "可检索", partial: "部分就绪", pending: "待索引", unavailable: "服务待恢复", blocked: "需处理" };
 
 export function SourceWorkspace() {
@@ -110,6 +111,7 @@ export function SourceWorkspace() {
           <label>检索问题<input value={q} onChange={e => setQ(e.target.value)} minLength={2} maxLength={1200} required placeholder="输入一个问题、术语或原文短语" /></label>
           <div className={s.toolbar}><select aria-label="检索方式" value={mode} onChange={e => setMode(e.target.value)}><option value="keyword">仅关键词</option><option value="hybrid">混合检索</option></select><button className={s.primary} disabled={busy}><Search size={16} />检索</button></div></form>
           {busy && <p role="status">正在检索指定范围…</p>}{results && <><p className={s.muted}>{results.results.length} 条返回结果 · {results.elapsed_ms} ms</p>
+            {results.retrieval?.candidates && <details className={s.searchNote}><summary>本次检索来源</summary><p>关键词候选 {results.retrieval.candidates.sparse} 条，语义候选 {results.retrieval.candidates.dense} 条，书名与章节语境候选 {results.retrieval.candidates.contextual} 条。候选可能重叠，经融合、去重和来源校验后显示结果。</p></details>}
             {results.warnings.map((v, i) => <p className={s.notice} key={`${v.code}-${i}`}>{v.message || v.code}</p>)}
             {results.status === "ready" && !results.results.length && <p className={s.empty}>此检索范围内没有匹配结果。可保留问题，切换检索方式后再试。</p>}
             {results.results.map((hit, i) => <button className={s.result} key={hit.id || i} onClick={() => { setLocator(hit.locator || null); setPage(hit.locator?.segments[0]?.page_number || hit.pdf_page || hit.page_start || 1); setEvidenceOpen(true); }}>

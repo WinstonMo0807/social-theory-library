@@ -217,6 +217,10 @@ def compilation_data(subscription, actor):
         require_revision_access(run.document_revision, actor, editorial=True)
     waiting = run.artifacts.filter(status="waiting_agent").order_by("stage", "created_at").first() if run else None
     changeset = m.ChangeSet.objects.filter(run=run).first() if run else None
+    coverage = {key:value for key,value in run.coverage.items() if key not in {"included_nodes", "excluded_pages"}} if run else {}
+    if run:
+        start, end = run.scope.get("start", 1), run.scope.get("end", run.document_revision.asset.page_count)
+        coverage["missing_text_pages"] = [p for p in coverage.get("missing_text_pages", []) if start <= p <= end]
     return {"id":str(subscription.pk), "edition_id":str(subscription.edition_id),
         "work_id":str(subscription.edition.work_id), "title":subscription.edition.work.title,
         "enabled":subscription.enabled, "execution_mode":subscription.execution_mode,
@@ -224,7 +228,8 @@ def compilation_data(subscription, actor):
         "scope":subscription.scope, "profile_key":subscription.profile_key,
         "target_page_ids":[str(key) for key in subscription.target_pages.values_list("pk", flat=True)],
         "run_id":str(run.pk) if run else None, "status":run.status if run else "waiting",
-        "coverage":{key:value for key,value in run.coverage.items() if key not in {"included_nodes", "excluded_pages"}} if run else {},
+        "stage":run.stage if run else 1,
+        "coverage":coverage,
         "excluded_page_count":len(run.coverage.get("excluded_pages", [])) if run else 0, "error":run.error if run else {},
         "waiting_artifact_id":str(waiting.pk) if waiting else None,
         "changeset_id":str(changeset.pk) if changeset else None,
