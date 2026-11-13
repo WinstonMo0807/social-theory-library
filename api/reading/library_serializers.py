@@ -129,10 +129,10 @@ class LibraryMessageSourceSerializer(serializers.ModelSerializer):
         )
 
     def get_available(self, obj):
-        return source_is_available(obj)
+        return source_is_available(obj, viewer=getattr(self.context.get("request"), "user", None))
 
     def get_reader_url(self, obj):
-        if not source_is_available(obj):
+        if not source_is_available(obj, viewer=getattr(self.context.get("request"), "user", None)):
             return None
         if obj.reader_url_snapshot:
             return obj.reader_url_snapshot
@@ -148,6 +148,6 @@ class LibraryMessageSourceDetailSerializer(LibraryMessageSourceSerializer):
         fields = LibraryMessageSourceSerializer.Meta.fields + ("quote",)
 
     def get_quote(self, obj):
-        if not source_is_available(obj):
+        if not source_is_available(obj, viewer=getattr(self.context.get("request"), "user", None)):
             return None
         return decrypt_private_text(obj.quote_ciphertext)

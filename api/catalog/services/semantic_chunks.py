@@ -205,6 +205,7 @@ def build_semantic_chunks(
                     "printed_label": page.printed_label,
                     "bbox": block.bbox,
                     "text": part[:500],
+                    "geometry": page.geometry,
                 }
                 if drafts and _can_merge(drafts[-1], part, page.index, chapter, current_section):
                     previous = drafts[-1]

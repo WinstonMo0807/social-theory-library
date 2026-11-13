@@ -50916,8 +50916,8 @@
                     },
                     "slug": {
                         "type": "string",
-                        "maxLength": 180,
-                        "pattern": "^[-a-zA-Z0-9_]+$"
+                        "pattern": "^[-\\w]+$",
+                        "maxLength": 180
                     },
                     "person": {
                         "$ref": "#/components/schemas/PersonCompact"
@@ -76338,8 +76338,8 @@
                     },
                     "slug": {
                         "type": "string",
-                        "maxLength": 180,
-                        "pattern": "^[-a-zA-Z0-9_]+$"
+                        "pattern": "^[-\\w]+$",
+                        "maxLength": 180
                     },
                     "person": {
                         "$ref": "#/components/schemas/PersonCompact"

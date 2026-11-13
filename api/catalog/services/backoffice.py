@@ -38,8 +38,9 @@ from catalog.models import (
     Work,
 )
 from catalog.services.query_lexicon.operations import query_lexicon_workspace
+from catalog.services.discovery_projection import active_generation, discovery_coverage
 from catalog.services.semantic_indexing import active_semantic_index_version, active_semantic_index_uid
-from catalog.services.semantic_search import current_semantic_runtime, semantic_model_health
+from catalog.services.semantic_search import current_semantic_runtime, semantic_model_health, viewer_access_statuses
 from common.ai_runtime import AICapability, profile_environment_status, runtime_profile
 from distribution.models import BackupJob
 from ingestion.models import ProcessingJob, UploadItem
@@ -139,6 +140,48 @@ def _semantic_status() -> dict[str, Any]:
         "model": active.model_repo_id or active.model_local_path,
         "model_revision": active.model_revision,
     }
+
+
+def _discovery_status() -> dict[str, Any]:
+    """Report the versioned viewpoint index without probing model services.
+
+    The admin overview must distinguish the legacy semantic index from the
+    publication-bound Discovery generation.  This is deliberately read-only:
+    it does not warm an inference model, contact Meilisearch, or activate a
+    candidate generation.
+    """
+    cache_key = "stl:backoffice:discovery-status:v1"
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict):
+        return cached
+    try:
+        generation = active_generation()
+        coverage = discovery_coverage(viewer_access_statuses(authenticated=True, staff=True))
+        if generation is None:
+            payload = {
+                "status": "not_ready",
+                "active_generation": None,
+                "coverage": coverage,
+            }
+            cache.set(cache_key, payload, timeout=15)
+            return payload
+        config = generation.config_snapshot if isinstance(generation.config_snapshot, dict) else {}
+        payload = {
+            "status": "current",
+            "active_generation": str(generation.pk),
+            "index_uid": generation.uid,
+            "model": generation.model_repo_id or generation.model_local_path,
+            "model_revision": generation.model_revision,
+            "dimensions": generation.dimensions or config.get("dimensions"),
+            "pipeline": config.get("pipeline", ""),
+            "embedding_artifact": config.get("embedding_artifact", ""),
+            "reranker_artifact": config.get("reranker_artifact", ""),
+            "coverage": coverage,
+        }
+        cache.set(cache_key, payload, timeout=15)
+        return payload
+    except Exception as exc:
+        return {"status": "unavailable", "error_category": exc.__class__.__name__}
 
 
 def _celery_status() -> dict[str, Any]:
@@ -298,6 +341,7 @@ def system_status_snapshot() -> dict[str, Any]:
         "storage": {"nas": _nas_status(), "r2_upload_staging": r2_staging_status()},
         "query_lexicon": _query_lexicon_status(),
         "semantic": _semantic_status(),
+        "discovery": _discovery_status(),
         "embedding": {
             "status": (
                 "available"

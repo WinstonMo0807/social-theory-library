@@ -36,6 +36,32 @@
 .admin-v307-metrics strong { display:block; font-size:30px; line-height:1.5; }
 .admin-v307-metrics small { font-size:max(13px, var(--stl-readable-meta)); margin-left:6px; font-weight:400; }
 .admin-v307-metrics p { margin:0; font-size:max(12px, var(--stl-readable-body)); color:var(--stl-ink-muted); }
+.admin-v307-processing-helper { margin:0 0 24px; padding:20px; }
+.admin-v307-processing-helper > header { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:16px; }
+.admin-v307-processing-helper h2 { margin:0; }
+.admin-v307-processing-helper header p:last-child { margin:7px 0 0; color:var(--stl-ink-muted); font-size:max(12px, var(--stl-readable-meta)); }
+.admin-v307-section-kicker { margin:0 0 6px; color:var(--stl-ink-muted); font-size:max(11px, var(--stl-readable-meta)); letter-spacing:.08em; text-transform:uppercase; }
+.admin-v307-processing-helper-link { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-size:max(12px, var(--stl-readable-meta)); }
+.admin-v307-processing-helper-summary { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+.admin-v307-processing-helper-summary span { padding:7px 10px; color:var(--stl-ink-muted); background:var(--stl-surface-wash); font-size:max(12px, var(--stl-readable-meta)); }
+.admin-v307-processing-helper-summary strong { color:var(--stl-ink-primary); font-size:17px; margin-right:4px; }
+.admin-v307-processing-helper-list { display:grid; gap:10px; }
+.admin-v307-processing-helper-item { display:grid; grid-template-columns:minmax(190px,1.15fr) minmax(0,2fr) auto; align-items:center; gap:14px; border-top:1px solid var(--stl-border-default); padding-top:12px; }
+.admin-v307-processing-helper-title { display:flex; align-items:flex-start; gap:9px; min-width:0; }
+.admin-v307-processing-helper-title > div { min-width:0; }
+.admin-v307-processing-helper-title strong, .admin-v307-processing-helper-title small { display:block; overflow-wrap:anywhere; }
+.admin-v307-processing-helper-title strong { font-family:var(--stl-type-serif); font-size:max(15px, var(--stl-readable-meta)); line-height:1.6; }
+.admin-v307-processing-helper-title small { margin-top:4px; color:var(--stl-ink-muted); font-size:max(11px, var(--stl-readable-meta)); }
+.admin-v307-processing-stages { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.admin-v307-processing-stage { display:flex; align-items:flex-start; gap:7px; padding:9px 10px; background:var(--stl-surface-wash); }
+.admin-v307-processing-stage.is-attention { color:var(--stl-ink-primary); }
+.admin-v307-processing-stage.is-ready { color:var(--stl-ink-muted); }
+.admin-v307-processing-stage div { min-width:0; }
+.admin-v307-processing-stage strong, .admin-v307-processing-stage small { display:block; overflow-wrap:anywhere; }
+.admin-v307-processing-stage strong { font-size:max(12px, var(--stl-readable-meta)); font-weight:600; }
+.admin-v307-processing-stage small { margin-top:4px; color:var(--stl-ink-muted); font-size:max(11px, var(--stl-readable-meta)); line-height:1.55; }
+.admin-v307-processing-helper-action { min-height:34px !important; white-space:nowrap; }
+.admin-v307-processing-helper-empty { display:flex; align-items:center; gap:8px; margin:0; padding-top:12px; border-top:1px solid var(--stl-border-default); color:var(--stl-ink-muted); font-size:max(12px, var(--stl-readable-meta)); }
 .admin-v307-day-grid { display:grid; grid-template-columns:minmax(0,2.1fr) minmax(260px,1fr); gap:18px; align-items:start; }
 .admin-v307-day-grid .admin-panel { padding:20px 16px; }
 .admin-v307-day-grid .admin-panel > header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
@@ -94,6 +120,10 @@
 .upload-page .upload-queue > header h2 { margin:0; }
 .upload-preview-select { font-weight:600; text-align:left; cursor:pointer; padding:0; border:0; background:none; overflow-wrap:anywhere; }
 .upload-page .upload-queue > div { flex-wrap:wrap; }
+.upload-ocr-preflight { display:grid; grid-template-columns:auto minmax(0,1fr); gap:3px 9px; margin-top:14px; padding:11px 12px; border-left:3px solid var(--stl-border-strong); background:var(--stl-surface-wash); font-size:max(12px, var(--stl-readable-meta)); }
+.upload-ocr-preflight strong { color:var(--stl-ink-primary); }
+.upload-ocr-preflight span { font-weight:600; overflow-wrap:anywhere; }
+.upload-ocr-preflight small { grid-column:1/-1; color:var(--stl-ink-muted); line-height:1.7; }
 .upload-page .pipeline-explainer { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; padding:22px; }
 .upload-page .pipeline-explainer > header { grid-column:1/-1; }
 .upload-page .pipeline-explainer > div { border:0; display:flex; gap:12px; align-items:center; padding:14px 0; }
@@ -160,6 +190,8 @@
 @media(max-width:1000px) {
   .admin-v307-day-grid { grid-template-columns:minmax(0,1fr); }
   .admin-v307-day-aside { grid-template-columns:1fr 1fr; }
+  .admin-v307-processing-helper-item { grid-template-columns:minmax(180px,1fr) minmax(0,1.6fr); }
+  .admin-v307-processing-helper-action { grid-column:2; justify-self:start; }
   .workflow-v307-editor { grid-template-columns:minmax(0,1fr); }
   .workflow-v307-editor .workflow-v306-preview { grid-column:1; grid-row:auto; position:static; max-height:none; margin:0; }
   .workflow-v307-live-preview .work-hero { display:grid; grid-template-columns:180px minmax(0,1fr); }
@@ -189,6 +221,12 @@
   .admin-v307-metrics span { font-size:max(12px, var(--stl-readable-meta)); }
   .admin-v307-metrics p { font-size:max(10px, var(--stl-readable-body)); }
   .admin-v307-day-aside { grid-template-columns:1fr; }
+  .admin-v307-processing-helper { padding:16px; }
+  .admin-v307-processing-helper > header { display:block; }
+  .admin-v307-processing-helper-link { margin-top:12px; }
+  .admin-v307-processing-helper-item { grid-template-columns:minmax(0,1fr); }
+  .admin-v307-processing-stages { grid-template-columns:minmax(0,1fr); }
+  .admin-v307-processing-helper-action { grid-column:auto; }
   .admin-v307-review-table > header { display:none; }
   .admin-v307-review-table > article { grid-template-columns:minmax(0,1fr) auto; gap:12px; }
   .admin-v307-review-table > article > div:first-child { grid-column:1/-1; }

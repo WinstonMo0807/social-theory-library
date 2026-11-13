@@ -239,6 +239,9 @@ export async function apiRequest<T>(
       credentials: "include",
     });
   } catch (reason) {
+    if (reason instanceof DOMException && reason.name === "TimeoutError") {
+      throw new ApiRequestError("请求等待超时，操作结果尚未确认；请重新读取后再继续。", 0);
+    }
     if (reason instanceof DOMException && reason.name === "AbortError") {
       throw new ApiRequestError("请求已取消。", 0);
     }
@@ -307,6 +310,9 @@ export async function apiStreamRequest(
       credentials: "include",
     });
   } catch (reason) {
+    if (reason instanceof DOMException && reason.name === "TimeoutError") {
+      throw new ApiRequestError("请求等待超时，操作结果尚未确认；请重新读取后再继续。", 0);
+    }
     if (reason instanceof DOMException && reason.name === "AbortError") throw reason;
     throw new ApiRequestError("无法连接书库服务，请检查网络后重试。", 0);
   }

@@ -889,6 +889,18 @@ def _render_annotation_html(pool_records: list[dict], manifest: dict) -> str:
             query_id = html.escape(str(pool_record["query_id"]), quote=True)
             work_id = html.escape(str(candidate.get("work_id") or ""), quote=True)
             page = candidate.get("page")
+            context_html = ""
+            if manifest.get("schema") == "discovery-context-comparison-v1":
+                from catalog.services.discovery_material import MATERIAL_ROLES
+                context_html = "<p>请按命中原文评分；邻文有用不等于命中段本身回答了问题。</p>" + "".join(
+                    f'<p>文件页 {html.escape(str(block.get("pdf_page")))} · {html.escape(str(block.get("role")))}'
+                    f'</p><blockquote>{html.escape(str(block.get("text") or ""))}</blockquote>'
+                    for block in candidate.get("context_blocks") or []
+                )
+                context_html += f'<p>PDF定位：{html.escape(str(candidate.get("reader_url") or ""))}</p>'
+                context_html += '<label><input type="checkbox" class="locator-verified"> 已打开PDF核对定位与原文</label>'
+                context_html += '<label>材料类型<select class="material-role"><option value="">请选择</option>' + ''.join(
+                    f'<option value="{key}">{label}</option>' for key, label in MATERIAL_ROLES.items()) + '</select></label>'
             cards.append(
                 f"""
                 <article class="candidate-card" data-query-id="{query_id}"
@@ -899,6 +911,7 @@ def _render_annotation_html(pool_records: list[dict], manifest: dict) -> str:
                     · {html.escape(authors)} · 文件页 {html.escape(str(page if page is not None else '待核对'))}</p>
                   <p class="identifier">{identifier}</p>
                   <blockquote>{html.escape(str(candidate.get('original_passage') or ''))}</blockquote>
+                  {context_html}
                   <fieldset>
                     <legend>人工 relevance grade</legend>
                     {''.join(f'<label><input type="radio" name="grade-{query_id}-{identifier}" value="{grade}"> {grade}</label>' for grade in range(4))}
@@ -956,6 +969,10 @@ def _render_annotation_html(pool_records: list[dict], manifest: dict) -> str:
           page: card.dataset.page === '' ? null : Number(card.dataset.page),
           relevance_grade: checked ? Number(checked.value) : null,
           reviewer_note: card.querySelector('.reviewer-note').value,
+          ...(document.body.dataset.manifest && JSON.parse(document.body.dataset.manifest).schema === 'discovery-context-comparison-v1'
+            ? {{report_hash: JSON.parse(document.body.dataset.manifest).report_hash,
+                material_role: card.querySelector('.material-role').value,
+                locator_verified: card.querySelector('.locator-verified').checked}} : {{}}),
         }});
       }});
       const text = rows.map((row) => JSON.stringify(row)).join('\n') + '\n';
