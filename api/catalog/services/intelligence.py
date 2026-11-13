@@ -93,7 +93,7 @@ def create_run(revision, actor, *, request_id, scope=None, profile_key="", execu
     config = configuration(profile_key)
     run = m.CurationRun.objects.create(work=revision.asset.edition.work, edition=revision.asset.edition,
         document_revision=revision, scope=scope, created_by=actor, request_id=request_id, input_hash=fingerprint,
-        profile_key=config.profile_key, execution_mode=execution_mode, model_identity=identity(config),
+        profile_key=config.profile_key, execution_mode=execution_mode, plan_version=2, model_identity=identity(config),
         status="waiting" if config.enabled or execution_mode == "agent" else "waiting_configuration")
     if execution_mode == "agent":
         from catalog.services.knowledge_compilation import run_configuration
@@ -262,29 +262,33 @@ def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, valid
     return saved
 
 
-def chapter_paths(structure, chapter_ids):
+def chapter_paths(structure, chapter_ids, *, include_groups=False):
     """Fetch unique ancestors by depth, not once for every resumed window."""
     requested = {str(key) for key in chapter_ids}
     rows, pending = {}, requested
     while pending:
-        batch = {str(row["id"]):row for row in structure.nodes.filter(pk__in=pending).values("id", "parent_id", "title")}
+        batch = {str(row["id"]):row for row in structure.nodes.filter(pk__in=pending).values("id", "parent_id", "title", "kind")}
         if set(batch) != pending:
             raise ValidationError("章节节点不属于当前正文结构。")
         rows.update(batch)
         pending = {str(row["parent_id"]) for row in batch.values() if row["parent_id"]} - rows.keys()
-    paths = {}
+    paths, groups = {}, {}
     for key in requested:
-        path, seen, cursor = [], set(), key
+        path, seen, cursor, chapter = [], set(), key, None
         while cursor:
             if cursor in seen:
                 raise ValidationError("正文层级存在循环，不能编纂。")
             seen.add(cursor)
             row = rows[cursor]
+            if chapter is None and row["kind"] == "chapter":
+                chapter = cursor
             if row["title"]:
                 path.insert(0, row["title"])
             cursor = str(row["parent_id"]) if row["parent_id"] else None
         paths[key] = path
-    return paths
+        groups[key] = {"node_id":chapter or key, "kind":rows[chapter or key]["kind"],
+            "title":rows[chapter or key]["title"]}
+    return (paths, groups) if include_groups else paths
 
 
 def prepare(run):
@@ -458,6 +462,8 @@ def compile_wiki(run, proposals, config, lease, *, synthesis=None):
             "total_windows":run.coverage.get("total_windows"), "interpretation_status":"unreviewed"}
     results = []
     budget = min(config.max_input_chars-6500, 6500)
+    optimized = run.plan_version == 2
+    from catalog.services.knowledge_compilation_plan import wiki_inputs, wiki_schema, validate_wiki_batch, WIKI_PROMPT
     for target in targets:
         if not target["assertions"]: continue
         if len(target["pages"]) == 1 and (target["key"] == "work" or "page_id" in target):
@@ -472,63 +478,74 @@ def compile_wiki(run, proposals, config, lease, *, synthesis=None):
             "source_revision":str(run.document_revision_id),"assertions":[],"existing_blocks":[],"omitted_context_blocks":[]}
         if argument_context is not None:
             base["argument_context"] = argument_context
-        source_budget = budget - len(json.dumps(base, ensure_ascii=False))
-        if source_budget <= 0:
-            raise ValidationError("全书论证语境超过编纂输入预算；请缩短综合产物或扩大明确预算，未截断原文或综合。")
-        batches, batch = [], []
-        # Partition at whole assertions; no sampling or truncating source claims.
-        for assertion in target["assertions"]:
-            source = source_assertions[assertion["id"]]
-            if batch and len(json.dumps([*batch,source],ensure_ascii=False)) > source_budget:
-                batches.append(batch);batch=[]
-            if len(json.dumps([source],ensure_ascii=False)) > source_budget:
-                raise ValidationError("单条学术陈述超过编纂输入预算，请扩大明确预算或缩小上游陈述范围。")
-            batch.append(source)
-        if batch: batches.append(batch)
-        for position, batch in enumerate(batches):
-            data = {**base, "assertions":batch, "existing_blocks":[], "omitted_context_blocks":[]}
-            for context in contexts:
-                if len(json.dumps({**data,"existing_blocks":[*data["existing_blocks"],context]},ensure_ascii=False)) <= budget:
-                    data["existing_blocks"].append(context)
-                else:
-                    data["omitted_context_blocks"].append(context["block"]["id"])
+        if optimized:
+            packets = wiki_inputs(base, [source_assertions[a["id"]] for a in target["assertions"]], contexts, config)
+        else:
+            # Preserve old packets and cache keys for already-started runs.
+            source_budget = budget - len(json.dumps(base, ensure_ascii=False))
+            if source_budget <= 0:
+                raise ValidationError("全书论证语境超过编纂输入预算；请缩短综合产物或扩大明确预算，未截断原文或综合。")
+            batches, batch = [], []
+            for assertion in target["assertions"]:
+                source = source_assertions[assertion["id"]]
+                if batch and len(json.dumps([*batch,source],ensure_ascii=False)) > source_budget:
+                    batches.append(batch);batch=[]
+                if len(json.dumps([source],ensure_ascii=False)) > source_budget:
+                    raise ValidationError("单条学术陈述超过编纂输入预算，请扩大明确预算或缩小上游陈述范围。")
+                batch.append(source)
+            if batch: batches.append(batch)
+            packets = []
+            for batch in batches:
+                data = {**base, "assertions":batch, "existing_blocks":[], "omitted_context_blocks":[]}
+                for context in contexts:
+                    if len(json.dumps({**data,"existing_blocks":[*data["existing_blocks"],context]},ensure_ascii=False)) <= budget:
+                        data["existing_blocks"].append(context)
+                    else:
+                        data["omitted_context_blocks"].append(context["block"]["id"])
+                packets.append(data)
+        for position, data in enumerate(packets):
             current_ids = {source_assertions[a["id"]]["id"]:a["id"] for a in target["assertions"]}
-            artifact = _model_artifact(run,6,f"page:{target['key']}:{position}",data,
+            legacy_prompt = (
                 "为目标知识页提出一个局部patch。operation为add、replace、delete或none；replace/delete须给出已读block_id及具体理由。"
                 "仅用本批有原文证据的陈述，说明与其他来源可能不同的用法或解释。"
                 "argument_context是按顺序综合的未审核论证语境，须保留其中的时期变化和限定；它不能充当原文证据或增加本批陈述之外的事实。"
                 "已有区块仅供避免重复，不能作为新增事实证据；省略的区块未读取，不能声称审阅整页。人物同名候选尚未合并。"
-                "人工区块默认受保护，只有新原文确实要求修订时才能提出待人工处理的修改，不直接覆盖。无实质变化时operation为none。返回实际使用的assertion_ids。",
-                WIKI_SCHEMA,config,lease,validate=lambda output:validate_wiki_patch(output,data))
-            output = artifact.output
-            operation=output.get("operation","add")
-            if operation=="none" or operation=="add" and not output["text"].strip(): continue
-            refs = [current_ids[key] for key in output["assertion_ids"]]
-            current = next((c for c in contexts if c["block"]["id"]==output.get("block_id")),None) if operation!="add" else None
-            block_id = current["block"]["id"] if current else str(uuid5(run.pk,f"wiki:{target['key']}:{position}"))
-            payload = {"operation":operation,"block_id":block_id,"reason":output["reason"],
-                "block":{"id":block_id,"type":"analysis","text":output["text"],
-                    "references":[{"type":"assertion","id":{"change_item":key}} for key in refs]}}
-            if current:
-                payload.update(page_id=current["page_id"],base_hash=digest(current["block"]),base_revision=current["revision_id"],
-                    base_value=current["block"],human_protected=bool(current["block"].get("human_edited") or current["block"].get("origin") in {"human","manual","migration"}))
-                if operation=="replace":
-                    payload["block"]["references"]=[*current["block"].get("references",[]),*payload["block"]["references"]]
-            dependencies = list(refs)
-            if "page_id" in target:
-                page = target["pages"][0]
-                _, revision = page_content(page)
-                payload.update(page_id=str(page.pk), base_revision=str(revision.pk) if revision else None)
-            elif target["key"] == "work":
-                payload["work_id"] = target["work_id"]
-                if target["pages"]:
-                    page=target["pages"][0];_,revision=page_content(page)
-                    payload.update(page_id=str(page.pk),base_revision=str(revision.pk) if revision else None)
-            else:
-                payload["entity_id"] = target["entity_id"]
-                dependencies.append(target["key"])
-            results.append({"id":str(uuid5(run.pk,"wiki:"+digest(payload))),"kind":"wiki_patch","payload":payload,
-                "dependencies":sorted(set(dependencies)),"source_artifact_id":str(artifact.pk)})
+                "人工区块默认受保护，只有新原文确实要求修订时才能提出待人工处理的修改，不直接覆盖。无实质变化时operation为none。返回实际使用的assertion_ids。")
+            validator = validate_wiki_batch if optimized else validate_wiki_patch
+            artifact = _model_artifact(run,6,f"page:{target['key']}:{position}",data,
+                WIKI_PROMPT if optimized else legacy_prompt, wiki_schema() if optimized else WIKI_SCHEMA,
+                config,lease,validate=lambda output:validator(output,data))
+            outputs = artifact.output["patches"] if optimized else [artifact.output]
+            for patch_index, output in enumerate(outputs):
+                operation=output.get("operation","add")
+                if operation=="none" or operation=="add" and not output["text"].strip(): continue
+                refs = [current_ids[key] for key in output["assertion_ids"]]
+                current = next((c for c in contexts if c["block"]["id"]==output.get("block_id")),None) if operation!="add" else None
+                identity_key = f"wiki:{target['key']}:{position}" + (f":{patch_index}" if optimized else "")
+                block_id = current["block"]["id"] if current else str(uuid5(run.pk,identity_key))
+                payload = {"operation":operation,"block_id":block_id,"reason":output["reason"],
+                    "block":{"id":block_id,"type":"analysis","text":output["text"],
+                        "references":[{"type":"assertion","id":{"change_item":key}} for key in refs]}}
+                if current:
+                    payload.update(page_id=current["page_id"],base_hash=digest(current["block"]),base_revision=current["revision_id"],
+                        base_value=current["block"],human_protected=bool(current["block"].get("human_edited") or current["block"].get("origin") in {"human","manual","migration"}))
+                    if operation=="replace":
+                        payload["block"]["references"]=[*current["block"].get("references",[]),*payload["block"]["references"]]
+                dependencies = list(refs)
+                if "page_id" in target:
+                    page = target["pages"][0]
+                    _, revision = page_content(page)
+                    payload.update(page_id=str(page.pk), base_revision=str(revision.pk) if revision else None)
+                elif target["key"] == "work":
+                    payload["work_id"] = target["work_id"]
+                    if target["pages"]:
+                        page=target["pages"][0];_,revision=page_content(page)
+                        payload.update(page_id=str(page.pk),base_revision=str(revision.pk) if revision else None)
+                else:
+                    payload["entity_id"] = target["entity_id"]
+                    dependencies.append(target["key"])
+                results.append({"id":str(uuid5(run.pk,"wiki:"+digest(payload))),"kind":"wiki_patch","payload":payload,
+                    "dependencies":sorted(set(dependencies)),"source_artifact_id":str(artifact.pk)})
     _save_artifact(run,6,"wiki",{"source_revision":str(run.document_revision_id)}, {"proposals":results},lease=lease)
     return results
 
@@ -548,6 +565,8 @@ def _completed_analyses(run, config, lease):
     total = run.coverage.get("total_windows", 0)
     if (not config.enabled or not total or run.coverage.get("completed_windows") != total
             or run.coverage.get("read_characters") != run.coverage.get("total_characters")):
+        return None
+    if run.plan_version == 2 and len(run.coverage.get("window_groups", [])) != total:
         return None
     _guard(run, lease)
     structure = current_structure(run.document_revision)
@@ -602,20 +621,25 @@ def _analyze_windows(run, config, lease):
     if not config.enabled:
         m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="waiting_configuration",stage=2)
         return
-    m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="running",started_at=timezone.now(),model_identity=identity(config))
+    m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="running",started_at=run.started_at or timezone.now(),model_identity=identity(config))
     analyses = []
     read_nodes = set()
     planned = list(windows(nodes, config, run.scope))
-    paths = chapter_paths(run.structure, (chapter for chapter, _ in planned))
+    paths, groups = chapter_paths(run.structure, (chapter for chapter, _ in planned), include_groups=True)
     total_characters = sum(row["end"]-row["start"] for _, rows in planned for row in source_rows(rows))
     read_characters = 0
     analysis_plan_hash = _analysis_plan_hash(run, config, run.structure)
     # Do not temporarily reset a partially read book to zero on every resume.
-    if run.coverage.get("analysis_plan_hash") != analysis_plan_hash or run.coverage.get("total_windows") != len(planned) or run.coverage.get("total_characters") != total_characters:
+    window_groups = [groups[chapter] for chapter, _ in planned] if run.plan_version == 2 else None
+    if (run.coverage.get("analysis_plan_hash") != analysis_plan_hash or run.coverage.get("total_windows") != len(planned)
+            or run.coverage.get("total_characters") != total_characters
+            or window_groups is not None and run.coverage.get("window_groups") != window_groups):
         run.coverage.update(total_windows=len(planned), completed_windows=0, read_nodes=0,
             total_characters=total_characters, read_characters=0, coverage_unit="unicode_code_point",
             analysis_plan_hash=analysis_plan_hash, analysis_complete=False)
         run.coverage.pop("interpretation_status", None)
+        if window_groups is not None:
+            run.coverage["window_groups"] = window_groups
         m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(coverage=run.coverage)
     for index, (chapter, rows) in enumerate(planned):
         chapter_path = paths[chapter]
@@ -635,6 +659,8 @@ def _analyze_windows(run, config, lease):
 
 
 def execute(run, config, lease):
+    if run.plan_version not in {1, 2}:
+        raise ValidationError("此执行计划版本不受当前代码支持，未修改旧产物。")
     # A new lease must not retain in-memory receipts from an earlier attempt.
     run._artifact_cache = {}
     analyses = _completed_analyses(run, config, lease)
@@ -644,13 +670,17 @@ def execute(run, config, lease):
             return
     else:
         m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(
-            status="running", started_at=timezone.now(), model_identity=identity(config))
-    synthesis = {"summary":"","development":[],"limitations":[]}
-    summary = None
-    for i, artifact in enumerate(analyses):
-        data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_hash":artifact.output_hash,"position":i}
-        summary = _model_artifact(run,3,f"fold:{i}",data,"按真实文献次序继续综合。保留论证发展和概念变化、相反解释及覆盖限制，不按多数意见归并。",SUMMARY_SCHEMA,config,lease)
-        synthesis = summary.output
+            status="running", started_at=run.started_at or timezone.now(), model_identity=identity(config))
+    if run.plan_version == 2:
+        from catalog.services.knowledge_compilation_plan import synthesize
+        summary = synthesize(run, analyses, config, lease)
+    else:
+        synthesis = {"summary":"","development":[],"limitations":[]}
+        summary = None
+        for i, artifact in enumerate(analyses):
+            data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_hash":artifact.output_hash,"position":i}
+            summary = _model_artifact(run,3,f"fold:{i}",data,"按真实文献次序继续综合。保留论证发展和概念变化、相反解释及覆盖限制，不按多数意见归并。",SUMMARY_SCHEMA,config,lease)
+            synthesis = summary.output
     entity_proposals, entity_items, names = [], {}, {}
     for artifact in analyses:
         for raw in artifact.output.get("entities",[]):

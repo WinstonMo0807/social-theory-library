@@ -15,6 +15,8 @@ class CurationRun(UUIDTimeStampedModel):
     coverage = models.JSONField(default=dict)
     profile_key = models.CharField(max_length=80, blank=True)
     execution_mode = models.CharField(max_length=16, default="provider", choices=[("provider", "Provider"), ("agent", "Interactive agent")])
+    # Pin execution semantics. Deploying a new planner must not invalidate old runs.
+    plan_version = models.PositiveSmallIntegerField(default=1, choices=[(1, "Window fold"), (2, "Ordered chapter batches")])
     model_identity = models.JSONField(default=dict)
     input_hash = models.CharField(max_length=64)
     request_id = models.UUIDField(unique=True)

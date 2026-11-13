@@ -10,7 +10,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from catalog import models as m
 from catalog.services.knowledge_sources import digest, require_revision_access
-from catalog.services.intelligence_provider import configuration, identity, SYSTEM, PROMPT_VERSION
+from catalog.services.intelligence_provider import configuration, identity, SYSTEM, TASK, PROMPT_VERSION
 from common.task_runtime import queue_or_wait
 from ingestion.services.ai_client import AIClient
 
@@ -95,7 +95,7 @@ def model_transport(demand_id,executor_id,lease_token,input_hash):
         artifact.save(update_fields=["status","execution_request","updated_at"])
     started=time.monotonic()
     try:
-        result=AIClient(config=config).generate_json(task="STL Intelligence",system_prompt=SYSTEM,
+        result=AIClient(config=config).generate_json(task=TASK,system_prompt=SYSTEM,
             document_text=text,schema=request["schema"],prompt_version=PROMPT_VERSION,strict=True)
         validate_result(artifact,result.data)
     except Exception as exc:
@@ -123,14 +123,21 @@ def validate_result(artifact,output):
     if artifact.stage == 2:
         from catalog.services.intelligence import validate_analysis
         validate_analysis(output,data["ranges"])
+    elif artifact.stage == 3 and "source_units" in data:
+        from catalog.services.knowledge_compilation_plan import validate_synthesis
+        validate_synthesis(output,data)
     elif artifact.stage == 4:
         candidates={c["id"] for c in data["bounded_candidates"]}
         seen=[c["candidate_id"] for c in output["comparisons"]]
         if set(seen) != candidates or len(seen) != len(candidates):
             raise ValidationError("身份比较没有完整覆盖限定候选。")
     elif artifact.stage == 6:
-        from catalog.services.intelligence import validate_wiki_patch
-        validate_wiki_patch(output,data)
+        if data.get("plan") == "page-batches-v2":
+            from catalog.services.knowledge_compilation_plan import validate_wiki_batch
+            validate_wiki_batch(output,data)
+        else:
+            from catalog.services.intelligence import validate_wiki_patch
+            validate_wiki_patch(output,data)
 
 
 def complete_stage(demand,result):

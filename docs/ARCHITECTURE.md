@@ -1,3 +1,9 @@
+## 2026-11-14 版本化章节综合与同页编纂
+
+CurationRun新增plan_version，0103使旧任务保留1，新建任务为2。v2按实际章节节点ID和完整请求预算合批，独立章内产物不依赖前章；全书仍按原文次序fold并固定前序哈希。单窗口复用原分析，完整窗口分析prompt不变。章节与Wiki产物分别核验有序covered_units/covered_assertion_ids，模型、代理与远程执行共用校验。Wiki同批最多8项局部patch，人工区块、基准版本、原文证据、ChangeSet与发布服务继续唯一。
+
+AIClient与输入规划共用structured_messages严格预算，超限显式失败，不截断正文或已完成产物。inspect_knowledge_runtime只读迁移、依赖、阶段及使用回执，未知耗时与调用数单列；不是历史总账或模型性能证明。47项定向检查及三书输入规划通过，尚未部署。架构差别见stl4/PUBLIC_KNOWLEDGE_COMPARISON_20261114.md，Mac接续见stl4/MAC_CODEX_HANDOFF_20261114.md。
+
 ## 2026-11-14 OCR索引的有界页面复用
 
 logical_source_units每100条DocumentNodeSegment预取相关RevisionPage，不将整页原文、blocks及geometry重复join到每个OCR行。索引窗口、来源哈希、历史修订及定位语义不变；没有持久页面缓存，不放宽原文验证，不因代码部署触发重索引。

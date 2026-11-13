@@ -19,6 +19,8 @@ STL 围绕社会学、人类学与民族学组织文献、人物、理论、主�
 
 > **当前基线：STL 4.0。** 本次文档依据 2026-11-09 公网 `curation-publish-r1` 及逐项核对的运行源码重建。生产镜像与 Git 提交的对应强度见[审计基线](docs/architecture/AUDIT_BASELINE.md)。GitHub 更新不等于生产重新部署。
 
+> **知识底层开发分支与Mac接续：** 使用`codex/stl-knowledge-intelligence`，先读[交接入口](docs/stl4/MAC_CODEX_HANDOFF_20261114.md)和[当前进度](CURRENT_PROGRESS.md)。[正式公网与新底层对照](docs/stl4/PUBLIC_KNOWLEDGE_COMPARISON_20261114.md)区分已上线、内网验证及开发中能力；数据库、馆藏、模型与密钥不在Git中。
+
 ## 在 STL 中完成什么
 
 | 场景 | 能力与边界 |

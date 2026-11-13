@@ -12,6 +12,7 @@ def run_data(run, actor, *, detail=False):
         "edition_id": str(run.edition_id), "document_revision_id": str(run.document_revision_id),
         "asset_id": str(run.document_revision.asset_id), "pages": run.document_revision.asset.page_count,
         "scope": run.scope, "status": run.status, "stage": run.stage, "coverage": run.coverage,
+        "plan_version": run.plan_version,
         "profile_key": run.profile_key, "model_identity": run.model_identity, "error": run.error,
         "version": run.version, "created_at": run.created_at, "finished_at": run.finished_at}
     if detail:

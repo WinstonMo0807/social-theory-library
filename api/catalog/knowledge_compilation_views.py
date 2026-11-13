@@ -60,10 +60,13 @@ class CompilationDetail(APIView):
         subscription = get_object_or_404(m.KnowledgeCompilation, pk=compilation_id)
         value = service.compilation_data(subscription, request.user)
         if subscription.latest_run_id:
+            from catalog.services.knowledge_runtime import run_metrics
+            value["runtime"] = run_metrics(subscription.latest_run)
             # Metadata only; source packets have a separate authenticated action.
             value["windows"] = list(subscription.latest_run.artifacts.filter(stage=2).order_by("created_at", "pk")
                 .values("id", "unit", "status", "elapsed_ms", "usage", "output_hash"))
-            value["synthesis"] = subscription.latest_run.artifacts.filter(stage=3, status__in=["succeeded", "empty"]).order_by("-created_at").values("output").first()
+            value["synthesis"] = subscription.latest_run.artifacts.filter(stage=3, unit__startswith="fold:",
+                status__in=["succeeded", "empty"]).order_by("-created_at").values("output").first()
         return Response(value)
 
     def post(self, request, compilation_id):

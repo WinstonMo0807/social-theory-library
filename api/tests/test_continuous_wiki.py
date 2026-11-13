@@ -26,6 +26,8 @@ def next_packet(subscription, admin_user):
 
 
 def submit(artifact, admin_user, output):
+    if artifact.stage == 3 and "source_units" in artifact.input_manifest:
+        output = {**output, "covered_units":artifact.input_manifest["source_units"]}
     return compilation.submit_agent_result(artifact.pk, admin_user, input_hash=artifact.cache_key,
         run_version=artifact.execution_request["run_version"], output=output, executor_label="test fixture")
 
@@ -51,8 +53,12 @@ def test_agent_cannot_submit_unread_or_obsolete_evidence(source, admin_user, mon
 def test_complete_empty_book_cache_and_idempotent_agent_receipts(source, admin_user, monkeypatch):
     policy = setup(source, admin_user, monkeypatch)
     receipts = []
+    first_started = None
     for _ in range(30):
         artifact = next_packet(policy, admin_user)
+        policy.latest_run.refresh_from_db()
+        first_started = first_started or policy.latest_run.started_at
+        assert policy.latest_run.started_at == first_started
         if artifact is None:
             break
         output = ({"summary":"fixture", "questions":[], "entities":[], "assertions":[]} if artifact.stage == 2

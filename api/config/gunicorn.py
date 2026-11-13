@@ -18,3 +18,10 @@ def post_fork(server, worker):
         from django.db import connections
         connections.close_all()
     gc.enable()
+
+
+def worker_abort(worker):
+    # Diagnose the observed worker timeouts without logging request bodies,
+    # local variables, credentials or document content.
+    import faulthandler
+    faulthandler.dump_traceback(all_threads=True)

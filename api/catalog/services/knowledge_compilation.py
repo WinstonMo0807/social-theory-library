@@ -237,6 +237,7 @@ def compilation_data(subscription, actor):
         "scope":subscription.scope, "profile_key":subscription.profile_key,
         "target_page_ids":[str(key) for key in subscription.target_pages.values_list("pk", flat=True)],
         "run_id":str(run.pk) if run else None, "status":run.status if run else "waiting",
+        "plan_version":run.plan_version if run else None,
         "stage":run.stage if run else 1,
         "coverage":coverage,
         "excluded_page_count":len(run.coverage.get("excluded_pages", [])) if run else 0, "error":run.error if run else {},
