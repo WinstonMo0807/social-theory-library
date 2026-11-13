@@ -9,9 +9,42 @@ import sys
 import tempfile
 
 
-def main():
+def main(*, api_port=8105, web_port=3105, offline=False, ready_file=None, resume_ready_file=None):
+    if not all(isinstance(port, int) and 1024 <= port <= 65535 for port in (api_port, web_port)):
+        raise ValueError("Fixture ports must be unprivileged local ports")
+    if offline:
+        # Only this fixture process is fenced; incoming loopback requests work.
+        # Existing production providers, mail and local model services cannot
+        # accidentally be called by synthetic tasks or source checks.
+        import socket
+        def deny_connect(*args, **kwargs):
+            raise OSError("Outbound connections are disabled in the isolated visual fixture")
+        socket.socket.connect = deny_connect
+        socket.socket.connect_ex = deny_connect
     repository = Path(__file__).resolve().parents[1]
-    fixture_directory = Path(tempfile.mkdtemp(prefix="stl-v305-e2e-")).resolve()
+    if resume_ready_file:
+        from contextlib import closing
+        import json
+        import sqlite3
+        if not offline:
+            raise ValueError("Resuming a preview requires --offline")
+        runtime = json.loads(Path(resume_ready_file).read_text(encoding="utf-8"))
+        fixture_directory = Path(runtime["fixture_directory"]).resolve()
+        if (runtime.get("offline") is not True
+                or runtime.get("api_url") != f"http://127.0.0.1:{api_port}/api"
+                or runtime.get("web_url") != f"http://127.0.0.1:{web_port}"
+                or fixture_directory.parent != Path(tempfile.gettempdir()).resolve()
+                or not fixture_directory.name.startswith("stl-v305-e2e-")):
+            raise ValueError("Only the recorded offline temporary fixture can be resumed")
+        fixture_database = fixture_directory / "local_fixture.sqlite3"
+        if not fixture_database.is_file() or fixture_database.is_symlink():
+            raise ValueError("The recorded fixture database must already exist")
+        with closing(sqlite3.connect(f"{fixture_database.as_uri()}?mode=ro", uri=True)) as connection:
+            accounts = connection.execute("SELECT email FROM accounts_user").fetchall()
+            if not accounts or any(not email.endswith("@example.test") for (email,) in accounts):
+                raise ValueError("Only synthetic fixture accounts may be resumed")
+    else:
+        fixture_directory = Path(tempfile.mkdtemp(prefix="stl-v305-e2e-")).resolve()
     os.environ.update({
         "DJANGO_SETTINGS_MODULE": "config.settings",
         "DATABASE_URL": f"sqlite:///{(fixture_directory / 'local_fixture.sqlite3').as_posix()}",
@@ -33,11 +66,13 @@ def main():
         # unchanged; rate-limit behavior has independent failure-injection tests.
         "API_ANON_RATE": "2000/min", "API_USER_RATE": "4000/min",
         "DJANGO_ALLOWED_HOSTS": "127.0.0.1,localhost,testserver",
-        "CORS_ALLOWED_ORIGINS": "http://127.0.0.1:3105",
-        "DJANGO_CSRF_TRUSTED_ORIGINS": "http://127.0.0.1:3105",
+        "CORS_ALLOWED_ORIGINS": f"http://127.0.0.1:{web_port}",
+        "DJANGO_CSRF_TRUSTED_ORIGINS": f"http://127.0.0.1:{web_port}",
         "CELERY_BROKER_URL": "memory://", "CELERY_TASK_ALWAYS_EAGER": "true" if os.environ.get("STL_E2E_V307") == "1" else "false",
         "PROCESS_INGESTION_INLINE": "false", "PYTHONIOENCODING": "utf-8",
         "THEORY_SYSTEM_ENABLED": "true",
+        "CACHE_URL": "",
+        "EMAIL_BACKEND": "django.core.mail.backends.locmem.EmailBackend",
     })
     sys.path.insert(0, str(repository / "api"))
     import django
@@ -52,6 +87,10 @@ def main():
     database.setdefault("OPTIONS", {}).update(timeout=20, transaction_mode="IMMEDIATE")
     django.setup()
     from django.core.management import call_command
+    if resume_ready_file:
+        print("Resuming existing offline fixture; no migration, reseeding or credential reset.", flush=True)
+        call_command("runserver", f"127.0.0.1:{api_port}", use_reloader=False)
+        return
     from accounts.models import User
     call_command("migrate", interactive=False, verbosity=0)
     for email, role in (("curator-v305@example.test", "editor"), ("reader-v305@example.test", "reader"), ("administrator-v305@example.test", "admin"), ("owner-v305@example.test", "admin")):
@@ -111,8 +150,22 @@ def main():
         from v307_e2e_fixtures import seed_v307
         seed_v307(User.objects.get(email="owner-v305@example.test"))
     print(f"Isolated local E2E database: {fixture_directory}", flush=True)
-    call_command("runserver", "127.0.0.1:8105", use_reloader=False)
+    if ready_file:
+        import json
+        Path(ready_file).write_text(json.dumps({"fixture_directory": str(fixture_directory),
+            "api_url": f"http://127.0.0.1:{api_port}/api", "web_url": f"http://127.0.0.1:{web_port}",
+            "offline": offline, "data": "synthetic fixtures; no production data"}), encoding="utf-8")
+    call_command("runserver", f"127.0.0.1:{api_port}", use_reloader=False)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--api-port", type=int, default=8105)
+    parser.add_argument("--web-port", type=int, default=3105)
+    parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--ready-file")
+    parser.add_argument("--resume-ready-file", help="Resume only an existing recorded offline temporary fixture")
+    arguments = parser.parse_args()
+    main(api_port=arguments.api_port, web_port=arguments.web_port,
+         offline=arguments.offline, ready_file=arguments.ready_file, resume_ready_file=arguments.resume_ready_file)

@@ -6,7 +6,7 @@ export function researchEvidenceKey(reference: ResolvedEvidence): string {
   return reference.reference_id || reference.evidence_span_id || `${reference.asset_id}:${reference.pdf_page}`;
 }
 
-export function researchEvidenceReference(reference: ResolvedEvidence): EvidenceReference {
+export function researchEvidenceReference(reference: EvidenceReference): EvidenceReference {
   if (reference.anchors?.length) return { anchors: reference.anchors.map(researchEvidenceReference) };
   const anchor = { asset_id: reference.asset_id, document_revision_id: reference.document_revision_id,
     pdf_page: reference.pdf_page, evidence_span_id: reference.evidence_span_id, content_hash: reference.content_hash,

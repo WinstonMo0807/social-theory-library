@@ -19,7 +19,7 @@ import { safeAdminHref, withAdminReturn } from "@/lib/admin-route-context";
 import { fileDraftFromWorkspace, fileKindLabel, pdfValidationPresentation, fileProcessingStatusLabel, fileTextProfileLabel, fileDuplicateLabel } from "./file-presentation";
 import { publicationDescription, publicationPresentation, type CatalogPublication } from "@/lib/api/admin-collections";
 
-import { AlertTriangle, Check, ChevronDown, ChevronRight, Eye, FileCheck2, LoaderCircle, RefreshCw, Save, Upload } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, ChevronRight, Eye, FileCheck2, RefreshCw, Save, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionButton, ActionLink, AsyncStatus, type ActionState } from "@/components/action-feedback";
 import { apiRequest, getServerSessionCredential, ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
@@ -591,7 +591,7 @@ type EditorProps={mode:EditorMode;itemId?:string;workId?:string;editionId?:strin
 export function WorkflowEditor(props:EditorProps){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<OwnedWorkflowEditor key={`${user.id}:${props.mode}:${props.workId}:${props.itemId}:${props.editionId}:${epoch}`} {...props} owner={String(user.id)}/>:<LoadingState role="status">正在核对编目账户…</LoadingState>;
+  return user?<OwnedWorkflowEditor key={`${user.id}:${props.mode}:${props.workId}:${props.itemId}:${props.editionId}:${epoch}`} {...props} owner={String(user.id)}/>:<LoadingState variant="screen" role="status">正在核对编目账户…</LoadingState>;
 }
 function OwnedWorkflowEditor({ mode, itemId, workId, editionId: requestedEditionId, owner, initialAssistant=false }: EditorProps & {owner:string}) {
   const lifetime=useRef<AbortController|null>(null);

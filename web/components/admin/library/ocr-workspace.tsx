@@ -27,7 +27,7 @@ export function OCRWorkspaceView({ assetId }: { assetId: string }) {
   const user = useAdminSession();
   const [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <LoadingState role="status">正在核对管理会话……</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对管理会话……</LoadingState>;
   return <Workspace key={`${user.id}:${assetId}:${epoch}`} assetId={assetId} ownerId={String(user.id)} canEdit={hasAdminCapability(user, "can_edit_metadata")} canPublish={hasAdminCapability(user, "can_publish_work")} />;
 }
 

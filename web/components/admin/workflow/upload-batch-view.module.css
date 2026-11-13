@@ -62,3 +62,7 @@
  .page[data-upload-batch=false] .summary{gap:8px;margin-top:3px}.page[data-upload-batch=false] .summary strong{font-size:18px}.page[data-upload-batch=false] .summary small{display:none}
  .page[data-upload-batch=false] .progress{margin:7px 0 0;height:7px}
 }
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .page:not(:global(dialog *), :global([role="dialog"] *)) { padding-inline:0; }
+:global(.admin-content) .heading:not(:global(dialog *), :global([role="dialog"] *)) { margin-bottom:24px; flex-wrap:wrap; }

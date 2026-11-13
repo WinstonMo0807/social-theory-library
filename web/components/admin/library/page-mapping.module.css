@@ -55,3 +55,7 @@
 /* PDF118: explicit missing-page decisions and the existing copy-task lifecycle. */
 .copyJobs{margin:16px 0;padding:17px;border:1px solid var(--night-line,#e5e8ec);background:var(--night-white,#fff);font:max(13px, var(--stl-readable-meta))/1.7 var(--font-serif),serif;color:var(--night-ink,#17395e)}.copyJobs h2{font:600 18px var(--font-serif),serif;margin:0 0 10px}.copyJobs article{padding:12px 0;border-top:1px solid var(--night-line,#e5e8ec)}.copyJobs article>div:first-child{display:flex;gap:15px;align-items:center;flex-wrap:wrap}.copyJobs time,.copyJobs small{font-size:max(11px, var(--stl-readable-meta));color:var(--night-muted,#75859b)}.copyJobs progress{width:min(100%,320px);height:7px;accent-color:var(--night-gold,#bd7b24)}.missingChoices{border:1px solid var(--night-line,#e5e8ec);padding:13px;margin:12px 0}.missingChoices legend{font-weight:600}.missingChoices label{margin-bottom:12px}.missingChoices a{font-size:max(13px, var(--stl-readable-meta));color:var(--night-ink,#244b76)}
 @media(max-width:760px){.copyJobs{padding:12px}.copyJobs h2{font-size:16px}.copyJobs>button{width:100%}}
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .workspace:not(:global(dialog *), :global([role="dialog"] *)) { padding-inline:0; }
+:global(.admin-content) .heading:not(:global(dialog *), :global([role="dialog"] *)) { margin-bottom:24px; }

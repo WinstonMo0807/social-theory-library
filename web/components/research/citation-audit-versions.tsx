@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,7 +48,7 @@ export function CitationAuditVersions({ record, ownerId, disabled = false, onRef
         {available.map(version => <option key={version.id} value={version.id}>v{version.manuscript_revision} · {version.filename} · {new Date(version.created_at).toLocaleString("zh-CN")}{version.id === record.id ? "（当前查看）" : ""}</option>)}
       </select> : <span>v{record.data.manuscript_revision || 1} · {record.data.filename}</span>}
     </label><div><button type="button" onClick={() => setUploading(true)} disabled={uploadingDisabled || uploading}><FileUp size={14} />上传新版本</button><button type="button" disabled={disabled || uploading || versions.loading} onClick={refresh}>读取版本记录</button></div></div>
-    {versions.loading ? <p className="stl4-audit-version-note" role="status">正在读取本人保存的稿件版本…</p> : versions.error ? <p className="stl4-audit-version-note" role="alert">{versions.error}</p> : versions.data && !current ? <p className="stl4-audit-version-note" role="alert">当前稿件不在返回的版本列表中，请重新读取记录。</p> : null}
+    {versions.loading ? <LoadingState className="stl4-audit-version-note" role="status">正在读取本人保存的稿件版本…</LoadingState> : versions.error ? <p className="stl4-audit-version-note" role="alert">{versions.error}</p> : versions.data && !current ? <p className="stl4-audit-version-note" role="alert">当前稿件不在返回的版本列表中，请重新读取记录。</p> : null}
     <p className="stl4-audit-version-note">{versions.data?.notice || "每个稿件版本保留独立原稿、报告和人工记录。切换版本将打开所选版本的报告。"}{needsParsedReport ? " 取得已解析的报告后可上传新版本。" : isTaskRunning(record.status) ? " 当前核验完成或取消后可上传下一版稿件。" : ""}{versions.data?.truncated ? <> <Link href="/account/citation-audits">从体检任务列表查看其他记录</Link></> : null}</p>
     {comparison || baseId ? <div className="stl4-audit-version-changes"><h3>与前版的实际变化{base ? <> · <Link href={`/account/citation-audits/${base.id}`}>回看基准 v{base.manuscript_revision}</Link></> : null}</h3>
       {comparison?.status === "completed" ? <dl className="stl4-audit-version-counts">{comparisonCounts.flatMap(({ field, label }) => {

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "P05",
+    "version": "v2",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6be56d1a-5595-405f-ae2b-5079f9dfa5a4.png",
+    "prompt": "Edit the supplied STL high-fidelity design, preserve layout/typography and unrelated components. Apply only these verified business corrections. No new features. Flat purecolorcontrols, no metaltexture. Allsampledata clearlymarked. Replace all source location labels 纸质页码 with PDF物理页 (samplevaluesretained). Add a separate 印刷页标：未提供 smallline whenunknown; neverconflate. Keep conversation andexistingquestioncomposer/sourceviewer."
+  },
+  {
+    "id": "R04",
+    "version": "v2",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2ba32a21-7683-4e28-87e0-7ee7de95e3d9.png",
+    "prompt": "Edit the supplied STL high-fidelity design, preserve layout/typography and unrelated components. Apply only these verified business corrections. No new features. Flat purecolorcontrols, no metaltexture. Allsampledata clearlymarked. Remove 计划周期 fromright 阅读目标 completely (not supported). Replace right 在研究项目中使用 with 本书单的阅读计划 and 这些作品下的本人笔记, both existinglinks. Remove × deleteicons on tags; tagseditedthrough 编辑书单. Remove draghandles onrows; keepmoveactionsunder更多. Readingprogress labels are read-only 未记录进度/未读/已读, not dropdown. Retain overalltable andprivacy."
+  },
+  {
+    "id": "R10",
+    "version": "v2",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3b24f655-190f-40e1-a0a7-a54474e7d95c.png",
+    "prompt": "Edit the supplied STL high-fidelity design, preserve layout/typography and unrelated components. Apply only these verified business corrections. No new features. Flat purecolorcontrols, no metaltexture. Allsampledata clearlymarked. Correct real character limits: statementtextarea max1200, 更正原因 max4000, optional对象时间地区条件差异 max4000. Remove incorrect /500 counters. Showsourcephysicalpageandprintedlabelseparately ratherthan genericpage. Do not changeotherfields."
+  },
+  {
+    "id": "R11",
+    "version": "v2",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-a5ec9d2d-0da1-419b-999f-a2f83fa82547.png",
+    "prompt": "Edit the supplied STL high-fidelity design, preserve layout/typography and unrelated components. Apply only these verified business corrections. No new features. Flat purecolorcontrols, no metaltexture. Allsampledata clearlymarked. Remove ALL 相关性：高/较高/中 labels; replay has no rating. Replace 按来源类型 dropdown with 排序：按保存顺序 (also supports按题名). For unavailable source row retainnameandwarning, remove old excerpt. Rightbottom replace vague 下一步 button with three explicit existing links 对比两轮范围 / 从此分支另开研究 / 返回研究工作区. Change标签区to staticchips + 编辑主题标签, noimmediate×buttons. Leftglobalnav use same readernav, do not add currentdetailasnewmodule."
+  },
+  {
+    "id": "R13",
+    "version": "v2",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-dabae21f-2306-47cb-a069-6cb8c94ed64f.png",
+    "prompt": "Edit the supplied STL high-fidelity design, preserve layout/typography and unrelated components. Apply only these verified business corrections. No new features. Flat purecolorcontrols, no metaltexture. Allsampledata clearlymarked. Precise businesscorrection. Left 可见范围：仅本人可见 is read-only text, NOdropdown. Replaceallfivecheckrows with read-only 本次检查项目：引文识别、书目核对、版本页码. No editablecheckboxes. Remove entire 解析选项 block and invented识别范围 and标记style. Place 来源：馆藏公开资料 and已解析位置与书目 simplelistinstead. Rightremove 全部状态 selector androwcheckboxes; resultrowsareindividualselection. Keep resultsearch. Correcttextarea limit4000, label本人校正文案; its save actionmustbe 保存人工决定 with dropdown decision 已记录修正, meaningrecordindependenttextnotoriginal. No additionalfields."
+  },
+  {
+    "id": "R15",
+    "version": "v2",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ec7bbe55-5e14-4752-95ad-b03da3b94ba9.png",
+    "prompt": "Edit the supplied STL high-fidelity design, preserve layout/typography and unrelated components. Apply only these verified business corrections. No new features. Flat purecolorcontrols, no metaltexture. Allsampledata clearlymarked. Correct right 分项结论 toexact existingcategories: 书目核对 / 规范化文字匹配 / 页码核对 / 论断关系建议. Allsamplelabels待核对 notmadeupchecks. Supplementalnote max4000, not300. Candidateversionchoice is single selection radio, notmultiselectcheckbox. Include 选择此版本 button toconfirmthrough existingdialog. Left修正书目对应关系 is an action button, notfake suggestedcorrectiontable; remove 建议修正 table. Keep原句/context/footnote. SourcePDFlabel物理页not实体页. No otherchanges."
+  },
+  {
+    "id": "R25",
+    "version": "v2",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-943bb9c6-0532-4fe8-b53d-d2fd43d2220f.png",
+    "prompt": "Edit the supplied STL high-fidelity design, preserve layout/typography and unrelated components. Apply only these verified business corrections. No new features. Flat purecolorcontrols, no metaltexture. Allsampledata clearlymarked. Correct 已读材料与关注方向 limit4000, not1200. Language dropdownvalue 中文优先 (options不限/中文优先/英文优先), not fabricated中文为主. Add existing unchecked 在允许使用阅读记录时优先安排未读材料 checkbox under时间安排. Keepmatchinglive依据预览, samegoal/base6hours8weeks45min, no newinputs."
+  }
+]

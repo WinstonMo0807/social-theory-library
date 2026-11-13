@@ -326,7 +326,7 @@ type UploadWorkspace = {owner_id:string;transport:"local"|"r2";max_files:number;
 export function AdminUpload() {
   const user=useAdminSession(),batchId=useSearchParams().get("batch")||"",[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<AdminUploadBody key={`${user.id}:${epoch}:${batchId}`} owner={String(user.id)} batchId={batchId}/>:<p>正在核对上传账户…</p>;
+  return user?<AdminUploadBody key={`${user.id}:${epoch}:${batchId}`} owner={String(user.id)} batchId={batchId}/>:<LoadingState>正在核对上传账户…</LoadingState>;
 }
 function AdminUploadBody({owner,batchId}:{owner:string;batchId:string}) {
   const user=useAdminSession();

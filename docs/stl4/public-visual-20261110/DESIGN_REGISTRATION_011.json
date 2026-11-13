@@ -1,0 +1,138 @@
+[
+  {
+    "id": "A03",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-039892d4-531a-46ea-8a6e-9cc7bdfa110b.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_010.json"
+  },
+  {
+    "id": "A05",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-92a973a6-fb0c-4a9f-aff2-24bc5356a1ef.png",
+    "version": "v2",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_010.json"
+  },
+  {
+    "id": "A06",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-f508a372-cf2c-479e-a618-8995c68bcd62.png",
+    "version": "v2",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_010.json"
+  },
+  {
+    "id": "A07",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-f94a4e6d-e6b7-4883-8e82-34e10105bde7.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_010.json"
+  },
+  {
+    "id": "A12",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-434a9fb6-d428-4ff5-a95f-2aefafbda75b.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_CORRECTIONS_010.json"
+  },
+  {
+    "id": "A13",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-8bfc0d12-b255-4311-8c9e-f11b865b55b3.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A14",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-88cfd36c-6aa4-43a5-95ea-d08dd331331f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A15",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-22f2b2e8-7434-482d-90d6-a34432e9b270.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A16",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-a7085360-8cd9-4e2a-9298-3457826149db.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A17",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-7ef77e59-72c9-478f-a76e-9c6ef8e8820b.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A18",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-d8397092-090b-492f-bbc2-0b9dec645445.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A19",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-9081da7e-5f75-4415-b407-4b3ef763be3c.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A20",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-0a55756e-ee6a-4501-ac46-3129f7e04a03.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A21",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-e3f1468b-7351-4d6c-aa84-40ee2551db9b.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A22",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-54f1de37-fece-494f-9052-5149ceba2331.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A42",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-146a1dc0-1886-4ea6-8839-13fb4dbbc99c.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  },
+  {
+    "id": "A43",
+    "source": "C:/Users/12297/.codex/generated_images/01a1c15f-3995-7da2-a9d1-59105dd3d083/exec-d963bdb6-379e-4f20-a551-eb8564df85e3.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已实看，按DESIGN_CORRECTIONS_011纠正实际字段、状态与控件后再采用。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_010.json"
+  }
+]

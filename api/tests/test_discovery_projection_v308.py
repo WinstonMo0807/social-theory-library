@@ -70,13 +70,15 @@ def test_successful_external_task_required_before_ready(monkeypatch):
              "embedding_text": unit["text"][1:5], "token_count": 10, "quality_flags": []}
     job = ProcessingJob.objects.create(job_type="discovery_index", task_id=str(uuid4()), status="running",
         stats={"source_type": "edition", "source_id": str(edition.pk), "source_revision": header["source_revision"]})
+    DiscoverySourceState.objects.create(generation=generation, source_type="edition", source_id=edition.pk, job=job)
     monkeypatch.setattr(indexing, "embed_texts", lambda *a, **kw: {"vectors": [[1.0] + [0.0] * 383]})
     monkeypatch.setattr(indexing, "meili", lambda *a, **kw: {"taskUid": 7})
     def fail_task(*args, **kwargs):
         raise projection.DiscoveryIndexError("write_failed")
     monkeypatch.setattr(indexing, "wait_index_task", fail_task)
-    with pytest.raises(projection.DiscoveryIndexError):
+    with pytest.raises(projection.DiscoveryIndexError) as error:
         indexing._write_chunk(job, generation, header, unit, child)
+    assert error.value.code == "write_failed"
     projected = DiscoveryDocument.objects.exclude(pk__in=[doc.pk for doc in docs]).get()
     assert not projected.keyword_ready and not projected.vector_ready
     assert projected.indexed_at is None

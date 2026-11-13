@@ -31,7 +31,7 @@ export function CounterEvidenceWorkspace({ id, initialTurnId }: { id: string; in
   const { state, retry } = useSessionBootstrap();
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(`/account/research/${id}/counter-evidence`)}`); }, [state.status, id]);
   if (["temporary_error", "forbidden"].includes(state.status)) return <Frame><Empty title="暂时无法读取这份研究" message={state.message || "请重新验证登录。"} retry={retry} /></Frame>;
-  if (state.status !== "authenticated" || !state.user) return <Frame><LoadingState role="status">正在核对登录状态…</LoadingState></Frame>;
+  if (state.status !== "authenticated" || !state.user) return <Frame><LoadingState variant="screen" role="status">正在核对登录状态…</LoadingState></Frame>;
   return <ProjectWorkspace key={`${state.user.id}:${id}`} id={id} ownerId={String(state.user.id)} initialTurnId={initialTurnId} />;
 }
 

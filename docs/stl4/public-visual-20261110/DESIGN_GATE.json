@@ -1,0 +1,32 @@
+{
+  "status": "implemented_with_scope_overrides_and_targeted_validation",
+  "scope": "SCOPE.json: admin/account main-body layout only; all protected surfaces unchanged",
+  "planned_designs": 76,
+  "generated_inspected": 76,
+  "historical_out_of_scope_designs": 62,
+  "pending": [],
+  "meaning": "76 desktop references mapped before implementation. Only allowed body geometry adopted; all user-pinned protected surfaces take precedence. Mobile is responsive code only.",
+  "implementation_review": {
+    "status": "passed_with_user_scope_overrides",
+    "active_pages": 80,
+    "desktop_designs": 76,
+    "unmapped_pages": 0,
+    "rules": "Only page-body spatial layout is adopted. Brand/fonts/text colors/navigation/content/actions/overlays/loading/public previews are preserved. Mobile implemented in CSS without additional image generation."
+  },
+  "runtime": {
+    "entry_count": 80,
+    "views": 200,
+    "ui_preservation_passed": 80,
+    "unchanged_existing_layouts": [
+      "PV035",
+      "PV050"
+    ],
+    "known_existing_issues": [
+      "PV072 baseline overflow",
+      "PV098 topic preview serializer mismatch",
+      "PV011 note citation nullable span contract mismatch"
+    ],
+    "review": "initial fix; sole material fix resolved; disposition ship limited to fix verdict",
+    "production_deployed": false
+  }
+}

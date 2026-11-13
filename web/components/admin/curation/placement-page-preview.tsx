@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import Link from "next/link";
 import { useCallback, useRef } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -33,7 +35,7 @@ export function PlacementPagePreview({owner,pageType,pageId,version,items,groups
   const resource=usePersistentWorkspace<PagePreview>(`/catalog/admin/content-placements/${pageType}/${pageId}/parent-preview/?${new URLSearchParams({expected_revision:version})}`,owner,undefined,load);
   if(resource.error)return <section role="alert"><p>{resource.error}</p><p>编排输入仍保留，完整页面读取成功后才能核对其位置。</p><button type="button" onClick={resource.reload}>重新读取页面</button></section>;
   const data=resource.data;
-  if(!data)return <p role="status">正在读取完整页面的已保存资料…</p>;
+  if(!data)return <LoadingState role="status">正在读取完整页面的已保存资料…</LoadingState>;
   const visibleItems=pageType==="subdiscipline"?items.filter(row=>row.target.type!=="span"):items;
   const placements=<div ref={placementRegion} data-placement-selection="true"><PlacementList items={visibleItems} groups={groups} selected={selected} onSelect={onSelect}/></div>;
   const footer=<>{placements}<SiteFooterView config={data.config} preview/></>;

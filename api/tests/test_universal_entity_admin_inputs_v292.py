@@ -12,6 +12,8 @@ from catalog.models import (
     Person,
     PublicationState,
     ScholarProfile,
+    Subdiscipline,
+    Topic,
     Work,
 )
 from catalog.services.research.contracts import (
@@ -35,6 +37,8 @@ MAINTENANCE_ENTITY_FIELDS = {
         "parent": ("knowledge_node",),
         "primary_discipline": ("discipline",),
         "related_disciplines": ("discipline",),
+        "subdiscipline_links": ("subdiscipline",),
+        "topic_links": ("topic",),
         "merge_target": ("knowledge_node",),
     },
     "maintenance_theory_relations": {
@@ -117,6 +121,24 @@ def test_reader_cannot_use_maintenance_entity_discovery(api_client, reader_user)
         format="json",
     )
     assert response.status_code == 403
+
+
+@pytest.mark.parametrize("field,entity_type", [("subdiscipline_links", "subdiscipline"), ("topic_links", "topic")])
+def test_theory_classification_picker_finds_existing_entities_without_writing(api_client, admin_user, field, entity_type):
+    discipline = Discipline.objects.create(code="anthropology-picker", name="人类学选择器测试", slug="anthropology-picker")
+    model = Subdiscipline if entity_type == "subdiscipline" else Topic
+    values = {"discipline": discipline} if entity_type == "subdiscipline" else {}
+    item = model.objects.create(name="礼物交换选择器测试", slug=f"gift-{entity_type}", editorial_status="published", **values)
+    api_client.force_authenticate(admin_user)
+    payload = {"step": "maintenance_theory_nodes", "field": field, "entity_type": entity_type,
+               "query": item.name, "include_external": False, "include_web": False}
+    response = api_client.post("/api/catalog/admin/research/entity-discovery/", payload, format="json")
+    assert response.status_code == 200
+    local = next(row for row in response.data["results"] if row.get("entity_id") == str(item.pk))
+    assert local["available_actions"] == ["inspect", "apply_to_draft"]
+    assert not EntityResolutionCandidate.objects.exists()
+    payload["entity_type"] = "person"
+    assert api_client.post("/api/catalog/admin/research/entity-discovery/", payload, format="json").status_code == 400
 
 
 def test_maintenance_contract_rejects_cross_field_entity_type(api_client, admin_user):

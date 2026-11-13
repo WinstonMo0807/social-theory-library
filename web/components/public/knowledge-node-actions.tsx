@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { Bookmark, Copy, Quote, Share2, X } from "lucide-react";
@@ -142,7 +144,7 @@ function Actions({ node, owner, ready, initialCommand, retain }: { node: NodeIde
       <header><h2 id={`knowledge-actions-${node.id}`}>{panel === "citation" ? "引用此条目" : "分享此条目"}</h2>
         <button type="button" aria-label="关闭" onClick={() => { setPanel(null); citationAbort.current?.abort(); }}><X size={18} /></button></header>
       {panel === "citation" ? <>
-        {citationBusy ? <p role="status">正在核对当前公开条目…</p> : citationError ? <div role="alert"><p>{citationError}</p><button onClick={() => void openCitation()}>重新获取</button></div> :
+        {citationBusy ? <LoadingState role="status">正在核对当前公开条目…</LoadingState> : citationError ? <div role="alert"><p>{citationError}</p><button onClick={() => void openCitation()}>重新获取</button></div> :
           citation ? <><p>{citation.notice}</p><textarea aria-label="条目引用" readOnly value={citation.text} rows={5} />
             <button type="button" onClick={() => void copy(citation.text)}><Copy size={15} />复制条目引用</button></> : null}
       </> : <><p>{node.canonical_name_zh}</p><input aria-label="条目链接" readOnly value={shareUrl} />

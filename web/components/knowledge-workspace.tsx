@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowRight, ExternalLink, FileClock, LoaderCircle, RefreshCw, Search } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
+
+import { ArrowRight, ExternalLink, FileClock, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -279,7 +281,7 @@ export function KnowledgeWorkspace() {
       <label className="knowledge-studio-search"><span>名称</span><div><Search size={15} /><input value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} placeholder="搜索馆内对象" /></div></label><button className="button" type="submit">搜索</button>
     </form>
     {loadError ? <p className="form-message" role="alert">{loadError}</p> : message ? <p className="form-message" role="status">{message}</p> : null}
-    {loading && !payload ? <p className="admin-list-state"><LoaderCircle size={17} className="spin" />正在读取馆内资料</p> : null}
+    {loading && !payload ? <LoadingState className="admin-list-state">正在读取馆内资料</LoadingState> : null}
     {studio ? <div className="knowledge-studio-layout">
       <aside className="admin-panel knowledge-studio-directory"><header><h2>馆内对象</h2><span>最多显示 {studio.filters.limit} 项</span></header><div>{studio.objects.map((row) => <button key={`${row.object_type}:${row.id}`} className={current?.id === row.id && current.object_type === row.object_type ? "active" : ""} type="button" onClick={() => choose(row.object_type, row.id)}><span>{objectLabels[row.object_type] || "知识对象"}</span><strong>{row.label}</strong><small>{row.secondary_label || statusLabels[row.status] || "需要核对"}</small><ArrowRight size={14} /></button>)}{!studio.objects.length ? <p className="admin-list-state">当前筛选下没有对象。可到上方对应编辑页面新建。</p> : null}</div></aside>
       {current ? <ObjectFields key={`${current.object_type}:${current.id}`} selection={current} onRefresh={load} publishing={publishing} publishState={publishState} onPublish={(row) => void publish(row)} /> : <section className="admin-panel knowledge-studio-empty"><h2>{studio.selection_error ? "无法找到指定对象" : "请选择馆内对象"}</h2><p>{studio.selection_error ? "请检查作品入口或重新搜索，没有显示其他对象作为替代。" : "选择后可以核对资料字段和馆内关联。"}</p></section>}

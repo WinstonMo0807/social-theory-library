@@ -36,6 +36,8 @@ PROFILE_REFERENCES = (
     (models.CuratedClaim, "scholar", "人工策展观点"),
     (models.RecommendationItem, "scholar", "推荐快照项目"),
     (models.RecommendationOverride, "scholar", "推荐人工设置"),
+    (models.ScholarRelation, "source_scholar", "学术关系来源"),
+    (models.ScholarRelation, "target_scholar", "学术关系对象"),
 )
 
 

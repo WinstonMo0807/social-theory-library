@@ -7,14 +7,14 @@ import type { components } from "@/lib/api/generated/schema";
 const subscribe = () => () => {};
 const serverApiBase = () => "/api";
 
-export function ResponsiveMediaImage({ src, sources, alt, sizes, loading = "lazy", className }: {
-  src: string; sources: components["schemas"]["PublicMediaRendition"][]; alt: string; sizes: string; loading?: "eager" | "lazy"; className?: string;
+export function ResponsiveMediaImage({ src, sources, alt, sizes, loading = "lazy", className, fit = "cover" }: {
+  src: string; sources: components["schemas"]["PublicMediaRendition"][]; alt: string; sizes: string; loading?: "eager" | "lazy"; className?: string; fit?: "cover" | "contain";
 }) {
   const apiBase = useSyncExternalStore(subscribe, getApiBase, serverApiBase);
   const url = (value: string) => value.startsWith("/api/") ? `${apiBase}${value.slice(4)}` : value;
   if (!src || !sources.length) return null;
   return <picture className={className} style={{ display: "block", width: "100%", height: "100%" }}>
     <source type="image/webp" srcSet={sources.map((row) => `${url(row.url)} ${row.width}w`).join(", ")} sizes={sizes} />
-    <img src={url(src)} alt={alt} width={sources[0].width} height={sources[0].height} loading={loading} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    <img src={url(src)} alt={alt} width={sources[0].width} height={sources[0].height} loading={loading} style={{ width: "100%", height: "100%", objectFit: fit }} />
   </picture>;
 }

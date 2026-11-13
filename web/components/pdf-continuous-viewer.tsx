@@ -6,6 +6,7 @@ import type {
   RenderTask,
 } from "pdfjs-dist/types/src/display/api";
 import type { TextLayer } from "pdfjs-dist/types/src/display/text_layer";
+import { LoadingState } from "./ui/loading-state";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { CanonicalBlock, PageHighlight } from "./pdf-canvas";
@@ -269,6 +270,7 @@ function ContinuousPdfPage({
                 <i
                   className={highlight.kind ?? "search"}
                   data-source={highlight.source}
+                  data-reader-annotation-id={highlight.annotationId}
                   key={`${x0}-${y0}-${index}`}
                   style={{
                     left: x0,
@@ -420,6 +422,8 @@ export function PdfContinuousViewer({
         withCredentials: false,
         disableStream: true,
         disableAutoFetch: true,
+        // Larger bounded ranges avoid hundreds of 64 KiB requests for scanned books.
+        rangeChunkSize: 1024 * 1024,
         enableXfa: true,
         cMapUrl: "/pdfjs/cmaps/",
         cMapPacked: true,
@@ -564,7 +568,7 @@ export function PdfContinuousViewer({
 
   return (
     <div className="continuous-pdf-viewer" ref={viewerRef} aria-label="PDF 连续阅读区" data-note-rail={noteRailWidth > 0} style={{"--pdf-note-rail-width":`${noteRailWidth}px`} as CSSProperties}>
-      {!pdfDocument ? <p className="continuous-pdf-loading" role="status">正在载入 PDF……</p> : null}
+      {!pdfDocument ? <LoadingState variant="page">正在载入 PDF…</LoadingState> : null}
       {pdfDocument ? pages.map((pageNumber) => (
         <ContinuousPdfPage
           pdfDocument={pdfDocument}

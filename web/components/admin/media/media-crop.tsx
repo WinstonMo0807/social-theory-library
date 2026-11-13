@@ -32,10 +32,10 @@ export function MediaCrop({owner,mediaId,value,onChange,onReady,disabled,labels=
   const [image,setImage]=useState<HTMLImageElement|null>(null),[error,setError]=useState(""),[attempt,setAttempt]=useState(0),[ratio,setRatioValue]=useState("free");
   const source=useRef<HTMLCanvasElement>(null),outputs=useRef<(HTMLCanvasElement|null)[]>([]),stage=useRef<HTMLDivElement>(null);
   const drag=useRef<{x:number;y:number;rect:MediaTransform;corner:string}|null>(null);
-  useEffect(()=>{const abort=new AbortController();let url="";onReady(false);
-    void ownedImage(owner,`/catalog/admin/media/${mediaId}/source/`,AbortSignal.any([abort.signal,AbortSignal.timeout(30000)])).then(async blob=>{
+  useEffect(()=>{const abort=new AbortController();let url="";onReady(false);setError("");
+    void ownedImage(owner,`/catalog/admin/media/${mediaId}/source/`,AbortSignal.any([abort.signal,AbortSignal.timeout(120000)])).then(async blob=>{
       url=URL.createObjectURL(blob);const next=new Image();next.src=url;await next.decode();if(!abort.signal.aborted){setImage(next);setError("");onReady(true);}
-    }).catch(reason=>{if(!abort.signal.aborted){setError(reason instanceof Error?reason.message:"原图无法读取。");onReady(false);}});
+    }).catch(reason=>{if(!abort.signal.aborted){setError(reason instanceof Error&&reason.name==="TimeoutError"?"原图读取超时，已上传的图片仍保留。请重新加载。":reason instanceof Error?reason.message:"原图无法读取。");onReady(false);}});
     return()=>{abort.abort();if(url)URL.revokeObjectURL(url);};
   },[owner,mediaId,attempt,onReady]);
   const rotated=value.rotation%180!==0,width=image?(rotated?image.naturalHeight:image.naturalWidth):1,height=image?(rotated?image.naturalWidth:image.naturalHeight):1;

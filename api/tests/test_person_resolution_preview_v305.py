@@ -272,6 +272,7 @@ def test_resolution_api_preserves_staff_and_owner_boundaries(api_client, reader_
     assert response["Cache-Control"] == "private, no-store"
     assert response.data["merge_execution_available"] is True
     assert response.data["execution_policy"] == "person-merge-noncolliding-v1"
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(owner.pk))
     assert api_client.post(preview_url, {"target_person": str(target.pk)}, format="json").status_code == 405
     assert api_client.get(preview_url, {"target_person": "invalid"}).status_code == 400
     assert api_client.get(duplicates_url, {"limit": 51}).status_code == 400

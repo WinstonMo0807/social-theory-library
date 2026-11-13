@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {AlertCircle,AlertTriangle,Info,Monitor,Smartphone,ExternalLink} from "lucide-react";
@@ -80,7 +82,7 @@ function ReviewPage({objectType,objectId}:{objectType:string;objectId:string}){
     <nav className={styles.breadcrumb} aria-label="面包屑"><a href="/admin/knowledge">学者与知识</a><span>›</span><a href={returnHref}>页面编排</a><span>› 预览与发布</span></nav>
     <header className={styles.heading}><div><h1>预览与发布</h1></div><div className={styles.actions}><span>{report?.has_draft?"已保存未发布":"已保存版本"}</span><a href={returnHref}>返回编辑</a>{!locked?<a href={`/admin/publication/knowledge/${objectType}/${objectId}?${new URLSearchParams({return_to:returnHref})}`}>版本历史</a>:null}<button type="button" disabled={loading||locked} onClick={reload}>重新检查最新保存版本</button></div></header>
     <nav className={styles.tabs} aria-label="发布检查视图">{[["preview","页面预览"],["changes","版本变化"],["checks","发布检查"],["settings","发布设置"]].map(([key,label],index)=><button type="button" key={key} aria-pressed={tab===key} onClick={()=>setTab(key)}><span>0{index+1}</span>{label}{key==="checks"&&report?`（${report.blocking_count}项阻断，${report.warning_count}项提醒）`:""}</button>)}</nav>
-    {error?<p className={styles.warning} role="alert">{error} 已保存内容保留。</p>:null}{loading?<p role="status">正在读取已保存内容、公开版本与发布检查…</p>:null}
+    {error?<p className={styles.warning} role="alert">{error} 已保存内容保留。</p>:null}{loading?<LoadingState role="status">正在读取已保存内容、公开版本与发布检查…</LoadingState>:null}
     <div className={styles.columns} data-tab={tab}>
       <section className={styles.panel} hidden={tab!=="preview"||!data}><header><div><h2>页面预览</h2><p>{data?.payload.label} · 当前保存版本</p></div><a href={frame} target="_blank" rel="noopener">在新标签页打开 <ExternalLink size={13}/></a></header>
         <nav className={styles.devices} aria-label="预览设备"><button type="button" aria-pressed={device==="desktop"} onClick={()=>setDevice("desktop")}><Monitor size={17}/>桌面端</button><button type="button" aria-pressed={device==="mobile"} onClick={()=>setDevice("mobile")}><Smartphone size={17}/>移动端</button></nav>

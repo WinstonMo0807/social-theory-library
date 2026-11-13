@@ -1,0 +1,2759 @@
+[
+  {
+    "id": "P01",
+    "title": "欢迎页",
+    "coverage": [
+      "PV119",
+      "PV151"
+    ],
+    "domain": "公开入口",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "大幅但克制的双语品牌与介绍；左主文案/进入书库，右同画面的连续功能演示。原文优先/问题出发/思想交锋三版随机但同次不轮换。下方学者、理论、主题、策划与连续研究，暂停/重播、减少动效。只画当前示例演示帧，无真实检索。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P01-v2.png",
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P02",
+    "title": "首页",
+    "coverage": [
+      "PV115"
+    ],
+    "domain": "公开浏览",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "同行品牌导航；醒目但紧凑检索框；已登录继续阅读一行；特别策划大图文编辑网格、最新馆藏横向书目、学者/理论/主题栏目。明确示例数据，不能加新统计或排行榜。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P02-v2.png",
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P03",
+    "title": "馆藏检索",
+    "coverage": [
+      "PV109",
+      "PV110"
+    ],
+    "domain": "检索列表",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "顶部搜索及exact/semantic/ask切换，当前exact；左侧作品类型/语言/年代/作者/权限筛选，右侧真实书目样式的结果列表、排序、当前条件、分页。无词/无结果另有状态映射。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P03-v2.png",
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P04",
+    "title": "原文证据探索",
+    "coverage": [
+      "PV107",
+      "PV108"
+    ],
+    "domain": "证据检索",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "研究问题输入、范围和筛选；有查询的原文证据结果，条目含作品/版本/来源状态及原文定位；选中条目相邻上下文。候选/已读取/失败数量位置，取消/扩展/重试按真实任务状态。避免聊天界面。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P04-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P05",
+    "title": "问答探索",
+    "coverage": [
+      "PV106",
+      "PV110"
+    ],
+    "domain": "研究探索",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "既有向书库提问会话列表/消息/发送、自动或始终检索、回答来源及个人模型设置；不是新增助手。未配置状态另图。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P05-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P06",
+    "title": "单作品语义探索",
+    "coverage": [
+      "PV111"
+    ],
+    "domain": "原文工作区",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "单作品语义结果：原始查询只读，相关段落计数，原文/前后文/来源页码与反馈，返回全部结果与回到原页。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P06-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P07",
+    "title": "学者目录",
+    "coverage": [
+      "PV128"
+    ],
+    "domain": "人物列表",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "编辑式标题、搜索/学科/排序；一张领衔人物卡和紧凑人物网格/条目，用中性示例肖像轮廓而非真实人物照片；中外文名、生卒年可空、简介与学科、分页。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P07-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P08",
+    "title": "主题目录",
+    "coverage": [
+      "PV149"
+    ],
+    "domain": "主题列表",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "紧凑主题索引、搜索、学科筛选、推荐主题图文和全部列表/分页；每项显示名称、简短问题和关联内容，不虚构评分/热度。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P08-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P09",
+    "title": "理论与学科目录",
+    "coverage": [
+      "PV131",
+      "PV132",
+      "PV145"
+    ],
+    "domain": "分类目录",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左学科/子学科树，右类型tabs/搜索/条目列表及独立分页；精选区与全部区分别表达失败/空态。理论、概念、争论类型清楚，不把分类树变为新知识架构。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P09-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P10",
+    "title": "阅读路径目录",
+    "coverage": [
+      "PV140"
+    ],
+    "domain": "阅读目录",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "编辑标题，搜索与学科/难度条件；路径列表显示标题、受众、目标、预计阅读量/周数和材料信息；无需购买或星级。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P10-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P11",
+    "title": "作品详情",
+    "coverage": [
+      "PV152",
+      "PV052"
+    ],
+    "domain": "作品阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "使用已生成校准图；保留版本、获取状态、章节、本期目录、责任者、关联、引用和原文。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P11-work-detail-v1.png",
+    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P12",
+    "title": "学者详情",
+    "coverage": [
+      "PV126",
+      "PV127",
+      "PV051"
+    ],
+    "domain": "人物阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "人物页左小肖像与中外文姓名、生卒/国别；主要导读，栏目导航概述/著作/关系/来源等实际section；关联作品列表，引用出处与材料状态。长文行宽舒适，无AI人物传记。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P12-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P13",
+    "title": "理论概念与主题详情",
+    "coverage": [
+      "PV136",
+      "PV137",
+      "PV142",
+      "PV143",
+      "PV147",
+      "PV148",
+      "PV051"
+    ],
+    "domain": "知识阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "页面标题、类型、中外文名、概述；左侧段落目录，主体理论问题/解释对象/命题或概念定义/主题导读，侧栏相关学者和作品。来源证据在正文相邻，关系可进入已有关系页，保留section URL。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P13-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P14",
+    "title": "学科与子学科详情",
+    "coverage": [
+      "PV130",
+      "PV133",
+      "PV051"
+    ],
+    "domain": "学科阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "学科标题与引言；子学科解释研究对象/核心问题/形成期/方向/方法/代表问题，所属学科和父级入口；作品、学者、路径分组。使用合成示例不编造学科史。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P14-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P15",
+    "title": "阅读路径详情",
+    "coverage": [
+      "PV139",
+      "PV051"
+    ],
+    "domain": "路径阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "标题、受众/难度/预计量与目标；按阶段排列材料，必读/可选、推荐理由/学习问题/先修/替代版本及来源变化；开始跟读/复制计划/导出分别保留。右侧当前阶段目录。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P15-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P16",
+    "title": "策划文章目录",
+    "coverage": [
+      "PV123"
+    ],
+    "domain": "编辑目录",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "一篇主要策划与不同尺寸的后续文章列表，标题/引言/署名/日期，搜索或筛选只呈现实际有的条件，清楚分页。白底编辑式长短节奏，无杂志排行榜。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P16-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P17",
+    "title": "策划文章阅读",
+    "coverage": [
+      "PV122",
+      "PV067"
+    ],
+    "domain": "文章阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "编辑式文章标题、署名头像和日期、导语；长正文约720px，侧边文章目录，真实block结构的图文和关联作品；下方评论入口与来源说明。主文全标示例，不编造引文。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P17-v1.png",
+    "inspection_notes": "已查看完整图，保留公开导航和相应阅读/目录结构；无新增业务操作。生成学者、肖像、理论叙述、封面、日期与页码均为示例而非核实内容，不进入产品；实际数据/精确品牌/正文行宽由真实组件实现。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P18",
+    "title": "理论时间线",
+    "coverage": [
+      "PV141",
+      "PV146"
+    ],
+    "domain": "时间浏览",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "年代窗口与事件类型/分组筛选，纵向时间线，日期精度及不详年代，事件标题、来源和相关人物，分页。不是无限横向关系壁画。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P18-v2.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P19",
+    "title": "时间线事件详情",
+    "coverage": [
+      "PV134",
+      "PV051"
+    ],
+    "domain": "事件阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "事件名称、日期精度、简介、参与者、作品与出处证据，物理页/印刷页区别、版本和来源状态；返回时间线保留年代窗口。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P19-v2.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P20",
+    "title": "理论关系图",
+    "coverage": [
+      "PV135",
+      "PV144"
+    ],
+    "domain": "图形浏览",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "现有关系图，顶部图/列表/主题/学者/作品模式；左筛选中心、深度、节点上限、关系/年代/馆藏；中可缩放图形用明确示例节点；右选中对象详情和来源。无新增评分和推测关系。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P20-v1.png",
+    "inspection_notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P21",
+    "title": "帮助与关于",
+    "coverage": [
+      "PV001",
+      "PV113",
+      "PV114",
+      "PV028"
+    ],
+    "domain": "长文本信息",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "紧凑双语品牌，页标题和侧边章节目录，主栏中文长段落与步骤/链接，关于书库定位、登录注册说明；帮助目录与正文共享文档结构。真实正文由接口提供，图用示例说明。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P21-v2.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P22",
+    "title": "反馈",
+    "coverage": [
+      "PV112"
+    ],
+    "domain": "公开表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "类别content/function/usage/suggestion/other、正文4–500、关联公开页面、可选邮箱、明确同意、取消提交；成功回执/限流/未知结果保留输入。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P22-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P23",
+    "title": "登录",
+    "coverage": [
+      "PV118"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "账号或邮箱、密码与显示、保持30天、登录、注册、忘记密码；书库账号。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P23-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P24",
+    "title": "链接重设密码",
+    "coverage": [
+      "PV125"
+    ],
+    "domain": "身份状态",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "有效链接、新密码/确认、本人恢复同意、确认重置与原链接结果核对。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P24-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P25",
+    "title": "理论总览",
+    "coverage": [
+      "PV138"
+    ],
+    "domain": "公开栏目",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "理论流派搜索；主要学科领域；馆藏理论流派及分页；进一步浏览理论传统/子学科/关键争论。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P25-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P26",
+    "title": "公开分享",
+    "coverage": [
+      "PV129"
+    ],
+    "domain": "共享阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "摘要标题、分享说明、有效期/撤回状态；仅允许的研究或书单内容、问题/材料/笔记分组，原文可访问与私人来源不可公开严格分开。不存在公开密钥输入或账号信息。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P26-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "R01",
+    "title": "读者中心",
+    "coverage": [
+      "PV012"
+    ],
+    "domain": "本人资料",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "使用已生成校准图；资料聚合、继续阅读、筛选、视图、分页、批量操作与账户偏好。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R01-reader-center-v1.png",
+    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R02",
+    "title": "笔记与引用",
+    "coverage": [
+      "PV010",
+      "PV011"
+    ],
+    "domain": "原文笔记",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左来源/类别列表，中笔记与原文引用条目，右选中笔记编辑与原文定位；body/标签/引用分开，source撤回保留本人笔记；筛选搜索分页，保存状态。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R02-v2.png",
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R03",
+    "title": "已确认笔记",
+    "coverage": [
+      "PV008"
+    ],
+    "domain": "笔记确认",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "待确认/已确认/需要修正/忽略列表与搜索来源筛选；相邻笔记正文、类别、原始来源、确认/忽略与历史；使用范围按钮打开真实研究/计划授权，不等同确认。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R03-v2.png",
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R04",
+    "title": "书单",
+    "coverage": [
+      "PV006",
+      "PV007"
+    ],
+    "domain": "资料编排",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "书单详情：作品/计划/笔记/相关推荐，筛选排序多选与原文入口；目标/标签/关联主题侧栏；目录用同一读者列表结构，具体列表字段记录在PAGE_BEHAVIOR。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R04-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R05",
+    "title": "阅读计划目录",
+    "coverage": [
+      "PV014"
+    ],
+    "domain": "个人计划",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "阅读计划目录无归档/搜索筛选，现有计划目标/材料数/生成状态/更新时间/查看与分页；创建表单另图R25。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R05-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R06",
+    "title": "阅读计划详情",
+    "coverage": [
+      "PV013"
+    ],
+    "domain": "计划执行",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "概览/材料/问题/设置tabs；目标和计划时间，材料pending/reading/completed/skipped操作、建议采用与手工编辑、来源修订变化；明确保存、增强、导出/打印，右侧当前材料。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R06-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R07",
+    "title": "连续研究目录",
+    "coverage": [
+      "PV019"
+    ],
+    "domain": "研究项目",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "简洁研究目录active/archived/all与分页，每项问题/状态/最近轮次、继续；开始研究沿既有探索入口。没有目录全文搜索控件。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R07-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R08",
+    "title": "连续研究工作区",
+    "coverage": [
+      "PV018"
+    ],
+    "domain": "研究证据",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "问题路径和已有轮次，当前证据/选材/笔记；明确下一轮追问输入和提交，保存后续范围独立；编辑研究题目/笔记，导出/分享/历史/比较/分支；没有可编辑模型研究文章或另设任务表。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R08-v2.png",
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R09",
+    "title": "研究比较",
+    "coverage": [
+      "PV015"
+    ],
+    "domain": "比较矩阵",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "可横向滚动材料×维度矩阵、固定行标题；维度草稿生成/采用分开，单元格笔记/引用在侧抽屉编辑；最多20维度、来源变化/保存冲突，不生成评分。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R09-v1.png",
+    "inspection_notes": "已查看原图：原文结果、计划目录与阶段、研究目录、证据矩阵布局与现有业务对应。实施时使用精确SVG、统一实际读者导航（不新增当前工作区入口），分页只显示接口支持的prev/next/total，示例内容不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R10",
+    "title": "反证工作区",
+    "coverage": [
+      "PV016"
+    ],
+    "domain": "判断核对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "顶部陈述/子主张/轮次，支持/不同结论/限定/不足/无关筛选；证据列表与原文相邻，本人判断、模型建议、确认笔记分别操作，分页。",
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R10-v3.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R11",
+    "title": "研究回放",
+    "coverage": [
+      "PV017"
+    ],
+    "domain": "历史阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "时间/树切换，左轮次时间线，中快照材料/笔记/比较/证据tabs，右轮次差异；当前来源变化警告，分支复制范围确认。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R11-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R12",
+    "title": "引文体检提交",
+    "coverage": [
+      "PV005"
+    ],
+    "domain": "材料提交",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "上传PDF/DOCX上限12MiB，选定文件名非可编辑稿件名称；检查项引文识别/书目核对/版本页码，扫描文字识别和深入分析未开放；范围仅馆藏/馆藏及本人选定材料，最多4个本人来源文件；下方真实任务列表及空态。无识别方式选项。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R12-v2.png",
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R13",
+    "title": "稿件解析核对",
+    "coverage": [
+      "PV004"
+    ],
+    "domain": "原文校对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "原稿页图、文内引用/书目列表、匹配来源三栏；修正文与原文件分开，来源版本选择、保存/重新核对、解析失败与未配置。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R13-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R14",
+    "title": "体检报告",
+    "coverage": [
+      "PV003"
+    ],
+    "domain": "问题报告",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "报告标题和真实任务状态、问题类别/条目/关系/定位/未核实筛选，25项分页列表，人工决定、批量操作、JSON/打印、新版本/仅核对改动，不能伪造评分。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R14-v2.png",
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R15",
+    "title": "体检问题详情",
+    "coverage": [
+      "PV002"
+    ],
+    "domain": "证据核对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "稿件片段与来源原文并排，中或下问题说明、候选版本、证据、本人的处理决定；revision/来源变化状态，返回报告位置。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R15-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R16",
+    "title": "隐私设置",
+    "coverage": [
+      "PV021"
+    ],
+    "domain": "本人权限",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "六类保留设置、明确使用范围与保存；导出/擦除各自操作入口，automatic_memory_use不可启用；作用范围、约束、成功/失败，不伪造公开预览。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R16-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R17",
+    "title": "隐私导出任务",
+    "coverage": [
+      "PV020"
+    ],
+    "domain": "个人数据任务",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "导出JSON/ZIP/CSV/本地文件夹方式，预览范围后确认，任务preview/queued/running/partial/failed/completed；文件清单/失败项/取消重试/下载，真实进度不用假百分比。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R17-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R18",
+    "title": "分享目录",
+    "coverage": [
+      "PV024"
+    ],
+    "domain": "分享管理",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "本人发出/接收等既有标签、研究/书单来源、目标/有效期/撤回状态、分页；查看分享/撤回/提案状态不同操作。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R18-v1.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R19",
+    "title": "创建分享",
+    "coverage": [
+      "PV023"
+    ],
+    "domain": "分享编排",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "最多5个研究/书单对象，每类问题材料笔记跨对象最多20；7/30/90/365天期限、附言200，目的地/成员明确选择，摘要预览与确认分离。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R19-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R20",
+    "title": "分享详情",
+    "coverage": [
+      "PV022"
+    ],
+    "domain": "分享权限",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "分享详情只读摘要与有效期，所有者公开摘要可复制链接；策划审核者独立改变提案状态。撤回在目录，不虚构本页动作。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R20-v2.png",
+    "inspection_notes": "已实看纠正图：真实字段、来源、对象范围及状态均保留；示例不进入产品。精确品牌、统一导航沿现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R21",
+    "title": "读者小组",
+    "coverage": [
+      "PV009"
+    ],
+    "domain": "协作范围",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "小组列表、当前小组成员与邀请分别分页，campus/team类型；改名/归档/离开/移除/邀请/撤销，邀请仅指定账户可接受，成员权限清楚。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R21-v1.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R22",
+    "title": "来源更新",
+    "coverage": [
+      "PV025"
+    ],
+    "domain": "订阅变化",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "来源分页列表，无全局筛选；未读/变化/撤回/不可用，历史抽屉单独分页；订阅取消、已读、删除分开。暂停保存更新是偏好状态，非逐条暂停按钮。",
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R22-v3.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "R23",
+    "title": "PDF阅读器",
+    "coverage": [
+      "PV121"
+    ],
+    "domain": "原文阅读",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "窄工具栏：返回、书名、页码输入、上一页下一页、缩放、下载、引用、阅读设置。左目录240，中真实白色PDF页约700宽，右笔记/选文面板300；页外定位提示不盖正文。中文合成原文明确示例，无假真实引文。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R23-v2.png",
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "R24",
+    "title": "双版本并读",
+    "coverage": [
+      "PV121"
+    ],
+    "domain": "版本比较",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "顶部左右版本选择、交换、同步/自由；两列原文有独立页码/缩放/选段，底部对齐/术语笔记列表，私人保存与公共校准提交分开，候选对齐非已确认；来源变化提示。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R24-v2.png",
+    "inspection_notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "A01",
+    "title": "管理工作台与检索",
+    "coverage": [
+      "PV048",
+      "PV076",
+      "PV071"
+    ],
+    "domain": "任务目录",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左固定工作导航，顶部今日工作/后台检索。紧凑category/kind/state/owner/ordering搜索栏，主表任务/最近编辑/问题/发布，右选中任务详情及继续工作入口；计数只对应真实响应，没有四张统计卡。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A01-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A02",
+    "title": "馆藏管理",
+    "coverage": [
+      "PV044"
+    ],
+    "domain": "管理列表",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "搜索、作品类型/发布状态/版本/分页，表格作品/版本/文件/处理/公开状态；右当前作品详情与编辑/文件/目录/OCR入口，选中保持return_to。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A02-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A03",
+    "title": "上传与新编目",
+    "coverage": [
+      "PV100",
+      "PV034"
+    ],
+    "domain": "文件入库",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "文件选择/拖放区域、上传队列逐文件状态与错误、重复文件处理和新建编目；开始/取消/重试按既有能力，保持文件身份，无伪进度。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A03-v2.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A04",
+    "title": "作品编目编辑",
+    "coverage": [
+      "PV033",
+      "PV046"
+    ],
+    "domain": "内容编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左任务步骤与对象版本；中作品/版本/责任者/文件/权利/关系字段分组；右实际WorkDetailView当前草稿预览，期刊目录必须读同草稿。底部保存草稿/下一步与发布准备分开；打开PDF和候选不丢输入。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A04-v2.png",
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A05",
+    "title": "字段与实体候选审核",
+    "coverage": [
+      "PV032",
+      "PV053"
+    ],
+    "domain": "候选判断",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "候选列表按来源/类型/状态，选中候选字段值、现有值、证据原文并列；采用/匹配现有/确认新建/拒绝依descriptor，冲突/回执未知独立；不展示自动人工确认。",
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A05-v3.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A06",
+    "title": "文件接收核对",
+    "coverage": [
+      "PV039"
+    ],
+    "domain": "入库核对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "文件摘要与PDF预览相邻；匹配作品和版本、q/page/scope筛选、确认输入；未知结果查原请求，文件来源与版本校验，不替换原件。",
+    "version": "v3",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A06-v3.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A07",
+    "title": "作品版本与文件",
+    "coverage": [
+      "PV045"
+    ],
+    "domain": "文件管理",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "版本列表和versions/files/impact/rights/publication tabs；文件表包含种类/状态/摘要/大小，当前采用状态，上传新版本/采用/生成阅读副本/下载；影响预览和权利表单在抽屉。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A07-v2.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A08",
+    "title": "OCR工作区",
+    "coverage": [
+      "PV041"
+    ],
+    "domain": "页图校对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左8页缩略图与问题筛选，中页图，右可编辑识别文本；问题/全文对比/设置/修改影响tabs，人工核验与重做OCR不同；保存候选、准备影响、采用分开，页码/未保存提示。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A08-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A09",
+    "title": "目录校准",
+    "coverage": [
+      "PV042"
+    ],
+    "domain": "目录编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "单一目录校准工作区，左目录条目树编辑标题/物理页/印刷页/层级，右PDF当前页和页外目标标记。保存修正一步生效，派生下载生成中真实状态；不恢复候选对比/历史/读者预览旧tabs。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A09-v2.png",
+    "inspection_notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A10",
+    "title": "页码校准",
+    "coverage": [
+      "PV043"
+    ],
+    "domain": "页码编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "PDF页图与8行页码表相邻；物理页、标签、页型、确认，分段/搜索/未确认/重号筛选；批量编辑、缺页说明、撤销、历史恢复、准备影响和发布导出分开。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A10-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A11",
+    "title": "文件处理任务",
+    "coverage": [
+      "PV056"
+    ],
+    "domain": "任务控制",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "紧凑搜索类型状态日期条件；文件分组/任务历史列表，选中详情progress/file/results/issues/logs/settings tabs；pause/resume/retry/cancel/recover按真实actions，失败页选择/后续处理/节点转移抽屉。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A11-v1.png",
+    "inspection_notes": "已实看，布局、真实操作与状态可采用；精确SVG品牌和实际条件权限沿源码，示例数据不进入产品。页码/分页/启禁以真实响应呈现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A12",
+    "title": "系统与知识健康",
+    "coverage": [
+      "PV055",
+      "PV054"
+    ],
+    "domain": "运行诊断",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "分组问题/知识健康列表，严重度、最近检查、结果来源、未配置/过期/失败；选中问题详情说明与真实检查操作，不能固定绿灯；候选入口保持。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A12-v2.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A13",
+    "title": "语义索引管理",
+    "coverage": [
+      "PV058"
+    ],
+    "domain": "索引任务",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "作品/版本索引目录、状态/搜索/分页，选中索引详情与任务/错误，索引操作和取消重试权限可见；真实等待、失败、未配置，无新模型聊天。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A13-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A14",
+    "title": "检索词表",
+    "coverage": [
+      "PV057"
+    ],
+    "domain": "词表编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "自动来源生成的只读词典：搜索、词条/实体/语言/信任/可见性/来源、预演与正式同步，不直接编辑候选。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A14-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A15",
+    "title": "服务与模型配置",
+    "coverage": [
+      "PV078"
+    ],
+    "domain": "配置工作区",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "服务总览/模型服务/检查日志/配置管理。表格capability/provider/model/enabled/检查状态，右选定profile参数temperature/tokens/timeout/retrieval/fallback；凭据只显示已配置/未配置，馆长HTTPS条件，保存配置与检查不同。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A15-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A16",
+    "title": "处理与系统设置",
+    "coverage": [
+      "PV059"
+    ],
+    "domain": "系统表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "OCR/AI/检索/提示词/读者投稿邮箱分类，内容区字段约束、作用范围、版本状态，保存和检查不同；禁用/未配置明确，不造读者预览。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A16-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A17",
+    "title": "存储与备份",
+    "coverage": [
+      "PV080",
+      "PV030"
+    ],
+    "domain": "维护任务",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "存储位置及实际文件用量表，backups/verifications/rehearsals/failed分页；备份任务列表与归档校验、恢复计划、保留策略，清理扫描/排队/取消分开；恢复计划不是执行恢复。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A17-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A18",
+    "title": "分发配置",
+    "coverage": [
+      "PV038"
+    ],
+    "domain": "存储配置",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "S3 provider列表，endpoint/bucket/region/public_base_url/credential_reference表单，启用/默认，预算阈值通知邮箱；用量手工录入period/egress/cost明确来源，不伪造实时账单。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A18-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A19",
+    "title": "用户与权限",
+    "coverage": [
+      "PV101"
+    ],
+    "domain": "账号管理",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "搜索role/state/page_size表，选中账户基本信息、roles/history；新建/修改/密码/邀请分开。权限变更前展示保留/新增/失去能力和会话撤销确认；不能授予馆长，不能停用自己。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A19-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A20",
+    "title": "反馈处理",
+    "coverage": [
+      "PV082"
+    ],
+    "domain": "支持队列",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "类别/状态/搜索筛选与反馈列表，右正文和status/note/follow_up处理字段；待回复不代表发送邮件，未保存与请求未知保留。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A20-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A21",
+    "title": "公共并读校准审核",
+    "coverage": [
+      "PV083"
+    ],
+    "domain": "校准审核",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左右原文与提交对齐/术语说明，提交者同意的公开范围，当前修订，审核/发布/拒绝动作；来源失效不可发布，私人笔记不公开。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A21-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A22",
+    "title": "使用分析",
+    "coverage": [
+      "PV029"
+    ],
+    "domain": "真实聚合",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "最近30天既有匿名聚合、热门馆藏与热门查询表，无时间序列趋势接口，不造图表。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A22-v1.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A23",
+    "title": "素材管理",
+    "coverage": [
+      "PV047"
+    ],
+    "domain": "媒体编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "素材目录cover/recommendation/portrait/hero筛选，当前/PDF/上传/复用来源；选中图片裁切，alt/source/rights/license/credit字段和display_uses，右实际保存页预览390/1280/fit，草稿裁切与已保存预览状态分开。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A23-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A24",
+    "title": "人物权威库",
+    "coverage": [
+      "PV049",
+      "PV075"
+    ],
+    "domain": "人物核对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "人物列表与搜索/重复项；中标准名、原文名、语言、国别、简介、异名、外部标识，右关联学者/作品职责、相似人物、历史；保存先preview_hash影响确认，合并独立。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A24-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A25",
+    "title": "学者管理目录",
+    "coverage": [
+      "PV074"
+    ],
+    "domain": "内容目录",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "搜索/状态/学科/分页，学者表含中外文名、公开/草稿状态、关联人物；右选中简介和打开编辑/关系/素材/发布准备操作，创建入口。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A25-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A26",
+    "title": "学者编辑",
+    "coverage": [
+      "PV072"
+    ],
+    "domain": "人物编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左section导航，表单中外文名/简介/生平/研究领域/材料/人物图；右真实学者公开页草稿预览（肖像、导读、作品）；正文与来源相邻，保存/已保存预览/发布独立。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A26-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A27",
+    "title": "关系编辑",
+    "coverage": [
+      "PV092"
+    ],
+    "domain": "关系核对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "可筛选关系列表，关系两端实体选择、类型、时间/说明、证据和来源版本；草稿修订与现有公开关系对照，保存不直接覆盖公开；未保存离开保护。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A27-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A28",
+    "title": "理论节点编辑",
+    "coverage": [
+      "PV088",
+      "PV090"
+    ],
+    "domain": "理论编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "使用已生成校准图；目录、基本信息/理论内容/关系/来源/图片与真实公开草稿预览相邻。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A28-theory-editor-v1.png",
+    "inspection_notes": "布局采用；品牌实现强制精确SVG，生成字体和示例内容不写入产品；纯色控件，无生成纹理。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A29",
+    "title": "子学科编辑",
+    "coverage": [
+      "PV093"
+    ],
+    "domain": "分类编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左学科/子学科目录，中code/name/foreign_name/slug/aliases/description/introduction/sort与父级，子学科研究对象/核心问题/方向/方法；右实际学科页面预览，父级环防止，发布状态分开。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A29-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A30",
+    "title": "阅读路径编辑",
+    "coverage": [
+      "PV091"
+    ],
+    "domain": "分阶段编排",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左路径目录和阶段，中标题/slug/目标/受众/难度/预计量，阶段材料排序与必读/先修/替代/版本/页码；右真实公开路径预览。validate/preview不保存，保存和发布分开。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A30-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A31",
+    "title": "时间线编辑",
+    "coverage": [
+      "PV094"
+    ],
+    "domain": "事件编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "事件目录/日期筛选，中事件标题/日期及精度/类型/参与者/作品/图像/证据页码，右实际时间线当前事件与已存事件预览；保存发布合并独立。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A31-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A32",
+    "title": "主题编辑",
+    "coverage": [
+      "PV098",
+      "PV099"
+    ],
+    "domain": "主题编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "主题目录，标题/slug/简介/问题/关联作品/学者/理论/图片，右真实主题页草稿预览；字段定位高亮，保存/预览/发布按edit_version。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A32-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A33",
+    "title": "内容编排目录",
+    "coverage": [
+      "PV036"
+    ],
+    "domain": "展示位置目录",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "按页面类型和对象搜索的入口列表，显示对象名称与可编辑展示区域/发布状态；点击进入实际编排，避免新建第二套建站库。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A33-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A34",
+    "title": "页面区块编排",
+    "coverage": [
+      "PV035"
+    ],
+    "domain": "展示编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左实际groups/area区块树，中position/target/reason/local_text/reading_target/concept_usage/display_fields编辑，右同草稿实际页面效果；排序/多选/undo/redo，点击区块定位字段，dirty/conflict/history/publish/withdraw。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A34-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A35",
+    "title": "策划项目",
+    "coverage": [
+      "PV068"
+    ],
+    "domain": "项目编排",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左项目搜索scope/page，中articles/materials/missing/settings tabs；项目title/question/introduction/visibility/collaborators/cover/planned_for，文章列表和排序、新建/附加/复制/归档/恢复；项目保存不等于文章发布。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A35-v1.png",
+    "inspection_notes": "已实际查看，采用主体布局；品牌/侧栏/字体/字色统一服从用户最新SHELL_CONSTRAINTS。图中匿名内容与日期均为示例，不进入产品。字段约束、现有状态枚举、权限与数据动作按已核实源码实现，不能由图中样例状态扩展业务。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A36",
+    "title": "文章编辑",
+    "coverage": [
+      "PV066"
+    ],
+    "domain": "文章编排",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "左body_blocks目录与选材，中标题/slug/issue_label/导语/署名/时间/封面和正文块编辑，右实际公开文章预览；10秒自动存草稿状态、冲突/未知结果恢复、手动保存与发布不同；评论审核入口。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A36-v1.png",
+    "inspection_notes": "主体编辑/预览同屏可采用。图中红色星号与字符数字仅样例，必填与上限以serializer及现有字段校验为准；不会全部设为必填。正文编辑继续复用已有块编辑器，不增加产品未支持的格式按钮。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A37",
+    "title": "网站文案编辑",
+    "coverage": [
+      "PV027"
+    ],
+    "domain": "网站内容",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "网站文案分组/字段与公开关于页等实际预览同屏，当前草稿/已保存/已发布、历史和发布前整份草稿影响范围；不可暗中发布其他编辑者修改。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A37-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A38",
+    "title": "欢迎页编辑",
+    "coverage": [
+      "PV103"
+    ],
+    "domain": "欢迎编排",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "三版原文优先/问题出发/思想交锋切换，主标题/引言/演示文字/真实选书与下面介绍字段；右实际欢迎页当前版本预览，顺序和选书一致；整份网站草稿发布范围清楚。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A38-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A39",
+    "title": "发布工作台",
+    "coverage": [
+      "PV063",
+      "PV061"
+    ],
+    "domain": "发布核对",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "队列选中作品或知识对象，已保存版本、校验/阻塞与具体字段、真实公开预览；返回编辑/刷新核对/发布动作，待处理/已发布/撤回状态；不能发布未保存草稿。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A39-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A40",
+    "title": "回收站",
+    "coverage": [
+      "PV069"
+    ],
+    "domain": "恢复工作区",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "来源类型/状态/操作人/原因/日期筛选，最多20批量选择；右恢复影响预览keep_separate与历史，确认恢复/原请求回执，原件和公开撤回语义不混。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A40-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A41",
+    "title": "管理证据预览",
+    "coverage": [
+      "PV050"
+    ],
+    "domain": "原文证据",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "EvidenceCurationEditor fullPreview：准确版本/文件/原文检索只读，分组/标题/推荐理由/排序编排，保存草稿与发布已保存编排分开，来源权限保留。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A41-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "M01",
+    "title": "欢迎页手机",
+    "coverage": [
+      "PV119",
+      "PV151"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px手机欢迎，品牌不挤缩，进入按钮与示例演示纵向，介绍自然滚动。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M02",
+    "title": "公开详情手机",
+    "coverage": [
+      "PV126",
+      "PV127",
+      "PV130",
+      "PV133",
+      "PV136",
+      "PV137",
+      "PV139",
+      "PV142",
+      "PV143",
+      "PV147",
+      "PV148",
+      "PV152"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px作品详情：封面缩小但正文可读，元数据换行，动作折行，简介/版本/章节导航与正文依序。共用知识/人物/路径窄屏骨架，保留差异字段。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M02-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M03",
+    "title": "目录与检索手机",
+    "coverage": [
+      "PV109",
+      "PV110",
+      "PV128",
+      "PV131",
+      "PV132",
+      "PV140",
+      "PV145",
+      "PV149"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px结果列表，搜索与筛选按钮，上方已选条件；筛选抽屉可滚动、确认和清除，结果标题可长，分页可操作。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M03-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M04",
+    "title": "读者中心手机",
+    "coverage": [
+      "PV012",
+      "PV006",
+      "PV007",
+      "PV014",
+      "PV019",
+      "PV024",
+      "PV025"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px读者中心，紧凑品牌/菜单和继续阅读，资料筛选滚动、列表逐行、选中批量工具，底部现有读者导航。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M04-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M05",
+    "title": "笔记手机",
+    "coverage": [
+      "PV008",
+      "PV010",
+      "PV011"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px笔记正文和来源选用面板切换，保存固定可达，原文抽屉关闭回到原编辑位置，键盘不遮主要操作。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M05-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M06",
+    "title": "研究手机",
+    "coverage": [
+      "PV002",
+      "PV003",
+      "PV004",
+      "PV005",
+      "PV013",
+      "PV015",
+      "PV016",
+      "PV017",
+      "PV018"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px连续研究，问题/材料/证据/笔记tabs切换，单列长文阅读，当前来源可展开，任务状态保留；矩阵用局部横向滚动。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M06-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M07",
+    "title": "PDF手机",
+    "coverage": [
+      "PV121"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px全宽原文PDF画布、紧凑两行页码缩放工具；目录/引用/笔记为可切换底部抽屉，不能把PDF挤成窄条，关闭抽屉保留页码。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M07-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M08",
+    "title": "并读手机",
+    "coverage": [
+      "PV121"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px左右版本用明确左文/右文/对齐tabs，显示当前两版名称和配对页码，同步选择，笔记保存不丢两侧定位。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M08-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M09",
+    "title": "管理列表手机",
+    "coverage": [
+      "PV029",
+      "PV038",
+      "PV044",
+      "PV048",
+      "PV053",
+      "PV054",
+      "PV055",
+      "PV057",
+      "PV058",
+      "PV063",
+      "PV069",
+      "PV071",
+      "PV074",
+      "PV076",
+      "PV082",
+      "PV083",
+      "PV101"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px管理任务目录：导航抽屉，过滤按钮，关键状态与主操作可见，详情整页抽屉，长表格局部滚动不缩小字体。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M10",
+    "title": "编辑预览手机",
+    "coverage": [
+      "PV027",
+      "PV033",
+      "PV035",
+      "PV046",
+      "PV066",
+      "PV072",
+      "PV088",
+      "PV089",
+      "PV090",
+      "PV091",
+      "PV093",
+      "PV094",
+      "PV098",
+      "PV099",
+      "PV103"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px理论编辑：对象标题/草稿状态，编辑/页面预览两个面板，表单单列，底部保存草稿和更多发布；切换保留内容与焦点。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M10-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M11",
+    "title": "文件校对手机",
+    "coverage": [
+      "PV039",
+      "PV041",
+      "PV042",
+      "PV043",
+      "PV045",
+      "PV050",
+      "PV056",
+      "PV100"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px目录校准：目录/原文面板切换，条目字段可达、物理页定位提示在页外，底部保存和生成中下载状态。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M12",
+    "title": "配置与权限手机",
+    "coverage": [
+      "PV020",
+      "PV021",
+      "PV022",
+      "PV023",
+      "PV009",
+      "PV030",
+      "PV059",
+      "PV060",
+      "PV075",
+      "PV078",
+      "PV080"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px隐私/配置表单单列，标签不被截断，影响说明与确认按钮在滚动弹层内可达；长权限列表仍可核对。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M13",
+    "title": "文章手机",
+    "coverage": [
+      "PV001",
+      "PV112",
+      "PV113",
+      "PV114",
+      "PV122",
+      "PV123",
+      "PV129"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      390,
+      1000
+    ],
+    "brief": "390px文章长标题、署名、导语、正文舒适行高、图片全宽；评论区输入与确认，不缩成卡片海。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M13-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M14",
+    "title": "编辑平板",
+    "coverage": [
+      "PV033",
+      "PV035",
+      "PV046",
+      "PV066",
+      "PV072",
+      "PV088",
+      "PV090",
+      "PV091"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      768,
+      1024
+    ],
+    "brief": "768px平板编辑，收窄导航，目录可抽屉，表单与预览切换或可用双栏，文本不被挤窄，主要动作始终可达。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/M14-v1.png",
+    "inspection_notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "M15",
+    "title": "320px与大字号",
+    "coverage": [
+      "PV118",
+      "PV124",
+      "PV026",
+      "PV125",
+      "PV150"
+    ],
+    "domain": "responsive",
+    "viewport": [
+      320,
+      960
+    ],
+    "brief": "320px登录表单，大字号200%情境，品牌自然折行、输入满宽、按钮不截断，错误文字不横向溢出。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "responsive_code_only",
+    "scope_override": "用户明确不再单独出图，按桌面设计在代码中响应式适配；已有图仅历史参考，不构成实施门槛。"
+  },
+  {
+    "id": "S01",
+    "title": "权限与不可访问",
+    "coverage": [
+      "PV155",
+      "PV156",
+      "PV121"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "完整单页错误状态：来源已撤回/无权访问的阅读入口，清楚原因、返回作品/登录或重试按实际原因，不能将404/403混作空库。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S02",
+    "title": "加载与空结果",
+    "coverage": [
+      "PV157",
+      "PV109",
+      "PV110",
+      "PV012"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "单个检索页无结果状态，保留当前搜索和条件、清除筛选；顶部有失败重读样式说明仅此真实状态，无假数据。加载骨架作为同页面次要未加载栏示意，非无限转圈。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S03",
+    "title": "引用弹窗",
+    "coverage": [
+      "PV121",
+      "PV152"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "一张真实作品页上打开引用弹窗，格式选择、可选引用文字、复制/手动选择备用、当前版本和物理页/印刷页区别；明确示例引用，无真实学术引文。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S04",
+    "title": "未保存离开",
+    "coverage": [
+      "PV033",
+      "PV035",
+      "PV046",
+      "PV066",
+      "PV072",
+      "PV088",
+      "PV090",
+      "PV091",
+      "PV094",
+      "PV098"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "理论编辑页上的离开确认模态，说明当前对象未保存，留在编辑/放弃本次修改，清楚焦点，不能暗中自动发布；后面当前输入仍可见。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S05",
+    "title": "保存回执未知",
+    "coverage": [
+      "PV033",
+      "PV046",
+      "PV066",
+      "PV072",
+      "PV088",
+      "PV090",
+      "PV101"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "真实编辑页非破坏性未知保存状态：请求已发送但结果未确认，保留输入；核对原保存结果/继续等待，不显示已保存或新建第二请求，原版本冲突另行处理。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S06",
+    "title": "发布前预览确认",
+    "coverage": [
+      "PV061",
+      "PV062",
+      "PV063",
+      "PV027",
+      "PV103"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "发布工作台当前已保存版本和实际页面预览，侧边发布范围/阻塞/权限，明确发布按钮与取消返回编辑；网站整份草稿范围不能隐藏。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S07",
+    "title": "图片裁切与展示位置",
+    "coverage": [
+      "PV047",
+      "PV072",
+      "PV088",
+      "PV098"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "编辑页素材抽屉：图片裁切视口、alt/来源/授权/署名，展示位置列表和实际页面局部预览，保存草稿/取消。示例图片非真实人物。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S08",
+    "title": "隐私擦除确认",
+    "coverage": [
+      "PV020",
+      "PV021",
+      "PV012"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "本人隐私擦除预览模态，类别/数量/范围和保留项、版本变化错误位置、明确确认擦除与取消，不混淆公开来源撤回。全部为示例资料。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S09",
+    "title": "未配置服务",
+    "coverage": [
+      "PV005",
+      "PV018",
+      "PV059",
+      "PV078"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "任务提交页面未配置模型状态，输入保留，实际原因/可用功能/管理员设置入口按权限；禁用无法运行操作，不伪造成功或绿色进度。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S10",
+    "title": "选文与笔记",
+    "coverage": [
+      "PV121",
+      "PV010",
+      "PV011"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "PDF读者页选中合成段落，浮动选文工具复制/引用/笔记，右笔记编辑正文和原文引文分开，保存中/未保存可见；标记不覆盖正文。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S11",
+    "title": "评论提交",
+    "coverage": [
+      "PV122"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "文章阅读底部评论区，已审核评论示例、本人待审核评论分组；署名80、正文3000、同意公开、提交，版本更新冲突保留输入；本人删除独立。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S12",
+    "title": "评论审核",
+    "coverage": [
+      "PV066"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "文章管理评论审核面板，待审核/已公开/未公开状态，署名和正文、审核说明240，核对后公开/不公开或撤下；旧版评论不可迁到新版。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S13",
+    "title": "笔记使用授权",
+    "coverage": [
+      "PV008",
+      "PV013",
+      "PV018"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "已确认笔记页上的研究或计划使用范围弹窗，选择一个本人项目/计划，当前已选列表，授权给此范围/撤销/停止全部，未确认禁用授权，修改笔记需重授权。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "S14",
+    "title": "账户权限变更",
+    "coverage": [
+      "PV101"
+    ],
+    "domain": "state",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "账户管理预览确认抽屉：当前与修改后角色，新增/保留/失去能力，账号激活与会话撤销影响，确认执行/返回修改；没有馆长授予选项，不泄露密码或邮箱。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P27",
+    "title": "注册",
+    "coverage": [
+      "PV124"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 注册账户. Quiet two-column identity layout: white form on left, reading illustration and short existing benefits on right. Fields 邮箱地址 required, 用户名 required4–20 Chinese/letters/digits/underscore, 密码 required10–128 with show/hide and restrained strength indicator, 确认密码 required. Text 注册后即可登录，无需邮件验证。Primary 创建账户. Plain policy links 服务条款/隐私政策, not an extra consent checkbox. 已有账户？登录. No OAuth.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P27-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P28",
+    "title": "邮件未配置与人工找回",
+    "coverage": [
+      "PV125"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 找回账户 when email is not configured. Quiet identity layout. Top message 邮件重置暂未开放，可提交找回申请由管理员核对处理。 Below standalone section 无法访问邮箱？提交找回申请. Fields 用户名（可选）, 可联系的邮箱 required, 情况说明 required4–300 characters. Required checkbox 我同意管理员使用上述信息处理这次申请。Primary 提交找回申请, 登录 link. Short note 请勿填写密码、验证码、证件或私人研究正文。 No successful send banner, no new security-question fields.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P28-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P29",
+    "title": "邮箱验证",
+    "coverage": [
+      "PV150"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 邮箱验证 ready state. Quiet identity page with one white form: 确认你的邮箱. Note 验证不会自动登录、调整角色或合并资料。 Sample expiry labeled示例. One 账户密码 masked input with visibility button; required checkbox 这是我本人发起的邮箱验证。 Primary 确认邮箱归属. Secondary 重新核对链接与处理结果, 找回密码 and 登录 links. No newpassword fields, no real email/token.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P29-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "P30",
+    "title": "邀请激活",
+    "coverage": [
+      "PV026"
+    ],
+    "domain": "身份表单",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 邀请激活账户 ready state. Quiet identity page with white form. Read-only 账户：示例账户 and 邮箱：sample@example.test, text 激活后角色：读者, sample expiry allmarked示例. 设置密码 and 确认密码 masked, show/hide;10–128. Required checkbox 这是本人账户，我已阅读账户与隐私说明。Primary 设置密码并激活. Secondary 重新核对邀请与激活结果 and 登录. No role selector or token field.",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/P30-v1.png",
+    "inspection_notes": "已逐张查看：时间线去重、出处页码语义及访客权限修正；反馈/身份页面字段按真实源码核对。生成样例不进入产品，精确品牌SVG与实际导航状态/校验沿真实组件。反馈公开路径允许同屏编辑并保留原验证；邮箱未配置为单独状态而非送达承诺。",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  },
+  {
+    "id": "R25",
+    "title": "创建阅读计划",
+    "coverage": [
+      "PV014"
+    ],
+    "domain": "读者表单",
+    "viewport": [
+      1536,
+      1200
+    ],
+    "brief": "Edit the provided STL design into one complete high-fidelity interface. Retain its restrained paper-white/white/charcoal/warm-gray/sand-gold design language and compact exact bilingual brand area. Replace all main contents. Desktop1536×1024, dense workspaces but readableChinese. Use clean flat CSS-like surfaces, 1px rules, square/slightlyround corners, no gradients/shadows/metal texture, no generic stats cards. Only listed business controls. Synthetic data visibly labeled示例数据. No real academic claims, credentials, usercontent. No browserchrome, no collage. 设置阅读目标与时间 creation form. Reader shell. Main left form 研究问题 textarea max1200; 当前基础 radios 没有基础/有一些基础/已有基础, 已读相关书籍数量, 已读材料与关注方向; 时间安排 budgetmode每周时间×计划周期 or本轮总时间, 每周小时,持续周数,每次阅读分钟,语言偏好; bottom 选择材料 from研究会话 dropdown and2samplecheckboxrows. Right依据预览 liveplaintext question/time/base; 使用选定的已确认笔记 checkbox unchecked. Bottom取消/生成计划. Fitthroughverticalviewport1536×1200 ifneeded, noarchivefilters.",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/R25-v2.png",
+    "inspection_notes": "已逐张查看：保留真实字段/预览/权限和写入区别。图中示例内容不进产品，品牌与导航按既有精确组件，分页受真实响应约束。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A42",
+    "title": "运行维护状态",
+    "coverage": [
+      "PV060"
+    ],
+    "domain": "管理运行维护",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "独立只读服务状态中心，配置、观察时间与可用性分开。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A42-v1.png",
+    "inspection_notes": "实际查看并核对来源；布局可采用。示例不进入产品；精确品牌、条件权限和真实状态由现有组件实现。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A43",
+    "title": "兼容语义索引评估工作区",
+    "coverage": [
+      "PV058"
+    ],
+    "domain": "管理运行维护",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "legacy=1已有测试查询、标注、评估集与索引版本操作；独立设计，非新模块。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A43-v2.png",
+    "inspection_notes": "已实际查看纠正图，真实字段/操作结构可采用；所有品牌与侧栏按用户最新SHELL_CONSTRAINTS覆盖，不再为品牌/导航出图。图中的示例文字、数据和服务名不进入产品；配置与权限以真实响应为准。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A44",
+    "title": "素材目录与来源维护",
+    "coverage": [
+      "PV047"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "MediaLibraryCatalog默认目录与ObjectMediaWorkspace裁切实质不同，独立图。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A44-v1.png",
+    "inspection_notes": "素材目录/来源表单/使用位置/历史布局可采用，来源、许可证值仅示例；字段类型、权利枚举和焦点坐标继续使用真实组件，不照图硬编码许可选择。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A45",
+    "title": "学者概念用法与关联",
+    "coverage": [
+      "PV073"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "usages/relations/materials/impact/history，概念用法与人工关系不同。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A45-v1.png",
+    "inspection_notes": "概念归属/来源原文只读布局可采用，源文都是明确示例。来源状态由接口决定，缺失原文不输出假引文。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A46",
+    "title": "知识发布历史与撤回",
+    "coverage": [
+      "PV062"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "正式版本/历史对比/影响/恢复草稿，不直接恢复公开。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A46-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A47",
+    "title": "策划文章目录",
+    "coverage": [
+      "PV068"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "view=legacy已有文章目录，非新模块。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A47-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A48",
+    "title": "首页推荐位置编排",
+    "coverage": [
+      "PV068"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "view=home既有RecommendationsAdmin，规则预览与15分钟内确认发布。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A48-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A49",
+    "title": "学科编辑",
+    "coverage": [
+      "PV089"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "与子学科字段不同，code/介绍/排序及实际公开预览。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A49-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A50",
+    "title": "模型配置编辑",
+    "coverage": [
+      "PV078"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "AIRuntimeEditor实际用途、参数、凭据动作/权限与保存，不把服务总览当编辑完成。",
+    "version": "v2",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A50-v2.png",
+    "inspection_notes": "已逐张查看业务纠正版本，移除所记录的虚构控件/规则，采用主体布局；所有示例/数字/必填星号不进入产品，实际字段约束及可用动作来自原接口。品牌、侧栏、字体与字色服从用户SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A51",
+    "title": "OCR运行配置",
+    "coverage": [
+      "PV059"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "OcrRuntimeEditor运行方式/远程回退/文档发送确认及连接检查。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A51-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A52",
+    "title": "外部书目来源配置",
+    "coverage": [
+      "PV078"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "ResearchSourceRegistryPanel现有来源启用、别名、凭据与实际观察。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A52-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "A53",
+    "title": "AI提示词管理",
+    "coverage": [
+      "PV059"
+    ],
+    "domain": "管理详情与编辑",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "PromptRegistryAdmin实际TaskProfile、提示词key/content、JSON对象schema/guidance，新修订与启用版本；不增加预演、评估或直接回滚按钮。",
+    "version": "v1",
+    "status": "generated_inspected",
+    "image": "output/public-visual-20261110/design/A53-v1.png",
+    "inspection_notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "current_scope": "page_layout",
+    "scope_override": "SCOPE.json优先：仅空间排版目标；所有现有分类栏、内容、字段、控件、交互、品牌字体字色、弹窗与加载保持。"
+  },
+  {
+    "id": "S15",
+    "title": "本机选材与批量引用导出",
+    "coverage": [
+      "PV121",
+      "PV152"
+    ],
+    "domain": "关键状态与弹层",
+    "viewport": [
+      1536,
+      1024
+    ],
+    "brief": "SharedCitationOverlay本机选材展开、重新核对来源、选中转存到明确研究、逐格式导出部分失败及只重试失败项；与引用弹窗普通态有实质差异。",
+    "version": "v1",
+    "status": "pending",
+    "current_scope": "historical_preserved_surface",
+    "scope_override": "用户已排除此区域，图片只保留历史，不实现、不继续出图。"
+  }
+]

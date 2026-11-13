@@ -53,7 +53,7 @@ function PublicationDetails({ item, returnTo }: { item: WorkflowQueueItem; retur
   );
   const destination = queueWorkbenchHref(item);
   if (result.error) return <div className={styles.error} role="alert">当前版本预览读取失败：{result.error}<button onClick={result.retry} type="button">重试当前版本预览</button></div>;
-  if (result.loading) return <p role="status">正在读取选定对象的保存内容和公开影响…</p>;
+  if (result.loading) return <LoadingState role="status">正在读取选定对象的保存内容和公开影响…</LoadingState>;
   if (!validIdentity) return <p className={styles.error} role="alert">返回内容与指定作品或出版版本不一致，已停止显示预览。请重新打开原记录，不会显示其他馆藏。</p>;
   const work = asRecord(data.work);
   const bibliography = asRecord(data.bibliography);
@@ -124,7 +124,7 @@ export function PublicationDesk() {
     </form>
     <p className={styles.count} role="status">{page ? `共 ${page.count} 项 · 第 ${page.page} 页` : result.error ? "发布记录数量未能读取。" : "正在读取全部来源的发布记录…"}</p>
     {result.error ? <div className={styles.error} role="alert"><AlertCircle size={16} />{result.error}<button type="button" onClick={result.retry}>重试发布列表</button></div> : null}
-    {result.loading ? <LoadingState role="status">正在读取当前页…</LoadingState> : null}
+    {result.loading ? <LoadingState variant="rows" role="status">正在读取当前页…</LoadingState> : null}
     <section className={styles.rows} aria-label="馆藏发布列表">{page?.results.map((item) => {
       const destination = queueWorkbenchHref(item);
       return <article className={styles.row} key={item.id} data-record-id={item.id}>

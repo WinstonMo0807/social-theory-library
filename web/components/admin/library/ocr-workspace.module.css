@@ -93,3 +93,9 @@
 @media(max-width:760px){.tabs{overflow:visible;gap:28px;position:relative}.tabs>button:nth-of-type(n+3){display:none}.tabsMore{display:block;margin-left:auto;position:relative;align-self:center;font-size:max(12px, var(--stl-readable-meta));z-index:5}.tabsMore :is(summary,:where([data-section-heading])){cursor:pointer;list-style:none;padding:7px 2px}.tabsMore :is(summary,:where([data-section-heading])):after{content:'⌄';margin-left:8px}.tabsMore>div{position:absolute;right:0;top:35px;display:grid;min-width:130px;background:var(--ocr-paper);border:1px solid var(--line);padding:7px;box-shadow:0 5px 15px #18232a18}.tabsMore button{padding:9px;font-size:max(12px, var(--stl-readable-ui));border:0;text-align:left}.tabsMore button[aria-current=page]{font-weight:600}.issueActions{flex-wrap:wrap;padding:10px;gap:7px;font-size:max(11px, var(--stl-readable-meta))}.issueActions button{font-size:max(11px, var(--stl-readable-ui));padding:5px 7px}}
 
 .qualityMark{background:var(--night-danger-muted,#f9dfdc);color:inherit;font:inherit;padding:1px 0;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .workspace:not(:global(dialog *), :global([role="dialog"] *)) { padding-inline:0; }
+:global(.admin-content) .editor:not(:global(dialog *), :global([role="dialog"] *)) { padding:20px; }
+:global(.admin-content) .overview { grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+:global(.admin-content) .book > div:nth-child(2) { min-width: 0; flex: 1; }

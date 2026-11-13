@@ -30,6 +30,7 @@ type ReaderRecordsOptions = {
   jumpToPage: (target: number, behavior?: ScrollBehavior) => void;
   setLeftPanel: (open: boolean) => void;
   setSidebarTab: Dispatch<SetStateAction<SidebarTab>>;
+  openNotes?: () => void;
   setGate: Dispatch<SetStateAction<string | null>>;
   setCopyStatus: Dispatch<SetStateAction<string>>;
   setCopyStatusState: Dispatch<SetStateAction<ActionState>>;
@@ -61,7 +62,7 @@ export function annotationReceiptMatches(record: ReaderAnnotation, payload: Anno
 export function useReaderRecords({
   assetId, initialFocus, readerAuthenticated, readerId, page, pagePayloads, captureSelection,
   setSelectionTools, setPage, jumpToPage, setLeftPanel, setSidebarTab, setGate,
-  setCopyStatus, setCopyStatusState,
+  setCopyStatus, setCopyStatusState, openNotes,
 }: ReaderRecordsOptions) {
   const [annotations, setAnnotations] = useState<ReaderAnnotation[]>([]);
   const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
@@ -110,8 +111,8 @@ export function useReaderRecords({
     const focused = annotations.find((item) => item.id === initialFocus);
     if (!focused) return;
     jumpToPage(focused.selector.page_index || 1, "auto");
-    setSidebarTab(focused.kind === "note" ? "notes" : "highlights");
-    setLeftPanel(true);
+    if (focused.kind === "note" && openNotes) openNotes();
+    else { setSidebarTab(focused.kind === "note" ? "notes" : "highlights"); setLeftPanel(true); }
     setFocusedAnnotationId(focused.id);
   });
   useEffect(() => {

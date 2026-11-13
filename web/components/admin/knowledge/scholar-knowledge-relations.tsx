@@ -24,7 +24,7 @@ const clearGuard:NodeRelationGuard={dirty:false,pending:false,composing:false};
 export function ScholarKnowledgeRelations({ scholarId }: { scholarId: string }) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <Workspace key={`${user.id}:${epoch}:${scholarId}`} scholarId={scholarId} owner={String(user.id)}/> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user ? <Workspace key={`${user.id}:${epoch}:${scholarId}`} scholarId={scholarId} owner={String(user.id)}/> : <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function Workspace({ scholarId, owner }: { scholarId: string; owner: string }) {

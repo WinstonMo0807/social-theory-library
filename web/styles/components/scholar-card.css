@@ -10,33 +10,22 @@
   width: 72px;
   height: 94px;
   overflow: hidden;
-  background: #cbcbc6;
+  background: #e5e8e8;
   color: #555;
   font-family: var(--serif);
   font-size: calc(var(--stl-type-title) + var(--font-bump));
   place-items: center;
-  filter: grayscale(1);
-}
-
-.scholar-portrait::after {
-  position: absolute;
-  right: -8px;
-  bottom: -24px;
-  left: -8px;
-  height: 58px;
-  background: #595957;
-  border-radius: 50% 50% 0 0;
-  content: "";
 }
 
 .scholar-portrait.has-image {
-  background-position: center 18%;
-  background-size: cover;
+  background-color: var(--night-wash, #eeebe5);
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
 }
 
-.scholar-portrait.has-image::after {
-  display: none;
-}
+.scholar-portrait.has-image > picture { position: absolute; inset: 0; }
+.scholar-portrait.has-image img { display: block; object-position: center; }
 
 .scholar-portrait.large {
   width: 100%;

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, UserRound } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { DefaultScholarPortrait } from "@/components/default-scholar-portrait";
 import { MediaPlacement } from "@/components/media-placement";
 import { ResponsiveMediaImage } from "@/components/responsive-media-image";
 import { scholarHref, scholarYears } from "@/lib/api/scholars.params";
@@ -8,7 +9,8 @@ import styles from "./scholar.module.css";
 
 export function ScholarImage({ scholar, eager = false, placement = "list" }: { scholar: PublicScholarCard; eager?: boolean; placement?: "list" | "detail" }) {
   const person = scholar.person, media = person.portrait_media;
-  return <div className={styles.portrait}><MediaPlacement uses={media?.display_uses} placement={placement} fallback={<span className={styles.noPortrait} aria-label={`${person.preferred_name}暂无肖像`}><UserRound size={52} strokeWidth={1}/></span>}>{person.portrait ? media?.renditions?.length ? <ResponsiveMediaImage src={person.portrait} sources={media.renditions} alt={media.alt_text || `${person.preferred_name}肖像`} sizes="(max-width: 700px) 110px, 25vw" loading={eager ? "eager" : "lazy"} /> : <img src={person.portrait} alt={`${person.preferred_name}肖像`} loading={eager ? "eager" : "lazy"} /> : <span className={styles.noPortrait} aria-label={`${person.preferred_name}暂无肖像`}><UserRound size={52} strokeWidth={1} /></span>}</MediaPlacement></div>;
+  const fallback = <DefaultScholarPortrait name={person.preferred_name} identity={scholar.href} eager={eager}/>;
+  return <div className={styles.portrait}><MediaPlacement uses={media?.display_uses} placement={placement} fallback={fallback}>{person.portrait ? media?.renditions?.length ? <ResponsiveMediaImage src={person.portrait} sources={media.renditions} alt={media.alt_text || `${person.preferred_name}肖像`} sizes="(max-width: 700px) 110px, 25vw" fit="contain" loading={eager ? "eager" : "lazy"} /> : <img src={person.portrait} alt={`${person.preferred_name}肖像`} loading={eager ? "eager" : "lazy"} /> : fallback}</MediaPlacement></div>;
 }
 export function ScholarResultCard({ scholar, compact = false }: { scholar: PublicScholarCard; compact?: boolean }) {
   return <article className={`${styles.scholarCard} ${compact ? styles.compactCard : ""}`} data-scholar-id={scholar.id}>

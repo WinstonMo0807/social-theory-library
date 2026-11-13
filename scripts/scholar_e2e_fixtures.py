@@ -15,7 +15,7 @@ IDS = {"profile": fixture_id(1), "namesake": fixture_id(2), "sparse": fixture_id
 
 def seed_scholars(actor):
     from timeline_e2e_fixtures import _isolated, _source
-    from parallel_reader_e2e_fixtures import IDS as parallel_ids
+    from parallel_reader_e2e_fixtures import IDS as parallel_ids, copy_fixture_pdf
     _isolated()
     from catalog.models import (Asset, Contribution, DocumentOutlineRevision, Edition, EvidenceSpan,
         KnowledgeNode, Page, Person, PersonNameVariant, PersonNodeRelation, PersonTopicRelation, ScholarProfile, Topic, Work)
@@ -47,8 +47,7 @@ def seed_scholars(actor):
             PersonNodeRelation.objects.create(person=profile.person, node=node, status="published", relation_label="隔离验收确认关系")
         work = Work.objects.create(id=IDS["work"], title="SCHOLAR66 责任范围合成文集", document_type="book")
         edition = Edition.objects.create(id=IDS["edition"], work=work, state="published", public_slug="e2e-scholar-work", is_primary=True, version_label="隔离验收版")
-        asset = Asset.objects.create(id=IDS["asset"], edition=edition, kind="normalized", status="ready", validation_status="valid", access_status="public",
-            file=original.file.name, sha256=original.sha256, page_count=original.page_count, is_current=True)
+        asset = copy_fixture_pdf(original, edition, IDS["asset"], "synthetic-scholar.pdf")
         pages = {row.index: Page.objects.create(asset=asset, index=row.index, text=row.text, printed_label=row.printed_label) for row in original.pages.order_by("index")}
         revision = activate_catalog_revision(edition, reader_asset=asset)
         DocumentOutlineRevision.objects.create(id=IDS["outline"], asset=asset, document_revision=revision.document_revision, revision=1, source_checksum=asset.sha256,
@@ -57,11 +56,15 @@ def seed_scholars(actor):
             "outline_revision_id": IDS["outline"], "outline_node_id": IDS["chapter"], "page_start": 1, "page_end": 1}]}
         Contribution.objects.create(edition=edition, person=profile.person, role="author", scope=scope, approved=True)
         Contribution.objects.create(edition=edition, person=profiles[1].person, role="editor", approved=True)
+        # The second snapshot includes the chapter contributions. Keep the first
+        # fixture revision as history, respecting the one-active-revision rule.
+        revision.status = revision.Status.SUPERSEDED
+        revision.save(update_fields=["status"])
         activate_catalog_revision(edition, reader_asset=asset, document_revision=revision.document_revision)
         span = EvidenceSpan.objects.create(document_revision=revision.document_revision, page=pages[1], page_number=1,
             start_offset=excerpt.start_offset, end_offset=excerpt.end_offset, original_text=excerpt.original_text,
             normalized_text=excerpt.normalized_text, content_hash=excerpt.content_hash, printed_page_label=excerpt.printed_page_label)
-        curation = shared_curation.save_curation("scholar", profile.pk, {"items": [{"source_type": "span", "source_id": str(span.pk), "group_title": "代表原文", "reason": "来自隔离PDF的准确原文。"}]}, actor)
+        curation = shared_curation.save_curation("scholar", profile.pk, {"edit_version": "0", "items": [{"source_type": "span", "source_id": str(span.pk), "group_title": "代表原文", "reason": "来自隔离PDF的准确原文。"}]}, actor)
         shared_curation.publish_curation("scholar", profile.pk, curation["edit_version"], actor)
         curation_values = {"nationalities": ["合成国别"], "occupations": ["合成研究者"], "featured_source_id": curation["items"][0]["id"],
             "profile_sources": [{"id": IDS["citation"], "title": "隔离验收资料说明", "url": "https://example.org/synthetic-scholar", "fields": ["biography"], "note": "合成夹具；不是学术来源。"}]}

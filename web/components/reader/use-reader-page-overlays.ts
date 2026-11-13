@@ -68,6 +68,7 @@ export function buildReaderPageOverlays({ annotations, focusedAnnotationId, page
             (annotation.selector.bboxes ?? []).map((bbox) => ({
               bbox,
               kind: annotation.kind,
+              annotationId: annotation.id,
             })),
           ),
       ],

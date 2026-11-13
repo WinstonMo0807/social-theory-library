@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { useEffect, useState } from "react";
 import { Check, Search, X } from "lucide-react";
 import { apiRequest } from "@/lib/api";
@@ -61,7 +63,7 @@ export function FeedbackPagePicker({ path, title, error, onChange, onClose, onSa
     </form>
     <div className={styles.choices} aria-label="可关联页面" aria-busy={kind !== "pages" && !result && !loadError}>
       {rows.map(row => <button type="button" key={row.path} aria-pressed={path === row.path} onClick={() => onChange(row.path, row.title)}><span><strong>{row.title}</strong>{row.subtitle ? <small>{row.subtitle}</small> : null}</span>{path === row.path ? <Check size={18} aria-hidden="true" /> : null}</button>)}
-      {kind !== "pages" && !result && !loadError ? <p role="status">正在读取页面…</p> : null}
+      {kind !== "pages" && !result && !loadError ? <LoadingState variant="compact" role="status">正在读取页面…</LoadingState> : null}
       {result && !rows.length ? <p role="status">没有找到相关页面，试试其他名称。</p> : null}
       {loadError ? <p role="alert">{loadError}<button type="button" onClick={() => setSearch(value => ({ ...value, attempt: value.attempt + 1 }))}>重试</button></p> : null}
     </div>

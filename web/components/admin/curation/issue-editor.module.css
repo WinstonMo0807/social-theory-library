@@ -223,3 +223,7 @@
 @media(max-width:760px){.editor[data-editor-mode=selection] .heading{margin-bottom:9px}.editor[data-editor-mode=selection] .heading h1{font-size:25px}.editor[data-editor-mode=selection] .actions>button,.editor[data-editor-mode=selection] .actions>.more{display:none}.editor[data-editor-mode=selection] .supportActions{display:none}.editor[data-editor-mode=selection] .heading p{display:none}}
 
 .articleInfo .inputCount{position:static;grid-column:2;justify-self:end;line-height:1.6}
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .editor:not(:global(dialog *), :global([role="dialog"] *)) { padding-inline:0; }
+:global(.admin-content) .heading:not(:global(dialog *), :global([role="dialog"] *)) { margin-bottom:24px; }

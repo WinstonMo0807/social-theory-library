@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { useEffect, useRef, useState } from "react";
 import { useOwnedRead } from "./media-requests";
 import styles from "./media-workspace.module.css";
@@ -12,7 +14,7 @@ export function SavedMediaPagePreview({ owner, path, slot, version, objectId, ob
 }) {
   const resource = useOwnedRead<State>(owner, `${path}?${new URLSearchParams({ slot, include_preview: "true", expected_version: version })}`);
   if (resource.error) return <section className={styles.feedback} role="alert"><p>{resource.error}</p><p>当前裁切与填写仍保留。若保存版本已变化，请关闭预览并重新读取工作区。</p><button onClick={resource.retry}>重新读取预览</button></section>;
-  if (!resource.data) return <p role="status">正在核对已保存版本并读取完整页面…</p>;
+  if (!resource.data) return <LoadingState role="status">正在核对已保存版本并读取完整页面…</LoadingState>;
   const preview = resource.data.page_preview;
   const expectedTypes = objectType === "knowledge_node" ? ["theory", "concept", "debate", "research_problem"] : [objectType === "scholar_profile" ? "scholar" : objectType];
   if (!preview || resource.data.version !== version || preview.owner_id !== owner || preview.object_id !== objectId || !expectedTypes.includes(preview.object_type))

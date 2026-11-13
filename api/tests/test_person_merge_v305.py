@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from accounts.models import User
 from catalog.models import (
     CatalogFieldDecision, Contribution, Edition, EditorialRevision, KnowledgePublicationEvent, Page,
-    Person, PersonMergeRecord, PersonNameVariant, ResearchRun, ScholarProfile, TheoryTimelineEvent, Work,
+    Person, PersonMergeRecord, PersonNameVariant, ResearchRun, ScholarProfile, ScholarRelation, TheoryTimelineEvent, Work,
 )
 from catalog.services.person_merges import merge_people, prepare_person_merge, rollback_person_merge, rollback_preview
 from catalog.services.query_lexicon.sync import ensure_query_lexicon_state
@@ -57,6 +57,9 @@ def test_person_merge_moves_references_without_deleting_rows_and_can_reverse(mer
     unreviewed = PersonNameVariant.objects.create(person=source, name="未经确认的称呼", variant_type="alias", source_kind="other", is_verified=False)
     profile = ScholarProfile.objects.create(person=source, slug="preserved-scholar-url", short_description="保留档案原文", editorial_status="published")
     timeline = TheoryTimelineEvent.objects.create(scholar=profile, event_type="scholar", title="既有时间线", start_year=1960)
+    peer = ScholarProfile.objects.create(person=Person.objects.create(preferred_name="关系人物"), slug="relation-peer")
+    outgoing = ScholarRelation.objects.create(source_scholar=profile, target_scholar=peer, relation_type="influence", summary="保留已核对解释")
+    incoming = ScholarRelation.objects.create(source_scholar=peer, target_scholar=profile, relation_type="dialogue", summary="保留反向关系")
     record = apply(source, target, merge_owner)
     source.refresh_from_db()
     author.refresh_from_db()
@@ -72,6 +75,8 @@ def test_person_merge_moves_references_without_deleting_rows_and_can_reverse(mer
     assert not unreviewed.is_verified
     assert profile.person_id == target.pk and profile.slug == "preserved-scholar-url"
     assert TheoryTimelineEvent.objects.get(pk=timeline.pk).scholar_id == profile.pk
+    assert ScholarRelation.objects.get(pk=outgoing.pk).source_scholar_id == profile.pk
+    assert ScholarRelation.objects.get(pk=incoming.pk).target_scholar_id == profile.pk
     assert Person.objects.filter(pk=source.pk).exists()
     assert AuditEvent.objects.filter(action="person_merge", object_id=str(record.pk)).exists()
     preview = rollback_preview(record)
@@ -83,6 +88,22 @@ def test_person_merge_moves_references_without_deleting_rows_and_can_reverse(mer
     assert author.person_id == variant.person_id == unreviewed.person_id == profile.person_id == source.pk
     assert record.rolled_back_at is not None
     assert profile.short_description == "保留档案原文"
+    assert ScholarRelation.objects.get(pk=outgoing.pk).summary == "保留已核对解释"
+    assert ScholarRelation.objects.get(pk=incoming.pk).summary == "保留反向关系"
+
+
+def test_merge_rechecks_scholar_relation_edits_after_preview(merge_owner):
+    source, target = pair()
+    profile = ScholarProfile.objects.create(person=source, slug="relation-preview-source")
+    peer = ScholarProfile.objects.create(person=Person.objects.create(preferred_name="关系对端"), slug="relation-preview-peer")
+    relation = ScholarRelation.objects.create(source_scholar=profile, target_scholar=peer, relation_type="influence", summary="原解释")
+    preview = prepare_person_merge(source, target)
+    relation.summary = "预览后经人工修订的解释"
+    relation.save(update_fields=["summary", "updated_at"])
+    with pytest.raises(ValueError, match="变化"):
+        merge_people(source.pk, target.pk, actor=merge_owner, confirmed=True,
+                     expected_fingerprint=preview["fingerprint"], idempotency_key="scholar-relation-edited")
+    assert not PersonMergeRecord.objects.exists()
 
 
 @pytest.mark.parametrize("blocked", ["identity", "profiles", "relation", "unverified", "draft"])
@@ -332,6 +353,8 @@ def test_person_merge_http_requires_owner_and_allows_confirmed_merge_and_rollbac
     assert preview.status_code == 200 and preview.data["merge_execution_available"] is True
     assert preview.data["execution_guidance"]
     payload = {"target_person": str(target.pk), "fingerprint": preview.data["fingerprint"], "idempotency_key": "http-confirmed-merge", "confirmed": False}
+    assert api_client.post(endpoint, payload, format="json").status_code == 403
+    api_client.credentials(HTTP_X_EDITOR_OWNER=str(merge_owner.pk))
     assert api_client.post(endpoint, payload, format="json").status_code == 409
     payload["confirmed"] = True
     applied = api_client.post(endpoint, payload, format="json")

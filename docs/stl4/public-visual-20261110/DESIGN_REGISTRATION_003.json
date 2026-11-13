@@ -1,0 +1,98 @@
+[
+  {
+    "id": "R02",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e8e4ab23-2036-4ac3-bce7-5d25ba2c41c8.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "业务偏差已用v2纠正：无权限来源撤回、默认授权、虚构研究任务/上传字段、错误人工决定与自动替代版本；不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_003.json"
+  },
+  {
+    "id": "R03",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6ebf4faa-ed91-434c-ad52-e7e4519319e9.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "业务偏差已用v2纠正：无权限来源撤回、默认授权、虚构研究任务/上传字段、错误人工决定与自动替代版本；不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_003.json"
+  },
+  {
+    "id": "R08",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d8d56660-aca7-49ba-9cbf-b7cd75b68905.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "业务偏差已用v2纠正：无权限来源撤回、默认授权、虚构研究任务/上传字段、错误人工决定与自动替代版本；不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_003.json"
+  },
+  {
+    "id": "R12",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-dbae1283-68b7-4e4b-9993-e6d2a1918fef.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "业务偏差已用v2纠正：无权限来源撤回、默认授权、虚构研究任务/上传字段、错误人工决定与自动替代版本；不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_003.json"
+  },
+  {
+    "id": "R14",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2d0bc2b7-f4da-4470-a394-b5317fa12198.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "业务偏差已用v2纠正：无权限来源撤回、默认授权、虚构研究任务/上传字段、错误人工决定与自动替代版本；不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_003.json"
+  },
+  {
+    "id": "R24",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6236064b-5286-4a7d-8795-8e668c71f8fa.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "业务偏差已用v2纠正：无权限来源撤回、默认授权、虚构研究任务/上传字段、错误人工决定与自动替代版本；不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_003.json"
+  },
+  {
+    "id": "R02",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-7adfbe41-3c76-441c-8181-80b0f0a1b4f9.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "prompt_file": "DESIGN_CORRECTIONS_003.json"
+  },
+  {
+    "id": "R03",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3e46b7a0-7420-4a57-82ab-fe340a21356d.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "prompt_file": "DESIGN_CORRECTIONS_003.json"
+  },
+  {
+    "id": "R08",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0efed13a-efb6-4f40-b2de-784b62e46945.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "prompt_file": "DESIGN_CORRECTIONS_003.json"
+  },
+  {
+    "id": "R12",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-65e3a213-6648-4b92-8754-82a9653e73da.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "prompt_file": "DESIGN_CORRECTIONS_003.json"
+  },
+  {
+    "id": "R14",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-dd70410a-116a-479f-befb-b35e1ebad0db.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "prompt_file": "DESIGN_CORRECTIONS_003.json"
+  },
+  {
+    "id": "R24",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-29579316-fcce-4924-9163-564f01588a4e.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已逐图查看。原文引用只读、本人笔记独立编辑；确认与范围授权分开；研究只提交追问；体检使用现有检查项/来源文件；人工决定四状态及笔记；并读不自动替换版本。精确品牌、选项、必填约束由正式组件，合成文案/数据不进入产品。",
+    "prompt_file": "DESIGN_CORRECTIONS_003.json"
+  }
+]

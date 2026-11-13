@@ -541,14 +541,16 @@ def _sources(profile):
     return output
 
 
-def _evidence(profile):
+def _evidence(profile, *, request=None, preview=False):
     from catalog.models import EvidenceCuration
-    from catalog.services.shared_curation import curation_payload, sources
+    from catalog.services.shared_curation import curation_payload, preview_published_curation, sources
     owner = EvidenceCuration.objects.filter(object_type="scholar", object_id=profile.pk, active_revision__status="published",
         active_revision__target_type="evidence_curation", active_revision__target_id=F("pk")).first()
     if owner is None:
         return []
-    items = curation_payload("scholar", profile.pk, public=True)["items"]
+    payload = (preview_published_curation("scholar", profile.pk, request=request) if preview
+               else curation_payload("scholar", profile.pk, public=True))
+    items = payload["items"]
     current = {kind: {str(row.pk): row for row in sources(kind, public=True).filter(pk__in=[item["source_id"] for item in items if item["source_type"] == kind])}
                for kind in ("span", "passage")}
     output = []
@@ -610,7 +612,7 @@ def public_scholar_detail(slug, params=None, *, request=None, preview_profile=No
     if direction != "all":
         relations = [v for v in relations if getattr(v, "target_scholar_id" if direction == "incoming" else "source_scholar_id") == profile.pk]
     result["relations"] = _page(relations, params, path, section="relations", transform=lambda rows: _relation_rows(rows, getattr(request, "user", None)))
-    evidence = _evidence(profile)
+    evidence = _evidence(profile, request=request, preview=preview_profile is not None)
     result["sources"] = _page(_sources(profile), params, path, section="sources")
     result["evidence"] = _page(evidence, params, path, section="evidence")
     result["featured_quote"] = next((row for row in evidence if row["id"] == curation.get("featured_source_id")), None)

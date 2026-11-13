@@ -38,12 +38,12 @@ function metadataFor(media:Media):Metadata{return Object.fromEntries(Object.keys
 export function MediaWorkspace({editionId,slot}:{editionId:string;slot:Slot}){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(n=>n+1)),[]);
-  return user?<WorkspaceLoader key={`${user.id}:${epoch}:${editionId}:${slot}`} owner={String(user.id)} path={`/catalog/admin/editions/${editionId}/media-workspace/`} slot={slot} canEdit={hasAdminCapability(user,"can_edit_metadata")}/>:<LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user?<WorkspaceLoader key={`${user.id}:${epoch}:${editionId}:${slot}`} owner={String(user.id)} path={`/catalog/admin/editions/${editionId}/media-workspace/`} slot={slot} canEdit={hasAdminCapability(user,"can_edit_metadata")}/>:<LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 export function ObjectMediaWorkspace({objectType,objectId}:{objectType:MediaObjectType;objectId:string}){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(n=>n+1)),[]);
-  return user?<WorkspaceLoader key={`${user.id}:${epoch}:${objectType}:${objectId}`} owner={String(user.id)} path={`/catalog/admin/media-objects/${objectType}/${objectId}/`} slot={objectType==="scholar_profile"?"portrait":"hero"} canEdit={hasAdminCapability(user,"can_edit_metadata")&&(objectType==="scholar_profile"||hasAdminCapability(user,"can_edit_draft_authority"))}/>:<LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user?<WorkspaceLoader key={`${user.id}:${epoch}:${objectType}:${objectId}`} owner={String(user.id)} path={`/catalog/admin/media-objects/${objectType}/${objectId}/`} slot={objectType==="scholar_profile"?"portrait":"hero"} canEdit={hasAdminCapability(user,"can_edit_metadata")&&(objectType==="scholar_profile"||hasAdminCapability(user,"can_edit_draft_authority"))}/>:<LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 function WorkspaceLoader({owner,path,slot,canEdit}:{owner:string;path:string;slot:Slot;canEdit:boolean}){
   const resource=useOwnedRead<Workspace>(owner,`${path}?slot=${slot}`);

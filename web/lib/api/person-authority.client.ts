@@ -3,7 +3,7 @@ import { withPrivateOwner } from "./private-owner";
 import type { components } from "./generated/schema";
 import type { PersonBusinessImpact } from "./person-resolution";
 
-export type AuthorityValues = components["schemas"]["AuthorityValuesRequest"];
+export type AuthorityValues = components["schemas"]["AuthorityValuesRequest"] & { citation_name?: string };
 export type AuthorityVariant = components["schemas"]["AuthorityVariantRequest"] & { source_kind?: string };
 export type AuthorityInput = components["schemas"]["AuthorityInputRequest"];
 export type AuthorityCommand = components["schemas"]["AuthorityCommandRequest"];

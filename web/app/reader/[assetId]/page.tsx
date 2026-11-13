@@ -23,7 +23,7 @@ export default async function ReaderPage({
   const [result, { config }] = await Promise.all([loadReaderManifestResult(assetId, query.revision || "", query.preview === "1"), loadSiteChromeConfig()]);
   if (query.mode === "parallel") {
     return <ParallelReader assetId={assetId} work={result.ok ? result.manifest.work : undefined} siteConfig={config}
-      taskId={query.alignment} initialRevision={query.revision} initialFocus={query.focus || query.evidence}
+      researchContext={{ project: query.research_project, turn: query.research_turn, reference: query.reference, returnTo: query.return_to }} taskId={query.alignment} initialRevision={query.revision} initialFocus={query.focus || query.evidence}
       initialRight={query.right_asset && query.right_revision ? { assetId: query.right_asset, revisionId: query.right_revision } : undefined} initialPage={Number.isSafeInteger(Number(query.page)) && Number(query.page) > 0 ? Number(query.page) : 1} />;
   }
   if (!result.ok) {

@@ -1,6 +1,8 @@
 "use client";
 
-import { ExternalLink, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
+
+import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
@@ -323,7 +325,7 @@ export function AuthoritySuggestions({ entityType, query }: AuthoritySuggestions
         <button type="button" disabled={loading} onClick={() => setRequest({ query: normalizedQuery, nonce: (request?.nonce ?? 0) + 1 })}>查找正式条目</button>
       </header>
       <div aria-live="polite" aria-atomic="true">
-        {loading && currentRequest ? <p className="authority-suggestion-status"><LoaderCircle className="spin" size={15} />正在核对来源……</p> : null}
+        {loading && currentRequest ? <LoadingState variant="compact" className="authority-suggestion-status">正在核对来源……</LoadingState> : null}
         {!loading && currentRequest && message ? <p className="authority-suggestion-status">{message}</p> : null}
       </div>
       {!loading && currentRequest && results.length ? <div className="authority-suggestion-list">

@@ -1,6 +1,8 @@
 "use client";
 
-import { LoaderCircle, RefreshCw, Search, WandSparkles } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
+
+import { RefreshCw, Search, WandSparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 
@@ -98,7 +100,7 @@ export function QueryLexiconWorkspace() {
       <div className="admin-toolbar"><label><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索词条……" aria-label="搜索词条" /></label></div>
       {message ? <p className="form-message" role="status">{message}</p> : null}
       {payload && !payload.permissions?.can_manage ? <p className="form-message" role="status">当前账户为只读权限。正式同步由超级管理员执行。</p> : null}
-      {loading && !payload ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取词典状态……</p> : null}
+      {loading && !payload ? <LoadingState className="admin-list-state">正在读取词典状态……</LoadingState> : null}
       {payload ? <>
         <section className="admin-panel"><header><h2>同步状态</h2></header><dl className="admin-stats-grid"><div><dt>内容版本</dt><dd>{payload.revision ?? "未初始化"}</dd></div><div><dt>当前生成批次</dt><dd translate="no">{payload.generation?.id ?? "—"}</dd></div><div><dt>当前词条</dt><dd>{payload.entries ?? 0}</dd></div><div><dt>公开可用词条</dt><dd>{payload.public_active_entries ?? 0}</dd></div><div><dt>后台可用词条</dt><dd>{payload.admin_resolvable_entries ?? 0}</dd></div><div><dt>待处理变更</dt><dd>{payload.pending_events ?? 0}</dd></div><div><dt>失败同步</dt><dd>{payload.failed_events ?? 0}</dd></div></dl><p className="admin-help">公开搜索只使用已公开词条，草稿仅供后台处理。</p></section>
         <section className="admin-panel"><header><h2>条目覆盖</h2></header><div className="admin-table-wrap"><table><thead><tr><th>条目类型</th><th>词条</th><th>公开</th><th>后台</th></tr></thead><tbody>{(payload.entities ?? []).map((row) => <tr key={row.entity_type}><td>{({ person: "学者", knowledge_node: "理论节点", discipline: "学科", subdiscipline: "子学科", topic: "主题", theory_school: "理论流派", concept: "概念" } as Record<string, string>)[row.entity_type] ?? row.entity_type}</td><td>{row.entries}</td><td>{row.public_active_entries}</td><td>{row.admin_resolvable_entries}</td></tr>)}</tbody></table></div></section>

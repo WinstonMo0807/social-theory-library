@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-09",
+  "purpose": "User-approved default scholar name cards J/K/L/M",
+  "source": "Built-in ImageGen, based on the user-supplied abstract layered-paper design reference",
+  "sourceArchive": "output/design/scholar-directions-20261109/r3",
+  "transformation": "WebP encoding and resolution variants only; no masks or semantic changes",
+  "assets": [
+    {
+      "variant": "J",
+      "file": "web/public/images/scholars/default-paper-640.webp",
+      "bytes": 27654
+    },
+    {
+      "variant": "J",
+      "file": "web/public/images/scholars/default-paper-1280.webp",
+      "bytes": 105774
+    },
+    {
+      "variant": "K",
+      "file": "web/public/images/scholars/default-stone-640.webp",
+      "bytes": 21928
+    },
+    {
+      "variant": "K",
+      "file": "web/public/images/scholars/default-stone-1280.webp",
+      "bytes": 84608
+    },
+    {
+      "variant": "L",
+      "file": "web/public/images/scholars/default-alabaster-640.webp",
+      "bytes": 7916
+    },
+    {
+      "variant": "L",
+      "file": "web/public/images/scholars/default-alabaster-1280.webp",
+      "bytes": 23326
+    },
+    {
+      "variant": "M",
+      "file": "web/public/images/scholars/default-dark-640.webp",
+      "bytes": 31916
+    },
+    {
+      "variant": "M",
+      "file": "web/public/images/scholars/default-dark-1280.webp",
+      "bytes": 129460
+    }
+  ]
+}

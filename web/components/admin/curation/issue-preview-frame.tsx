@@ -14,7 +14,7 @@ import type { IssuePublicationReviewData } from "./issue-publication-review";
 export function IssuePreviewFrame({issueId,version,config}:{issueId:string;version:string;config:SiteConfig}) {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<OwnedIssuePreview key={`${user.id}:${epoch}:${issueId}:${version}`} owner={String(user.id)} issueId={issueId} version={version} config={config}/>:<LoadingState role="status">正在核对预览账户…</LoadingState>;
+  return user?<OwnedIssuePreview key={`${user.id}:${epoch}:${issueId}:${version}`} owner={String(user.id)} issueId={issueId} version={version} config={config}/>:<LoadingState variant="screen" role="status">正在核对预览账户…</LoadingState>;
 }
 
 function OwnedIssuePreview({owner,issueId,version,config}:{owner:string;issueId:string;version:string;config:SiteConfig}) {
@@ -32,6 +32,6 @@ function OwnedIssuePreview({owner,issueId,version,config}:{owner:string;issueId:
     return()=>{active=false;window.cancelAnimationFrame(paint);window.removeEventListener("message",receive);unsubscribe();};
   },[owner,issueId,version,data,error]);
   if(error)return <section role="alert"><h1>预览暂不可用</h1><p>{error}</p><p>请返回发布检查重新读取当前已保存版本。</p></section>;
-  if(!data)return <p role="status">正在读取已保存稿…</p>;
+  if(!data)return <LoadingState role="status">正在读取已保存稿…</LoadingState>;
   return <><SiteHeader config={config} preview/><RecommendationIssueView issue={data.reader_preview} preview/></>;
 }

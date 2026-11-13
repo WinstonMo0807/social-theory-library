@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search, X } from "lucide-react";
 import type { ParallelSegment, ParallelSegments, ParallelVersion } from "@/lib/api/parallel-reader.client";
@@ -72,7 +74,7 @@ export function ParallelColumn({ side, version, page, segmentId, selectedReferen
       <button type="button" disabled={!version?.document_revision_id} aria-expanded={searchOpen} aria-label={`在${side === "left" ? "左" : "右"}侧版本中搜索`} onClick={() => setSearchOpen(value => !value)}><Search size={14} /></button>
       {version?.asset_id ? <a href={`/reader/${encodeURIComponent(version.asset_id)}?${new URLSearchParams({ page: String(page), ...(version.document_revision_id ? { revision: version.document_revision_id } : {}) })}`} target="_blank" rel="noreferrer" aria-label={`在新标签页打开${side === "left" ? "左" : "右"}侧PDF原文`}><ExternalLink size={15} /></a> : null}
     </div>
-    {searchOpen ? <div className="parallel-column-search"><form onSubmit={event => { event.preventDefault(); search.jumpToFirstSearchMatch(); }}><label><span className="sr-only">书内关键词</span><input autoFocus value={search.query} onChange={event => search.setQuery(event.target.value)} placeholder="在此版本中搜索" maxLength={200} /></label><button type="submit" disabled={!search.searchMatches.length}>定位</button><button type="button" aria-label="关闭版本搜索" onClick={() => { search.setQuery(""); setSearchOpen(false); }}><X size={15} /></button></form>{search.searchLoading ? <p role="status">正在查找…</p> : search.searchError ? <p role="alert">{search.searchError}<button type="button" onClick={search.retrySearch}>重试</button></p> : search.query.trim() ? <><p>{search.searchMatches.length ? `当前返回 ${search.searchMatches.length} 个匹配页（最多 100 页）` : "没有找到匹配页。"}</p><ul>{search.searchMatches.map((match, index) => <li key={match.page_id}><button type="button" onClick={() => search.jumpToSearchMatch(index)}><strong>PDF 第 {match.page_index} 页</strong><span>{match.snippet}</span></button></li>)}</ul></> : null}</div> : null}
+    {searchOpen ? <div className="parallel-column-search"><form onSubmit={event => { event.preventDefault(); search.jumpToFirstSearchMatch(); }}><label><span className="sr-only">书内关键词</span><input autoFocus value={search.query} onChange={event => search.setQuery(event.target.value)} placeholder="在此版本中搜索" maxLength={200} /></label><button type="submit" disabled={!search.searchMatches.length}>定位</button><button type="button" aria-label="关闭版本搜索" onClick={() => { search.setQuery(""); setSearchOpen(false); }}><X size={15} /></button></form>{search.searchLoading ? <LoadingState variant="compact" role="status">正在查找…</LoadingState> : search.searchError ? <p role="alert">{search.searchError}<button type="button" onClick={search.retrySearch}>重试</button></p> : search.query.trim() ? <><p>{search.searchMatches.length ? `当前返回 ${search.searchMatches.length} 个匹配页（最多 100 页）` : "没有找到匹配页。"}</p><ul>{search.searchMatches.map((match, index) => <li key={match.page_id}><button type="button" onClick={() => search.jumpToSearchMatch(index)}><strong>PDF 第 {match.page_index} 页</strong><span>{match.snippet}</span></button></li>)}</ul></> : null}</div> : null}
     {resource.data?.segments.length ? <label className="parallel-segment-select"><span className="sr-only">当前页段落定位</span><select data-stl-select value={activeSegment?.id || ""} onChange={event => { const row = resource.data?.segments.find(item => item.id === event.target.value); if (row) onSelect(row); }}><option value="">选择当前页段落</option>{resource.data.segments.map(row => <option key={row.id} value={row.id}>{row.label}</option>)}</select></label> : null}
     <div className="parallel-text-pane" ref={panel} style={{ fontSize }} onScroll={() => {
       const el = panel.current;
@@ -84,7 +86,7 @@ export function ParallelColumn({ side, version, page, segmentId, selectedReferen
       if (match) onScrollSegment(match);
     }}>
       {!version ? <p className="parallel-empty">选择一个版本开始比较。</p> : !version.asset_id ? <div className="parallel-empty"><strong>这个版本暂未提供可用正文</strong><p>{version.notice || "可以先使用其他已收录版本，或提交版本建议。"}</p><a href="/feedback?category=content">提交版本建议</a></div>
-        : resource.loading ? <div role="status" className="parallel-empty">正在读取 PDF 第 {page} 页…<button type="button" onClick={resource.stop}>停止读取</button></div>
+        : resource.loading ? <div role="status" className="parallel-empty"><LoadingState variant="page">正在读取 PDF 第 {page} 页…</LoadingState><button type="button" onClick={resource.stop}>停止读取</button></div>
           : resource.error || resource.stopped ? <div role="alert" className="parallel-empty"><p>{resource.error || "已停止读取，原文位置保留。"}</p><button type="button" onClick={resource.reload}><RefreshCw size={14} />重新读取</button></div>
             : resource.data ? <>
               {focusId && !focusedSegment && !activeSegment ? <p className="parallel-source-notice" role="status">原定位没有对应到当前返回的段落。请核对本页并明确选择，不会自动改用第一段。</p> : null}

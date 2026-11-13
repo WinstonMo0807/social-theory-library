@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { confirmAction } from "@/lib/ui-dialog";
 
 import Link from "next/link";
@@ -141,7 +143,7 @@ function BookNotesWorkspace({ assetId, bootstrap }: { assetId: string; bootstrap
   }
 
   if (loading || loadedOwnerId !== session.user?.id) {
-    return <main className="account-loading">正在读取这本书的笔记……</main>;
+    return <main className="account-loading"><LoadingState variant="screen">正在读取这本书的笔记…</LoadingState></main>;
   }
 
   const work = notes[0]?.work ? adaptWork(notes[0].work) : null;

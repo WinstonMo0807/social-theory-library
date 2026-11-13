@@ -25,7 +25,7 @@ export function TurnBranches({ id, owner, active, parent = "", ancestors = [], o
   const resource = usePersistentWorkspace<TurnPage>(`/reading/research-projects/${id}/replay-tree/?${new URLSearchParams({ page: String(page), ...(parent ? { parent_id: parent } : {}) })}`, owner, undefined, load);
   const data = resource.error ? null : resource.data;
   if (resource.error) return <p role="alert">{resource.error}<button onClick={resource.reload}>重新读取分支</button></p>;
-  if (!data) return <LoadingState role="status">正在读取这一层轮次…</LoadingState>;
+  if (!data) return <LoadingState variant="compact" role="status">正在读取这一层轮次…</LoadingState>;
   return <><ol className={styles.branchList}>{data.results.map(turn => {
     const open = expanded.includes(turn.id), circular = ancestors.includes(turn.id), deep = ancestors.length >= 30;
     return <li key={turn.id} data-current={turn.id === active}><div className={styles.branchRow}>
@@ -42,7 +42,7 @@ export function ProjectBranches({ id, owner, ancestors = [] }: { id: string; own
   const resource = usePersistentWorkspace<ProjectPage>(`/reading/research-projects/${id}/replay-tree/?view=projects&page=${page}`, owner, undefined, load);
   const data = resource.error ? null : resource.data;
   if (resource.error) return <p role="alert">{resource.error}<button onClick={resource.reload}>重新读取研究关联</button></p>;
-  if (!data) return <LoadingState role="status">正在加载研究分支…</LoadingState>;
+  if (!data) return <LoadingState variant="compact" role="status">正在加载研究分支…</LoadingState>;
   return <div className={styles.projectBranches}>
     {!ancestors.length ? data.parent ? <p>来自研究 <Link href={`/account/research/${data.parent.id}/history${data.parent.turn_id ? `?turn=${data.parent.turn_id}` : ""}`}>{data.parent.title}</Link>{!data.parent.turn_id ? "（原轮次已不存在）" : ""}</p> : data.origin_unavailable ? <p>原研究当前不可用，这份研究与已保存笔记仍保留。</p> : <p>这份研究没有记录其他研究的分支来源。</p> : null}
     <p className={styles.branchHint}>由此创建的研究 {data.count} 份 · 仅本人可见</p>

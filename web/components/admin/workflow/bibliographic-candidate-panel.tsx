@@ -1,6 +1,8 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LoaderCircle, RefreshCw, Search, Undo2 } from "lucide-react";
+import { RefreshCw, Search, Undo2 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
 import { useAdminSession } from "@/lib/admin-session";
@@ -63,7 +65,7 @@ export function BibliographicCandidatePanel({editionId,token,formContext,disable
   return <section className="bibliographic-candidates admin-panel" aria-label="整条书目候选">
     <header><div><h2>候选书目与版本</h2><p>先核对整条来源，再选择需要填入的字段。</p></div><div><button className="button secondary" type="button" disabled={disabled||busy} onClick={()=>void lookup(false)}><RefreshCw size={14}/>馆内候选</button><button className="button secondary" type="button" disabled={disabled||busy} onClick={()=>void lookup(true)}><Search size={14}/>查找免费来源</button></div></header>
     <p className="admin-help">页面打开和输入只使用本地资料；外部查询仅在你点击时进行，限已允许的免费来源。作者姓名须在作者区核对具体人物。</p>
-    {busy?<p role="status"><LoaderCircle className="spin" size={15}/>正在读取候选…</p>:null}
+    {busy?<LoadingState role="status">正在读取候选…</LoadingState>:null}
     {message?<p role="status">{message}</p>:null}
     {stale?<p role="status">用于查找的书目信息已经改变，旧候选已停用。请按当前填写重新查找。</p>:null}
     {candidates.length>1?<details data-disclosure="collection" className={styles.compare}><summary>横向比较候选与当前填写</summary><p>选择2至4条来源逐字段比较；采用只填入本页草稿，未选择的字段保留。</p><fieldset><legend>选择要比较的来源</legend>{candidates.map(candidate=><label key={candidate.id}><input type="checkbox" checked={comparison.includes(candidate.id)} disabled={!comparison.includes(candidate.id)&&comparison.length>=4} onChange={event=>setComparison(current=>event.target.checked?[...current,candidate.id]:current.filter(id=>id!==candidate.id))}/>{candidate.source_label||candidate.source} · {display(candidate.fields.title)||"未题名"} · {display(candidate.fields.publication_year)||"年份未提供"}</label>)}</fieldset>

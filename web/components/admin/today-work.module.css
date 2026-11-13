@@ -174,3 +174,14 @@
  :global([data-workbench="elicit"]) .actions { grid-column:2; grid-row:3; padding-top:8px; }
  :global([data-workbench="elicit"]) .identity>span,:global([data-workbench="elicit"]) .rowStatus { font-size:max(12px, var(--stl-readable-meta)); }
 }
+
+
+/* Current public candidate: body density only; navigation and menus stay intact. */
+:global(.admin-content) .heading { padding-block: 8px 24px; gap: 20px; }
+:global(.admin-content) .list { border-radius: 3px; }
+:global(.admin-content) .row { padding-block: 20px; column-gap: 20px; }
+:global(.admin-content) .copy { min-width: 0; }
+@media (max-width: 640px) {
+  :global(.admin-content) .heading { padding-block: 8px 20px; flex-wrap: wrap; }
+  :global(.admin-content) .row { padding-block: 18px; column-gap: 12px; }
+}

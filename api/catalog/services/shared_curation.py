@@ -82,6 +82,19 @@ def source_payload(kind, row, *, public=False):
 
 def curation_payload(kind, key, *, public=False):
     parent = target(kind, key, public=public)
+    return _curation_payload_for_parent(kind, parent, public=public)
+
+
+def preview_published_curation(kind, key, *, request):
+    """Preview published sources before their parent profile is published."""
+    from common.capabilities import Capability, has_capability
+    from rest_framework.exceptions import PermissionDenied
+    if not has_capability(getattr(request, "user", None), Capability.ACCESS_BACK_OFFICE):
+        raise PermissionDenied("原文编辑预览需要后台访问权限。")
+    return _curation_payload_for_parent(kind, target(kind, key), public=True)
+
+
+def _curation_payload_for_parent(kind, parent, *, public):
     row = EvidenceCuration.objects.select_related("active_revision").filter(object_type=kind, object_id=parent.pk).first()
     revision = row.active_revision if public and row else revisions._latest("evidence_curation", row.pk) if row else None
     data = deepcopy(revision.materialized_preview) if revision else {"items": []}

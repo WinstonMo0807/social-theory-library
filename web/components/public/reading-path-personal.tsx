@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -117,7 +119,7 @@ export function ReadingPathActions({ path, personal, preview, initialCopy = fals
       <button type="button" className={styles.primaryButton} disabled={blocked} onClick={() => void personal.mutate(personal.record ? { action: "bookmark", request_id: createRequestKey(), id: personal.record.id, expected_revision: personal.record.revision, bookmarked: !personal.record.bookmarked } : { action: "create", request_id: createRequestKey(), path_id: path.id, expected_source_revision: path.revision.token })}>{personal.record?.bookmarked ? <Check size={16} /> : <Bookmark size={16} />}{personal.record?.bookmarked ? "已收藏路径" : "收藏路径"}</button>
       <button type="button" className={styles.outlineButton} disabled={blocked} onClick={() => setCopyOpen(true)}><Copy size={15} />另存为私人计划</button>
     </>}</div>
-    {!preview && personal.loading ? <p role="status" className={styles.status}>正在核对本人跟读记录…</p> : null}
+    {!preview && personal.loading ? <LoadingState role="status" className={styles.status}>正在核对本人跟读记录…</LoadingState> : null}
     {!preview && personal.error ? <div role="alert" className={styles.error}><p>{personal.error}</p>{!personal.pending ? <button type="button" disabled={personal.busy} onClick={() => void personal.reload()}>重新读取本人记录</button> : null}</div> : null}
     {!preview && personal.notice ? <p role="status" className={styles.status}>{personal.notice}</p> : null}
     {!preview && personal.pending ? <div className={styles.status} role="status"><p>{personal.busy ? "正在保存，请稍候。" : "原操作尚待核对，本页保留原请求标识。"}</p><button type="button" disabled={personal.busy} onClick={() => { if (personal.pending) void personal.mutate(personal.pending.command, true); }}><RefreshCw size={14} />核对原操作</button></div> : null}

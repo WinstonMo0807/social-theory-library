@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { CandidateDecisionBar } from "../research/candidate-decision-bar";
 
 import {
@@ -302,7 +304,7 @@ export function CurationFieldAssistant({
       <p>先查看馆内记录和已有依据，不会保存或改变你的填写。</p>
       {externalAllowed === false ? <p>当前账户没有外部查找权限，仍可核对已有建议或手工填写。</p> : null}
       <small>这里核对馆内记录及已有来源。未启用的来源会说明原因，不会生成示例建议。</small>
-      {loading ? <p><LoaderCircle className="spin" size={14} />正在查找馆内记录和可核对资料</p> : null}
+      {loading ? <LoadingState variant="compact">正在查找馆内记录和可核对资料</LoadingState> : null}
       {!loading && visible.map((candidate) => <MaterialCandidate key={candidate.key} id={candidate.key} label={candidate.label}>
         <div><strong>{candidate.label}</strong><span>{candidate.statusLabel}</span></div>
         {candidate.secondary ? <small>{candidate.secondary}</small> : null}

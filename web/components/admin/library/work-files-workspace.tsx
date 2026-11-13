@@ -44,7 +44,7 @@ function Pager({ page, size, count, label, change }: { page: number; size: numbe
 export function WorkFilesWorkspace({ workId }: { workId: string }) {
   const user = useAdminSession(), search = useSearchParams(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <LoadingState role="status">正在核对管理会话…</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对管理会话…</LoadingState>;
   return <Workspace key={`${user.id}:${workId}:${search.get("edition") || ""}:${epoch}`} workId={workId} ownerId={String(user.id)} />;
 }
 

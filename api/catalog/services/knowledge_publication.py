@@ -200,6 +200,7 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
                 "id": str(row.person_id),
                 "preferred_name": row.person.preferred_name,
                 "original_name": row.person.original_name,
+                "citation_name": row.person.citation_name,
                 "aliases": list(row.person.aliases or []),
                 "authority_status": row.person.authority_status,
                 "birth_year": row.person.birth_year,
@@ -329,6 +330,9 @@ def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, 
             "series": edition.series,
             "series_number": edition.series_number,
             "container_title": edition.container_title,
+            "degree_institution": edition.degree_institution,
+            "degree_type": edition.degree_type,
+            "report_institution": edition.report_institution,
             "extent": edition.extent,
             "public_slug": edition.public_slug,
             "state": edition.state,
@@ -872,9 +876,10 @@ def create_catalog_publication_event(
         )))
     system_content_update = (provenance or {}).get("source") in {"ocr_completion", "semantic_maintenance", "page_mapping", "file_selection", "ocr_text_correction"}
     shared_work_update = (provenance or {}).get("source") == "shared_work_publication"
+    citation_name_update = (provenance or {}).get("source") == "person_citation_name"
     bundle = None if restored is not None else (
         pending_base.bundle if shared_work_update and pending_base is not None
-        else None if system_content_update or shared_work_update
+        else None if system_content_update or shared_work_update or citation_name_update
         else bundle or ensure_publication_bundle(edition, actor=actor)
     )
     if not withdrawal and edition.state != PublicationState.PUBLISHED:
@@ -887,6 +892,25 @@ def create_catalog_publication_event(
         snapshot, related = deepcopy(restored.snapshot), deepcopy(restored.related_entities)
     else:
         snapshot, related = catalog_snapshot(edition, content_asset_id=content_asset_id)
+    if citation_name_update:
+        # Correct one confirmed name without publishing unrelated book drafts.
+        from copy import deepcopy
+        formal_base = pending_base or old_active
+        if formal_base is None:
+            raise ValueError("引用姓名更新需要已有正式书目修订。")
+        person_id = str((provenance or {}).get("person_id") or "")
+        confirmed = {
+            str((row.get("person") or {}).get("id")): (row.get("person") or {}).get("citation_name", "")
+            for row in snapshot.get("contributions", [])
+        }
+        if person_id not in confirmed:
+            raise ValueError("当前版本未包含待更新的引用责任者。")
+        snapshot = deepcopy(formal_base.snapshot)
+        related = deepcopy(formal_base.related_entities or [])
+        for row in snapshot.get("contributions", []):
+            if str((row.get("person") or {}).get("id")) == person_id:
+                row["person"]["citation_name"] = confirmed[person_id]
+        bundle = formal_base.bundle
     document_base = restored or (None if requested_content_change or withdrawal else (pending_base or old_active))
     if document_base is not None:
         # Metadata-only publication cannot fall back from a pending OCR/PDF

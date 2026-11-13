@@ -565,6 +565,8 @@ for _step, _field, _output, _entities, _target in (
     ("maintenance_theory_nodes", "parent", "entity", ("knowledge_node",), "knowledge_node"),
     ("maintenance_theory_nodes", "primary_discipline", "entity", ("discipline",), "knowledge_node"),
     ("maintenance_theory_nodes", "related_disciplines", "entity_list", ("discipline",), "knowledge_node"),
+    ("maintenance_theory_nodes", "subdiscipline_links", "entity_list", ("subdiscipline",), "knowledge_node"),
+    ("maintenance_theory_nodes", "topic_links", "entity_list", ("topic",), "knowledge_node"),
     ("maintenance_theory_nodes", "merge_target", "entity", ("knowledge_node",), "knowledge_node"),
     ("maintenance_theory_relations", "review_candidate", "entity", ("knowledge_node",), "knowledge_node"),
     ("maintenance_theory_relations", "new_node_discipline", "entity", ("discipline",), "knowledge_node"),

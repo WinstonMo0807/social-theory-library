@@ -32,6 +32,20 @@ e955992d已更新隔离候选API；源码备份位于候选目录`backup-rag-lin
 
 2026-11-10 候选Web可用`powershell -File scripts/start_intelligence_demo.ps1 -NodePath <node.exe绝对路径>`启动独立隐藏进程，日志/PID写入忽略的tmp/intelligence-web。限定5174→18091；占用端口时拒绝启动，不自动杀其他进程。进程不随工具会话退出，但机器重启后需重新启动；仍为Vite开发候选，不是公网发行部署。0098迁移及受影响表备份见知识核心记录。
 
+## 2026-11-13 最终公网与 main 回读
+
+本轮阅读器与加载修复已于13:59:59 +0800上线。同期检索追加读取预算后，14:11:21 +0800最终Web为viewpoint-web-r4（sha256:8810070bb92af9e6dcf0b97e5960c8b1d91fc42bc8f88fe10f8e031dfcfdf73c），以本轮reader-b-loading-r1为底层，保留本轮全部13份源码。独立回读1866个构建文件哈希一致，runtime-config由启动入口生成；五入口200、106其他容器保持。API未被本轮改写。main已推送bfb55957并核对远端相同SHA，本条为其最终回执补记。原两项暂存、共享HEAD及其他未提交内容保持。Mac架构迁移未开始。详docs/stl4/READER_B_LOADING_20261113.md。
+
+## 2026-11-13 B 版阅读控件与等比随机加载已上线
+
+B 版短把手、整块标题拖动、双页码同排、上方复位及账户本机位置记忆已实现；L5/L6/L7每次加载随机，首屏HTML即带动效，Logo与双线/书签使用同一SVG按容器等比缩放。定向检查、类型与构建、本机真实PDF、刷新/返回记忆和复位、1280/390px布局均通过。13:59:59 +0800发布reader-b-loading-r1，1867运行文件一致，106其他容器保持；外网首页/账户/检索200。公网阅读会话已退出，未声称本轮登录后的公网操作复测。main合并树类型检查通过，Git推送收尾中。详docs/stl4/READER_B_LOADING_20261113.md。
+
+## 2026-11-13 brand-annotations-r1 当前公网Web
+
+NAS回执 2026-11-13T03:57:17Z 完成Web-only更新，镜像 sha256:015d463fd71bfe4e681d66d217c88777178effa3082020968eaf330ed79b2626。API继续使用reader-unified-r3，未迁移数据库或重启任务服务。1866运行文件哈希一致，runtime-config原样保留；ready/home/admin/explore/original/account均200，106其他容器身份、配置和启动时间不变。
+
+发布目录/volume2/library/stl-releases/20261113-brand-annotations-r1；活动compose-command追加web.compose.json。恢复脚本recovery/rollback-web.py只切回先前Web，带活动版本保护，不回灌数据库。沿用reader-unified-r1已完整读验的252637363字节数据库备份并重新核对SHA256。详stl4/BRAND_LOADING_ANNOTATIONS_20261113.md。
+
 # STL 部署与运行入口
 
 2026-11-10 新增[Knowledge Core / Intelligence 内网候选](stl4/KNOWLEDGE_INTELLIGENCE_20261109.md)，记录新模型、服务、locator、配置、隔离部署和未完成项。以下仍描述正式环境，不能将候选能力误作已上线。

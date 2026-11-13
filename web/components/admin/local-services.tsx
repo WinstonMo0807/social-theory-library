@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { ResearchSourceRegistryPanel } from "../research-source-registry";
 import { AIRuntimeEditor } from "./ai-runtime-editor";
 import { OcrRuntimeEditor } from "./ocr-runtime-editor";
@@ -131,7 +133,7 @@ function LocalServicesWorkspace({owner,initialService=""}:{owner:string;initialS
     <ConfirmDialog open={cancelOpen} title="取消尚未执行的服务检查" description="服务端会先查询原编号。已完成的检查保留原结果；尚未执行的检查将登记取消，迟到请求不会调用服务。" details={message?[message]:[]} confirmLabel={reconciling?"正在核对…":"取消未执行检查"} pending={reconciling} onCancel={()=>{if(!reconciling)setCancelOpen(false);}} onConfirm={()=>void readReceipt(true)}/>
 
     {data&&selected&&!current?<p className={styles.message} role="alert">原链接中的服务已不在当前配置中。请从服务列表重新选择，未自动改为检查其他服务。</p>:null}
-    {resource.loading?<div className={styles.empty} role="status"><RefreshCw size={22}/><p>正在读取服务配置与已有检查记录</p></div>:null}
+    {resource.loading?<div className={styles.empty} role="status"><RefreshCw size={22}/><LoadingState>正在读取服务配置与已有检查记录</LoadingState></div>:null}
     {data?<>
       <section className={styles.metrics} aria-label="服务与任务概况">{[["services","配置服务"],["available","可使用"],["limited","受限"],["unavailable","不可用"],["waiting","等待任务"],["failed_24h","失败任务（近 24 小时）"]].map(([key,label])=><div key={key} data-tone={key==="available"?"ready":key==="limited"?"limited":key==="failed_24h"?"failed":undefined}><strong>{data.summary[key]??"—"}</strong><span>{label}</span></div>)}</section>
       {tab==="services"?<nav className={styles.detailTabs} aria-label="能力详情栏目"><button disabled={configurationBusy} aria-current={!technical?"page":undefined} onClick={()=>setTechnical(false)}>服务总览</button><button disabled={configurationBusy} aria-current={technical?"page":undefined} onClick={()=>setTechnical(true)}>技术配置</button><button disabled={configurationBusy} onClick={()=>setTab("history")}>检查与日志</button></nav>:null}

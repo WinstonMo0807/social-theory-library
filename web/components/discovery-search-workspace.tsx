@@ -1,13 +1,16 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { useEvidenceLanguage } from "./evidence-language";
 import { SourceText } from "./source-text";
 import { MediaPlacement } from "./media-placement";
 
 import Link from "next/link";
+import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
-import { actOnDiscoverySearch, canKeepDiscoveryContext, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
+import { actOnDiscoverySearch, canKeepDiscoveryContext, canRetryDiscoveryRead, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
 import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "@/lib/api/discovery.types";
 import type { SearchPayload } from "@/lib/api/search.types";
 import { CollectionLink } from "./collection-link";
@@ -70,6 +73,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   const pollStarted = useRef(0);
   const createRef = useRef<Promise<DiscoverySearch> | null>(null);
   const refreshInFlight = useRef(false);
+  const failedReads = useRef(0);
   const contextItemRef = useRef<DiscoveryPassage | null>(null);
   useEffect(() => {
     if (publicSession.status !== "unauthenticated" || !result?.id || savedGuestSearch.current === result.id) return;
@@ -85,6 +89,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   }, [cacheKey]);
 
   const accept = useCallback((next: DiscoverySearch) => {
+    failedReads.current = 0;
     if (next.access_token) tokenRef.current = next.access_token;
     if (next.sort) sortRef.current = next.sort;
     resultRef.current = next;
@@ -144,7 +149,9 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       if (revision !== requestRevision.current) return;
       if (invalidSession(reason)) discard();
       setError(errorMessage(reason));
-      setPollPaused(true);
+      // Retry only reads of this existing session; never recreate a search or
+      // repeat an expansion after an uncertain network response.
+      setPollPaused(!running(current.status) || !canRetryDiscoveryRead(reason, ++failedReads.current));
     } finally { refreshInFlight.current = false; }
   }, [accept, discard]);
 
@@ -353,7 +360,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       </section>
     </div>
     {Object.entries(filters).filter(([name, value]) => !["document_type", "author", "theories", "topics", "concept", "language", "year_min", "year_max", "availability"].includes(name) && first(value)).map(([name, value]) => <span className={styles.filterChip} key={name}>{t(filterLabels[name] || "已有范围")}{(Array.isArray(value) ? value : [value]).map(entry => <input type="hidden" key={entry} name={name} value={entry} />)}<button type="button" aria-label={t("取消{label}筛选", { label: t(filterLabels[name] || "已有范围") })} onClick={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })}><X size={12} /></button></span>)}
-    {facetBusy ? <p role="status">{t("正在读取馆内筛选项……")}</p> : null}
+    {facetBusy ? <LoadingState variant="compact">{t("正在读取馆内筛选项……")}</LoadingState> : null}
     {facetError ? <p role="alert">{t(facetError)}<button type="button" className="text-link" onClick={() => void loadFacets()}>{t("重试读取筛选项")}</button></p> : null}
     <div className={styles.actions}><button className="button secondary" type="submit">{t("应用范围并检索")}</button>{selectedCount ? <Link href={initialQuery ? `/explore/evidence?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>{t("清除全部筛选")}</Link> : null}</div>
   </>;
@@ -395,7 +402,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
         <DiscoveryCoverageDetails result={result} />
     </div>
     <Dialog open={summaryOpen && Boolean(selected)} onRequestClose={() => setSummaryOpen(false)} className={styles.summaryDialog} aria-labelledby="mobile-evidence-summary"><header className={styles.dialogHeader}><h2 id="mobile-evidence-summary">{t("证据摘要")}</h2><button type="button" onClick={() => setSummaryOpen(false)} aria-label={t("关闭证据摘要")}><X size={20} /></button></header>{selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => { setSummaryOpen(false); void openContext(selected); }} /> : null}</Dialog>
-    <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><h2 id="discovery-context-title">{t("原文上下文")}</h2><button type="button" aria-label={t("关闭上下文")} onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <p role="status">{t("正在读取原文上下文……")}</p> : contextError ? <div role="alert"><p>{t(contextError)}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>{t("重试读取上下文")}</button></div> : context && contextItem ? <EvidenceContextBody key={context.result_id} item={contextItem} context={context} returnTo={returnTo(contextItem)} onOpenCandidate={item => void openContext(item)} /> : null}</div></Dialog>
+    <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><h2 id="discovery-context-title">{t("原文上下文")}</h2><button type="button" aria-label={t("关闭上下文")} onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <LoadingState variant="compact">{t("正在读取原文上下文……")}</LoadingState> : contextError ? <div role="alert"><p>{t(contextError)}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>{t("重试读取上下文")}</button></div> : context && contextItem ? <EvidenceContextBody key={context.result_id} item={contextItem} context={context} returnTo={returnTo(contextItem)} onOpenCandidate={item => void openContext(item)} /> : null}</div></Dialog>
   </div></SavedWorkStatusProvider>;
 
 }
@@ -418,7 +425,8 @@ export function DiscoveryEntityCard({ item }: { item: DiscoveryEntity }) {
   const { t } = useEvidenceLanguage();
   const href = internalHref(item.url);
   const [failedPortrait, setFailedPortrait] = useState("");
-  return <article className={styles.entityCard}>{item.portrait_url && failedPortrait !== item.portrait_url ? <MediaPlacement uses={item.portrait_media?.display_uses}><img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setFailedPortrait(item.portrait_url || "")} /></MediaPlacement> : null}<div><small>{t(kindLabels[item.kind] || "知识条目")}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p>{item.excerpt}</p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
+  const fallback = item.kind === "scholar" || item.kind === "scholar_profile" ? <ScholarPortraitFallback name={item.title} identity={href || item.id} className={styles.scholarFallback}/> : null;
+  return <article className={styles.entityCard}>{item.portrait_url && failedPortrait !== item.portrait_url ? <MediaPlacement uses={item.portrait_media?.display_uses} fallback={fallback}><img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setFailedPortrait(item.portrait_url || "")} /></MediaPlacement> : fallback}<div><small>{t(kindLabels[item.kind] || "知识条目")}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p>{item.excerpt}</p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
 }
 
 export function DiscoveryCurationCard({ item, preview = false }: { item: DiscoveryCuration; preview?: boolean }) {

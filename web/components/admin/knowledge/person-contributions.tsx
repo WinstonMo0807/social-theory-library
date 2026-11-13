@@ -69,7 +69,7 @@ function RoleEditor({ row, owner, personId, onClose, onSaved }: { row: Edition; 
   }
   return <div className={styles.roleEditor}>
     <p>修改保存到此版本的书目草稿。其他贡献者、顺序与章节责任范围保留，正式发布仍在原书目页面确认。</p>
-    {priorRequest ? <p role="alert">此版本有尚待核对的保存请求。请先<Link href={row.editor_url}>打开原书目核对请求</Link>，再继续修改。</p> : resource.loading ? <LoadingState role="status">正在读取此版本的当前职责…</LoadingState> : payload ? <>
+    {priorRequest ? <p role="alert">此版本有尚待核对的保存请求。请先<Link href={row.editor_url}>打开原书目核对请求</Link>，再继续修改。</p> : resource.loading ? <LoadingState variant="compact" role="status">正在读取此版本的当前职责…</LoadingState> : payload ? <>
       {!payload.permissions.can_edit ? <p>当前账户没有书目编辑权限，可查看原关联。</p> : null}
       {mine.length ? mine.map(({item,index})=><label key={index}>{asString(item.display_name)}<select data-stl-select disabled={blocked} value={changes[index]||asString(item.role)} onChange={event=>{const role=event.target.value;setChanges(current=>{const next={...current};if(role===item.role)delete next[index];else next[index]=role;return next;});}}>{contributorRoleOptions.map(({value,label})=><option key={value} value={value} disabled={items.some((other,at)=>at!==index&&other.person_id===personId&&(changes[at]||other.role)===value)}>{label}</option>)}</select></label>) : <p>当前草稿已没有此人物关联，请从原书目核对，不能覆盖其他编辑。</p>}
     </> : null}

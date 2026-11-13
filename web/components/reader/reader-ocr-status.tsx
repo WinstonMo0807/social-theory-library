@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import Link from "next/link";
 import { Clock3, ExternalLink, FileScan, Info, Pause, Play, RefreshCw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -48,7 +50,7 @@ export function ReaderOcrStatus({ preview, onRecoveryLockChange, ...props }: Rea
   const blocked = resource.pending || resource.unknown || resource.conflict;
   return <section className={styles.card} aria-label="文字识别进度">
     <header className={styles.heading}><div><span>OCR 文字识别</span><h2>{job?.pause_requested ? "已请求暂停，等待当前页保存" : stateName}</h2></div><button type="button" onClick={resource.refresh} disabled={resource.pending} aria-label="刷新文字识别状态"><RefreshCw size={15} /></button></header>
-    {resource.loading ? <p className={styles.empty} role="status">正在读取处理状态…</p> : null}
+    {resource.loading ? <LoadingState className={styles.empty} role="status">正在读取处理状态…</LoadingState> : null}
     {data ? <>
       <div className={styles.body}>
         <div className={styles.preview}>{preview || <div className={styles.noPreview}><FileScan size={32} /><span>当前阅读文件</span></div>}

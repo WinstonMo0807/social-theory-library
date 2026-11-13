@@ -9,7 +9,7 @@ import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { BookOpen, Copy, Download, LockKeyhole, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Copy, Download, Quote, LockKeyhole, Search, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
@@ -40,7 +40,7 @@ export function ReaderNotebook({ assetId, initialKind = "all" }: { assetId?: str
   const next = `/account/notes${assetId ? `/${assetId}` : ""}${context.size ? `?${context}` : ""}`;
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(next)}`); }, [state.status, next]);
   if (state.status === "forbidden" || state.status === "temporary_error") return <main className={styles.page}><h1>阅读记录暂时无法读取</h1><p role="alert">{state.message}</p><button onClick={retry}>重新核对登录</button></main>;
-  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState role="status">正在核对登录状态…</LoadingState></main>;
+  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState variant="screen" role="status">正在核对登录状态…</LoadingState></main>;
   return <Notebook key={`${state.user.id}:${assetId || "all"}:${context.get("booklist") || ""}:${context.get("work") || ""}:${context.get("project") || ""}`} owner={String(state.user.id)} assetId={assetId} initialKind={initialKind} />;
 }
 
@@ -218,7 +218,7 @@ function DetailActions({ owner, row, onPreview }: { owner: string; row: Notebook
       if (!request.signal.aborted) setMessage("已复制当前可核对的摘录与来源。");
     } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "引用暂时无法核对。"); }
   }
-  return <><div className={styles.detailActions}><button disabled={!row.saved_quote || row.source.source_status !== "available"} onClick={() => void cite(true)}><Copy size={14} />复制摘录（含出处）</button><button disabled={row.source.source_status !== "available"} onClick={() => void cite(false)}><Download size={14} />导出为引用</button><button disabled={row.source.source_status !== "available"} onClick={onPreview}><BookOpen size={14} />核对原文</button>{message ? <p role="status">{message}</p> : null}</div>{citation ? <SharedCitationOverlay {...citation} open onClose={() => setCitation(null)} /> : null}</>;
+  return <><div className={styles.detailActions}><button disabled={!row.saved_quote || row.source.source_status !== "available"} onClick={() => void cite(true)}><Copy size={14} />复制摘录（含出处）</button><button disabled={row.source.source_status !== "available"} onClick={() => void cite(false)}><Quote size={14} />查看引用</button><button disabled={row.source.source_status !== "available"} onClick={onPreview}><BookOpen size={14} />核对原文</button>{message ? <p role="status">{message}</p> : null}</div>{citation ? <SharedCitationOverlay {...citation} open onClose={() => setCitation(null)} /> : null}</>;
 }
 
 type BulkIntent = { requestId: string; kind: "export" | "erase"; targets: PrivacyTarget[] };

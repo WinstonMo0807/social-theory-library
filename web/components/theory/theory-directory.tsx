@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
@@ -178,11 +180,11 @@ export function TheoryDirectory({
       </section>
       {!mobile ? <aside className={styles.detailPanel} aria-label="所选条目详情"><SelectedEntry {...detailProps} /></aside> : null}
     </div>
-    {pending ? <p className={styles.loading} role="status">正在读取当前资料…</p> : null}
+    {pending ? <LoadingState className={styles.loading} role="status">正在读取当前资料…</LoadingState> : null}
     {mobile ? <Dialog open={selection.status !== "none"} onRequestClose={closeDrawer} className={styles.drawer} aria-label="所选条目详情">
       <div className={styles.drawerHandle} aria-hidden="true" />
       <button className={styles.closeDrawer} type="button" onClick={closeDrawer} aria-label="关闭条目详情" disabled={pending}><X size={20} /></button>
-      {pending ? <p className={styles.loading} role="status">正在读取当前资料…</p> : null}
+      {pending ? <LoadingState className={styles.loading} role="status">正在读取当前资料…</LoadingState> : null}
       <SelectedEntry {...detailProps} />
     </Dialog> : null}
   </article>;

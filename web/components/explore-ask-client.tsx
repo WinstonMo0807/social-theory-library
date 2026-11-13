@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
@@ -11,7 +13,6 @@ import {
   Cloud,
   KeyRound,
   Layers3,
-  LoaderCircle,
   MessageCircle,
   Plus,
   Send,
@@ -672,7 +673,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
   }
 
   if (state === "checking") {
-    return <><AskLibraryIntro query={initialQuestion} /><section className="ask-library-state" aria-live="polite"><LoaderCircle className="spin" /><h2>正在检查问答服务…</h2></section></>;
+    return <><AskLibraryIntro query={initialQuestion} /><LoadingState variant="screen">正在检查问答服务…</LoadingState></>;
   }
 
   if (state === "unauthenticated") {
@@ -865,7 +866,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
       <aside className="ask-source-panel" aria-label="回答来源">
         <header><p>证据来源</p><h2>{sources ? `${sources.items.length} 条` : "按回答查看"}</h2></header>
         {!sources ? <p>点击回答下方的来源按钮，在这里核对馆藏、页码与原文片段。</p> : null}
-        {sources?.loading ? <p>正在读取来源……</p> : null}
+        {sources?.loading ? <LoadingState>正在读取来源……</LoadingState> : null}
         {sources && !sources.loading && !sources.items.length ? <p>这条回答没有可展示的馆藏来源。</p> : null}
         <div>
           {sources?.items.map((source, index) => {

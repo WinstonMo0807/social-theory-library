@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { ArrowRight, BookOpen, Check, FileText, FolderOpen, NotebookPen, Pause, Play, Plus, RotateCcw, Search } from "lucide-react";
 import { BrandImage } from "@/components/brand-image";
+import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import type { SiteConfig } from "@/lib/site-config";
 import styles from "./home-feature-story.module.css";
 import { EditorialDiscoveryArt, ScholarDiscoveryArt, TheoryDiscoveryArt } from "./welcome-discovery-art";
@@ -43,8 +44,8 @@ function StoryScene({ chapter, books }: { chapter: number; books: StoryBook[] })
 function DiscoveryView({ kind, discovery, interactive = false }: { kind: "scholars" | "theories" | "topics" | "issue"; discovery: WelcomeDiscovery; interactive?: boolean }) {
   if (kind === "scholars") return <div className={styles.scholarRegister} inert={!interactive}>
     {discovery.scholars.length ? discovery.scholars.map(person => <Link href={`/scholars/${person.slug}`} className={styles.scholarEntry} key={person.slug}>
-      <div><strong>{person.name}</strong>{person.originalName !== person.name ? <span>{person.originalName}</span> : null}</div>
-      {person.portrait ? <img src={person.portrait} alt="" width={62} height={70} /> : person.years ? <span className={styles.scholarYears}>{person.years}</span> : <ArrowRight size={19} />}
+      <div><strong>{person.name}</strong>{person.originalName !== person.name ? <span>{person.originalName}</span> : null}{!person.portrait && person.years ? <span className={styles.scholarYears}>{person.years}</span> : null}</div>
+      {person.portrait ? <img src={person.portrait} alt="" width={62} height={70} /> : <ScholarPortraitFallback name={person.name} identity={person.slug} className={styles.scholarFallback}/>}
     </Link>) : <div className={styles.organizingView}><span>生平与著述</span><TextLines /><span>研究问题</span><TextLines /></div>}
     <div className={styles.registerFooter}><span>生平</span><span>著述</span><span>思想与论争</span></div>
   </div>;

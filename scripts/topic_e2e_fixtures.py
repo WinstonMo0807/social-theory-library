@@ -15,7 +15,7 @@ SLUG = "stl4-topic-technology"
 
 def seed_topics(actor):
     from timeline_e2e_fixtures import _isolated, _source
-    from parallel_reader_e2e_fixtures import IDS as parallel_ids
+    from parallel_reader_e2e_fixtures import IDS as parallel_ids, copy_fixture_pdf
     _isolated()
     from catalog.models import (Asset, Contribution, Edition, EvidenceSpan, KnowledgeNode, KnowledgeNodeTopic, Page, Person,
         PersonTopicRelation, ReadingPath, ReadingPathItem, ReadingPathStage, RecommendationIssue, ScholarProfile, Topic, Work, WorkTopicRelation)
@@ -50,8 +50,7 @@ def seed_topics(actor):
         PersonTopicRelation.objects.create(person=person, topic=topic, review_status="approved")
         work = Work.objects.create(id=IDS["work"], title="TOPIC71 准确版本原文", document_type="book")
         edition = Edition.objects.create(id=IDS["edition"], work=work, state="published", public_slug="stl4-topic-source", is_primary=True, version_label="准确公开版")
-        asset = Asset.objects.create(id=IDS["asset"], edition=edition, kind="normalized", status="ready", validation_status="valid", access_status="public",
-            file=original.file.name, sha256=original.sha256, page_count=original.page_count, is_current=True)
+        asset = copy_fixture_pdf(original, edition, IDS["asset"], "synthetic-topic.pdf")
         pages = {row.index: Page.objects.create(asset=asset, index=row.index, text=row.text, printed_label=row.printed_label) for row in original.pages.order_by("index")}
         Contribution.objects.create(edition=edition, person=person, role="author", approved=True)
         WorkTopicRelation.objects.create(work=work, topic=topic, review_status="approved")
@@ -59,7 +58,7 @@ def seed_topics(actor):
         span = EvidenceSpan.objects.create(document_revision=publication.document_revision, page=pages[1], page_number=1,
             start_offset=excerpt.start_offset, end_offset=excerpt.end_offset, original_text=excerpt.original_text,
             normalized_text=excerpt.normalized_text, content_hash=excerpt.content_hash, printed_page_label=excerpt.printed_page_label)
-        curation = shared_curation.save_curation("topic", topic.pk, {"items": [{"source_type": "span", "source_id": str(span.pk), "group_title": "主题原文", "reason": "准确隔离PDF出处。"}]}, actor)
+        curation = shared_curation.save_curation("topic", topic.pk, {"edit_version": "0", "items": [{"source_type": "span", "source_id": str(span.pk), "group_title": "主题原文", "reason": "准确隔离PDF出处。"}]}, actor)
         shared_curation.publish_curation("topic", topic.pk, curation["edit_version"], actor)
         bib_work = Work.objects.create(id=IDS["bib_work"], title="TOPIC71 纯书目", document_type="book")
         bib = Edition.objects.create(id=IDS["bib_edition"], work=bib_work, state="published", public_slug="stl4-topic-bibliography", is_primary=True, publication_mode="bibliographic")

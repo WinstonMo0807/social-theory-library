@@ -1,0 +1,66 @@
+[
+  {
+    "id": "A36",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-cbc2fbf4-adb0-4692-9735-b7fcd7f584d7.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "主体编辑/预览同屏可采用。图中红色星号与字符数字仅样例，必填与上限以serializer及现有字段校验为准；不会全部设为必填。正文编辑继续复用已有块编辑器，不增加产品未支持的格式按钮。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  },
+  {
+    "id": "A37",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0168f550-55b5-4dd6-b7c6-51f26334a018.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "需纠正：生成器添加了正文富文本工具条；当前网站文案按实际纯文本/段落字段，不能新增富文本能力；预览页头导航也须实际公开组件。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  },
+  {
+    "id": "A38",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-57f369a7-e0f1-4e19-ad87-e1acad45411e.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "需纠正：下方固定介绍被画成可上下排序/删除；当前仅编辑已有文案，不能增加区块删除排序功能；展示字符上限须实际字段。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  },
+  {
+    "id": "A39",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-79a99a2b-3ef9-460d-b0f6-1e76a106242e.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "需纠正：缺少封面被画成发布必填阻塞，无此已核实依据。改为已核实来源未公开/无可发布文件的真实阻塞文案，出版版本不能用草稿修订号代替。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  },
+  {
+    "id": "A40",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b4375a56-75ae-4065-82fa-a0e291618dfd.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "需纠正：日期范围画成任意起止日期，实际仅近7/30/90天选项；恢复不能描述为自动创建新对象并立即公开，须按实际恢复范围。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  },
+  {
+    "id": "A41",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-74a9aa07-30c5-441e-978e-b615ce665a74.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "需纠正：当前未发布来源却画了可发布按钮；当前状态应禁用发布已保存编排，并说明未发布来源只可存草稿。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  },
+  {
+    "id": "A44",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4994b143-40f2-403a-8923-99b9fbf4cec4.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "素材目录/来源表单/使用位置/历史布局可采用，来源、许可证值仅示例；字段类型、权利枚举和焦点坐标继续使用真实组件，不照图硬编码许可选择。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  },
+  {
+    "id": "A45",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d643bca8-0cf9-489a-a7b6-f7d1e32d0a3c.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "概念归属/来源原文只读布局可采用，源文都是明确示例。来源状态由接口决定，缺失原文不输出假引文。 品牌、导航、字体、字色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_013.json"
+  }
+]

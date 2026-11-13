@@ -45,6 +45,15 @@ def active_generation():
     return SemanticIndexVersion.discovery_objects.filter(status="active").first()
 
 
+def _ranked_hits(result, warnings, channel, branch):
+    hits = result.get("hits", [])
+    ranked = [row for row in hits if "skipped" not in (row.get("_rankingScoreDetails") or {})]
+    if len(ranked) != len(hits):
+        warnings.append({"code": branch + "_sort_incomplete", "channel": channel,
+                         "message": "部分候选未完成索引排序，已略过并保留完成排序的材料。"})
+    return ranked
+
+
 def kinds_for(channel):
     return (("edition",) if channel == "passages" else
             ("reading_path", "recommendation_issue", "evidence_curation") if channel == "curation" else
@@ -447,7 +456,8 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         warnings.append({"code": "normalization_unavailable", "message": "文字规范化服务暂不可用，当前保留输入文字检索。"})
     base = {"limit": limit, "filter": [f"channel = {json.dumps(channel)}",
             f"access_status IN {json.dumps(list(access_statuses))}"],
-            "attributesToRetrieve": ["id", "source_revision"], "attributesToSearchOn": ["title", "aliases", "authors", "normalized_text"]}
+            "attributesToRetrieve": ["id", "source_revision"], "showRankingScoreDetails": True,
+            "attributesToSearchOn": ["normalized_text"] if channel == "passages" else ["title", "aliases", "authors", "normalized_text"]}
     if scopes is not None:
         base["filter"].append(f"scope_token IN {json.dumps(scopes)}")
     if scope:
@@ -470,14 +480,14 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
             deferred=scopes is None, warnings=warnings)
     try:
         sparse = search({**base, "q": normalized})
-        empty["sparse"] = sparse.get("hits", [])
+        empty["sparse"] = _ranked_hits(sparse, warnings, channel, "keyword")
         from .discovery_query import keyword_question
         keywords = keyword_question(normalized)
         if channel == "passages" and keywords != normalized and not scope:
             extra = search({**base, "q": keywords, "attributesToSearchOn": ["normalized_text"]})
             # Fuse before hydration so each source/text slice is loaded once.
             scores, refs = {}, {}
-            for hits, weight in ((empty["sparse"], 1.0), (extra.get("hits", []), 0.85)):
+            for hits, weight in ((empty["sparse"], 1.0), (_ranked_hits(extra, warnings, channel, "keyword"), 0.85)):
                 for rank, row in enumerate(hits, 1):
                     key = row.get("id")
                     if key:
@@ -509,7 +519,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
             vector = vector_cache[vector_key]
             dense = search({**base, "q": "", "vector": vector,
                 "hybrid": {"embedder": "discovery", "semanticRatio": 1.0}})
-            empty["dense"] = dense.get("hits", [])
+            empty["dense"] = _ranked_hits(dense, warnings, channel, "dense")
         except (DiscoveryIndexError, DiscoveryInferenceError, KeyError):
             warnings.append({"code": "dense_unavailable", "message": "向量检索暂不可用，当前只显示关键词召回的材料。"})
     hydrated = {row["id"]: row for row in validate_discovery_results(channel, [*empty["sparse"], *empty["dense"], *empty["contextual"]], access_statuses, filters=filters)}
@@ -534,7 +544,8 @@ def candidate_search(index_uid, payload, channel, access_statuses, filters, *, d
         response = meili("POST", f"/indexes/{index_uid}/search",
             {**payload, "limit": batch_size, **({"offset": offset} if offset else {})})
         hits = response.get("hits", [])
-        fresh = [row for row in hits if row.get("id") not in seen]
+        ranked = _ranked_hits(response, warnings, channel, "dense" if "vector" in payload else "keyword")
+        fresh = [row for row in ranked if row.get("id") not in seen]
         seen.update(row.get("id") for row in fresh)
         accepted.extend(validate_discovery_results(channel, fresh, access_statuses, filters=filters))
         offset += batch_size

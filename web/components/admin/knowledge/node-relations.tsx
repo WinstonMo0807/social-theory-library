@@ -30,7 +30,7 @@ const clearGuard: NodeRelationGuard = { dirty: false, pending: false, composing:
 export function NodeRelations(props: Props) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <><AcademicRelations key={`${user.id}:${epoch}:${props.nodeId}`} legacyType={props.centerKind === "scholar" ? "scholar" : "node"} legacyId={props.nodeId} blocked={props.blocked} /><details><summary>历史关联记录</summary><RelationList {...props} blocked owner={String(user.id)} /></details></> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user ? <><AcademicRelations key={`${user.id}:${epoch}:${props.nodeId}`} legacyType={props.centerKind === "scholar" ? "scholar" : "node"} legacyId={props.nodeId} blocked={props.blocked} /><details><summary>历史关联记录</summary><RelationList {...props} blocked owner={String(user.id)} /></details></> : <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, owner, centerKind = "node", initialRelationId, initialRelationKind }: Props & { owner: string }) {

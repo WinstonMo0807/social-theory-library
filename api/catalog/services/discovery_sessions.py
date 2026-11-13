@@ -685,7 +685,10 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
     retrieval_context: dict = {"on_passage_scope": lambda scopes, index: begin_document_query(
         session_id, generation, task_id, scopes, index)}
     channel_states = {}
-    for channel in ("entities", "curation", "passages"):
+    # Return source evidence before optional knowledge/curation work. Expansion
+    # still resolves knowledge aliases before using them for additional recall.
+    channels = ("entities", "curation", "passages") if expanded else ("passages", "entities", "curation")
+    for channel in channels:
         if not _task_current(session_id, generation, task_id):
             return
         with transaction.atomic():

@@ -171,3 +171,14 @@
 
 /* PDF205: only the current mobile status has the gold underline. */
 @media(max-width:720px){.page .mobileTabs{gap:12px}.page .mobileTabs button{border:0;border-bottom:2px solid transparent;border-radius:0;box-shadow:none;background:transparent;padding:8px 0;font:max(12px, var(--stl-readable-ui)) var(--serif);min-height:44px;gap:4px}.page .mobileTabs .active{border-bottom-color:var(--memory-gold)}.mobileTabs button span{font-size:max(11px, var(--stl-readable-ui));color:var(--memory-muted)}}
+
+
+/* Center layout candidate boundary. */
+:global([data-stl-page-layout="account"]) .shell > .heading { margin-block: 24px; }
+:global([data-stl-page-layout="account"]) .main > .empty { min-height: 300px; padding: 24px; }
+:global([data-stl-page-layout="account"]) .row { padding-block: 20px; }
+:global([data-stl-page-layout="account"]) .queueTools { gap: 16px; }
+@media (max-width: 700px) {
+  :global([data-stl-page-layout="account"]) .row { padding-block: 18px; }
+  :global([data-stl-page-layout="account"]) .queueTools { gap: 10px; }
+}

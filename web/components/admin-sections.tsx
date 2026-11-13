@@ -26,7 +26,6 @@ import {
   Download,
   HardDrive,
   ImagePlus,
-  LoaderCircle,
   Pencil,
   Plus,
   RefreshCw,
@@ -282,7 +281,7 @@ const emptyTaxonomy: TaxonomyDraft = {
 export function TaxonomyAdmin(props: {mode?: "combined" | "theory" | "topic";entityId?:string}) {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  if(!user)return <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  if(!user)return <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
   return <TaxonomyWorkspace key={`${user.id}:${epoch}:${props.entityId||"list"}:${props.mode||"combined"}`} {...props} owner={String(user.id)}/>;
 }
 
@@ -904,7 +903,7 @@ const emptyScholar: ScholarDraft = {
 export function ScholarsAdmin({ scholarId }: { scholarId?: string }) {
   const user = useAdminSession(), params = useSearchParams(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
   if (scholarId === "new" && params.get("person")) return <ExistingScholarStart key={`${user.id}:${epoch}:${params.get("person")}`} owner={String(user.id)} personId={params.get("person")!} />;
   return <ScholarWorkspace key={`${user.id}:${epoch}:${scholarId || "list"}`} scholarId={scholarId} owner={String(user.id)} />;
 }
@@ -1946,7 +1945,7 @@ function StatusCard({ icon: Icon, title, value, description }: { icon: typeof Cl
 }
 
 function ResourceState({ loading, error, empty }: { loading: boolean; error: string; empty: boolean }) {
-  if (loading) return <p className="admin-resource-state"><LoaderCircle className="spin" size={17} />正在加载……</p>;
+  if (loading) return <LoadingState className="admin-resource-state">正在加载……</LoadingState>;
   if (error) return <p className="admin-resource-state error"><AlertCircle size={17} />{error}</p>;
   if (empty) return <p className="admin-resource-state">当前没有记录。</p>;
   return null;

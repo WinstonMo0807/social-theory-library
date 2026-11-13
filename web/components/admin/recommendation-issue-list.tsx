@@ -32,7 +32,7 @@ type Directory = IssuePage & { page: number; pages: number };
 export function RecommendationIssueList({ initialTab = "issues" }: { initialTab?: "issues" | "placements" }) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0), params = useSearchParams();
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <ArticleDirectory key={`${user.id}:${epoch}:${initialTab}:${params.get("proposal") || ""}`} owner={String(user.id)} home={initialTab === "placements"} canEdit={hasAdminCapability(user, "can_edit_metadata")} canReview={hasAdminCapability(user, "can_review_candidate")} /> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user ? <ArticleDirectory key={`${user.id}:${epoch}:${initialTab}:${params.get("proposal") || ""}`} owner={String(user.id)} home={initialTab === "placements"} canEdit={hasAdminCapability(user, "can_edit_metadata")} canReview={hasAdminCapability(user, "can_review_candidate")} /> : <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function ArticleDirectory({ owner, home, canEdit, canReview }: { owner: string; home: boolean; canEdit: boolean; canReview: boolean }) {

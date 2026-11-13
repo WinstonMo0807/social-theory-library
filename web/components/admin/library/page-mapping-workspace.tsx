@@ -31,7 +31,7 @@ const pending = (data: MappingState) => (data.jobs?.some(job=>isTaskRunning(job.
 
 export function PageMappingWorkspace({ assetId }: { assetId: string }) {
   const user = useAdminSession();
-  if (!user) return <LoadingState role="status">正在核对管理会话……</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对管理会话……</LoadingState>;
   return <MappingWorkspace key={`${user.id}:${assetId}`} assetId={assetId} ownerId={String(user.id)} canEdit={hasAdminCapability(user, "can_edit_metadata")} canPublish={hasAdminCapability(user, "can_publish_work")} canRetry={hasAdminCapability(user,"can_retry_jobs")} canDownload={hasAdminCapability(user,"can_view_evidence")} />;
 }
 

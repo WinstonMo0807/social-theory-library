@@ -32,7 +32,7 @@ const stateLabel = (row: Association) => row.confirmed ? "已确认" : ["archive
 export function ScholarLinks(props: Props) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <LinksWorkspace key={`${user.id}:${epoch}:${props.scholarId}:${props.kind}`} {...props} owner={String(user.id)} /> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user ? <LinksWorkspace key={`${user.id}:${epoch}:${props.scholarId}:${props.kind}`} {...props} owner={String(user.id)} /> : <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function LinksWorkspace({ scholarId, kind, blocked, onChanged, derived = [], owner }: Props & { owner: string }) {

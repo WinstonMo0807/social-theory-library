@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { useEffect, useState } from "react";
 import { GuestTransferProvider, GuestTransferChoice } from "./auth-guest-records";
 import { AuthReturnCard } from "./auth-return-card";
@@ -23,7 +25,7 @@ export function AuthReturnContext({ destination, recovery=false, compact=false }
 function RecoveryEntry({ destination }: { destination: string }) {
   const [kind, setKind] = useState<"loading" | "link" | "request">("loading");
   useEffect(() => { queueMicrotask(() => setKind(new URLSearchParams(window.location.hash.slice(1)).has("token") ? "link" : "request")); }, []);
-  return kind === "loading" ? <p role="status">正在准备恢复入口…</p> : kind === "link" ? <AccountEmailLink purpose="password" destination={destination} /> : <AuthForm mode="reset" next={destination} />;
+  return kind === "loading" ? <LoadingState role="status">正在准备恢复入口…</LoadingState> : kind === "link" ? <AccountEmailLink purpose="password" destination={destination} /> : <AuthForm mode="reset" next={destination} />;
 }
 
 export function AuthPageFrame({ mode }: { mode: AuthMode }) {

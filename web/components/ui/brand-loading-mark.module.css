@@ -1,0 +1,20 @@
+.mark { display:inline-block; position:relative; flex:none; width:64px; max-width:100%; aspect-ratio:8/7; color:var(--ink,#242424); }
+.mark[data-size="large"] { width:clamp(112px,24cqi,192px); }
+.mark[data-size="hero"] { width:min(72cqi,46svh,440px); }
+.canvas { display:block; width:100%; height:auto; overflow:visible; }
+.lines,.bookmark,.frame { display:none; }
+.mark[data-variant="l6"] .lines { display:block; }
+.ink { stroke:var(--ink,#242424); transform-box:fill-box; transform-origin:right center; }
+.gold { stroke:#cc9847; transform-box:fill-box; transform-origin:left center; }
+.mark[data-variant="l7"] .frame { display:block; color:#b4a48a; opacity:.65; }
+.mark[data-variant="l7"] .bookmark { display:block; fill:#cc9847; }
+@media(prefers-reduced-motion:no-preference) {
+  .mark[data-variant="l5"] .symbol { animation:pages 2.4s ease-in-out infinite; }
+  .mark[data-variant="l6"] .ink { animation:ink 2s ease-in-out infinite; }
+  .mark[data-variant="l6"] .gold { animation:ink 2s ease-in-out infinite; }
+  .mark[data-variant="l7"] .bookmark { animation:bookmark 3s ease-in-out infinite; }
+}
+@keyframes pages { 0%,100% { opacity:.3; clip-path:inset(45% 0 0); } 50%,78% { opacity:1; clip-path:inset(0); } }
+@keyframes ink { 0%,100% { transform:scaleX(.25); opacity:.35; } 50%,65% { transform:scaleX(1); opacity:1; } }
+@keyframes bookmark { 0%,100% { transform:translateX(0); } 50%,65% { transform:translateX(132px); } }
+:global([data-reader-motion="reduced"]) .mark * { animation:none!important; }

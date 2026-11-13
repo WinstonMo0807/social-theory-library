@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
@@ -60,7 +62,7 @@ export function AccountActivation() {
     <header className="auth-heading"><h1>激活你的账户</h1><p>核对邀请账户，由你设置密码，保存本人的阅读与研究。</p></header>
     <div className="auth-atlas-columns"><div className="auth-panel"><form className="auth-form" onSubmit={submit} aria-busy={busy}>
       <nav className="auth-tabs" aria-label="账户入口"><span aria-current="page">激活账户</span><Link href="/login">登录</Link></nav>
-      {result ? <p role="status" className="form-message">{result.detail}</p> : busy ? <p role="status">正在核对邀请…</p> : null}
+      {result ? <p role="status" className="form-message">{result.detail}</p> : busy ? <LoadingState role="status">正在核对邀请…</LoadingState> : null}
       {result?.state === "ready" ? <><label>账户<input readOnly value={`${result.display_name} · ${result.username}`} /></label><label>邮箱<input readOnly value={result.email || ""} /></label><p>激活后角色：{result.role_label}</p><p className="field-help">有效至 {result.expires_at ? new Date(result.expires_at).toLocaleString("zh-CN") : "请重新核对"}。链接只供本人使用。</p>
         <label>设置密码<div className="password-input"><input type={visible ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={128} required value={password} disabled={busy || uncertain} onChange={event => setPassword(event.target.value)} /><button type="button" aria-label={visible ? "隐藏密码" : "显示密码"} aria-pressed={visible} onClick={() => setVisible(value => !value)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label>
         <p className="field-help">至少10位，不使用常见、纯数字或与账户资料相近的密码。</p><label>确认密码<input type={visible ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={128} required disabled={busy || uncertain} value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>

@@ -3,7 +3,6 @@ from hashlib import sha256
 import json
 from uuid import uuid5
 
-from django.contrib.auth.models import AnonymousUser
 from django.core import signing
 from django.db import transaction
 from django.utils.dateparse import parse_datetime
@@ -65,7 +64,7 @@ def save(request, list_id, data):
     if edition is None:
         raise ValidationError("该出版版本当前未公开，请重新核对来源。")
     raw = json.loads(json.dumps(data.get("reference"), default=str))
-    resolved = research.resolve_reference(raw, AnonymousUser(), strict=True) if raw else None
+    resolved = research.resolve_reference(raw, research.citation_reader(user), strict=True) if raw else None
     if resolved and str(edition.pk) != resolved.get("edition_id"):
         raise ValidationError("所选原文与书目版本不一致。")
     if data["save_excerpt"] and not resolved:
@@ -94,7 +93,7 @@ def save(request, list_id, data):
     # Both the public source and list write are in this transaction. A revision
     # change observed here rolls the whole command back rather than saving stale text.
     if frozen_reference:
-        research.resolve_reference(frozen_reference, AnonymousUser(), strict=True)
+        research.resolve_reference(frozen_reference, research.citation_reader(user), strict=True)
     if not Edition.objects.filter(public_edition_q(), pk=edition.pk).exists():
         raise research.ResearchConflict("公开来源刚刚撤下，本次保存未完成。")
     saved = KnowledgeSaveReceipt.objects.create(user=user, request_id=data["request_id"],

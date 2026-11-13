@@ -21,6 +21,7 @@ export type CanonicalBlock = ReaderGeometryBox & {
 
 export type PageHighlight = ReaderGeometryBox & {
   bbox: number[];
+  annotationId?: string;
   kind?: "search" | "highlight" | "underline" | "note";
   source?: "pdf-text" | "ocr-estimate";
 };
@@ -244,6 +245,7 @@ export function PdfCanvas({
             <i
               className={highlight.kind ?? "search"}
               data-source={highlight.source}
+              data-reader-annotation-id={highlight.annotationId}
               key={`${x0}-${y0}-${index}`}
               style={{
                 left: x0,

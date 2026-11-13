@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getServerSessionCredential } from "@/lib/api";
@@ -161,7 +163,7 @@ export function KnowledgeWorkspaceDiagnostics() {
     <header className="admin-page-title"><div><p>系统诊断</p><h1>知识处理诊断</h1><span>查看来源、修订和索引同步情况。修改或发布内容请返回知识工作台。</span></div><div className="admin-title-actions"><Link className="button" href={returnUrl}>返回当前对象工作台</Link><button className="button secondary" type="button" disabled={loading || !valid} onClick={retry}>重新读取诊断</button></div></header>
     {!valid ? <p role="alert">对象类型或编号无效，未读取其他对象作为替代。</p> : null}
     {error ? <p role="alert">{error}</p> : null}
-    {loading ? <p role="status">正在读取已保存的诊断记录…</p> : null}
+    {loading ? <LoadingState role="status">正在读取已保存的诊断记录…</LoadingState> : null}
     {objectId && studio?.selection_error ? <p role="alert">无法找到指定对象，没有显示其他对象的结果。</p> : null}
     {selected ? <section className="admin-panel" aria-label="当前知识对象诊断"><h2>{selected.label}</h2><p>对象 {selected.object_type} · {selected.id}</p>
       <h3>索引与内容版本</h3>{projections ? projections.length ? <div className="knowledge-studio-list">{projections.map((row) => <article key={row.type}><strong>{row.name} · {row.status}</strong><p>来源修订 {row.source_revision} · 已处理修订 {row.projected_revision} · 落后 {row.lag}</p>{row.last_error_code ? <p role="status">错误 {row.last_error_code}；从工作台的原发布记录检查影响及允许的恢复操作。</p> : null}</article>)}</div> : <p>暂无索引同步记录。</p> : <p>未能获取索引同步状态，请刷新重试。</p>}

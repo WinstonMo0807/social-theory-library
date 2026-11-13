@@ -3,6 +3,7 @@
 import { EntityKnowledge } from "../work-knowledge";
 import { DefaultCover } from "@/components/default-cover";
 import Link from "next/link";
+import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { MediaPlacement } from "@/components/media-placement";
 import { ArrowRight, BookOpen, ChevronDown, ExternalLink, FileText } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -82,7 +83,7 @@ export function TheoryDetailPublicView({ node, timeline, paths, section = "overv
       // Author and work must share a confirmed usage; list order is not an attribution.
       const source = usages.find(usage => usage.author?.id === person.id)?.source;
       const work = source ? works.find(item => item.id === source.work_id) : null;
-      return <article key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<div className={styles.personPlaceholder}><span>{person.name.slice(0,1)}</span></div>}><img src={person.portrait_url} alt={person.name} loading="lazy" /></MediaPlacement> : <div className={styles.personPlaceholder}><span>{person.name.slice(0, 1)}</span></div>}
+      return <article key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<ScholarPortraitFallback name={person.name} identity={person.scholar_slug || person.id} className={styles.personPlaceholder}/>}><img src={person.portrait_url} alt={person.name} loading="lazy" /></MediaPlacement> : <ScholarPortraitFallback name={person.name} identity={person.scholar_slug || person.id} className={styles.personPlaceholder}/>}
         <div><h3>{person.scholar_slug ? <Link href={`/scholars/${person.scholar_slug}`}>{person.name}</Link> : person.name}</h3>{person.original_name ? <small>{person.original_name}</small> : null}<small>{[person.birth_year, person.death_year].filter(value => value !== null).join(" — ")}</small>{person.relation_label ? <p>{person.relation_label}</p> : null}{work ? <WorkRow work={work} compact /> : person.scholar_slug ? <Link className={styles.readLink} href={`/scholars/${person.scholar_slug}`}>查看人物与著作<ArrowRight size={14} /></Link> : null}</div>
       </article>;
     })}</div>{!node.representative_scholars.length ? <p className={styles.empty}>暂无已确认的代表人物。</p> : null}

@@ -1,4 +1,5 @@
 # Environment files and credentials
+/.local/stl-mcp/
 .env
 .env.*
 !/.env.example

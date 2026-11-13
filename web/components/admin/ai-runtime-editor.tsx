@@ -30,7 +30,7 @@ function profileInput(row:Profile,owner:boolean):Input["profiles"][number]{
 export function AIRuntimeEditor(props:Props){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  if(!user)return <LoadingState>正在读取当前管理账户…</LoadingState>;
+  if(!user)return <LoadingState variant="screen">正在读取当前管理账户…</LoadingState>;
   if(!hasAdminCapability(user,"can_manage_ai"))return <p>当前账户不能管理模型配置。</p>;
   return <RuntimeEditor key={`${user.id}:${epoch}:${props.profileKey||"all"}`} owner={String(user.id)} {...props}/>;
 }

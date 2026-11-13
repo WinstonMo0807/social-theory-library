@@ -1080,54 +1080,43 @@ def _draft_topic_relation_revision(
     rows: list[dict],
     change_note: str,
 ):
-    from .models import CanonicalObjectRevision, EditorialRevision
-    from .services.editorial_revision import (
-        create_editorial_revision,
-        editorial_idempotency_key,
-        serialize_editorial_revision,
-    )
+    from .services.editorial_drafts import save_object_editorial_patch
+    from .services.editorial_revision import serialize_editorial_revision
 
     field_name = TOPIC_RELATION_FIELDS[kind][0]
     patch = {field_name: rows}
-    current_revision = (
-        CanonicalObjectRevision.objects.filter(
-            object_type=EditorialRevision.TargetType.TOPIC,
-            object_id=topic.id,
-        )
-        .values_list("current_revision", flat=True)
-        .first()
-        or 0
-    )
-    revision = create_editorial_revision(
-        target_type=EditorialRevision.TargetType.TOPIC,
-        target_id=topic.id,
-        patch=patch,
+    revision = save_object_editorial_patch(
+        EditorialRevision.TargetType.TOPIC, topic.id, patch,
         actor=request.user,
-        idempotency_key=str(request.headers.get("Idempotency-Key") or "").strip()
-        or editorial_idempotency_key(
-            target_type=EditorialRevision.TargetType.TOPIC,
-            target_id=topic.id,
-            base_revision=current_revision,
-            patch=patch,
-        ),
+        request_key=str(request.headers.get("Idempotency-Key") or "").strip(),
         change_note=change_note,
     )
     return Response(
         {
             "topic_id": str(topic.id),
             "relation_kind": kind,
-            "draft_relations": revision.patch[field_name],
-            "editorial_revision": serialize_editorial_revision(revision),
+            "draft_relations": rows,
+            "editorial_revision": serialize_editorial_revision(revision) if revision else None,
+            "publication_required": bool(revision),
         },
         status=status.HTTP_202_ACCEPTED,
     )
 
 
 def _topic_relation_rows(topic: Topic, kind: str) -> list[dict]:
+    from copy import deepcopy
     from .services.editorial_revision import topic_relation_snapshot
 
+    # All callers hold a transaction, so concurrent edits share the topic lock.
+    Topic.objects.select_for_update().get(pk=topic.pk)
     field_name = TOPIC_RELATION_FIELDS[kind][0]
-    return topic_relation_snapshot(topic)[field_name]
+    rows = topic_relation_snapshot(topic)[field_name]
+    for draft in EditorialRevision.objects.filter(
+        target_type="topic", target_id=topic.pk, status="draft",
+    ).order_by("revision"):
+        if field_name in draft.patch:
+            rows = draft.patch[field_name]
+    return deepcopy(rows)
 
 
 class AdminKnowledgeRelationListCreateView(APIView):
@@ -1150,6 +1139,7 @@ class AdminKnowledgeRelationListCreateView(APIView):
                 queryset = queryset.filter(**{name: value})
         return Response(serializer_class(queryset[:500], many=True, context={"request": request}).data)
 
+    @transaction.atomic
     def post(self, request, kind):
         resource = self._resource(kind)
         if resource is None:
@@ -1172,9 +1162,9 @@ class AdminKnowledgeRelationListCreateView(APIView):
                 from .services.editorial_revision import EditorialRevisionError
 
                 rows = _topic_relation_rows(topic, kind)
-                rows.append(
-                    _topic_relation_row(kind, values=serializer.validated_data)
-                )
+                incoming = _topic_relation_row(kind, values=serializer.validated_data)
+                id_field = TOPIC_RELATION_FIELDS[kind][2]
+                rows = [row for row in rows if row[id_field] != incoming[id_field]] + [incoming]
                 try:
                     return _draft_topic_relation_revision(
                         request,
@@ -1202,6 +1192,7 @@ class AdminKnowledgeRelationDetailView(APIView):
         model, serializer_class = resource
         return model, serializer_class, get_object_or_404(model, pk=pk)
 
+    @transaction.atomic
     def patch(self, request, kind, pk):
         if kind in LEGACY_THEORY_RELATION_KINDS:
             if kind == "work-theories":
@@ -1261,6 +1252,7 @@ class AdminKnowledgeRelationDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+    @transaction.atomic
     def delete(self, request, kind, pk):
         if kind in LEGACY_THEORY_RELATION_KINDS:
             if kind == "work-theories":

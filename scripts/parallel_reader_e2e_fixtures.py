@@ -46,6 +46,24 @@ def _isolated_media():
     return media
 
 
+def copy_fixture_pdf(original, edition, asset_id, label):
+    """A distinct synthetic file, with its real checksum, for another edition."""
+    media = _isolated_media()
+    from catalog.models import Asset
+    source = Path(original.file.path).resolve()
+    if not source.is_relative_to(media):
+        raise RuntimeError("Fixture source is outside the disposable media directory")
+    # PDF comments after EOF do not change pages/text. Do not spoof the digest
+    # or weaken the real (sha256, kind) uniqueness constraint for test records.
+    content = source.read_bytes() + f"\n% isolated fixture {asset_id}\n".encode("ascii")
+    asset = Asset.objects.create(id=asset_id, edition=edition, kind="normalized",
+        status="ready", validation_status="valid", access_status="public",
+        sha256=sha256(content).hexdigest(), byte_size=len(content),
+        page_count=original.page_count, is_current=True, original_filename=label)
+    asset.file.save(label, ContentFile(content), save=True)
+    return asset
+
+
 def _paragraph(marker):
     # Every printed block exceeds the extractor's 700-character merge threshold.
     # These are labelled fixture sentences, not academic claims or test results.

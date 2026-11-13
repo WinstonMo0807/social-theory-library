@@ -1,0 +1,52 @@
+.portrait[data-default-portrait] {
+  position: absolute;
+  inset: 0;
+  display: block;
+  container-type: inline-size;
+  isolation: isolate;
+  overflow: hidden;
+  background: #e5e8e8;
+  color: #262e31;
+  text-align: left;
+}
+.portrait[data-default-portrait="M"] { background: #20272b; color: #edf0ef; }
+.portrait[data-default-portrait] .art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+  float: none;
+  filter: none;
+  pointer-events: none;
+}
+.portrait[data-default-portrait] .copy {
+  position: absolute;
+  top: 17%;
+  right: 19%;
+  bottom: 30%;
+  left: 10.5%;
+  display: block;
+}
+.portrait[data-default-portrait] .name {
+  display: block;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font: 400 max(8px, var(--scholar-name-size, 12.2cqi))/1.48 "STL Display Serif", "Noto Serif SC", "Songti SC", serif;
+  letter-spacing: .035em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-break: strict;
+}
+.portrait[data-default-portrait] .part { display: inline-block; max-width: 100%; vertical-align: top; font: inherit; color: inherit; }
+/* At icon size the surrounding scholar label carries the readable full name. */
+@container (max-width: 60px) {
+  .portrait[data-default-portrait] .copy { display: none; }
+}

@@ -3271,7 +3271,7 @@ class CitationView(APIView):
                 )
             page = get_object_or_404(asset.pages, index=pdf_page)
             printed_label = clean_page_label(page.printed_label)
-            page_label = printed_label or str(page.index)
+            page_label = printed_label
             page_meta = {
                 "pdf_page": page.index,
                 "printed_label": printed_label,
@@ -3283,6 +3283,9 @@ class CitationView(APIView):
             page_label,
             snapshot=active_catalog_snapshot(edition),
         )
+        if page_meta["pdf_page"] and not page_meta["printed_label"]:
+            bundle = {key: f"{value}（PDF 第 {page_meta['pdf_page']} 页）" if isinstance(value, str) else value
+                      for key, value in bundle.items()}
         bundle["page"] = page_meta
         return Response(bundle)
 

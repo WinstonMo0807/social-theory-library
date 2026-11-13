@@ -54,7 +54,7 @@ export function ReviewQueue() {
     </form>
     <p className={styles.count} role="status">{page ? `当前条件共 ${page.count} 项，第 ${page.page} 页显示 ${page.results.length} 项。${ordering === "priority" ? "较早的待办排在前面，已设置优先级的项目优先。" : ordering === "-updated_at" ? "按全部匹配待办的更新时间从新到旧排序。" : "按全部匹配待办的更新时间从旧到新排序。"}` : result.error ? "待办数量未能读取。" : "正在读取完整待办数量…"}</p>
     {result.error ? <div className={styles.error} role="alert">{result.error}<button type="button" onClick={result.retry}>重新读取待办</button></div> : null}
-    {result.loading ? <LoadingState role="status">正在读取当前页…</LoadingState> : null}
+    {result.loading ? <LoadingState variant="rows" role="status">正在读取当前页…</LoadingState> : null}
     <section className="admin-v307-review-table" aria-label="待办记录">
       <header><span>书目信息</span><span>公开状态</span><span>当前工作</span><span>更新时间</span><span>操作</span></header>
       {page?.results.map((item) => {
