@@ -1,3 +1,7 @@
+## 2026-11-14 S4 公网发布
+
+最终Web：`social-theory-library-web:4.0.0-20261114-s4-web-r9`，`sha256:796503b4b14a690668c282182f76c7ddf6eab0244c15421b912a73f11b3b2b9e`，时间 `2026-11-14T03:59:27+08:00`。API为`200d52cae66c`，普通worker为`d1711e519d36`。只更新这三角色，未迁移数据库；Web最终校验1891文件及106个受保护服务。回退入口 `/volume2/library/stl-releases/20261114-s4-research-r1/recovery-web-r9/rollback-web.py` 恢复r8；此前r8/r7/r6/r5到r2、首次三角色恢复链保留。完整备份与详细验证见 `docs/stl4/S4_RESEARCH_RELEASE_20261114.md`。
+
 ## 2026-11-13 最终公网与 main 回读
 
 本轮阅读器与加载修复已于13:59:59 +0800上线。同期检索追加读取预算后，14:11:21 +0800最终Web为viewpoint-web-r4（sha256:8810070bb92af9e6dcf0b97e5960c8b1d91fc42bc8f88fe10f8e031dfcfdf73c），以本轮reader-b-loading-r1为底层，保留本轮全部13份源码。独立回读1866个构建文件哈希一致，runtime-config由启动入口生成；五入口200、106其他容器保持。API未被本轮改写。main已推送bfb55957并核对远端相同SHA，本条为其最终回执补记。原两项暂存、共享HEAD及其他未提交内容保持。Mac架构迁移未开始。详docs/stl4/READER_B_LOADING_20261113.md。

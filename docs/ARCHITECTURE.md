@@ -1,3 +1,7 @@
+## 2026-11-14 检索页内连续研究与原版页面
+
+S4检索复用既有发现/书目检索接口；SearchResearchDock在同页复用私人研究接口。每轮context_refs与scope独立快照，选段仍由服务端核对原文偏移；不新增私人资料库。SourceExcerpt清洗仅影响显示，引用继续使用原始来源。DiscoverySourcePage在读者展开时先校验来源及版本，再沿既有distribution access/PdfCanvas显示单页PDF，关闭自动预取；不新增检索任务、OCR或模型调用。结构提示是本地展示规则，不能视为结构识别的准确性保证，所有段落均保留原页入口。
+
 ## 2026-11-12 本机 Codex MCP 策展
 
 tools/stl_mcp 是本机stdio接口，通过现有严格主机校验的SSH通道在原API容器内启动固定Django命令分派，复用原编目、编辑修订、规范实体、EvidenceCuration与AuditEvent。没有远程MCP监听、第二套馆藏或数据库schema变更。模型仅可调用白名单读取/草稿命令；固定账户、token_version、作品范围、对象关联、人工锁、版本与逐项回执在服务端重核。独立本机SQLite仅存不可变计划、原请求编号及耗时，不承担正式业务状态；机器待审与人工确认/正式发布分开。三书6项维护增补已真实保存并跨进程回放验证。边界与实测见 `stl4/LOCAL_MCP_CURATION_20261112.md`。
