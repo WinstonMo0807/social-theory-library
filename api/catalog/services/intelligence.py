@@ -403,7 +403,7 @@ def assertion_evidence(raw, pages):
     return rows
 
 
-def compile_wiki(run, proposals, config, lease):
+def compile_wiki(run, proposals, config, lease, *, synthesis=None):
     """Bounded, evidence-backed patches to work and affected identity pages.
 
     Entity destinations remain dependencies until an editor resolves identity.
@@ -433,6 +433,11 @@ def compile_wiki(run, proposals, config, lease):
     for page in m.KnowledgePage.objects.filter(pk__in=run.scope.get("target_page_ids", [])).exclude(pk__in=occupied):
         targets.append({"key":f"page:{page.pk}", "page_id":str(page.pk), "title":page.title,
             "scope":page.scope, "pages":[page], "assertions":assertions})
+    argument_context = None
+    if synthesis is not None:
+        argument_context = {"output":synthesis.output, "source_artifact_hash":synthesis.output_hash,
+            "last_window":int(synthesis.unit.split(":")[-1]),
+            "total_windows":run.coverage.get("total_windows"), "interpretation_status":"unreviewed"}
     results = []
     budget = min(config.max_input_chars-6500, 6500)
     for target in targets:
@@ -444,20 +449,26 @@ def compile_wiki(run, proposals, config, lease):
             blocks, revision = page_content(page)
             contexts += [{"page_id":str(page.pk),"entity_id":str(page.entity_id) if page.entity_id else None,
                 "revision_id":str(revision.pk) if revision else None,"block":b} for b in blocks]
+        base = {"destination":{"title":target["title"],"scope":target.get("scope", ""),
+                "identity_pending":target["key"] != "work" and "page_id" not in target},
+            "source_revision":str(run.document_revision_id),"assertions":[],"existing_blocks":[],"omitted_context_blocks":[]}
+        if argument_context is not None:
+            base["argument_context"] = argument_context
+        source_budget = budget - len(json.dumps(base, ensure_ascii=False))
+        if source_budget <= 0:
+            raise ValidationError("全书论证语境超过编纂输入预算；请缩短综合产物或扩大明确预算，未截断原文或综合。")
         batches, batch = [], []
         # Partition at whole assertions; no sampling or truncating source claims.
         for assertion in target["assertions"]:
             source = source_assertions[assertion["id"]]
-            if batch and len(json.dumps([*batch,source],ensure_ascii=False)) > budget:
+            if batch and len(json.dumps([*batch,source],ensure_ascii=False)) > source_budget:
                 batches.append(batch);batch=[]
-            if len(json.dumps(source,ensure_ascii=False)) > budget:
+            if len(json.dumps([source],ensure_ascii=False)) > source_budget:
                 raise ValidationError("单条学术陈述超过编纂输入预算，请扩大明确预算或缩小上游陈述范围。")
             batch.append(source)
         if batch: batches.append(batch)
         for position, batch in enumerate(batches):
-            data = {"destination":{"title":target["title"],"scope":target.get("scope", ""),
-                    "identity_pending":target["key"] != "work" and "page_id" not in target},
-                "source_revision":str(run.document_revision_id),"assertions":batch,"existing_blocks":[],"omitted_context_blocks":[]}
+            data = {**base, "assertions":batch, "existing_blocks":[], "omitted_context_blocks":[]}
             for context in contexts:
                 if len(json.dumps({**data,"existing_blocks":[*data["existing_blocks"],context]},ensure_ascii=False)) <= budget:
                     data["existing_blocks"].append(context)
@@ -467,6 +478,7 @@ def compile_wiki(run, proposals, config, lease):
             artifact = _model_artifact(run,6,f"page:{target['key']}:{position}",data,
                 "为目标知识页提出一个局部patch。operation为add、replace、delete或none；replace/delete须给出已读block_id及具体理由。"
                 "仅用本批有原文证据的陈述，说明与其他来源可能不同的用法或解释。"
+                "argument_context是按顺序综合的未审核论证语境，须保留其中的时期变化和限定；它不能充当原文证据或增加本批陈述之外的事实。"
                 "已有区块仅供避免重复，不能作为新增事实证据；省略的区块未读取，不能声称审阅整页。人物同名候选尚未合并。"
                 "人工区块默认受保护，只有新原文确实要求修订时才能提出待人工处理的修改，不直接覆盖。无实质变化时operation为none。返回实际使用的assertion_ids。",
                 WIKI_SCHEMA,config,lease,validate=lambda output:validate_wiki_patch(output,data))
@@ -542,6 +554,7 @@ def execute(run, config, lease):
             run.coverage.update(read_nodes=len(read_nodes), completed_windows=len(analyses), read_characters=read_characters)
             m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(coverage=run.coverage)
     synthesis = {"summary":"","development":[],"limitations":[]}
+    summary = None
     for i, artifact in enumerate(analyses):
         data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_hash":artifact.output_hash,"position":i}
         summary = _model_artifact(run,3,f"fold:{i}",data,"按真实文献次序继续综合。保留论证发展和概念变化、相反解释及覆盖限制，不按多数意见归并。",SUMMARY_SCHEMA,config,lease)
@@ -599,7 +612,7 @@ def execute(run, config, lease):
             proposals.append({"id":str(uuid5(run.pk,"assertion:"+digest(payload))),"kind":"assertion","payload":payload,
                 "source_artifact_id":str(artifact.pk),"dependencies":sorted(set(dependencies))})
     _save_artifact(run,5,"assertions",{"analysis_hashes":[a.output_hash for a in analyses]}, {"proposals":proposals[len(entity_proposals):]},lease=lease)
-    proposals += compile_wiki(run, proposals, config, lease)
+    proposals += compile_wiki(run, proposals, config, lease, synthesis=summary)
     # Repeated mentions may yield identical proposals; their evidence identity
     # remains in the fingerprint rather than a subject/predicate unique key.
     proposals = list({p["id"]:p for p in proposals}.values())

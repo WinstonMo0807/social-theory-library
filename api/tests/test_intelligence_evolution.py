@@ -142,19 +142,30 @@ def test_wiki_targets_work_and_identity_without_overwriting_human_blocks(source,
         request_id=uuid4(),created_by=admin_user)
     proposals=[{"id":entity_id,"kind":"entity","payload":{"label":"概念甲","kind":"concept","context":"本书用法","candidates":[]},"dependencies":[]},
         {"id":assertion_id,"kind":"assertion","payload":{"text":"有证据的用法","predicate":"uses","participants":[{"role":"subject","entity_id":{"change_item":entity_id}}],"evidence":[]},"dependencies":[entity_id]}]
+    synthesis=SimpleNamespace(output={"summary":"前章预算外描述受后章2007总额入账限定。","development":["先净额，后总额"],"limitations":["历史案例"]},
+        output_hash="ordered-source-hash",unit="fold:9")
     destinations=[]
     def model(run,stage,unit,data,*args,**kwargs):
         destinations.append(data["destination"])
+        assert data["argument_context"]["output"] == synthesis.output
+        assert data["argument_context"]["source_artifact_hash"] == synthesis.output_hash
+        assert data["argument_context"]["last_window"] == 9
+        assert data["argument_context"]["interpretation_status"] == "unreviewed"
         output={"text":"来源限定的局部说明","reason":"新增来源","assertion_ids":[data["assertions"][0]["id"]]}
         kwargs["validate"](output)
         return SimpleNamespace(pk=uuid4(),output=output)
     monkeypatch.setattr(intelligence,"_model_artifact",model)
-    patches=intelligence.compile_wiki(run,proposals,SimpleNamespace(max_input_chars=16000),None)
+    patches=intelligence.compile_wiki(run,proposals,SimpleNamespace(max_input_chars=16000),None,synthesis=synthesis)
     assert len(patches)==2 and destinations[1]["identity_pending"]
     assert all(p["payload"]["operation"]=="add" for p in patches)
     assert patches[1]["payload"]["entity_id"]=={"change_item":entity_id}
     assert patches[1]["payload"]["block"]["references"][0]["id"]=={"change_item":assertion_id}
     assert not m.KnowledgePage.objects.exists()
+    from rest_framework.exceptions import ValidationError
+    synthesis.output={"summary":"不可截断"*2000,"development":[],"limitations":[]}
+    with pytest.raises(ValidationError,match="全书论证语境"):
+        intelligence.compile_wiki(run,proposals,SimpleNamespace(max_input_chars=16000),None,synthesis=synthesis)
+    assert len(destinations)==2  # no stage was dispatched with silently sliced context
 
 
 @pytest.mark.django_db
