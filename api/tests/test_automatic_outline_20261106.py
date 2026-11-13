@@ -26,7 +26,7 @@ def test_no_observed_titles_does_not_claim_a_generated_outline(outline_source):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("retained_parser", [None, "outline-v9-docling-geometry"])
+@pytest.mark.parametrize("retained_parser", [None, "outline-v9-docling-geometry", "outline-v10-docling-geometry"])
 def test_automatic_outline_download_and_correction_preserve_source(outline_source, admin_user, settings, retained_parser):
     asset, document, path = outline_source
     original = path.read_bytes()

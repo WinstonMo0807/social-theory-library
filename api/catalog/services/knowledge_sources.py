@@ -21,7 +21,7 @@ from catalog.services.page_geometry import validated_geometry, locator_geometry
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
 
-STRUCTURE_VERSION = "stl-raw-structure-v4"
+STRUCTURE_VERSION = "stl-raw-structure-v5"
 LOCATOR_VERSION = "stl-locator-v1"
 
 
@@ -103,12 +103,14 @@ def _locate_title(text, title):
 def _heading_kind(title, level):
     if re.match(r"^(前言|序言|序|引言|preface|foreword|introduction)", title, re.I):
         return "preface"
-    if re.match(r"^(附录|appendix)", title, re.I):
+    if re.match(r"^(附录|(?:译者|出版)?后记|appendix|afterword)", title, re.I):
         return "appendix"
-    if re.match(r"^(参考文献|bibliography|references)", title, re.I):
+    if re.match(r"^(参考(?:文献|书目)|bibliography|references)", title, re.I):
         return "references"
     if re.match(r"^(第.+[部编篇]|part\s)", title, re.I):
         return "part"
+    if re.match(r"^(?:第\s*[一二三四五六七八九十百零〇\dⅠⅡⅢIVXIlO\s]+章|chapter\s)", title, re.I):
+        return "chapter"
     return "chapter" if level == 1 else "section"
 
 
@@ -137,6 +139,22 @@ def _outline_heading(page_text, raw):
     # TOC leader dots/page labels are not part of the body title.
     clean = re.sub(r"[.·…]+\s*" + re.escape(label) + r"\s*$", "", title).strip() if label else title
     observed = (raw.get("source_locator") or {}).get("observed_title", "") if raw.get("calibration_status") == "matched" else ""
+    fragments = (raw.get("source_locator") or {}).get("raw_text_fragments") or []
+    if observed and fragments:
+        # Visual heading order may differ from immutable OCR storage order.
+        # Verify original code-point slices; never use normalized-text offsets.
+        valid = all(isinstance(f,dict) and f.get("unit") == "unicode_codepoint" and type(f.get("start")) is int
+            and type(f.get("end")) is int and 0 <= f["start"] < f["end"] <= len(page_text)
+            and f.get("page_text_hash") == digest(page_text)
+            and f.get("exact") == page_text[f["start"]:f["end"]] for f in fragments)
+        if valid:
+            ordered = sorted(fragments,key=lambda f:f["start"])
+            valid = all(a["end"] <= b["start"] and not page_text[a["end"]:b["start"]].strip()
+                        for a,b in zip(ordered,ordered[1:]))
+            key = lambda value: re.sub(r"[\W_]+", "", value).casefold()
+            if valid and key("".join(f["exact"] for f in fragments)) == key(observed):
+                return clean, ordered[0]["start"]
+        return title, None
     # Prefer the longest exact verified spelling, e.g. a full section heading
     # over a truncated last line from the printed TOC. No fuzzy raw offsets.
     for candidate in sorted({clean, observed} - {""}, key=len, reverse=True):

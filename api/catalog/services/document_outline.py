@@ -23,8 +23,8 @@ from catalog.services.outline_labels import LABEL_ONLY, LABEL_RANGE, PRINTED_LAB
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v10-docling-geometry"
-AUTOMATIC_PARSER_VERSIONS = {"outline-v9-docling-geometry", PARSER_VERSION}
+PARSER_VERSION = "outline-v11-docling-geometry"
+AUTOMATIC_PARSER_VERSIONS = {"outline-v9-docling-geometry", "outline-v10-docling-geometry", PARSER_VERSION}
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*[录錄]|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(rf"^(?P<title>.+?)\s*(?:[.．·…_]{{2,}}|\s{{2,}}|\t)\s*(?P<label>{PRINTED_LABEL})\s*$")

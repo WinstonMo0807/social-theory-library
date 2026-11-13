@@ -23,7 +23,8 @@ def _caps(text):
 
 
 _CHAPTER = re.compile(r"^(?:第\s*[一二三四五六七八九十百零〇\dⅠⅡⅢIVXIlO\s]+章|chapter\s+[\w]+)[\s:：.、-]*", re.I)
-_FRONT_BACK = re.compile(r"^(?:自\s*序|前言|序言|后记|出版后记|参考文献|附录|preface\b|foreword\b|bibliography\b|references\b|appendix\b)", re.I)
+_PART = re.compile(r"^(?:第\s*[一二三四五六七八九十百零〇\d\s]+(?:部分|部|编|篇)|part\s+[\w]+)[\s:：.、-]*", re.I)
+_FRONT_BACK = re.compile(r"^(?:自\s*序|前言|序言|(?:译者|出版)?后记|参考(?:文献|书目)|附录|preface\b|foreword\b|bibliography\b|references\b|appendix\b)", re.I)
 
 
 def _body_key(text):
@@ -39,6 +40,9 @@ def _contents_entries(rows, number, two_columns):
             pending = None
             continue
         match = ENTRY.match(text) or TRAILING_PAGE.match(text)
+        if not match:
+            # OCR may retain only one leader dot next to the observed label.
+            match = re.match(r"^(?P<title>.+?)\s+[.．·…_]\s*(?P<label>\d{1,5})$", text)
         if not match:
             # Preserve an observed OCR label such as 0g2; never silently repair
             # it to a guessed page. A unique body heading can still locate it.
@@ -64,6 +68,10 @@ def _contents_entries(rows, number, two_columns):
             if len(title) >= 2 and not title.isdecimal():
                 entries.append({"title":title, "label":match["label"], "contents_page":number,
                                 "x":row["x"] - (520 if row.get("column") == 1 else 0)})
+            pending = None
+        elif _PART.match(text):
+            entries.append({"title":text, "label":"", "contents_page":number,
+                            "x":row["x"] - (520 if row.get("column") == 1 else 0)})
             pending = None
         else:
             pending = {**row, "text":text} if 3 <= len(text) <= 180 else None
@@ -111,26 +119,55 @@ def automatic_nodes(asset, nodes):
                 repeated[_key(text)].add(page.index)
         by_page[page.index] = rows
     contents_pages = {node.get("contents_page") for node in nodes if node.get("contents_page")}
-    contents = []
+    contents, layout_contents = [], []
     for number, rows in by_page.items():
-        if number not in contents_pages and not any(CONTENTS.fullmatch(row["text"]) for row in rows[:8]):
-            continue
-        contents_pages.add(number)
+        known_contents = number in contents_pages or any(CONTENTS.fullmatch(row["text"]) for row in rows[:8])
         # Numeric ends on both halves identify two independent TOC columns.
         numbers = [r for r in rows if r["text"].isdigit()]
         two_columns = sum(r["x2"] < 520 for r in numbers) >= 3 and sum(r["x"] > 520 for r in numbers) >= 3
         for row in rows:
             if two_columns:
                 row["column"] = int(row["x"] >= 520)
-        contents.extend(_contents_entries(rows, number, two_columns))
+        entries = _contents_entries(rows, number, two_columns)
+        if not known_contents:
+            # A damaged/missing "Contents" heading is not a reason to use every
+            # chapter listed on that page as a body heading. Require repeated
+            # title/label rows and independently observed right-aligned labels.
+            numbered = [e for e in entries if e["label"].isdigit() and len(e["title"]) <= 100]
+            if (len(numbered) < 4 or sum(bool(_CHAPTER.match(e["title"])) for e in numbered) < 2
+                    or sum(r["x"] > 650 for r in numbers) < 4):
+                continue
+            layout_contents.append(number)
+        contents_pages.add(number)
+        contents.extend(entries)
     # Existing native bookmarks remain useful only when their own observations passed.
     native = [deepcopy(n) for n in nodes if n.get("calibration_status") == "native"]
     suppressed = {key for key, occurrences in repeated.items() if len(occurrences) >= max(3, len(pages) * .08)}
     contents_keys = {_body_key(r["title"]) for r in contents}
+    full_contents_keys = {_key(r["title"]) for r in contents}
     candidates = []
     for number, rows in by_page.items():
         if number in contents_pages:
             continue
+        # OCR can store a title before its chapter number, or split a two-word
+        # title horizontally. Match the visual row, retain each raw fragment.
+        for row in rows:
+            if (row["y"] < 90 or row["y2"] > 940
+                    or not (_PART.match(row["text"]) or _CHAPTER.match(row["text"]))):
+                continue
+            parts = sorted([r for r in rows if abs((r["y"]+r["y2"]-row["y"]-row["y2"])/2)
+                            <= min(r["y2"]-r["y"],row["y2"]-row["y"])*.65], key=lambda r:r["x"])
+            joined = " ".join(r["text"] for r in parts)
+            if len(parts) < 2 or _key(joined) not in full_contents_keys:
+                continue
+            boxes = [p["locator"].get("normalized_bbox") for p in parts]
+            ranges = [p["locator"].get("raw_text_range") for p in parts]
+            if not all(ranges) or not all(box and len(box)==4 for box in boxes):
+                continue
+            locator = {**row["locator"], "raw_text_fragments":ranges,
+                       "normalized_bbox":[min(b[0] for b in boxes),min(b[1] for b in boxes),max(b[2] for b in boxes),max(b[3] for b in boxes)]}
+            locator.pop("raw_text_range",None);locator.pop("bbox",None)
+            candidates.append({**row,"text":joined,"locator":locator,"joined":True})
         for row in rows:
             text = row["text"]
             if row["y"] < 90 or row["y2"] > 940 or _key(text) in suppressed:
@@ -231,7 +268,9 @@ def automatic_nodes(asset, nodes):
                 continue
             occupied.add(identity)
             level = min(6, min(range(len(indents)), key=lambda i:abs(indents[i] - entry["x"])) + 1)
-            if _CHAPTER.match(title) or _FRONT_BACK.match(title):
+            if _PART.match(title) or _FRONT_BACK.match(title):
+                level = 1
+            elif _CHAPTER.match(title):
                 level = 1
             elif any(_CHAPTER.match(r["title"]) for r in contents):
                 level = max(2, level)
@@ -260,6 +299,16 @@ def automatic_nodes(asset, nodes):
         if not selected:
             selected = [deepcopy(n) for n in nodes if n.get("pdf_page") and n.get("source") == "generated_heading"
                         and n.get("calibration_status") == "generated"]
+    # Only a part with a verified body destination can own later chapters.
+    # Unresolved translated TOC groups must not indent the entire book.
+    in_part = False
+    for node in sorted(selected,key=lambda n:(n["pdf_page"],n["position"])) if contents else []:
+        if _PART.match(node["title"]):
+            in_part = True
+        elif _FRONT_BACK.match(node["title"]):
+            in_part = False
+        elif in_part:
+            node["level"] = 2 if _CHAPTER.match(node["title"]) else min(6,node["level"]+1)
     selected = _parents(selected)
     targets = {(_key(n["title"]), n["pdf_page"]): n["id"] for n in selected}
     replacements = {n["id"]: targets[(_key(n["title"]), n["pdf_page"])] for n in native
@@ -275,6 +324,9 @@ def automatic_nodes(asset, nodes):
     diagnostics = [{"code":"automatic_outline" if selected else "no_outline_detected",
                     "message":"目录已自动生成，可在后台修正。" if selected else "尚未识别到可定位的章节，可完成文字识别后重新生成，或在后台补充。",
                     "algorithm":PARSER_VERSION}]
+    if layout_contents:
+        diagnostics.append({"code":"contents_layout_observed", "pages":layout_contents,
+                            "message":"目录标题文字不完整，已依据重复的标题与右侧页码版面识别。"})
     if unresolved:
         diagnostics.append({"code":"unresolved_contents", "message":"这些条目尚无可靠落点，其余目录已生成。", "entries":unresolved})
     return _tree_order(selected), diagnostics

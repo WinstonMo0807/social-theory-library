@@ -1,3 +1,7 @@
+## 2026-11-13 新馆藏自动维护候选更新
+
+f6728245已更新5份API源码并核对哈希，源码回退包位于候选根目录backup-knowledge-automation-f6728245-20261113212303/source-before.tar.gz。仅候选API于13:23:55.921 UTC重启，无迁移；worker/beat保持停止。前端来自当前工作区，实际登录界面成功读取策略并显示模型未启用的等待路径，未保存策略或启动全馆任务。正式/候选/前端分别HTTP200，宿主内存和IO等待仍存在。公网、正式数据库和MCP没有变更。
+
 ## 2026-11-13 目录候选备份与关键词回执运行
 
 b5ae5fdc已上传候选discovery_indexing.py并核对哈希，备份backup-index-receipts-b5ae5fdc-20261113193247/source-before.tar.gz，API于11:33:34.611 UTC重启。指定书目3次有限执行已确认实际迟到回执，最近47.540秒完成单元6→9并保留下一批任务。worker/beat仍停止，未运行全馆索引。
