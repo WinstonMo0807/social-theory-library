@@ -23,7 +23,8 @@ from catalog.services.outline_labels import LABEL_ONLY, LABEL_RANGE, PRINTED_LAB
 from ingestion.models import AuditEvent, ProcessingJob
 
 
-PARSER_VERSION = "outline-v9-docling-geometry"
+PARSER_VERSION = "outline-v10-docling-geometry"
+AUTOMATIC_PARSER_VERSIONS = {"outline-v9-docling-geometry", PARSER_VERSION}
 HEADING = re.compile(r"^(?:第[一二三四五六七八九十百零\d]+[编部篇章节]|(?:chapter|part|section|appendix)\s+[\w一二三四五六七八九十]+|\d+(?:\.\d+){1,5}\s+)", re.I)
 CONTENTS = re.compile(r"^(?:目\s*[录錄]|contents|table\s+of\s+contents)$", re.I)
 ENTRY = re.compile(rf"^(?P<title>.+?)\s*(?:[.．·…_]{{2,}}|\s{{2,}}|\t)\s*(?P<label>{PRINTED_LABEL})\s*$")
@@ -51,6 +52,19 @@ def _match_key(value):
 
 def _readable(title):
     return bool(title and len(title) <= 600 and "\ufffd" not in title and not re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", title))
+
+
+def _split_contents_pairs(lines):
+    """OCR often puts the printed page number on its own line.
+
+    Used only immediately after an observed contents page; a number in ordinary
+    body text cannot start a contents sequence. Require repeated short title /
+    label pairs, not just several numbers or a single page footer.
+    """
+    return sum(bool(LABEL_ONLY.fullmatch(line)) and 3 <= len(previous) < 180
+               and not LABEL_ONLY.fullmatch(previous)
+               and not re.search(r"[。；;!?！？]", previous)
+               for previous, line in zip(lines, lines[1:]))
 
 
 def _level(title):
@@ -214,7 +228,9 @@ def extract_outline(asset, path, *, progress=None):
         is_contents = (any(CONTENTS.match(_title(line)) for line in lines[:8])
             or any(CONTENTS.fullmatch(_title("".join(lines[i:i+2]))) for i in range(min(7, len(lines)-1)))
             or sum(bool(match) for match in matches) >= 3
-            or page["index"]-1 in contents_pages and (any(matches) or any(line in {"目", "录", "錄"} for line in lines[:4])))
+            or page["index"]-1 in contents_pages and (any(matches)
+                or _split_contents_pairs(lines) >= 3
+                or any(line in {"目", "录", "錄"} for line in lines[:4])))
         if is_contents:
             contents_pages.add(page["index"])
             pending = ""
@@ -687,7 +703,7 @@ def adopt_outline(asset_id, *, revision_id, expected_revision, actor, restore=Fa
         raise ValueError("目录为空，请先添加并确认有效目录项。")
     if any(type(node.get("pdf_page")) is not int or not 1 <= node["pdf_page"] <= asset.page_count for node in revision.nodes):
         raise ValueError("仍有目录项缺少有效物理页落点，请先逐项校准。")
-    allowed = {"confirmed", "native", "matched", "generated"} if restore and revision.parser_version == PARSER_VERSION else {"confirmed", "native"}
+    allowed = {"confirmed", "native", "matched", "generated"} if restore and revision.parser_version in AUTOMATIC_PARSER_VERSIONS else {"confirmed", "native"}
     if any(node.get("calibration_status") not in allowed for node in revision.nodes):
         raise ValueError("仍有目录项未经明确确认，请核对候选后再采用。")
     # Adoption changes the edit precondition too. Otherwise two windows can

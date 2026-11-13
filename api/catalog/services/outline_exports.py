@@ -9,7 +9,7 @@ from django.utils import timezone
 from kombu.exceptions import OperationalError
 
 from catalog.models import Asset
-from catalog.services.document_outline import OutlineConflict, OutlineJobInterrupted, _source_current, _tree_order
+from catalog.services.document_outline import AUTOMATIC_PARSER_VERSIONS, OutlineConflict, OutlineJobInterrupted, _source_current, _tree_order
 from ingestion.models import AuditEvent, ProcessingJob
 
 OPERATION = "outline_export"
@@ -67,7 +67,7 @@ def export_revision(asset, revision_id):
     document = asset.document_revisions.filter(is_active=True).first()
     if not revision or str(revision.document_revision_id or "") != str(document.pk if document else ""):
         raise OutlineConflict("已采用目录或原文已变化，请重新读取当前目录；原文件保留。")
-    automatic = revision.origin in {"automatic", "corrected", "restored"} and revision.parser_version == "outline-v9-docling-geometry"
+    automatic = revision.origin in {"automatic", "corrected", "restored"} and revision.parser_version in AUTOMATIC_PARSER_VERSIONS
     allowed = {"confirmed", "native", "matched", "generated"} if automatic else {"confirmed", "native"}
     if (not revision.nodes or not (automatic or revision.reviewed)
             or any(node.get("calibration_status") not in allowed or not node.get("pdf_page") for node in revision.nodes)):

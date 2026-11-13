@@ -21,7 +21,7 @@ from catalog.services.page_geometry import validated_geometry, locator_geometry
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
 
-STRUCTURE_VERSION = "stl-raw-structure-v3"
+STRUCTURE_VERSION = "stl-raw-structure-v4"
 LOCATOR_VERSION = "stl-locator-v1"
 
 
@@ -143,6 +143,18 @@ def _outline_heading(page_text, raw):
         offset = _locate_title(page_text, candidate)
         if offset is not None:
             return candidate, offset
+    # A heading may be repeated verbatim in the paragraph below it. The outline
+    # parser can retain its exact block range only after aligning the original
+    # ordered blocks to this complete raw page, including every intervening gap.
+    position = (raw.get("source_locator") or {}).get("raw_text_range") or {}
+    left, right = position.get("start"), position.get("end")
+    if (observed and position.get("unit") == "unicode_codepoint"
+            and type(left) is int and type(right) is int and 0 <= left < right <= len(page_text)
+            and position.get("page_text_hash") == digest(page_text)
+            and position.get("exact") == page_text[left:right]):
+        offset = _locate_title(position["exact"], observed)
+        if offset is not None:
+            return observed, left + offset
     # A confirmed correction changes the display spelling, not the retained
     # source observation. Resolve that observation exactly on the same page;
     # neither edit distance nor normalized-text offsets can supply a locator.
@@ -191,6 +203,13 @@ def build_structure(revision):
     full = "\n".join(full_parts)
     by_page = {p.page_number: p for p in pages}
     headings, gaps = [], []
+    # Automatic navigation may omit unresolved candidates from its usable tree.
+    # Mapping every remaining node does not prove the whole outline is complete.
+    for diagnostic in outline.diagnostics if outline else []:
+        if diagnostic.get("code") == "unresolved_contents" and not diagnostic.get("stage"):
+            gaps.extend({"title": entry.get("title"), "page": entry.get("pdf_page"),
+                "contents_page": entry.get("contents_page"), "printed_label": entry.get("printed_label"),
+                "reason": "outline_target_unresolved"} for entry in diagnostic.get("entries", []))
     outline_nodes = outline.nodes if outline else []
     running_headers = _running_headers(outline_nodes)
     for raw in outline_nodes:

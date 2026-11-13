@@ -55,6 +55,21 @@ def test_codepoint_and_exact_quote(source):
 
 
 @pytest.mark.django_db
+def test_unresolved_printed_entries_survive_structure_mapping(source):
+    outline = source.asset.outline_revisions.get(is_active=True)
+    outline.diagnostics = [
+        {"code": "unresolved_contents", "stage": "before_automatic_matching", "entries": [{"title": "already resolved"}]},
+        {"code": "unresolved_contents", "entries": [{"title": "Missing chapter", "printed_label": "30", "contents_page": 1}]},
+    ]
+    outline.save()
+    structure = build_structure(source)
+    assert structure.coverage["mapped_headings"] == 3
+    assert structure.coverage["structure_status"] == "needs_structure_review"
+    assert structure.coverage["unmapped_headings"] == [{"title": "Missing chapter", "page": None,
+        "contents_page": 1, "printed_label": "30", "reason": "outline_target_unresolved"}]
+
+
+@pytest.mark.django_db
 def test_unrecoverable_history_does_not_read_latest(source):
     source.is_active = False
     source.save()

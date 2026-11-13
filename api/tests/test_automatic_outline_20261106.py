@@ -26,7 +26,8 @@ def test_no_observed_titles_does_not_claim_a_generated_outline(outline_source):
 
 
 @pytest.mark.django_db
-def test_automatic_outline_download_and_correction_preserve_source(outline_source, admin_user, settings):
+@pytest.mark.parametrize("retained_parser", [None, "outline-v9-docling-geometry"])
+def test_automatic_outline_download_and_correction_preserve_source(outline_source, admin_user, settings, retained_parser):
     asset, document, path = outline_source
     original = path.read_bytes()
     with patch("catalog.services.document_outline.dispatch_outline_job"), patch("catalog.services.outline_exports.dispatch_export"):
@@ -34,6 +35,9 @@ def test_automatic_outline_download_and_correction_preserve_source(outline_sourc
         assert queue_outline_rebuild(asset.pk, automatic=True).pk == job.pk
         result = run_outline_job(job.pk, task_id=job.task_id)
     active = asset.outline_revisions.get(is_active=True)
+    if retained_parser:
+        active.parser_version = retained_parser
+        active.save(update_fields=["parser_version"])
     assert result.status == "succeeded" and active.origin == "automatic" and not active.reviewed
     export = ProcessingJob.objects.get(asset=asset, stats__operation="outline_export")
     assert export.created_by_id is None

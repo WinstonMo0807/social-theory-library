@@ -1,6 +1,7 @@
 """Automatic navigation from existing OCR geometry, without another OCR/model service."""
 from collections import defaultdict
 from copy import deepcopy
+from hashlib import sha256
 import re
 
 from .outline_upstream import _match_score, _cluster_sizes, group_ocr_rows
@@ -21,16 +22,81 @@ def _caps(text):
     return len(letters) >= 5 and sum(c.isupper() for c in letters) / len(letters) > .85
 
 
+_CHAPTER = re.compile(r"^(?:第\s*[一二三四五六七八九十百零〇\dⅠⅡⅢIVXIlO\s]+章|chapter\s+[\w]+)[\s:：.、-]*", re.I)
+_FRONT_BACK = re.compile(r"^(?:自\s*序|前言|序言|后记|出版后记|参考文献|附录|preface\b|foreword\b|bibliography\b|references\b|appendix\b)", re.I)
+
+
+def _body_key(text):
+    return _key(_CHAPTER.sub("", text)) or _key(text)
+
+
+def _contents_entries(rows, number, two_columns):
+    from .document_outline import CONTENTS, ENTRY, TRAILING_PAGE
+    pending, entries = None, []
+    for row in group_ocr_rows(rows, "two" if two_columns else "single"):
+        text = _clean(row["text"])
+        if CONTENTS.fullmatch(text) or re.fullmatch(r"目\s*[录錄]\s*\d*", text) or row["y"] > 920:
+            pending = None
+            continue
+        match = ENTRY.match(text) or TRAILING_PAGE.match(text)
+        if not match:
+            # Preserve an observed OCR label such as 0g2; never silently repair
+            # it to a guessed page. A unique body heading can still locate it.
+            match = re.match(r"^(?P<title>.+?)\s+(?P<label>\d[\dA-Za-z]{1,4})$", text)
+        if match:
+            title = _clean(match["title"])
+            duplicate = ENTRY.match(title) or TRAILING_PAGE.match(title)
+            if (duplicate and duplicate["label"] == match["label"]
+                    and re.search(r"[.．…·_]$", duplicate["title"].rstrip())):
+                title = _clean(duplicate["title"])
+            # Continuation lines are visibly indented beneath an unnumbered
+            # first line. Do not attach a missing-label entry to its next peer.
+            if (pending and pending.get("column") == row.get("column")
+                    and 0 < row["y"] - pending["y"] < 40
+                    and row["x"] - pending["x"] > 15
+                    and not _CHAPTER.match(title)):
+                title = pending["text"] + " " + title
+                row = {**row, "x": pending["x"]}
+            elif (pending and pending.get("column") == row.get("column")
+                    and 0 < row["y"] - pending["y"] < 40 and abs(row["x"] - pending["x"]) < 12):
+                entries.append({"title":pending["text"], "label":"", "contents_page":number,
+                                "x":pending["x"] - (520 if row.get("column") == 1 else 0)})
+            if len(title) >= 2 and not title.isdecimal():
+                entries.append({"title":title, "label":match["label"], "contents_page":number,
+                                "x":row["x"] - (520 if row.get("column") == 1 else 0)})
+            pending = None
+        else:
+            pending = {**row, "text":text} if 3 <= len(text) <= 180 else None
+    # Odd/even page margins are layout, not an extra hierarchy level.
+    chapter_x = [r["x"] for r in entries if _CHAPTER.match(r["title"])]
+    if chapter_x:
+        for entry in entries:
+            entry["x"] -= min(chapter_x)
+    return entries
+
+
 def automatic_nodes(asset, nodes):
-    from .document_outline import CONTENTS, ENTRY, TRAILING_PAGE, HEADING, _node, _parents, _tree_order
+    from .document_outline import CONTENTS, ENTRY, TRAILING_PAGE, HEADING, PARSER_VERSION, _node, _parents, _tree_order
     pages = list(asset.pages.order_by("index").prefetch_related("blocks"))
+    page_texts = {p.index:getattr(p,"text","") for p in pages}
     by_page, repeated = {}, defaultdict(set)
     labels = OutlineLabels([{"index": p.index, "printed_label": p.printed_label,
         "label_segment": p.label_segment} for p in pages], (asset.validation_details or {}).get("page_mapping"))
     for page in pages:
         width, height = page.width or 1, page.height or 1
-        rows = []
+        rows, cursor, aligned = [], 0, True
+        raw_text = getattr(page, "text", "")
+        page_hash = sha256(raw_text.encode()).hexdigest()
         for item in page.blocks.all():
+            if not item.text.strip():
+                continue
+            start = raw_text.find(item.text, cursor) if aligned and item.text else -1
+            aligned = start >= 0 and not raw_text[cursor:start].strip()
+            raw_range = {}
+            if aligned:
+                cursor = start + len(item.text)
+                raw_range = {"start":start,"end":cursor,"exact":item.text,
+                             "page_text_hash":page_hash,"unit":"unicode_codepoint"}
             if len(item.bbox or []) != 4 or not item.text.strip():
                 continue
             x, y, x2, y2 = item.bbox
@@ -38,7 +104,8 @@ def automatic_nodes(asset, nodes):
             row = {"text": text, "page": page.index, "x": x / width * 1000,
                    "x2": x2 / width * 1000, "y": y / height * 1000,
                    "y2": y2 / height * 1000, "score": 1.0,
-                   "locator": locator_geometry(item.bbox, page.geometry)}
+                   "locator": {**locator_geometry(item.bbox, page.geometry),
+                               **({"raw_text_range":raw_range} if raw_range else {})}}
             rows.append(row)
             if row["y"] < 100 or row["y2"] > 920:
                 repeated[_key(text)].add(page.index)
@@ -55,16 +122,11 @@ def automatic_nodes(asset, nodes):
         for row in rows:
             if two_columns:
                 row["column"] = int(row["x"] >= 520)
-        for row in group_ocr_rows(rows, "two" if two_columns else "single"):
-            match = ENTRY.match(row["text"]) or TRAILING_PAGE.match(row["text"])
-            if match:
-                title = _clean(match["title"])
-                if len(title) >= 2 and not title.isdecimal():
-                    contents.append({"title": title, "label": match["label"], "contents_page": number,
-                                     "x": row["x"] - (520 if row.get("column") == 1 else 0)})
+        contents.extend(_contents_entries(rows, number, two_columns))
     # Existing native bookmarks remain useful only when their own observations passed.
     native = [deepcopy(n) for n in nodes if n.get("calibration_status") == "native"]
     suppressed = {key for key, occurrences in repeated.items() if len(occurrences) >= max(3, len(pages) * .08)}
+    contents_keys = {_body_key(r["title"]) for r in contents}
     candidates = []
     for number, rows in by_page.items():
         if number in contents_pages:
@@ -76,9 +138,38 @@ def automatic_nodes(asset, nodes):
             inline = re.match(r"^(.{3,100}?)\s*[.。]?\s*[—–]", text)
             if inline:
                 candidates.append({**row, "text": _clean(inline[1]), "inline_heading": True})
-            if not 3 <= len(text) <= 180:
+            if not 2 <= len(text) <= 180 or len(text) == 2 and _body_key(text) not in contents_keys:
                 continue
             candidates.append(row)
+            # A wrapped body heading must match the complete observed TOC title.
+            # Its union box is made only from contiguous, overlapping text boxes.
+            parts = [row]
+            for _ in range(2):
+                last = parts[-1]
+                following = [r for r in rows if r not in parts and 0 <= r["y"] - last["y2"] < 20
+                             and min(r["x2"], last["x2"]) > max(r["x"], last["x"])]
+                if not following:
+                    break
+                nxt = min(following, key=lambda r:r["y"])
+                parts.append(nxt)
+                joined = " ".join(r["text"] for r in parts)
+                if len(joined) > 180:
+                    break
+                if _body_key(joined) in contents_keys:
+                    boxes = [p["locator"].get("normalized_bbox") for p in parts]
+                    locator = {}
+                    if all(box and len(box) == 4 for box in boxes):
+                        locator = {**row["locator"], "normalized_bbox":[min(b[0] for b in boxes),min(b[1] for b in boxes),max(b[2] for b in boxes),max(b[3] for b in boxes)]}
+                        # The old single-line source bbox no longer describes the union.
+                        locator.pop("bbox", None)
+                    locator.pop("raw_text_range", None)
+                    ranges = [p["locator"].get("raw_text_range") for p in parts]
+                    if all(ranges):
+                        first, last_range = ranges[0], ranges[-1]
+                        original = page_texts[number][first["start"]:last_range["end"]]
+                        if "".join(original.split()) == "".join("".join(r["exact"] for r in ranges).split()):
+                            locator["raw_text_range"] = {**first,"end":last_range["end"],"exact":original}
+                    candidates.append({**row, "text":joined, "y2":nxt["y2"], "locator":locator, "joined":True})
             # Recover adjacent title fragments in the same column, even if OCR interleaves another column.
             following = [r for r in rows if r is not row and -.3 * (row["y2"] - row["y"]) <= r["y"] - row["y2"] < 16 and r["y"] > row["y"]
                          and abs((r["x"] + r["x2"]) - (row["x"] + row["x2"])) < 130
@@ -95,9 +186,11 @@ def automatic_nodes(asset, nodes):
                 if len(hits) == 1:
                     anchors.append((index, int(entry["label"]), next(iter(hits))))
         indents = []
-        for x in sorted({r["x"] for r in contents}):
+        for x in sorted({r["x"] for r in contents if not _FRONT_BACK.match(r["title"])}):
             if not indents or x - indents[-1] > 20:
                 indents.append(x)
+        if not indents:
+            indents = [0]
         for index, entry in enumerate(contents):
             title = entry["title"]
             ranked = []
@@ -115,7 +208,10 @@ def automatic_nodes(asset, nodes):
                     break
                 if len(row["text"]) > max(30, len(title) * 1.8):
                     continue
-                score = _match_score(row["text"], title)
+                body_key, title_key = _body_key(row["text"]), _body_key(title)
+                if min(len(body_key),len(title_key)) < max(len(body_key),len(title_key)) * .8:
+                    continue
+                score = _match_score(body_key, title_key)
                 if score < .73:
                     continue
                 distance = abs(row["page"] - expected) if expected is not None else 0
@@ -135,6 +231,10 @@ def automatic_nodes(asset, nodes):
                 continue
             occupied.add(identity)
             level = min(6, min(range(len(indents)), key=lambda i:abs(indents[i] - entry["x"])) + 1)
+            if _CHAPTER.match(title) or _FRONT_BACK.match(title):
+                level = 1
+            elif any(_CHAPTER.match(r["title"]) for r in contents):
+                level = max(2, level)
             node = _node(asset, index, title, row["page"], source="printed_contents", level=level,
                          label=entry["label"], contents_page=entry["contents_page"],
                          locator={**row["locator"], "algorithm":"docling-title-match", "observed_title":row["text"]})
@@ -174,7 +274,7 @@ def automatic_nodes(asset, nodes):
             node["parent_id"] = None
     diagnostics = [{"code":"automatic_outline" if selected else "no_outline_detected",
                     "message":"目录已自动生成，可在后台修正。" if selected else "尚未识别到可定位的章节，可完成文字识别后重新生成，或在后台补充。",
-                    "algorithm":"outline-v9-docling-geometry"}]
+                    "algorithm":PARSER_VERSION}]
     if unresolved:
         diagnostics.append({"code":"unresolved_contents", "message":"这些条目尚无可靠落点，其余目录已生成。", "entries":unresolved})
     return _tree_order(selected), diagnostics

@@ -1,3 +1,9 @@
+## 2026-11-13 OCR目录范围与历史兼容
+
+outline-v10仅在已识别目录的相邻续页接纳重复的短标题/独立页码。沿现有分列/行聚合算法组合有缩进和相邻位置依据的多行标题，以章首位置扣除奇偶页边距，章节和前后附录身份保持；不将OCR错误页码自动改成猜测值。正文匹配要求完整标题的长度覆盖，连续且横向重叠的正文框只有能复现完整目录标题时才组合，坐标使用实际框并集。
+
+自动匹配可附raw_text_range，字段为start/end/exact/page_text_hash/unit=unicode_codepoint。它只在原始有序TextBlock与完整Page.text之间从起点逐块匹配、间隔全为空白时产生。结构读取时重新核对整页哈希、原文区间和标题，允许区分标题与下方重复论述，不用相似度或PDF坐标反推文本偏移。历史快照不变。v4覆盖同时保存最终自动目录的unresolved_contents；v9/v10目录均可走已有导出和恢复服务。
+
 ## 2026-11-13 顺序综合与增量编纂联动
 
 execute将最后一个顺序fold交给compile_wiki，编纂输入argument_context保存完整summary/development/limitations、source_artifact_hash、last_window、total_windows和unreviewed状态。此语境用于保留跨章概念变化、相反解释及范围限定；它没有新的原文证据地位，Wiki引用仍限定为本批经过原文回查的Assertion候选。该输入进入原有产物缓存键，不升级全局prompt版本，不使未变化章节重读。
