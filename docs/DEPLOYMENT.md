@@ -1,3 +1,7 @@
+## 2026-11-14 OCR页面预取更新内网
+
+653012a4的discovery_sources.py已更新候选并逐文件核对SHA256，回退包backup-ocr-page-prefetch-653012a4-20261114002026/source-before.tar.gz。API于2026-11-13T16:21:08.479817725Z重启，重型worker/beat仍停止，无schema变化。首次候选ready200/23.979秒，随后再次检查正式/候选均200/0.136秒才开始有限接续。宿主内存/IO full PSI avg60约26.19%/32.96%，不将探针成功解释为NAS承载已验证。公网、正式库、MCP保持。
+
 ## 2026-11-13 有界身份查询部署
 
 - 794e50ae已推送并更新候选knowledge_core.py，回退包backup-bounded-identity-ids-794e50ae-20261113235631/source-before.tar.gz；仅API重启，worker/beat继续停止。源代码无schema变化。API启动后ready200/9.311秒，随后200/0.057秒才继续。
