@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, ExternalLink, Netw
 import { useEffect, useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { SharedCitationButton } from "@/components/shared-citation-overlay";
+import { RelationSourceQuote } from "./relation-source-quote";
 import type { KnowledgeNodeDetail, NormalizedKnowledgeRelation, TheoryConceptUsage } from "@/lib/api/knowledge.types";
 import styles from "./theory-detail.module.css";
 
@@ -144,8 +145,7 @@ export function TheoryRelations({ node }: { node: KnowledgeNodeDetail }) {
         <div className={mode === "evidence" ? styles.fullWidth : styles.relationList}>
           {mode !== "evidence" ? <div className={styles.relationChoices}>{rows.map(row => <button key={row.id} type="button" aria-pressed={row.id === selected?.id} onClick={() => setSelectedId(row.id)}><span>{target(row).name}</span><small>{row.relation_label}</small><ChevronDown size={14} /></button>)}</div> : <label className={styles.relationSelect}>选择关系<select data-stl-select value={selected?.id || ""} onChange={event => setSelectedId(event.target.value)}>{rows.map(row => <option key={row.id} value={row.id}>{target(row).name} · {row.relation_label}</option>)}</select></label>}
           {selected ? <article className={styles.relationEvidence} aria-live="polite"><header><h3>{selected.source_name} {selected.direction === "undirected" ? "—" : selected.direction === "bidirectional" ? "↔" : "→"} {selected.target_name}</h3><span>{selected.relation_label}</span></header>{selected.description ? <p>{selected.description}</p> : null}
-            {(selected.evidence || []).length ? selected.evidence!.map(evidence => <div key={evidence.id}><blockquote>{evidence.quote}</blockquote><p>《{evidence.work_title}》 · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">核对这条关系的原文<ExternalLink size={14} /></Link> : null}</div>) : <p className={styles.notice}>这条关系尚无可公开定位的原文依据。关系说明与馆藏原文分开展示。</p>}
-            {selected.evidence_source ? <p className={styles.notice}>关系来源说明：{selected.evidence_source}</p> : null}
+            <RelationSourceQuote material={selected.source_material}/>{(selected.evidence || []).length ? selected.evidence!.map(evidence => <div key={evidence.id}><blockquote>{evidence.quote}</blockquote><p>《{evidence.work_title}》 · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">核对这条关系的原文<ExternalLink size={14} /></Link> : null}</div>) : null}
             <Link href={`/theories/nodes/${target(selected).slug}`}>查看{target(selected).name}<ArrowRight size={14} /></Link>
           </article> : null}
         </div>
