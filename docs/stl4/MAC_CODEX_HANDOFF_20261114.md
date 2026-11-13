@@ -55,7 +55,7 @@ python manage.py makemigrations --check --dry-run --noinput
 
 `inspect_knowledge_runtime`只读取迁移、依赖和运行元数据，不显示密钥/原文，不调用模型、不调度任务。它会区分缺迁移、缺worker依赖和当前产物回执；不能代替网络、文件或模型实测。API不必安装DocETL/Docling；缺少它们只说明相应计算环境尚未就绪。
 
-5. 有隔离恢复点后，再在该隔离库执行`python manage.py migrate --noinput`。新0103仅给run增加plan_version，历史记录为1，新建任务为2；不批量分析、不删除旧产物。该迁移已在本机隔离SQLite测试中执行，Mac PostgreSQL须另验。
+5. 有隔离恢复点后，再在该隔离库执行`python manage.py migrate --noinput`。0103给run增加plan_version，历史记录为1，新建任务为2；0104给订阅增加next_refresh_at/refresh_failures，支持接续退避。不批量分析、不删除旧产物。这些迁移已在本机隔离SQLite测试中执行，PostgreSQL须另验。
 6. 运行单run只读报告，例如：
 
 ```sh
@@ -73,6 +73,8 @@ plan_version=1保留旧窗口fold与单patch协议；新建run采用2。相同�
 - 同一目标页面一批可返回最多8个局部patch，完整陈述覆盖清单和每项证据仍校验，重复修改同一块拒绝。人工保护、基准哈希、ChangeSet和发布路径不变。
 - Provider、代理提交和远程完成使用同一覆盖/证据校验。预算共用AIClient的严格请求构造，包含系统指令、JSON/schema、UTF-8上界及预留输出，未调用模型前即拒绝超限。
 - 当前仍一个重型执行名额，不为了减少耗时直接打开跨进程并发。后续并发调整须根据实际Provider容量、在线体验和Mac测量。
+- v2新增stage1/windows范围计划，包含偏移/节点身份而不重复保存整书正文；部分分析恢复也复用原切窗，仍逐次验证快照。已有三书v1产物不强制转换。
+- 在线推理共享预算DISCOVERY_QUERY_INFERENCE_BUDGET_SECONDS默认8秒；这是可选模型准入和请求超时预算，不能当全搜索耗时保证。图权限批量检查、原检索会话诊断、0104自动接续及实际测试见RUNTIME_OPTIMIZATION_20261114.md。
 
 Gunicorn配置新增worker_abort调用栈诊断，只打印线程栈，不打印请求正文或局部变量。启动API时须沿`--config python:config.gunicorn`加载；旧候选命令未加载此配置，不能宣称已经捕获旧超时根因。
 

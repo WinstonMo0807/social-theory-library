@@ -32,6 +32,51 @@ def public_entities():
     return m.Entity.objects.filter(scope | standalone, merged_into__isnull=True).exclude(status__in=["withdrawn", "archived"])
 
 
+def prime_assertion_visibility(statements, visibility):
+    """Batch the same visibility predicates for prefetched bounded statements.
+
+    The dictionary is valid for this read only. Callers still use
+    assertion_public, and create a fresh dictionary after any model call.
+    """
+    from django.db.models import F
+    sources = [s for statement in statements for s in statement.retrieval_sources]
+    participants = [p for statement in statements for p in statement.retrieval_participants]
+    identities = {s.attribution_id for s in sources if s.attribution_id} | {p.entity_id for p in participants if p.entity_id}
+    identities = {key for key in identities if ("entity", key) not in visibility}
+    redirects, pending = {}, identities
+    while pending:
+        found = dict(m.Entity.objects.filter(pk__in=pending).values_list("pk", "merged_into_id"))
+        redirects.update(found)
+        pending = {key for key in found.values() if key and key not in redirects}
+        if len(redirects) > max(1, len(identities)) * 33:
+            raise ValueError("身份重定向超过安全范围，请核对归并历史。")
+    canonical = {}
+    for key in identities:
+        cursor, seen = key, set()
+        while redirects.get(cursor):
+            if cursor in seen or len(seen) >= 32:
+                raise ValueError("身份重定向存在循环或超过安全范围，请核对归并历史。")
+            seen.add(cursor)
+            cursor = redirects[cursor]
+        canonical[key] = cursor
+    published = set(public_entities().filter(pk__in=set(canonical.values())).values_list("pk", flat=True))
+    visibility.update((("entity", key), value in published) for key, value in canonical.items())
+    works = {s.work_id for s in sources if s.work_id and not s.document_revision_id} | {p.work_id for p in participants if p.work_id}
+    works = {key for key in works if ("work", key) not in visibility}
+    published_works = set(public_editions().filter(work_id__in=works).values_list("work_id", flat=True))
+    visibility.update((("work", key), key in published_works) for key in works)
+    editions = {p.edition_id for p in participants if p.edition_id and ("edition", p.edition_id) not in visibility}
+    published_editions = set(public_editions().filter(pk__in=editions).values_list("pk", flat=True))
+    visibility.update((("edition", key), key in published_editions) for key in editions)
+    pairs = {(s.edition_id, s.document_revision_id) for s in sources if s.document_revision_id}
+    pairs = {pair for pair in pairs if ("source", pair) not in visibility}
+    fulltext = set(public_editions(require_fulltext=True).filter(pk__in={e for e, _ in pairs}).values_list("pk", flat=True))
+    revisions = set(m.CatalogPublicationRevision.objects.filter(document_revision_id__in={r for _, r in pairs},
+        reader_asset_id=F("document_revision__asset_id"), status__in=["active", "superseded"], fulltext_ready=True)
+        .values_list("document_revision_id", flat=True))
+    visibility.update((("source", pair), pair[0] in fulltext and pair[1] in revisions) for pair in pairs)
+
+
 def assertion_public(statement, *, visibility=None):
     # A caller may reuse checks within one bounded read, never across requests
     # or across a model call/publication change.

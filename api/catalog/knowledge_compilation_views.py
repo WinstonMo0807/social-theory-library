@@ -84,7 +84,8 @@ class CompilationDetail(APIView):
             subscription.save(update_fields=["enabled", "updated_at"])
         else:
             subscription.enabled, subscription.updated_by = True, request.user
-            subscription.save(update_fields=["enabled", "updated_by", "updated_at"])
+            subscription.next_refresh_at, subscription.refresh_failures = None, 0
+            subscription.save(update_fields=["enabled", "updated_by", "updated_at", "next_refresh_at", "refresh_failures"])
             revision = subscription.latest_run.document_revision
             # Follow the new active text of the same file; never guess across editions.
             current = m.DocumentRevision.objects.filter(asset=revision.asset, is_active=True).first()

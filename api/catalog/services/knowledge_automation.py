@@ -1,5 +1,7 @@
 """New public sources join the existing compilation ledger, never a second queue."""
+from datetime import timedelta
 from django.db import transaction
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -123,3 +125,21 @@ def resume_configured_sources():
         if ready:
             ids = list(rows.filter(profile_key=key).order_by("updated_at").values_list("pk", flat=True)[:5])
             m.KnowledgeCompilation.objects.filter(pk__in=ids).update(pending_refresh=True)
+
+
+def resume_resource_waiters():
+    """Retry scheduling only: no automatic retry of failed model generations.
+
+    Never revoke a live lease, resume a paused source, or poll an external agent
+    or a remote stage by creating another run. Beat supplies the bounded retry.
+    """
+    now = timezone.now()
+    claimed = m.CapabilityDemand.objects.filter(pk=OuterRef("latest_run__demand_id"),
+        state="claimed", lease_expires_at__gt=now)
+    rows = m.KnowledgeCompilation.objects.filter(enabled=True, pending_refresh=False,
+        latest_run__updated_at__lte=now-timedelta(seconds=60)).filter(
+            Q(latest_run__status="waiting_resource")
+            | Q(latest_run__status="waiting_executor", latest_run__error__code="queue_unavailable"))
+    ids = list(rows.annotate(live_lease=Exists(claimed)).filter(live_lease=False)
+        .order_by("updated_at", "pk").values_list("pk", flat=True)[:5])
+    m.KnowledgeCompilation.objects.filter(pk__in=ids).update(pending_refresh=True)

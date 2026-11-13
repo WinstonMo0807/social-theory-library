@@ -101,6 +101,8 @@ class KnowledgeCompilation(UUIDTimeStampedModel):
     edition = models.OneToOneField("catalog.Edition", on_delete=models.PROTECT, related_name="knowledge_compilation")
     enabled = models.BooleanField(default=True, db_index=True)
     pending_refresh = models.BooleanField(default=False, db_index=True)
+    next_refresh_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    refresh_failures = models.PositiveSmallIntegerField(default=0)
     last_error = models.JSONField(default=dict)
     scope = models.JSONField(default=dict)
     profile_key = models.CharField(max_length=80, blank=True)

@@ -73,7 +73,8 @@ def test_anchor_budget_records_actual_model_input_without_corrupting_locator():
 
 def test_anchor_hydration_batches_paths_and_skips_legacy_page_reads(django_assert_max_num_queries):
     _, _, _, _, row = anchored_source()
-    with django_assert_max_num_queries(5):
+    # A sixth bounded query shares page objects across all evidence segments.
+    with django_assert_max_num_queries(6):
         values = retrieval._hydrate_evidence([{**row,"id":str(uuid4())} for _ in range(16)],
             retrieval_profile="stable",access_statuses=["public"])
     assert len(values)==16 and all(v.locator==values[0].locator for v in values)

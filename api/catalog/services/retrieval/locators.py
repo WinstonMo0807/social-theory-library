@@ -22,7 +22,7 @@ def current_source_locators(rows, access_statuses):
         active_document_revision_q(revision_prefix="document_revision"),
         current_retrieval_source_q(asset_prefix="document_revision__asset", access_statuses=access_statuses),
     ).select_related("document_revision__asset__edition__work").prefetch_related(
-        Prefetch("segments", queryset=EvidenceSegment.objects.select_related("page", "node"), to_attr="locator_segments")))
+        Prefetch("segments", queryset=EvidenceSegment.objects.select_related("node").prefetch_related("page"), to_attr="locator_segments")))
     _prime_paths(anchors)
     return {str(anchor.pk): locator_payload(anchor) for anchor in anchors}
 
@@ -79,7 +79,7 @@ def attach_locators(rows):
         source_type="discovery_document", source_id__in=[r["id"] for r in rows], target_type="anchor", quality="verified_text")}
     anchors = {a.pk: a for a in EvidenceAnchor.objects.filter(pk__in=[*mapping.values(), *documents.values()])
         .select_related("document_revision__asset__edition")
-        .prefetch_related(Prefetch("segments", queryset=EvidenceSegment.objects.select_related("page", "node"), to_attr="locator_segments"))}
+        .prefetch_related(Prefetch("segments", queryset=EvidenceSegment.objects.select_related("node").prefetch_related("page"), to_attr="locator_segments"))}
     _prime_paths(anchors.values())
     for row in rows:
         row["source_type"] = "original_text" if row.get("asset_id") else "knowledge_object"

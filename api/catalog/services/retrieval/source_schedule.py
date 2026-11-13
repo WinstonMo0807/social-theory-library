@@ -62,7 +62,11 @@ def publication_changed(edition_id):
     def dispatch():
         from catalog.services.knowledge_automation import enroll
         try:
-            if enroll(edition_id):
+            enrolled = enroll(edition_id)
+            from catalog.models import KnowledgeCompilation
+            existing = KnowledgeCompilation.objects.filter(edition_id=edition_id, enabled=True).update(
+                pending_refresh=True, next_refresh_at=None, refresh_failures=0)
+            if enrolled or existing:
                 from catalog.intelligence_tasks import refresh_compilations
                 refresh_compilations.apply_async(queue="intelligence")
         except Exception:

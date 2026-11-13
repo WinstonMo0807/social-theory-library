@@ -208,7 +208,10 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
     from catalog.services.knowledge_sources import digest
     logical_ids = [key for d in documents for key in
         (d.payload.get("node_segment_ids") or [d.payload.get("node_segment_id")]) if key]
-    logical = {str(s.pk):s for s in DocumentNodeSegment.objects.filter(pk__in=logical_ids).select_related("page","node")}
+    # Share immutable page objects across OCR lines; do not join full page
+    # geometry/text once per segment on both sides of model ranking.
+    logical = {str(s.pk):s for s in DocumentNodeSegment.objects.filter(pk__in=logical_ids)
+        .select_related("node").prefetch_related("page")}
     contribution_cache = {}
     for doc in documents:
         ref = refs[str(doc.pk)]

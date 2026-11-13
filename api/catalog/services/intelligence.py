@@ -617,20 +617,19 @@ def _completed_analyses(run, config, lease):
 
 
 def _analyze_windows(run, config, lease):
-    nodes = prepare(run)
+    from catalog.services.knowledge_compilation_plan import analysis_windows
+    planned = analysis_windows(run, config, lease)
     if not config.enabled:
         m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="waiting_configuration",stage=2)
         return
     m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="running",started_at=run.started_at or timezone.now(),model_identity=identity(config))
     analyses = []
     read_nodes = set()
-    planned = list(windows(nodes, config, run.scope))
-    paths, groups = chapter_paths(run.structure, (chapter for chapter, _ in planned), include_groups=True)
-    total_characters = sum(row["end"]-row["start"] for _, rows in planned for row in source_rows(rows))
+    total_characters = sum(row["end"]-row["start"] for entry in planned for row in entry["ranges"])
     read_characters = 0
     analysis_plan_hash = _analysis_plan_hash(run, config, run.structure)
     # Do not temporarily reset a partially read book to zero on every resume.
-    window_groups = [groups[chapter] for chapter, _ in planned] if run.plan_version == 2 else None
+    window_groups = [entry["group"] for entry in planned] if run.plan_version == 2 else None
     if (run.coverage.get("analysis_plan_hash") != analysis_plan_hash or run.coverage.get("total_windows") != len(planned)
             or run.coverage.get("total_characters") != total_characters
             or window_groups is not None and run.coverage.get("window_groups") != window_groups):
@@ -641,16 +640,16 @@ def _analyze_windows(run, config, lease):
         if window_groups is not None:
             run.coverage["window_groups"] = window_groups
         m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(coverage=run.coverage)
-    for index, (chapter, rows) in enumerate(planned):
-        chapter_path = paths[chapter]
-        model_rows = source_rows(rows)
+    for index, entry in enumerate(planned):
+        chapter_path = entry["chapter_path"]
+        model_rows = entry["ranges"]
         artifact = _model_artifact(run,2,f"window:{index}",{"revision":str(run.document_revision_id), "work_id":str(run.work_id),
             "work_title":run.work.title,
             "parser_version":run.structure.parser_version,"chapter_path":chapter_path,"ranges":model_rows},
             ANALYSIS_PROMPT, ANALYSIS_SCHEMA,config,lease,
             validate=lambda output: validate_analysis(output, model_rows))
         analyses.append(artifact)
-        read_nodes.update(row["node_id"] for row in rows if row["node_complete"])
+        read_nodes.update(entry["completed_node_ids"])
         read_characters += sum(row["end"]-row["start"] for row in model_rows)
         if len(analyses) > run.coverage.get("completed_windows", 0):
             run.coverage.update(read_nodes=len(read_nodes), completed_windows=len(analyses), read_characters=read_characters)
@@ -681,14 +680,17 @@ def execute(run, config, lease):
             data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_hash":artifact.output_hash,"position":i}
             summary = _model_artifact(run,3,f"fold:{i}",data,"按真实文献次序继续综合。保留论证发展和概念变化、相反解释及覆盖限制，不按多数意见归并。",SUMMARY_SCHEMA,config,lease)
             synthesis = summary.output
-    entity_proposals, entity_items, names = [], {}, {}
+    entity_proposals, entity_items, names, candidate_cache = [], {}, {}, {}
     for artifact in analyses:
         for raw in artifact.output.get("entities",[]):
             key = digest(raw)
             if key in entity_items:
                 continue
             item_id = str(uuid5(run.pk,"entity:"+key))
-            candidates = match_entities(raw["label"],raw["kind"])
+            lookup = (raw["label"], raw["kind"])
+            if lookup not in candidate_cache:
+                candidate_cache[lookup] = match_entities(*lookup)
+            candidates = candidate_cache[lookup]
             comparisons = []
             if candidates:
                 candidate_ids = {c["id"] for c in candidates}

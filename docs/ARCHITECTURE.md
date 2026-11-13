@@ -1,3 +1,9 @@
+## 2026-11-14 交互等待预算、窗口计划与接续退避
+
+统一retrieve_channel以请求内ContextVar共享可选推理预算，不建立跨请求失败缓存。默认8秒用于剩余HTTP超时及后续调用准入，交互触发只通知冷服务而不等其启动；后台推理沿原超时。已有Discovery会话保存安全数值耗时，来源/权限仍在模型调用后重查。可选知识图数据库故障在事务边界内隔离、明确警告，保留已校验原文。图可见性按本次限定陈述集批量查询，继续同一assertion_public规则，不放宽撤回、历史版本或身份归并判断。
+
+v2使用原CurationArtifact的stage1/windows持久保存范围计划，中途恢复也无需重构全书OCR节点与切窗；每次仍核验不可变快照和计划哈希，模型输入与覆盖保持。KnowledgeCompilation的0104增加next_refresh_at/refresh_failures；原beat负责有界资源恢复及1分钟至1小时的接续失败退避，不重试失败模型生成、不恢复人工暂停。原出版通知同时使既有启用订阅接续，没有新任务系统或自动发布。详见stl4/RUNTIME_OPTIMIZATION_20261114.md，尚未部署NAS。
+
 ## 2026-11-14 版本化章节综合与同页编纂
 
 CurationRun新增plan_version，0103使旧任务保留1，新建任务为2。v2按实际章节节点ID和完整请求预算合批，独立章内产物不依赖前章；全书仍按原文次序fold并固定前序哈希。单窗口复用原分析，完整窗口分析prompt不变。章节与Wiki产物分别核验有序covered_units/covered_assertion_ids，模型、代理与远程执行共用校验。Wiki同批最多8项局部patch，人工区块、基准版本、原文证据、ChangeSet与发布服务继续唯一。

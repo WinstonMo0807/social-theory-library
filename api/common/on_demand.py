@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 SERVICES = {"inference", "docx", "searxng", "ocr"}
 
 
-def ensure_service(name, *, url="", unix_socket=""):
+def ensure_service(name, *, url="", unix_socket="", wait_seconds=15):
     if not getattr(settings, "NAS_ON_DEMAND_ENABLED", False):
         return
     if name not in SERVICES:
@@ -28,7 +28,7 @@ def ensure_service(name, *, url="", unix_socket=""):
                     pipeline.get("stl:service-stopping:" + name)
                     return bool(pipeline.execute()[-1])
     parsed = urlsplit(url) if url else None
-    deadline = time.monotonic() + 15
+    deadline = time.monotonic() + max(0, min(15, wait_seconds))
     while True:
         try:
             stopping = signal()

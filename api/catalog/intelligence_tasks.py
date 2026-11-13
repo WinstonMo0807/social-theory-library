@@ -76,7 +76,10 @@ def execute_curation(run_id, version):
         from catalog.models import CapabilityDemand
         if CapabilityDemand.objects.filter(pk=run.demand_id, state__in=["completed", "canceled"]).exists():
             return
-        CurationRun.objects.filter(pk=run_id,version=version).update(status="waiting_resource")
+        # Another delivery may own the live lease. It must remain running.
+        if CapabilityDemand.objects.filter(pk=run.demand_id, state="claimed", lease_expires_at__gt=timezone.now()).exists():
+            return
+        CurationRun.objects.filter(pk=run_id,version=version).update(status="waiting_resource", updated_at=timezone.now())
         return
     try:
         execute(run,config,lease)

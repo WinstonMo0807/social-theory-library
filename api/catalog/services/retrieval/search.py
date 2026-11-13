@@ -1,6 +1,27 @@
 """Unified recall; Discovery sessions provide durable presentation."""
+import time
+import logging
+from django.db import DatabaseError, transaction
+
+logger = logging.getLogger(__name__)
+
+
 def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
                                expanded=False, aliases=(), request_context=None, is_current=None):
+    from catalog.services.discovery_inference import interactive_inference
+    context = request_context if request_context is not None else {}
+    with interactive_inference(context) as budget:
+        result = _retrieve_channel(query, channel, filters, access_statuses, limit=limit,
+            expanded=expanded, aliases=aliases, request_context=context, is_current=is_current)
+        result.setdefault("retrieval", {})["inference"] = {
+            "scope": "query_task", "calls": budget["calls"],
+            "elapsed_ms": round(budget["elapsed_seconds"] * 1000),
+            "budget_seconds": budget["limit_seconds"], "unavailable": budget["unavailable"]}
+        return result
+
+
+def _retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
+                      expanded=False, aliases=(), request_context=None, is_current=None):
     """One recall/fusion/source-check/order path for sessions and the legacy Ask adapter.
 
     ``filters`` here is a server-resolved scope, not unvalidated HTTP input. This
@@ -9,8 +30,11 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
     from catalog.services.discovery_sessions import _warning, _rrf, _deduplicate, _rerank, _diverse_prefix, MAX_MATERIALIZED
     from catalog.services.discovery_projection import discovery_candidates, validate_discovery_results
     request_context = request_context if request_context is not None else {}
+    started = time.monotonic()
     result = discovery_candidates(query, channel, filters, access_statuses, limit=limit,
                                   expanded=expanded, request_context=request_context)
+    timings = {"recall_ms": round((time.monotonic()-started)*1000)}
+    step = time.monotonic()
     branches = [(result.get("sparse", []), 1.0), (result.get("dense", []), 1.0),
                 (result.get("contextual", []), 0.6)]
     warnings = list(result.get("warnings", []))
@@ -18,9 +42,18 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
     if (channel == "passages" and not filters.get("search_scope") and not filters.get("_baseline")
             and not filters.get("_keyword_only") and not query.lstrip().startswith(('"', '“'))):
         from .knowledge_graph import recall
-        graph_rows, graph = recall(query, _rrf(branches), access_statuses,
-            generation=request_context.get("generation"), scopes=request_context.get("passage_scopes", []), filters=filters)
+        try:
+            # Optional knowledge recall cannot discard already-found original
+            # text. A savepoint also repairs a PostgreSQL failed transaction.
+            with transaction.atomic():
+                graph_rows, graph = recall(query, _rrf(branches), access_statuses,
+                    generation=request_context.get("generation"), scopes=request_context.get("passage_scopes", []), filters=filters)
+        except DatabaseError as exc:
+            logger.warning("Knowledge retrieval failed: %s", type(exc).__name__)
+            graph = {"status":"unavailable"}
+            warnings.append(_warning("knowledge_graph_unavailable", "知识关系召回暂不可用，已保留原文检索结果。", channel))
         branches.append((graph_rows, 0.35))
+    timings["knowledge_graph_ms"] = round((time.monotonic()-step)*1000)
     if channel == "passages" and filters.get("search_scope") == "terms":
         from catalog.models import QueryLexiconState
         from catalog.services.query_lexicon.search import resolve_search_query
@@ -52,7 +85,10 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
     for row in fused:
         if row["id"] in graph_refs:
             row["knowledge_assertion_ids"] = graph_refs[row["id"]]
+    step = time.monotonic()
     rows = validate_discovery_results(channel, fused, access_statuses, filters=filters)
+    timings["source_validation_ms"] = round((time.monotonic()-step)*1000)
+    step = time.monotonic()
     if channel == "passages":
         rows = _deduplicate(rows)
         if is_current and not is_current():
@@ -64,11 +100,15 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
         # tail remains available, but work diversity is not evidence relevance.
         if not any(warning.get("code") == "reranker_unavailable" for warning in rerank_warnings):
             rows = _diverse_prefix(rows, eligible_count=rerank_count)
+    timings["ranking_ms"] = round((time.monotonic()-step)*1000)
+    step = time.monotonic()
     # Model calls may outlive a publication change. Recheck after them as well.
     rows = validate_discovery_results(channel, rows, access_statuses, filters=filters)
     if channel == "passages":
         from .locators import attach_locators
         rows = attach_locators(rows)
+    timings["final_validation_locators_ms"] = round((time.monotonic()-step)*1000)
+    timings["total_ms"] = round((time.monotonic()-started)*1000)
     coverage = result.get("coverage") or {}
     if coverage.get("scope_status") == "candidate_filtered":
         warnings.append(_warning("coverage_unknown", coverage["notice"], channel))
@@ -79,6 +119,7 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
             "retrieval": {"algorithm": "hybrid_context_graph_rrf_v2", "rrf_k": 60,
                 "candidates": {name:len(result.get(name, [])) for name in ("sparse", "dense", "contextual")},
                 "knowledge_graph": graph,
+                "timings": timings,
                 "context_source": "bibliography_and_document_structure", "baseline": bool(filters.get("_baseline"))},
             "index_uid": str(result.get("index_uid") or getattr(request_context.get("generation"), "uid", "")),
             "embedding_artifact": str(result.get("embedding_artifact") or ""),

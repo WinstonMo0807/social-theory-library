@@ -2,10 +2,28 @@
 from __future__ import annotations
 
 import math
+import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from urllib.parse import urlsplit
 
 import httpx
 from django.conf import settings
+
+_interactive = ContextVar("discovery_interactive_inference", default=None)
+
+
+@contextmanager
+def interactive_inference(request_context):
+    """One query's finite optional-model budget; no cross-request failure cache."""
+    state = request_context.setdefault("inference_budget", {
+        "limit_seconds": min(30, max(1, float(getattr(settings, "DISCOVERY_QUERY_INFERENCE_BUDGET_SECONDS", 8)))),
+        "elapsed_seconds": 0.0, "calls": 0, "failures": {}, "unavailable": False})
+    token = _interactive.set(state)
+    try:
+        yield state
+    finally:
+        _interactive.reset(token)
 
 
 class DiscoveryInferenceError(RuntimeError):
@@ -17,6 +35,28 @@ class DiscoveryInferenceError(RuntimeError):
 def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None = None,
           max_response_bytes: int = 2_000_000, transport: httpx.BaseTransport | None = None,
           allow_unready_health: bool = False) -> dict:
+    state = _interactive.get()
+    if state is None:
+        return _request(path, payload, timeout_seconds=timeout_seconds, max_response_bytes=max_response_bytes,
+            transport=transport, allow_unready_health=allow_unready_health)
+    remaining = state["limit_seconds"] - state["elapsed_seconds"]
+    if state["unavailable"] or path in state["failures"] or remaining <= 0:
+        raise DiscoveryInferenceError(state["failures"].get(path, "inference_timeout"))
+    start = time.monotonic()
+    state["calls"] += 1
+    try:
+        return _request(path, payload, timeout_seconds=min(timeout_seconds or remaining, remaining),
+            max_response_bytes=max_response_bytes, transport=transport, allow_unready_health=allow_unready_health)
+    except DiscoveryInferenceError as exc:
+        state["failures"][path] = exc.code
+        if exc.code in {"service_unavailable", "invalid_endpoint", "inference_busy", "inference_timeout"}:
+            state["unavailable"] = True
+        raise
+    finally:
+        state["elapsed_seconds"] += time.monotonic() - start
+
+
+def _request(path, payload, *, timeout_seconds, max_response_bytes, transport, allow_unready_health):
     base = str(getattr(settings, "DISCOVERY_INFERENCE_URL", "http://discovery-inference:8091")).rstrip("/")
     allowed = str(getattr(settings, "DISCOVERY_INFERENCE_ALLOWED_HOSTS", "discovery-inference,127.0.0.1,localhost")).split(",")
     parsed = urlsplit(base)
@@ -28,9 +68,11 @@ def _call(path: str, payload: dict | None = None, *, timeout_seconds: int | None
     try:
         if transport is None and (path != "/health" or not allow_unready_health):
             from common.on_demand import ensure_service
-            ensure_service("inference", url=base)
+            # Signal a cold service, but an interactive keyword response must
+            # not wait 15 seconds separately for normalize, embed and rerank.
+            ensure_service("inference", url=base, **({"wait_seconds": 0} if _interactive.get() is not None else {}))
         # Never inherit a machine's outbound proxy for private library text.
-        with httpx.Client(trust_env=False, follow_redirects=False, timeout=httpx.Timeout(timeout, connect=3),
+        with httpx.Client(trust_env=False, follow_redirects=False, timeout=httpx.Timeout(timeout, connect=min(3, timeout)),
                           **({"transport": transport} if transport is not None else {})) as client:
             with client.stream("GET" if payload is None else "POST", base + path, json=payload) as response:
                 body = bytearray()

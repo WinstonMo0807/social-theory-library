@@ -11,7 +11,7 @@ from django.db.models import Exists, OuterRef, Prefetch, Q
 
 from catalog import models as m
 from catalog.discovery_index_models import DiscoveryDocument
-from catalog.services.knowledge_public import assertion_public, public_entities
+from catalog.services.knowledge_public import assertion_public, public_entities, prime_assertion_visibility
 from catalog.services.publication_eligibility import active_document_revision_q, current_retrieval_source_q
 
 VERSION = "source_assertion_ppr_v1"
@@ -31,14 +31,19 @@ def _statements(queryset):
     # Oversized editorial records remain readable through the knowledge API;
     # they do not monopolize an interactive query's expansion budget.
     return queryset.annotate(
+        has_evidence=Exists(m.AssertionEvidence.objects.filter(assertion_id=OuterRef("pk"))),
         too_many_sources=Exists(m.AssertionSource.objects.filter(assertion_id=OuterRef("pk"))[32:33]),
         too_many_participants=Exists(m.AssertionParticipant.objects.filter(assertion_id=OuterRef("pk"))[64:65]),
         too_many_evidence=Exists(m.AssertionEvidence.objects.filter(assertion_id=OuterRef("pk"))[64:65]),
     ).filter(too_many_sources=False, too_many_participants=False, too_many_evidence=False).prefetch_related(
-        Prefetch("sources", queryset=m.AssertionSource.objects.select_related(
-            "document_revision__asset", "attribution"), to_attr="retrieval_sources"),
-        Prefetch("participants", queryset=m.AssertionParticipant.objects.select_related("entity"),
-            to_attr="retrieval_participants"))
+        Prefetch("sources", queryset=m.AssertionSource.objects.all(), to_attr="retrieval_sources"),
+        Prefetch("participants", queryset=m.AssertionParticipant.objects.all(), to_attr="retrieval_participants"))
+
+
+def _visible_statements(queryset, visibility):
+    statements = list(_statements(queryset))
+    prime_assertion_visibility(statements, visibility)
+    return [s for s in statements if assertion_public(s, visibility=visibility)]
 
 
 def _source_overlap(rows):
@@ -55,7 +60,7 @@ def _current_segments(anchor_ids, access_statuses):
     return m.EvidenceSegment.objects.filter(anchor_id__in=anchor_ids).filter(
         active_document_revision_q(revision_prefix="anchor__document_revision"),
         current_retrieval_source_q(asset_prefix="anchor__document_revision__asset", access_statuses=access_statuses),
-    ).select_related("anchor", "page").order_by("anchor_id", "order")
+    ).select_related("anchor").prefetch_related("page").order_by("anchor_id", "order")
 
 
 def _valid_segment(segment):
@@ -120,12 +125,10 @@ def recall(query, raw_rows, access_statuses, *, generation, scopes, filters):
         selected = candidates[:remaining]
         seen.update(selected)
         next_frontier = set()
-        for statement in _statements(m.Assertion.objects.filter(pk__in=selected)):
-            if not assertion_public(statement, visibility=visibility):
-                continue
+        for statement in _visible_statements(m.Assertion.objects.filter(pk__in=selected), visibility):
             # A bibliographic reference or historical manual confirmation alone
             # cannot supply a graph edge to original-text retrieval.
-            if not statement.evidence.exists():
+            if not statement.has_evidence:
                 continue
             visible[statement.pk] = statement
             key = f"a:{statement.pk}"
@@ -179,7 +182,7 @@ def recall(query, raw_rows, access_statuses, *, generation, scopes, filters):
         docs = docs.filter(payload__language__in=_language_filter_values(filters["languages"]))
     # OCR pages can have many projected lines. Explicitly report this cap; never
     # materialize a whole collection or a dense all-entity similarity matrix.
-    documents = list(docs.order_by("pk")[:1201])
+    documents = list(docs.only("id", "document_revision_id", "source_revision", "payload", "start_offset", "end_offset").order_by("pk")[:1201])
     metadata["truncated"] |= len(documents) > 1200
     by_anchor = defaultdict(list)
     for link in links:
@@ -220,15 +223,15 @@ def enrich_paths(rows, references):
     if not ids:
         return rows
     visibility = {}
-    statements = {s.pk: s for s in _statements(m.Assertion.objects.filter(pk__in=sorted(ids, key=str)[:ASSERTIONS], status="published"))
-        if assertion_public(s, visibility=visibility)}
+    statements = {s.pk: s for s in _visible_statements(
+        m.Assertion.objects.filter(pk__in=sorted(ids, key=str)[:ASSERTIONS], status="published"), visibility)}
     segments = defaultdict(list)
     links = list(m.AssertionEvidence.objects.filter(assertion_id__in=statements)
         .order_by("assertion_id", "anchor_id")[:ANCHORS])
     by_anchor = defaultdict(list)
     for link in links:
         by_anchor[link.anchor_id].append(link)
-    for part in m.EvidenceSegment.objects.filter(anchor_id__in=by_anchor).select_related("anchor", "page").order_by("anchor_id", "order")[:256]:
+    for part in m.EvidenceSegment.objects.filter(anchor_id__in=by_anchor).select_related("anchor").prefetch_related("page").order_by("anchor_id", "order")[:256]:
         if _valid_segment(part):
             for link in by_anchor[part.anchor_id]:
                 segments[link.assertion_id].append((part, link.stance))

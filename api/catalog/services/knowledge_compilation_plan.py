@@ -7,6 +7,56 @@ There is no sampling, unordered reduce or implicit parallel Provider traffic.
 from rest_framework.exceptions import ValidationError
 from catalog.services.intelligence_provider import fits_input
 
+
+def analysis_windows(run, config, lease):
+    """Persist range planning once, including before all windows have finished.
+
+    The plan contains offsets, not a second copy of the book. Each resume reads
+    and verifies immutable page text; it does not rebuild thousands of OCR nodes.
+    """
+    from django.conf import settings
+    from catalog.services import intelligence as runner
+    from catalog.services.knowledge_sources import current_structure, digest
+    from catalog.services.intelligence_provider import identity
+    structure = current_structure(run.document_revision)
+    def inputs():
+        return {"structure_id":str(structure.pk), "structure_hash":structure.input_hash,
+            "source_manifest_hash":run.coverage.get("source_manifest_hash"),
+            "scope":run.scope, "model":identity(config), "selection":runner.SOURCE_SELECTION_VERSION,
+            "context_tokens":settings.INTELLIGENCE_CONTEXT_TOKENS, "planner":"ranges-v1"}
+    saved = run.artifacts.filter(stage=1, unit="windows", status="succeeded").first() if run.plan_version == 2 else None
+    if (saved and structure and run.structure_id == structure.pk and saved.input_manifest == inputs()):
+        if saved.output_hash != digest(saved.output):
+            raise ValidationError("窗口范围计划哈希不符，不能继续编纂。")
+        entries = saved.output["windows"]
+        numbers = {r["page_number"] for entry in entries for r in entry["ranges"]}
+        snapshots = list(run.document_revision.page_snapshots.filter(page_number__in=numbers)
+            .values_list("page_number", "text", "content_hash"))
+        pages = {number:text for number,text,_ in snapshots}
+        if set(pages) != numbers or any(digest(text) != checksum for _,text,checksum in snapshots):
+            raise ValidationError("窗口计划引用的正文快照缺失或哈希不符。")
+        for entry in entries:
+            for row in entry["ranges"]:
+                text = pages[row["page_number"]]
+                if not 0 <= row["start"] < row["end"] <= len(text):
+                    raise ValidationError("窗口计划原文范围无效。")
+                row["text"] = text[row["start"]:row["end"]]
+        run.structure = structure
+        return entries
+    nodes = runner.prepare(run)
+    structure = run.structure
+    if not config.enabled:
+        return None
+    planned = list(runner.windows(nodes, config, run.scope))
+    paths, groups = runner.chapter_paths(structure, (chapter for chapter, _ in planned), include_groups=True)
+    entries = [{"chapter_path":paths[chapter], "group":groups[chapter],
+        "completed_node_ids":sorted({r["node_id"] for r in rows if r["node_complete"]}),
+        "ranges":runner.source_rows(rows)} for chapter, rows in planned]
+    if run.plan_version == 2:
+        ranges = [{**entry, "ranges":[{k:v for k,v in row.items() if k != "text"} for row in entry["ranges"]]} for entry in entries]
+        runner._save_artifact(run, 1, "windows", inputs(), {"windows":ranges}, lease=lease)
+    return entries
+
 CHAPTER_PROMPT = (
     "按sources_in_order的真实原文次序综合本章的这些连续窗口，全部纳入，不抽样。"
     "保留论证发展、主张者、相反解释、概念用法变化及条件；不得按多数意见归并。"

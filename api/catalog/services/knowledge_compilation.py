@@ -4,10 +4,12 @@ Provider and agent execution share the same immutable inputs, chapter cache,
 validators and ChangeSet writer. Agent work is explicit, never a fake Provider.
 """
 import json
+from datetime import timedelta
 from types import SimpleNamespace
 from uuid import uuid5
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from catalog import models as m
 from catalog.services.knowledge_core import require_editor, page_content, page_metadata
@@ -57,6 +59,7 @@ def configure(revision, actor, *, enabled=True, scope=None, profile_key="", exec
     subscription.enabled, subscription.scope = enabled, scope
     subscription.profile_key, subscription.execution_mode = profile_key, execution_mode
     subscription.updated_by = actor
+    subscription.next_refresh_at, subscription.refresh_failures = None, 0
     subscription.save()
     subscription.target_pages.set(pages)
     if enabled:
@@ -77,7 +80,7 @@ def request_page_refresh(page_ids):
     ids = list(rows.values_list("pk", flat=True))
     if not ids:
         return
-    m.KnowledgeCompilation.objects.filter(pk__in=ids).update(pending_refresh=True)
+    m.KnowledgeCompilation.objects.filter(pk__in=ids).update(pending_refresh=True, next_refresh_at=None, refresh_failures=0)
     def dispatch():
         from catalog.intelligence_tasks import refresh_compilations
         try:
@@ -90,15 +93,18 @@ def request_page_refresh(page_ids):
 
 
 def reconcile_pending():
-    from catalog.services.knowledge_automation import recover_new_sources, resume_configured_sources
+    from catalog.services.knowledge_automation import recover_new_sources, resume_configured_sources, resume_resource_waiters
     recover_new_sources()
     resume_configured_sources()
-    ids = list(m.KnowledgeCompilation.objects.filter(enabled=True, pending_refresh=True).order_by("updated_at").values_list("pk", flat=True)[:30])
+    resume_resource_waiters()
+    due = Q(next_refresh_at__isnull=True) | Q(next_refresh_at__lte=timezone.now())
+    ids = list(m.KnowledgeCompilation.objects.filter(due, enabled=True, pending_refresh=True).order_by("updated_at", "pk").values_list("pk", flat=True)[:30])
     for key in ids:
         try:
             with transaction.atomic():
                 subscription = m.KnowledgeCompilation.objects.select_for_update().get(pk=key)
-                if not subscription.enabled or not subscription.pending_refresh:
+                if (not subscription.enabled or not subscription.pending_refresh
+                        or subscription.next_refresh_at and subscription.next_refresh_at > timezone.now()):
                     continue
                 revision = subscription.latest_run.document_revision if subscription.latest_run_id else subscription.edition.active_catalog_revision.document_revision
                 published = subscription.edition.active_catalog_revision
@@ -107,10 +113,14 @@ def reconcile_pending():
                     revision = published.document_revision
                 revision = m.DocumentRevision.objects.filter(asset=revision.asset, is_active=True).first() or revision
                 reconcile(revision, retry=True)
-                m.KnowledgeCompilation.objects.filter(pk=key).update(pending_refresh=False, last_error={})
+                m.KnowledgeCompilation.objects.filter(pk=key).update(pending_refresh=False, last_error={},
+                    next_refresh_at=None, refresh_failures=0, updated_at=timezone.now())
         except Exception as exc:
+            failures = min(10, m.KnowledgeCompilation.objects.get(pk=key).refresh_failures + 1)
             m.KnowledgeCompilation.objects.filter(pk=key).update(last_error={
-                "code":type(exc).__name__, "message":"编纂接续失败，已保留原产物；请核对来源和执行配置后重试。"})
+                "code":type(exc).__name__, "message":"编纂接续失败，原产物保留；将在退避后重试，其他来源继续处理。"},
+                refresh_failures=failures, next_refresh_at=timezone.now()+timedelta(seconds=min(3600, 60*2**(failures-1))),
+                updated_at=timezone.now())
 
 
 @transaction.atomic
@@ -234,6 +244,7 @@ def compilation_data(subscription, actor):
         "work_id":str(subscription.edition.work_id), "title":subscription.edition.work.title,
         "enabled":subscription.enabled, "execution_mode":subscription.execution_mode,
         "pending_refresh":subscription.pending_refresh, "refresh_error":subscription.last_error,
+        "next_refresh_at":subscription.next_refresh_at, "refresh_failures":subscription.refresh_failures,
         "scope":subscription.scope, "profile_key":subscription.profile_key,
         "target_page_ids":[str(key) for key in subscription.target_pages.values_list("pk", flat=True)],
         "run_id":str(run.pk) if run else None, "status":run.status if run else "waiting",

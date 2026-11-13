@@ -111,8 +111,13 @@ def mentioned_entities(query, rows, *, limit=8):
         is_verified=True, displayable=True, source_kind__in=FORMAL_PERSON_VARIANT_SOURCES), "name")
     nodes = contains_label(m.KnowledgeNodeAlias.objects.filter(node_id=OuterRef("node_id"),
         is_verified=True, source_kind__in=FORMAL_KNOWLEDGE_ALIAS_SOURCES), "alias")
-    return list(entity_query(rows, public=True).annotate(
+    matches = entity_query(rows, public=True).annotate(
         mention_length=Length("identity_label"), mention_position=StrIndex(Lower(Value(query)), Lower("identity_label")),
         alias_mentioned=Exists(aliases), person_mentioned=Exists(people), node_mentioned=Exists(nodes)
     ).filter(Q(mention_length__gte=2, mention_position__gt=0) | Q(alias_mentioned=True)
-        | Q(person_mentioned=True) | Q(node_mentioned=True)).order_by("-mention_length", "pk")[:limit])
+        | Q(person_mentioned=True) | Q(node_mentioned=True)).order_by("-mention_length", "pk")
+    # Identity selection needs no biographies/definitions from nine joined
+    # profile tables. Load the small selected identity set afterwards.
+    ids = list(matches.values_list("pk", flat=True)[:limit])
+    selected = m.Entity.objects.only("id", "kind", "label").in_bulk(ids)
+    return [selected[key] for key in ids if key in selected]

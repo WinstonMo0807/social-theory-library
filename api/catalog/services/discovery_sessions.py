@@ -715,6 +715,18 @@ def execute_session(session_id, generation: int, task_id: str) -> None:
                             aliases.append(value)
                 aliases = aliases[:6]
             channel_state = {"status": "degraded" if warnings else "completed"}
+            diagnostics = result.get("retrieval") or {}
+            # Persist only measured numeric diagnostics with the existing
+            # session. No source text, credentials or new polling task.
+            timings = diagnostics.get("timings") or {}
+            channel_state["timings"] = {key:timings[key] for key in (
+                "recall_ms", "knowledge_graph_ms", "source_validation_ms", "ranking_ms",
+                "final_validation_locators_ms", "total_ms") if type(timings.get(key)) is int and timings[key] >= 0}
+            inference = diagnostics.get("inference") or {}
+            channel_state["inference"] = {key:inference[key] for key in ("calls", "elapsed_ms")
+                if type(inference.get(key)) is int and inference[key] >= 0}
+            if inference.get("scope") == "query_task":
+                channel_state["inference"]["scope"] = "query_task_cumulative"
             version = str(result.get("version") or "")
         except SoftTimeLimitExceeded:
             raise
