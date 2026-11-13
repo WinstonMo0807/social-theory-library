@@ -19,6 +19,14 @@ import styles from "./search-reading-workbench.module.css";
 const PreviewContext = createContext<{ work?: Work; citation?: ResolvedEvidence; mobile?: boolean | null; inspect?: (ref:ResolvedEvidence)=>void; select: (work: Work, focus?: boolean) => void }>({ select: () => {} });
 
 export function SearchReadingWorkbench({ works, children }: { works: Work[]; children: ReactNode }) {
+  const scope = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const header = document.querySelector<HTMLElement>("header.site-header"), root = scope.current;
+    if (!header || !root) return;
+    const update = () => root.style.setProperty("--search-header-height", `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    update(); const observer = new ResizeObserver(update); observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
   const [selected, setSelected] = useState<Work>();
   const [citation,setCitation]=useState<ResolvedEvidence>();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -29,7 +37,7 @@ export function SearchReadingWorkbench({ works, children }: { works: Work[]; chi
     if (window.matchMedia("(max-width: 1100px)").matches) setMobileOpen(true);
     else if (focus) document.getElementById("search-reading-preview")?.focus();
   }
-  return <PreviewContext.Provider value={{ work, select, citation, mobile, inspect:ref=>{setCitation(ref);if(window.matchMedia("(max-width: 1100px)").matches)setMobileOpen(true);} }}><div className={styles.scope}>{children}</div>
+  return <PreviewContext.Provider value={{ work, select, citation, mobile, inspect:ref=>{setCitation(ref);if(window.matchMedia("(max-width: 1100px)").matches)setMobileOpen(true);} }}><div ref={scope} className={styles.scope}>{children}</div>
     <Dialog open={mobile === true && mobileOpen} onRequestClose={() => setMobileOpen(false)} aria-label="作品预览" className={styles.mobilePreview}>
       <header><h2>作品预览</h2><button aria-label="关闭作品预览" onClick={() => setMobileOpen(false)}><X size={20}/></button></header>
       {mobile === true && mobileOpen ? citation ? <SourceCitationPanel input={{reference:citation}}/> : work ? <PreviewDetails key={`${work.workId}:${work.editionId}`} work={work}/> : null : null}
