@@ -1,5 +1,7 @@
 ## 2026-11-14 复用入库恢复与跳过占用来源
 
+索引每次任务声明/代际状态/来源归属合并为一个带Exists的SQL，再实时读取实际出版版本及权限，总查询4→2；不缓存这些资格，写入后的回执和发布校验继续保持。用户明确停止Codex暂代生成模型，既有人工代理回执保留，不自动接续waiting_agent；未配置Provider保持等待，原文检索与结构维护可独立运行。
+
 正文结构同步仍是ProcessingJob.logical_structure。它现在进入原recover_stalled_processing_jobs与统一dispatcher，使用原claim/task_id/heartbeat/max_attempts，不增加队列数据库。Celery路由显式列出refresh_source，使Redis消息存在性检查覆盖该队列；已排队/未知队列状态不误当丢失，人工暂停保持。共享intelligence任务名称只是后端兼容，不恢复独立工作台。
 
 订阅接续采用PostgreSQL skip_locked，占用项保留标志，其他来源继续。原短事务、模型/索引分离和唯一编纂服务保持。本机PostgreSQL与真实Meilisearch验证见stl4/POSTGRES_REHEARSAL_20261114.md。

@@ -12,7 +12,7 @@ from uuid import UUID, uuid4, uuid5
 
 from django.conf import settings
 from django.db import connection, transaction
-from django.db.models import F, Q
+from django.db.models import Exists, F, Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -357,12 +357,14 @@ def remove_source(generation, kind, source_id, *, keep_revision=None):
 
 
 def _is_current(job, generation, header):
-    if not ProcessingJob.objects.filter(pk=job.pk, task_id=job.task_id, status="running").exists():
-        return False
-    if not SemanticIndexVersion.discovery_objects.filter(pk=generation.pk, status__in=["building", "ready", "active"]).exists():
-        return False
-    if not DiscoverySourceState.objects.filter(generation=generation, source_type=job.stats["source_type"],
-            source_id=job.stats["source_id"], job_id=job.pk).exists():
+    generation_current = SemanticIndexVersion.discovery_objects.filter(
+        pk=generation.pk, status__in=["building", "ready", "active"])
+    owner_current = DiscoverySourceState.objects.filter(generation=generation, source_type=job.stats["source_type"],
+        source_id=job.stats["source_id"], job_id=job.pk)
+    # One statement for the three current ownership guards; never cache them
+    # across chunks. Keep the exact publication/access check immediately below.
+    if not ProcessingJob.objects.filter(Exists(generation_current), Exists(owner_current),
+            pk=job.pk, task_id=job.task_id, status="running").exists():
         return False
     if job.stats["source_type"] == "edition":
         row = source_queryset("edition").filter(pk=job.stats["source_id"]).values_list(

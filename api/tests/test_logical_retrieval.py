@@ -11,6 +11,28 @@ from tests.test_discovery_sessions_v308 import fixture_source
 pytestmark = pytest.mark.django_db
 
 
+def test_index_guards_are_bounded_and_observe_live_ownership_and_withdrawal():
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    edition, asset, revision, generation, job, old = indexing_source()
+    header = get_source("edition", edition.pk)[1]
+    with CaptureQueriesContext(connection) as queries:
+        assert indexing._is_current(job, generation, header)
+    assert len(queries) == 2
+    ProcessingJob.objects.filter(pk=job.pk).update(task_id=str(uuid4()))
+    assert not indexing._is_current(job, generation, header)
+    ProcessingJob.objects.filter(pk=job.pk).update(task_id=job.task_id)
+    m.DiscoverySourceState.objects.filter(job=job).update(job=None)
+    assert not indexing._is_current(job, generation, header)
+    m.DiscoverySourceState.objects.filter(generation=generation, source_id=edition.pk).update(job=job)
+    generation.status = "retired"; generation.save(update_fields=["status"])
+    assert not indexing._is_current(job, generation, header)
+    generation.status = "active"; generation.save(update_fields=["status"])
+    assert indexing._is_current(job, generation, header)
+    edition.state = "withdrawn"; edition.save(update_fields=["state"])
+    assert not indexing._is_current(job, generation, header)
+
+
 def test_ocr_line_packing_preserves_raw_offsets_and_note_boundaries(monkeypatch):
     from catalog.services.knowledge_sources import snapshot_revision, digest
     from catalog.services.discovery_sources import logical_source_units, logical_unit_text

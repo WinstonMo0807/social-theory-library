@@ -17,6 +17,7 @@ git log -5 --oneline
 
 ## 必须保留的运行边界
 
+- 用户最新明确停止Codex暂代生成模型。不要继续人工生成章节/全书/Wiki产物；未配置Provider时保持等待，旧三书产物与决定不改写。原文、缓存、索引和迁移验证可继续。
 - NAS正式服务优先。隔离候选重型worker/beat已停止，不因克隆代码、恢复数据库或接续本任务而自动启动。
 - 只允许迁移准备、隔离恢复和内网验证；公网、正式数据库写入端、DNS和Cloudflare Tunnel切换仍等用户授权。
 - Intelligence独立工作台不恢复，审核使用/admin/knowledge/review。MCP不开发、不重建、不部署。
@@ -76,6 +77,7 @@ plan_version=1保留旧窗口fold与单patch协议；新建run采用2。相同�
 - v2新增stage1/windows范围计划，包含偏移/节点身份而不重复保存整书正文；部分分析恢复也复用原切窗，仍逐次验证快照。已有三书v1产物不强制转换。
 - 在线推理共享预算DISCOVERY_QUERY_INFERENCE_BUDGET_SECONDS默认8秒；这是可选模型准入和请求超时预算，不能当全搜索耗时保证。图权限批量检查、原检索会话诊断、0104自动接续及实际测试见RUNTIME_OPTIMIZATION_20261114.md。
 - 后续增加订阅skip_locked和正文结构任务的原ProcessingJob恢复接入。部署时同步更新恢复worker与源任务worker；消息携带原job/task_id，队列暂停不会被此源码提交自行解除。真实数据库/引擎检查见POSTGRES_REHEARSAL_20261114.md。
+- 索引每次任务/代际/来源归属检查合并为带Exists查询，仍实时核对出版版本及权限；每次4→2条SQL。两书缓存原文的索引与定位记录只证明本机限定关键词路径，不是任意观点质量或全馆时延承诺。
 
 Gunicorn配置新增worker_abort调用栈诊断，只打印线程栈，不打印请求正文或局部变量。启动API时须沿`--config python:config.gunicorn`加载；旧候选命令未加载此配置，不能宣称已经捕获旧超时根因。
 
