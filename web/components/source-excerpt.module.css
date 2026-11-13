@@ -2,18 +2,22 @@
 .header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px 20px; margin-bottom:12px; font:500 max(13px,var(--stl-readable-meta,13px))/1.5 var(--sans); }
 .header strong { font-weight:600; }.header>span { color:var(--muted,#69655f); font-variant-numeric:tabular-nums; }
 .toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:20px; font:400 max(13px,var(--stl-readable-ui,14px))/1.4 var(--sans); }
-.modes { display:flex; flex-wrap:wrap; padding:3px; background:var(--wash,#eeebe5); border-radius:7px; gap:2px; }
-.modes button,.settings summary,.footer button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:6px 10px; border:1px solid transparent; border-radius:5px; color:inherit; font:inherit; cursor:pointer; }
-.modes button[aria-pressed=true] { background:var(--surface,#fffefa); box-shadow:0 1px 3px #0000000c; color:var(--ink); }
-.modes button:hover,.settings summary:hover,.footer button:hover { background:var(--wash,#eeebe5); border-color:var(--line,#d8d2c8); }
+.settings summary,.footer button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:6px 10px; border:1px solid transparent; border-radius:5px; color:inherit; font:inherit; cursor:pointer; }
+.settings summary:hover,.footer button:hover { background:var(--wash,#eeebe5); border-color:var(--line,#d8d2c8); }
 .settings { position:relative; }.settings summary { list-style:none; }.settings summary::-webkit-details-marker { display:none; }
 .popover { position:absolute; z-index:12; inset-inline-end:0; top:calc(100% + 6px); width:250px; max-width:calc(100vw - 40px); padding:16px; border:1px solid var(--line,#d8d2c8); border-radius:9px; background:var(--surface,#fffefa); box-shadow:0 8px 28px #00000014; }
 .popover label { display:flex; align-items:flex-start; gap:9px; padding:7px 0; }.popover input { margin-top:3px; accent-color:var(--gold,#9f7b42); }.popover p { font:400 13px/1.6 var(--sans); color:var(--muted); margin:10px 0 0; }
 .texts { max-inline-size:42em; }.texts>div { min-width:0; }.texts small { display:block; margin-bottom:10px; color:var(--muted); font:500 13px/1.5 var(--sans); }
-.texts[data-compare] { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-inline-size:none; }.texts[data-compare]>div+div { border-inline-start:1px solid var(--line,#d8d2c8); padding-inline-start:24px; }
 .texts :global(.source-text) { font-size:max(16px,var(--stl-readable-body,16px)); line-height:1.85; color:var(--ink); }
 .footer { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:16px; font:400 13px/1.5 var(--sans); }.footer>span { color:var(--muted); }.footer svg { flex:none; }
 .manual { display:grid; gap:8px; font:14px/1.6 var(--sans); }.manual textarea { min-height:140px; width:100%; padding:12px; border:1px solid var(--line); }
 .error { color:var(--stl-danger,#8a332c); font:14px/1.7 var(--sans); }.excerpt button:disabled { opacity:.55; cursor:not-allowed; }.excerpt button[aria-busy=true] { cursor:progress; }
-@media(max-width:760px) { .texts[data-compare] { grid-template-columns:1fr; }.texts[data-compare]>div+div { border-inline-start:0; padding-inline-start:0; padding-top:20px; border-top:1px solid var(--line); }.toolbar { gap:8px; }.modes button,.settings summary,.footer button { min-height:40px; }.popover { inset-inline-start:0; inset-inline-end:auto; } }
+@media(max-width:760px) { .settings summary,.footer button { min-height:40px; } }
 @media(prefers-reduced-motion:reduce) { .excerpt * { transition:none!important; } }
+
+/* Comfortable reading is the only presentation; cleaning stays a quiet option. */
+.excerpt { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:12px; }
+.header { margin:0 0 18px; align-items:center; }
+.toolbar { margin:0 0 18px; align-self:start; }
+.texts,.footer,.error,.manual { grid-column:1/-1; }
+@media(max-width:600px) { .header { display:grid; gap:5px; } .header>span { font-size:12px; } .toolbar { margin-bottom:14px; } }

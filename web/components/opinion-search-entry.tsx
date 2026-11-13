@@ -65,7 +65,7 @@ export function OpinionSearchEntry({ initialFilters = {} }: { initialFilters?: D
     </form>
     {message ? <p className={styles.alert} role="alert"><CircleAlert size={18} />{message}</p> : null}
     {scope !== "all" && selected.length === 0 && !hasInheritedScope ? <p className={styles.alert} role="status"><CircleAlert size={18} />请先选择当前公开的{title.replace("特定", "")}，核对范围后再检索。</p> : null}
-    <section className={styles.scopeSection} aria-labelledby="opinion-scope-title"><h2 id="opinion-scope-title">选择检索范围 <Info size={16} aria-label="范围用于原文检索；知识与策展按问题提供线索" /></h2>
+    <section className={styles.scopeSection} aria-labelledby="opinion-scope-title"><h2 id="opinion-scope-title">选择检索范围 <Info size={16} aria-label="限定查找原文的文献范围" /></h2>
       <div className={styles.scopeCards} role="radiogroup" aria-label="检索范围">{scopes.map((item, index) => <button type="button" role="radio" aria-checked={scope === item.key} tabIndex={scope === item.key ? 0 : -1} key={item.key} onClick={() => chooseScope(item.key)} onKeyDown={event => {
         const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 0;
         if (!delta) return;

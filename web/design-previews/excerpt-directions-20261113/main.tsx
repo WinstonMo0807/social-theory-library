@@ -7,6 +7,7 @@ import { SourceText } from "@/components/source-text";
 import { ReaderContextMenu } from "@/components/reader/reader-floating-controls";
 import { DefaultCover } from "@/components/default-cover";
 import { LoadingState } from "@/components/ui/loading-state";
+import { QueryDirection, PreviewFacet, queryCopy } from "./query-directions";
 import "./preview.css";
 
 const passages = [
@@ -14,7 +15,7 @@ const passages = [
   "概括起来，民族问题主要有四个层面：政治层面、经济层面、文\n\n化层面和社会层面。”②可见，郑先生不仅强调民族互利和民族认\n\n同是民族团结的基础，而且对此做了全面、深入而具体的思考和\n\n回答。在中国社会的快速转型中，不仅形成了一种市场化经济和\n\n市场化社会，国家及地方政府的运行也不可能脱离市场化的现实。",
 ];
 const citation = "李强, 洪大用. 社会运行论及其发展[M]. 北京: 中国人民大学出版社, 2020: 316.";
-const titles = { A:"核对与引用", B:"连续精读", C:"材料比较" };
+const queryTitles = { Q1:"问题稿纸", Q2:"检索书签", Q3:"研究札记" };
 // Public catalog cover, read back from the existing book record on 2026-11-13.
 const coverUrl = "https://books.winstonmo.com/api/catalog/works/345a5992-efe3-4f73-acd1-72c9dc752105/cover/?edition_id=7051527d-6aba-42b8-a268-276c643991ae";
 function BookCover(){
@@ -23,9 +24,10 @@ function BookCover(){
 }
 
 function App(){
-  const [variant,setVariant]=useState<"A"|"B"|"C">("A");
+  const [variant,setVariant]=useState<"A"|"B"|"C">("B");
   const [selected,setSelected]=useState(0),[grid,setGrid]=useState(false),[query,setQuery]=useState("民族认同与社会整合");
-  const [filter,setFilter]=useState(false),[filterQuery,setFilterQuery]=useState(""),[onlyOcr,setOnlyOcr]=useState(false);
+  const [filter,setFilter]=useState(false),[facetValues,setFacetValues]=useState<Record<string,string[]>>({});
+  const [direction,setDirection]=useState<"Q1"|"Q2"|"Q3">("Q1"),[copyIndex,setCopyIndex]=useState(0);
   const [tab,setTab]=useState("引用"),[draft,setDraft]=useState(""),[notes,setNotes]=useState<string[]>([]),[materials,setMaterials]=useState<number[]>([]);
   const [selection,setSelection]=useState(""),[status,setStatus]=useState(""),[manualCopy,setManualCopy]=useState(false),[mark,setMark]=useState(false);
   const [menu,setMenu]=useState<{x:number;y:number}|null>(null);
@@ -36,13 +38,15 @@ function App(){
   async function copyCitation(){try{await navigator.clipboard.writeText(citation);setStatus("引用格式已复制");setManualCopy(false);}catch{setManualCopy(true);setStatus("请在右侧选中文字复制");}}
   function choose(next:typeof variant){setVariant(next);setStatus("");}
   return <div className="design-root" data-variant={variant}>
-    <header className="masthead"><a href="https://books.winstonmo.com/home" className="brand"><img src="/brand/stl-symbol-20261027.svg" alt=""/><span><b>Social Theory Library</b><strong>社会理论书库</strong></span></a><nav aria-label="设计版本">{(["A","B","C"] as const).map(v=><button key={v} aria-pressed={variant===v} onClick={()=>choose(v)}>{v}<span>{titles[v]}</span></button>)}</nav></header>
-    <main><div className="page-heading"><div><p>书库检索</p><h1>{variant==="A"?"在原文中，找到依据。":variant==="B"?"让阅读，回到文字。":"并置原文，继续研究。"}</h1></div><button className="quiet" onClick={()=>setShowComponents(v=>!v)} aria-expanded={showComponents}><SlidersHorizontal size={16}/>组件与反馈</button></div>
-    <form className="searchbar" onSubmit={event=>{event.preventDefault();setStatus(query.trim()?`本地演示：保留当前两段原文，查询词为“${query.trim()}”`:"请输入检索内容");}}><Search size={21}/><input aria-label="检索内容" value={query} onChange={e=>setQuery(e.target.value)}/><button type="button" className="icon" aria-label="清空检索" onClick={()=>setQuery("")}><X size={17}/></button><button className="button" type="submit">检索<ArrowRight size={17}/></button></form>
-    <div className="result-toolbar"><div className="result-tabs"><strong>原文检索</strong><span>2 段截图原文 · 交互预览</span></div><div><button className="quiet mobile-filter" onClick={()=>setFilter(v=>!v)} aria-expanded={filter}><SlidersHorizontal size={16}/>筛选</button><label className="sort">排序 <select value={sort} onChange={e=>setSort(e.target.value)}><option>页码顺序</option><option>页码倒序</option></select></label><div className="view-toggle"><button aria-label="列表视图" aria-pressed={!grid} onClick={()=>setGrid(false)}><List size={18}/></button><button aria-label="网格视图" aria-pressed={grid} onClick={()=>setGrid(true)}><LayoutGrid size={18}/></button></div></div></div>
+    <header className="masthead"><a href="https://books.winstonmo.com/home" className="brand"><img src="/brand/stl-symbol-20261027.svg" alt=""/><span><b>Social Theory Library</b><strong>社会理论书库</strong></span></a><nav aria-label="检索框方案">{(["Q1","Q2","Q3"] as const).map(v=><button key={v} aria-pressed={direction===v} onClick={()=>setDirection(v)}>{v}<span>{queryTitles[v]}</span></button>)}</nav></header>
+    <main><div className="preview-controls"><span>B 版 · 固定阅读布局</span><label>文案<select aria-label="观点检索文案" value={copyIndex} onChange={e=>setCopyIndex(Number(e.target.value))}>{queryCopy.map((copy,index)=><option key={copy.name} value={index}>{copy.name}</option>)}</select></label><button className="quiet" onClick={()=>setShowComponents(v=>!v)} aria-expanded={showComponents}><SlidersHorizontal size={16}/>组件与反馈</button></div>
+    <QueryDirection direction={direction} copyIndex={copyIndex} value={query} onChange={setQuery} onSubmit={()=>setStatus("本地设计演示：已保留问题，当前展示截图中的两段原文。")}/>
+    <div className="result-toolbar"><div className="result-tabs"><strong>相关原文</strong><span>2 段截图原文 · 交互预览</span></div><div><button className="quiet mobile-filter" onClick={()=>setFilter(v=>!v)} aria-expanded={filter}><SlidersHorizontal size={16}/>筛选</button><label className="sort">排序 <select value={sort} onChange={e=>setSort(e.target.value)}><option>页码顺序</option><option>页码倒序</option></select></label><div className="view-toggle"><button aria-label="列表视图" aria-pressed={!grid} onClick={()=>setGrid(false)}><List size={18}/></button><button aria-label="网格视图" aria-pressed={grid} onClick={()=>setGrid(true)}><LayoutGrid size={18}/></button></div></div></div>
     <div className="workspace">
-      <aside className={`navigation ${filter?"is-open":""}`}><h2 className="panel-heading">{variant==="A"?"筛选结果":"原文导航"}</h2>{variant==="A"?<div className="filter-content"><h2>内容类型</h2><label className="check"><input type="checkbox" checked={onlyOcr} onChange={e=>setOnlyOcr(e.target.checked)}/>包含 OCR 原文<span>2</span></label>{["作者","理论流派","研究专题","文献标签"].map(title=><details className="facet" key={title}><summary>{title}<ChevronDown size={15}/></summary><label className="facet-search"><Search size={14}/><input placeholder={`搜索${title}`} aria-label={`搜索${title}`} value={filterQuery} onChange={e=>setFilterQuery(e.target.value)}/></label><p>{filterQuery?"没有匹配项":"当前示例暂无可筛选项"}</p></details>)}<button className="quiet" onClick={()=>{setOnlyOcr(false);setFilterQuery("");}}>清除筛选</button></div>:<div className="passage-nav">{rows.map(i=><button key={i} aria-pressed={selected===i} onClick={()=>setSelected(i)}><small>原文 0{i+1}</small><strong>社会运行论及其发展</strong><span>书页 316 · PDF 330</span><p>{i===0?"民族互利与民族认同":"民族问题的不同层面"}</p></button>)}</div>}</aside>
-      <section className={`results ${grid?"is-grid":""}`} aria-label="原文结果">{(variant==="B"?[selected]:rows).map(i=><article className={`paper ${selected===i?"selected":""}`} key={i} data-mark={mark&&selected===i||undefined} onClick={()=>setSelected(i)}>
+      <aside className={`navigation ${filter?"is-open":""}`}><h2 className="panel-heading">筛选结果</h2><div className="filter-content">{[
+        ["文献类型",["图书"]], ["责任者",["李强","洪大用"]], ["理论流派",[]], ["主题",[]], ["概念",[]], ["出版年份",["2020"]], ["文献语言",["中文"]], ["可读版本",["有 PDF"]],
+      ].map(([title,options])=><PreviewFacet key={String(title)} title={String(title)} options={options as string[]} selected={facetValues[String(title)]||[]} onChange={values=>setFacetValues(current=>({...current,[String(title)]:values}))}/>)}<button className="quiet" onClick={()=>setFacetValues({})}>清除筛选</button></div></aside>
+      <section className={`results ${grid?"is-grid":""}`} aria-label="原文结果">{rows.map(i=><article className={`paper ${selected===i?"selected":""}`} key={i} data-mark={mark&&selected===i||undefined} onClick={()=>setSelected(i)}>
         <header className="paper-heading"><BookCover/><div><small className="passage-index">原文 0{i+1}</small><h2>社会运行论及其发展</h2><p>李强、洪大用 主编 · 中国人民大学出版社 · 2020</p></div><button className="icon" aria-label={`选用第${i+1}段原文`} aria-pressed={materials.includes(i)} onClick={e=>{e.stopPropagation();setSelected(i);setMaterials(value=>value.includes(i)?value.filter(n=>n!==i):[...value,i]);}}>{materials.includes(i)?<Check size={19}/>:<Bookmark size={19}/>}</button></header>
         <div className="source-area" onContextMenu={event=>{if(event.shiftKey)return;event.preventDefault();setSelected(i);setMenu({x:event.clientX,y:event.clientY});}} onMouseUp={()=>{const value=window.getSelection()?.toString().trim();if(value)setSelection(value);}}><SourceExcerpt text={passages[i]} label={variant==="C"?(i===0?"本段原文":"同页相邻原文"):"原文节选 · OCR"} location="书页 316 · PDF 330" marginalia={["社会运行论及其发展","316"]}/></div>
         <footer className="paper-actions"><button className="button" onClick={e=>{e.stopPropagation();setStatus("此为截图排版预览；正式页面沿用原阅读器定位链接。");}}>在线阅读<ArrowRight size={16}/></button><button className="quiet" onClick={()=>{setSelected(i);setVariant("B");}}>展开原文</button><button className="quiet" onClick={()=>{setTab("引用");setStatus(`右侧已定位原文 0${i+1} 的出处`);}}><Quote size={15}/>引用</button><button className="quiet" onClick={()=>{setTab("笔记");setSelection(passages[i]);}}><PencilLine size={15}/>笔记</button></footer>

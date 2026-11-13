@@ -45,16 +45,16 @@ export function EvidenceQuote({ item }: { item: DiscoveryPassage }) {
   return <div className={styles.readableExcerpt}><SourceExcerpt key={item.id} text={item.excerpt} label={`${t("原文节选")}${/ocr/i.test(item.source_kind) ? " · OCR" : ""}`} location={`${item.printed_page ? `${t("书页 {page}", { page: item.printed_page })} · ` : ""}PDF ${item.pdf_page}`} marginalia={[item.work.title, item.printed_page || ""]} validateSource={async () => { await previewSharedCitation({ reference: passageReference(item), selectedText: item.excerpt }); }} /></div>;
 }
 
-export function EvidenceResultCard({ item, index, selected, fresh, onSelect, onContext }: {
-  item: DiscoveryPassage; index: number; selected: boolean; fresh: boolean; onSelect: () => void; onContext: () => void;
+export function EvidenceResultCard({ item, index, selected, fresh, onSelect, onContext, returnTo }: {
+  item: DiscoveryPassage; index: number; selected: boolean; fresh: boolean; onSelect: () => void; onContext: () => void; returnTo?: string;
 }) {
   const { t } = useEvidenceLanguage();
-  return <article className={`${styles.resultCard} ${selected ? styles.selectedCard : ""}`} id={`material-${item.id}`}>
+  return <article className={`${styles.resultCard} ${selected ? styles.selectedCard : ""}`} id={`material-${item.id}`} onClick={event => { if((event.target as HTMLElement).closest("button,a,input,textarea,select,summary,label")) return; if(window.getSelection()?.toString().trim()) return; onSelect(); }}>
     <span className={styles.resultNumber}>{index + 1}</span><div className={styles.resultContent}>
       <div className={styles.selectEvidence}><EvidenceBook item={item} onSelect={onSelect} /></div>
       <div className={styles.evidenceTags}>{fresh ? <span>{t("本轮新增")}</span> : null}<span>{t("含原文证据")}</span>{item.attribution?.status && item.attribution.status !== "unknown" ? <span>{item.attribution.label}</span> : null}</div>
       <div className={styles.selectQuote}><EvidenceQuote item={item} /></div>
-      <footer><span>{item.section_title || t("章节位置待核对")}</span><button type="button" className="editorial-link" onClick={onContext}>{t("查看上下文")}<ChevronRight size={14} /></button></footer>
+      <footer>{discoveryReaderHref(item, returnTo) ? <Link href={discoveryReaderHref(item, returnTo)} className="button"><BookOpen size={16} />{t("在线阅读")}</Link> : null}<button type="button" onClick={onSelect}><Copy size={15} />{t("引用")}</button><button type="button" className="editorial-link" onClick={onContext}>{t("查看上下文")}<ChevronRight size={14} /></button></footer>
     </div><div className={styles.cardSave}><SaveWorkButton workId={item.work.id} compact /></div>
   </article>;
 }

@@ -74,14 +74,14 @@ export function SearchReadingPreview() {
   </aside>;
 }
 
-export function SearchableFacet({ title, name, options, selected }: { title: string; name: string; options: SearchFacetOption[]; selected: string[] }) {
+export function SearchableFacet({ title, name, options, selected, onSelectionChange }: { title: string; name: string; options: SearchFacetOption[]; selected: string[]; onSelectionChange?: (values: string[]) => void }) {
   const fieldset = useRef<HTMLFieldSetElement>(null);
   const [query, setQuery] = useState("");
   const [chosen, setChosen] = useState(selected);
   const selectionKey = JSON.stringify(selected);
   useEffect(() => {
     const reset = () => { setChosen(JSON.parse(selectionKey)); setQuery(""); };
-    reset();
+    setChosen(JSON.parse(selectionKey));
     const form = fieldset.current?.closest("form");
     form?.addEventListener("reset", reset);
     return () => form?.removeEventListener("reset", reset);
@@ -90,6 +90,6 @@ export function SearchableFacet({ title, name, options, selected }: { title: str
   const matches = rows.filter(row => row.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   return <fieldset ref={fieldset} className={styles.facet}><legend>{title}</legend><details><summary><span>{chosen.length ? `已选 ${chosen.length} 项` : `全部${title}`}</span><ChevronDown size={15}/></summary><div className={styles.facetMenu}>
     <label className={styles.facetSearch}><Search size={15}/><input type="search" aria-label={`搜索${title}选项`} value={query} onChange={event => setQuery(event.target.value)} placeholder={`搜索${title}`}/></label>
-    <div className={styles.facetOptions}>{rows.map(option => <label key={option.value} hidden={!matches.includes(option)}><input type="checkbox" name={name} value={option.value} checked={chosen.includes(option.value)} onChange={event => setChosen(current => event.target.checked ? [...current, option.value] : current.filter(v => v !== option.value))}/><span>{option.label}</span><small>{option.count}</small></label>)}{!matches.length ? <p>{rows.length ? "没有匹配的选项" : "当前结果没有可用选项"}</p> : null}</div>
+    <div className={styles.facetOptions}>{rows.map(option => <label key={option.value} hidden={!matches.includes(option)}><input type="checkbox" name={name} value={option.value} checked={chosen.includes(option.value)} onChange={event => { const next = event.target.checked ? [...chosen, option.value] : chosen.filter(v => v !== option.value); setChosen(next); onSelectionChange?.(next); }}/><span>{option.label}</span><small>{option.count}</small></label>)}{!matches.length ? <p>{rows.length ? "没有匹配的选项" : "当前结果没有可用选项"}</p> : null}</div>
   </div></details></fieldset>;
 }
