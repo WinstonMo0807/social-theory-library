@@ -116,13 +116,23 @@ def _dispatch(job_id, task_id, *, countdown=0):
         logger.warning("Discovery index dispatch failed: %s", type(exc).__name__)
 
 
-def _enqueue_job(job):
+def _enqueue_job(job, *, countdown=0):
     task_id = str(uuid4())
     job.task_id, job.status = task_id, "pending"
     job.error_message, job.error_code, job.error_kind = "", "", ""
     job.started_at, job.finished_at = None, None
     job.save(update_fields=["task_id", "status", "error_message", "error_code", "error_kind", "started_at", "finished_at", "updated_at"])
-    transaction.on_commit(lambda: _dispatch(job.pk, task_id))
+    transaction.on_commit(lambda: _dispatch(job.pk, task_id, countdown=countdown))
+
+
+def _reader_query_active():
+    from catalog.discovery_models import DiscoverySearchSession
+    from catalog.services.discovery_sessions import STALE_MINUTES
+    now = timezone.now()
+    active = Q()
+    for status, minutes in STALE_MINUTES.items():
+        active |= Q(status=status, updated_at__gt=now - timedelta(minutes=minutes))
+    return DiscoverySearchSession.objects.filter(active, expires_at__gt=now).exists()
 
 
 @transaction.atomic
@@ -265,6 +275,10 @@ def schedule_sources(generation, *, max_queued=8):
     for state in states.values():
         if (state.source_type, str(state.source_id)) in current:
             continue
+        # Read-time source validation already hides withdrawals. Their physical
+        # vector cleanup can wait while an interactive question is running.
+        if _reader_query_active():
+            break
         remove_source(generation, state.source_type, state.source_id)
         state.delete()
     return pending
@@ -397,6 +411,10 @@ def process_source(job, generation):
     for unit_index, unit in enumerate(source_units(kind, source, header)):
         if unit_index < completed_units:
             continue
+        # Yield at a durable source-unit boundary. Interactive questions and
+        # indexing share the same bounded inference process on the NAS.
+        if _reader_query_active():
+            return False
         location = {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"), "start_offset": None, "end_offset": None}
         _guard_job(job, stats={**job.stats, "active_unit": location})
         # Canonical spans/pages remain intact; a pathological page is partitioned
@@ -534,6 +552,10 @@ def finish_builds():
 
 
 def run_job(job_id, task_id):
+    if _reader_query_active():
+        if ProcessingJob.objects.filter(pk=job_id, task_id=task_id, status="pending").exists():
+            _dispatch(job_id, task_id, countdown=20)
+        return
     with index_writer() as acquired:
         if not acquired:
             if ProcessingJob.objects.filter(pk=job_id, task_id=task_id, status="pending").exists():
@@ -567,7 +589,7 @@ def _run_job(job_id, task_id):
                 with transaction.atomic():
                     current = ProcessingJob.objects.select_for_update().filter(pk=job.pk, task_id=task_id, status="running").first()
                     if current:
-                        _enqueue_job(current)
+                        _enqueue_job(current, countdown=20)
                 return
             ProcessingJob.objects.filter(pk=job.pk, task_id=task_id, status="running").update(
                 status="succeeded", progress=100, finished_at=timezone.now(), error_message="")
@@ -599,6 +621,8 @@ def _run_job(job_id, task_id):
 def reconcile():
     if not enabled():
         return {"enabled": False}
+    if _reader_query_active():
+        return {"deferred": "reader_query_active"}
     with index_writer() as acquired:
         if not acquired:
             return {"busy": True}

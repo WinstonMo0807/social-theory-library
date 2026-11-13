@@ -162,7 +162,7 @@ def test_cancel_during_retrieval_blocks_late_channel_write(monkeypatch):
     session.refresh_from_db()
     assert session.status == "canceled"
     assert session.generation == 2
-    assert calls == ["entities"]
+    assert calls == ["passages"]
     assert all(not rows for rows in session.results.values())
 
 

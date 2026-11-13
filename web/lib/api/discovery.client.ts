@@ -1,4 +1,4 @@
-import { apiRequest, getServerSessionCredential } from "../api";
+import { ApiRequestError, apiRequest, getServerSessionCredential } from "../api";
 import type { DiscoveryContext, DiscoveryCoverage, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "./discovery.types";
 
 export function canKeepDiscoveryContext(item: DiscoveryPassage, next: DiscoverySearch) {
@@ -15,14 +15,15 @@ export function discoveryCoverageRows(coverage: DiscoveryCoverage | undefined) {
 }
 
 const endpoint = "/catalog/discovery-search/";
+export function canRetryDiscoveryRead(reason: unknown, failedReads: number) {
+  return failedReads < 3 && reason instanceof ApiRequestError &&
+    (reason.status === 0 || reason.status === 408 || reason.status === 429 || reason.status >= 500);
+}
 async function request<T>(path: string, options: RequestInit = {}, accessToken = ""): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
   const headers = new Headers(options.headers);
   if (accessToken) headers.set("X-Discovery-Token", accessToken);
-  try {
-    return await apiRequest<T>(path, { ...options, headers, signal: controller.signal, cache: "no-store" }, getServerSessionCredential(), !options.method || options.method === "GET");
-  } finally { clearTimeout(timeout); }
+  const readOnly = !options.method || options.method === "GET";
+  return apiRequest<T>(path, { ...options, headers, signal: AbortSignal.timeout(readOnly ? 45000 : 25000), cache: "no-store" }, getServerSessionCredential(), readOnly);
 }
 export function createDiscoverySearch(q: string, filters: DiscoveryFilters) {
   return request<DiscoverySearch>(endpoint, { method: "POST", body: JSON.stringify({ q, filters }) });

@@ -1,4 +1,5 @@
 "use client";
+
 import { LoadingState } from "@/components/ui/loading-state";
 import { useEvidenceLanguage } from "./evidence-language";
 import { SourceText } from "./source-text";
@@ -9,7 +10,7 @@ import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
-import { actOnDiscoverySearch, canKeepDiscoveryContext, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
+import { actOnDiscoverySearch, canKeepDiscoveryContext, canRetryDiscoveryRead, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
 import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "@/lib/api/discovery.types";
 import type { SearchPayload } from "@/lib/api/search.types";
 import { CollectionLink } from "./collection-link";
@@ -72,6 +73,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   const pollStarted = useRef(0);
   const createRef = useRef<Promise<DiscoverySearch> | null>(null);
   const refreshInFlight = useRef(false);
+  const failedReads = useRef(0);
   const contextItemRef = useRef<DiscoveryPassage | null>(null);
   useEffect(() => {
     if (publicSession.status !== "unauthenticated" || !result?.id || savedGuestSearch.current === result.id) return;
@@ -87,6 +89,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   }, [cacheKey]);
 
   const accept = useCallback((next: DiscoverySearch) => {
+    failedReads.current = 0;
     if (next.access_token) tokenRef.current = next.access_token;
     if (next.sort) sortRef.current = next.sort;
     resultRef.current = next;
@@ -146,7 +149,9 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       if (revision !== requestRevision.current) return;
       if (invalidSession(reason)) discard();
       setError(errorMessage(reason));
-      setPollPaused(true);
+      // Retry only reads of this existing session; never recreate a search or
+      // repeat an expansion after an uncertain network response.
+      setPollPaused(!running(current.status) || !canRetryDiscoveryRead(reason, ++failedReads.current));
     } finally { refreshInFlight.current = false; }
   }, [accept, discard]);
 
