@@ -178,16 +178,27 @@ def _save_artifact(run, stage, unit, data, output, *, config=None, result=None, 
     _guard(run, lease)
     model = identity(config) if config else {}
     key = cache_key or digest([PROMPT_VERSION, stage, data, model])
+    output_hash = digest(output)
+    no_candidates = stage == 2 and not output.get("entities") and not output.get("assertions")
+    status = "empty" if not output or no_candidates else "succeeded"
     with transaction.atomic():
         m.CurationRun.objects.select_for_update().get(pk=run.pk)
         _guard(run, lease)
-        no_candidates = stage == 2 and not output.get("entities") and not output.get("assertions")
+        if result is None and reused_from is None:
+            # Resuming a Wiki window rebuilds the same entity/assertion packets.
+            # Keep their durable receipts instead of rewriting whole-book JSON
+            # and briefly moving the visible stage back to entity matching.
+            existing = m.CurationArtifact.objects.filter(run=run, stage=stage, unit=unit,
+                cache_key=key, output_hash=output_hash, status=status,
+                schema_version=PROMPT_VERSION).defer("input_manifest").first()
+            if existing:
+                return existing
         usage = {"model_calls":result.attempts, "tokens":result.usage, "cost":None} if result else {"model_calls":0}
         if reused_from:
             usage.update(reused_from_artifact_id=str(reused_from.pk), reused_output_hash=reused_from.output_hash)
         artifact, _ = m.CurationArtifact.objects.update_or_create(run=run, stage=stage, unit=unit, defaults={
-            "cache_key":key, "schema_version":PROMPT_VERSION, "status":"empty" if not output or no_candidates else "succeeded",
-            "input_manifest": data, "output":output, "output_hash":digest(output), "model_identity":model,
+            "cache_key":key, "schema_version":PROMPT_VERSION, "status":status,
+            "input_manifest": data, "output":output, "output_hash":output_hash, "model_identity":model,
             "usage": usage,
             "elapsed_ms":elapsed, "executor_id":lease.executor_id if lease else "", "error":{}})
         m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(stage=stage, updated_at=timezone.now())

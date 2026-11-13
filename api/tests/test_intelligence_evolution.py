@@ -194,3 +194,30 @@ def test_wiki_patch_reads_exact_target_and_requires_manual_protection(source,adm
         apply_page_patch(patch,admin_user,request_key="no-human-consent")
     apply_page_patch({**patch,"human_edited":True},admin_user,request_key="explicit-human-review")
     assert page_content(page)[0]==[]
+
+
+@pytest.mark.django_db
+def test_resume_preserves_identical_stage_receipt_but_checks_changes_and_cancellation(source, admin_user):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    from rest_framework.exceptions import ValidationError
+    from catalog.services.intelligence import _save_artifact
+    run=m.CurationRun.objects.create(work=source.asset.edition.work, edition=source.asset.edition,
+        document_revision=source, request_id=uuid4(), created_by=admin_user, stage=6)
+    inputs={"analysis_hashes":["chapter-one"]}
+    output={"proposals":[{"text":"先前原文支持的陈述"}]}
+    first=_save_artifact(run,5,"assertions",inputs,output)
+    m.CurationRun.objects.filter(pk=run.pk).update(stage=6)
+    stamp=first.updated_at
+    with CaptureQueriesContext(connection) as queries:
+        again=_save_artifact(run,5,"assertions",inputs,output)
+    run.refresh_from_db()
+    assert again.pk==first.pk and again.updated_at==stamp and run.stage==6
+    assert not any(q['sql'].lstrip().upper().startswith(('INSERT','UPDATE','DELETE')) for q in queries)
+    # An unchanged analysis manifest alone is insufficient: identity resolution
+    # may change the derived participants and must produce a new output receipt.
+    changed=_save_artifact(run,5,"assertions",inputs,{"proposals":[{"text":"变更后的归属"}]})
+    assert changed.pk==first.pk and changed.output_hash!=first.output_hash
+    m.CurationRun.objects.filter(pk=run.pk).update(status="canceled")
+    with pytest.raises(ValidationError, match="取消"):
+        _save_artifact(run,5,"assertions",inputs,changed.output)
