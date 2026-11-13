@@ -8,12 +8,12 @@ export function createReaderFloatingLayout(root, storageKey) {
   let offsets = {}, active = null, disposed = false;
   const desktop = () => window.matchMedia('(min-width: 761px)').matches;
   try {
-    const saved = JSON.parse(sessionStorage.getItem(storageKey) || '{}');
+    const saved = JSON.parse(localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey) || '{}');
     for (const [id, point] of Object.entries(saved)) {
       if (/^[a-z-]+$/.test(id) && Number.isFinite(point?.x) && Number.isFinite(point?.y)) offsets[id] = point;
     }
   } catch { /* Storage is optional; dragging still works. */ }
-  const store = () => { try { sessionStorage.setItem(storageKey, JSON.stringify(offsets)); } catch {} };
+  const store = () => { try { localStorage.setItem(storageKey, JSON.stringify(offsets)); } catch {} };
   const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
   const elements = () => root.querySelectorAll('[data-reader-float]');
   function apply(element, proposed) {
@@ -32,6 +32,7 @@ export function createReaderFloatingLayout(root, storageKey) {
     elements().forEach(element => {
       if (!desktop()) { element.style.translate = ''; element._readerOffset = { x: 0, y: 0 }; delete element.dataset.readerMoved; }
       else if (offsets[element.dataset.readerFloat]) apply(element, offsets[element.dataset.readerFloat]);
+      else { element.style.translate = ''; element._readerOffset = { x: 0, y: 0 }; delete element.dataset.readerMoved; }
     });
   }
   function end(event) {

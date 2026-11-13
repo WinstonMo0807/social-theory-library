@@ -2,7 +2,6 @@
 
 import { useLayoutEffect, useRef, type RefObject, type ReactNode } from "react";
 import { flushSync } from "react-dom";
-import { GripHorizontal } from "lucide-react";
 import { createReaderFloatingLayout, type FloatingLayout } from "@/lib/reader-floating-layout.mjs";
 import styles from "./reader-floating-controls.module.css";
 
@@ -18,8 +17,8 @@ export function useReaderFloatingLayout(root: RefObject<HTMLDivElement | null>, 
   return () => controller.current?.reset();
 }
 
-export function ReaderGrip({ label }: { label: string }) {
-  return <button type="button" data-reader-grip className={styles.grip} aria-label={`移动${label}`} title={`拖动${label}；方向键移动，Home 归位`}><GripHorizontal size={17} /></button>;
+export function ReaderGrip({ label, heading }: { label: string; heading?: string }) {
+  return <button type="button" data-reader-grip className={`${styles.grip} ${heading ? styles.heading : ""}`} aria-label={`移动${label}`} title={`拖动${label}；方向键移动，Home 归位`}><span className={styles.handle} aria-hidden="true" />{heading ? <span>{heading}</span> : null}</button>;
 }
 
 export type ReaderContextAction = { id?: string; label: string; icon: ReactNode; run(): void; disabled?: boolean; group?: boolean };
