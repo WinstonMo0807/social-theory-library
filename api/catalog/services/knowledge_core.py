@@ -54,14 +54,17 @@ def match_entities(label, kind, *, limit=12):
     if not label or len(label) > 240:
         return []
     scope = m.Entity.objects.filter(kind=kind)
-    rows = list(entity_query(scope, query=label, exact=True)[:min(limit, 30)])
-    fragment = not rows and kind == "person" and 2 <= len(label) <= 80
+    # Resolve bounded IDs before loading type profiles. Selecting every joined
+    # profile field made PostgreSQL planning dominate long-book compilation.
+    ids = list(entity_query(scope, query=label, exact=True).values_list("pk", flat=True)[:min(limit, 30)])
+    fragment = not ids and kind == "person" and 2 <= len(label) <= 80
     if fragment:
         # Books commonly cite surnames. Retrieve a small comparison set rather
         # than treating a missing exact alias as proof that the person is new.
-        rows = list(entity_query(scope, query=label)[:min(limit, 30)])
+        ids = list(entity_query(scope, query=label).values_list("pk", flat=True)[:min(limit, 30)])
+    rows = m.Entity.objects.in_bulk(ids)
     from catalog.services.knowledge_identity import canonical_entity
-    candidates = {value.pk: value for row in rows if (value := canonical_entity(row))}
+    candidates = {value.pk: value for key in ids if key in rows and (value := canonical_entity(rows[key]))}
     return [matching_candidate(row, query=label) for row in candidates.values()]
 
 
