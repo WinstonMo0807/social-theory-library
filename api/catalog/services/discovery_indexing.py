@@ -550,7 +550,9 @@ def process_source(job, generation):
         return False  # Do not prepare structure or index settings ahead of a reader.
     contributions = contribution_projection(source, access_statuses=[header["access_status"]]) if kind == "edition" else None
     state, _ = DiscoverySourceState.objects.get_or_create(generation=generation, source_type=kind, source_id=source_id)
-    deadline = time.monotonic() + 240
+    # Cooperative slice: finish/acknowledge the current write before yielding.
+    # Slow database or Meilisearch calls can exceed this budget; it is not a timeout.
+    deadline = time.monotonic() + max(1, int(settings.DISCOVERY_INDEX_SLICE_SECONDS))
     structure_id = job.stats.get("structure_id")
     if "projection_version" not in job.stats:
         # A running v1 job resumes its original unit ledger. New jobs use v2;

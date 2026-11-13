@@ -1,3 +1,9 @@
+## 2026-11-13 索引时间片与综合编纂部署
+
+- 候选已运行525bbcf0的intelligence.py，备份于候选根目录backup-wiki-synthesis-525bbcf0-20261113183058/source-before.tar.gz。仅重启候选API，10:31:52 UTC恢复；无schema变化，无正式库/MCP/公网变更。
+- 新增DISCOVERY_INDEX_SLICE_SECONDS（默认240，最小1秒）控制单来源索引协作执行窗口。受限NAS可用20秒做单来源接续；计时包含准备，等待数据库或Meilisearch确认仍可超出预算，不是请求超时。不得先删旧有效索引；当前单元可幂等重放。
+- 本段新增配置尚未上传。定向回归36项通过；候选worker/beat仍停止，只允许本轮指定样本有限批次。完整模型运行仍待管理员启用Provider，不新增隐式外呼。
+
 ## 2026-11-13 结构补丁运行与定向数据保存
 
 68b4e231仅更新候选knowledge_sources.py、document_structure.py，两份哈希一致；API于09:52:30 UTC重启完成。源码备份位于候选根目录backup-structure-68b4e231-20261113174949/source-before.tar.gz。定向结构/编纂数据备份backup-structure-data-68b4e231-20261113/source-and-compilation-before.dump为50,276,492字节，SHA256 b94bf8e7403c0de02c68253c056a024c9cd278e2d540d5f8e2af57967d6b4e3a，pg_restore清单202行；尚未做恢复演练。

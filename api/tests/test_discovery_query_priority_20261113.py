@@ -68,6 +68,43 @@ def test_index_yields_before_next_unit_and_keeps_completed_chunks(monkeypatch):
     assert job.stats["completed_units"] == 0 and doc.keyword_ready and doc.vector_ready
 
 
+@pytest.mark.parametrize("acknowledged", [True, False])
+def test_short_slice_checkpoints_only_after_keyword_ack(monkeypatch, settings, acknowledged):
+    settings.DISCOVERY_INDEX_SLICE_SECONDS = 3
+    settings.DISCOVERY_INDEX_KEYWORD_ONLY = True
+    edition, _, _, docs = fixture_source(1)
+    doc = docs[0]
+    job = ProcessingJob.objects.create(job_type="discovery_index", status="running", task_id=str(uuid4()),
+        stats={"source_type":"edition", "source_id":str(edition.pk), "source_revision":doc.source_revision,
+               "structure_id":str(uuid4()), "projection_version":2, "completed_units":0})
+    from catalog.discovery_index_models import DiscoverySourceState
+    DiscoverySourceState.objects.create(generation=doc.generation, source_type="edition", source_id=edition.pk, job=job)
+    doc.generation.config_snapshot["context_fields_version"] = 1
+    clock, written, committed = [0], [], []
+    monkeypatch.setattr(indexing.time, "monotonic", lambda:clock[0])
+    monkeypatch.setattr(indexing, "source_units", lambda *args, **kwargs: iter([
+        {"unit_id":"one", "metadata":{"pdf_page":1}, "text":"甲乙"},
+        {"unit_id":"two", "metadata":{"pdf_page":2}, "text":"丙丁"}]))
+    monkeypatch.setattr(indexing, "raw_keyword_slices", lambda text, title:[{"start":0, "end":len(text), "text":text}])
+    def write(job, generation, header, unit, child, *, keyword_batch, **kwargs):
+        written.append(unit["unit_id"]); keyword_batch.append(unit["unit_id"]); clock[0] += 4
+    def commit(job, generation, header, batch):
+        if not acknowledged:
+            raise indexing.DiscoveryIndexError("index_unavailable", "No index acknowledgement")
+        committed.extend(batch); batch.clear()
+    monkeypatch.setattr(indexing, "_write_chunk", write)
+    monkeypatch.setattr(indexing, "_commit_keyword_batch", commit)
+    if acknowledged:
+        assert indexing.process_source(job, doc.generation) is False
+    else:
+        with pytest.raises(indexing.DiscoveryIndexError):
+            indexing.process_source(job, doc.generation)
+    job.refresh_from_db(); doc.refresh_from_db()
+    assert written == ["one"] and committed == (["one"] if acknowledged else [])
+    assert job.stats["completed_units"] == 0  # The current unit is replayed idempotently.
+    assert doc.keyword_ready and doc.vector_ready  # Previous valid generation stays available.
+
+
 def test_coordinator_defers_cleanup_without_touching_a_live_writer(monkeypatch,settings):
     settings.DISCOVERY_ENABLED=True
     make_session(status="running")
