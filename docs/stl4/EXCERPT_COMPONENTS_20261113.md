@@ -1,12 +1,20 @@
 # 原文排版与全站组件候选 · 2026-11-13
 
-本轮用户新增：截图 OCR 原文排版清洗，检索右栏不再重复证据摘要，生成三组 imagegen 设计；扩展至全站摘录展示、文字、按钮位置及交互反馈。沿已采纳阅读器的黑金品牌、纸白、B 短把手、整个标题拖动和复位。三组新布局尚未选定；本轮仅本机/内网候选，没有生产发布、main 推送、API/数据库变更。
+本轮用户新增：截图 OCR 原文排版清洗，检索右栏不再重复证据摘要，生成三组 imagegen 设计；扩展至全站摘录展示、文字、按钮位置及交互反馈。沿已采纳阅读器的黑金品牌、纸白与控件视觉。最新批注要求本检索页固定布局、恢复书封，覆盖本页此前借用拖动和复位的方案；PDF 阅读器的拖动规则保持。三组新布局尚未选定；本轮仅本机/内网候选，没有生产发布、main 推送、API/数据库变更。
+
+## 最新批注：固定分栏与真实封面
+
+- A/B/C 预览均移除 ReaderGrip、useReaderFloatingLayout、位置记忆及组件复位入口，标题恢复普通标题；选段工具条保留固定位置。右栏桌面 sticky，窄屏恢复正常文档流。未改阅读器。
+- 缺封面发生在新 demo，正式检索 EvidenceBook 已有封面。三版结果卡片和右侧出处均补入馆藏真实封面，object-fit:contain 保持完整；加载失败复用 DefaultCover。未生成或改写真实书封。
+- 公开馆藏回读确认《社会运行论及其发展》版本 7051527d-6aba-42b8-a268-276c643991ae，李强、洪大用为主编；郑杭生为研究对象。预览书目信息及引用采用馆藏元数据，书页316/PDF330继续明确为用户截图示例。
+- 本次 tsc --project web/tsconfig.json --noEmit --pretty false 退出0；Vite demo build 退出0。CUA检查三版1440桌面和390手机，真实封面加载成功，拖动标记为0，无横向溢出。实际截图为 output/excerpt-ui-20261113/fixed-cover-A.png、fixed-cover-B.png、fixed-cover-C.png、fixed-cover-mobile.png。旧生成图含拖动把手，仅留历史；以更新后的demo为当前候选。
+- 状态B：已实现、演示检查通过，设计待用户选择；未推送公网或main。
 
 ## 产物
 
 - imagegen A 核对与引用、B 连续精读、C 材料比较：`output/imagegen/excerpt-ui-20261113/`，含原始提示词。图中辅助书目、数量及状态是设计示意，不能作为真实馆藏或引文依据；实际 demo 只用用户截图两段原文，页码始终分开标为书页 316 / PDF 330。
-- 可操作预览：`http://localhost:18895/`，内网 `http://192.168.5.3:18895/`。源码 `web/design-previews/excerpt-directions-20261113/`。复用真实 SourceExcerpt、SourceText、ReaderGrip、ReaderContextMenu、L5/L6/L7 LoadingState。
-- 可操作范围：三方案切换、列表/网格、排序、筛选展开与搜索输入、原始/整理/对照、已知页眉页码显示、复制、笔记与选材演示、STL 右键菜单、拖动/键盘微调/复位、加载及操作状态。检索提交与在线阅读入口会明确提示设计演示，不伪装真实搜索或 PDF；笔记/选材仅本页内存，位置偏好用独立 demo key，不写私人研究。
+- 可操作预览：`http://localhost:18895/`，内网 `http://192.168.5.3:18895/`。源码 `web/design-previews/excerpt-directions-20261113/`。复用真实 SourceExcerpt、SourceText、ReaderContextMenu、DefaultCover、L5/L6/L7 LoadingState。
+- 可操作范围：三方案切换、列表/网格、排序、筛选展开与搜索输入、原始/整理/对照、已知页眉页码显示、复制、笔记与选材演示、STL 右键菜单、加载及操作状态。检索提交与在线阅读入口会明确提示设计演示，不伪装真实搜索或 PDF；笔记/选材仅本页内存，不写私人研究。本页不再读取或保存组件位置。
 - 实际浏览器截图：`output/excerpt-ui-20261113/desktop-A.png`、`desktop-B.png`、`desktop-C.png`、`mobile-A.png`。
 
 ## 排查边界与根因
