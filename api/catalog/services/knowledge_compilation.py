@@ -112,7 +112,7 @@ def reconcile_pending():
 
 @transaction.atomic
 def reconcile(revision, *, subscription=None, retry=False):
-    from catalog.services.intelligence import create_run, control_run
+    from catalog.services.intelligence import create_run, control_run, SOURCE_SELECTION_VERSION
     from catalog.services.intelligence_provider import identity, configuration
     subscription = m.KnowledgeCompilation.objects.select_for_update(of=("self",)).filter(
         edition_id=revision.asset.edition_id, enabled=True).select_related("updated_by", "latest_run").first()
@@ -127,7 +127,7 @@ def reconcile(revision, *, subscription=None, retry=False):
     page_versions = [(str(p.pk), digest({"blocks":page_content(p)[0],
         "metadata":page_metadata(p, draft=True)})) for p in targets]
     config = configuration(subscription.profile_key) if subscription.execution_mode == "provider" else None
-    key = digest([str(revision.pk), structure.input_hash, subscription.scope, page_versions,
+    key = digest([str(revision.pk), structure.input_hash, SOURCE_SELECTION_VERSION, subscription.scope, page_versions,
         subscription.execution_mode, identity(config) if config else "interactive-agent-v1"])
     previous = subscription.latest_run
     if previous and subscription.requested_hash == key:

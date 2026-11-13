@@ -212,6 +212,46 @@ def test_source_update_only_enqueues_opted_in_edition(source, admin_user, monkey
     assert m.CurationRun.objects.count() == 1
 
 
+def test_reference_container_does_not_duplicate_children_or_rewrite_old_plan(source, admin_user, monkeypatch):
+    page = source.asset.pages.get(index=1)
+    page.text = page.text.replace("前言", "参考文献")
+    page.save(update_fields=["text"])
+    outline = source.asset.outline_revisions.get(is_active=True)
+    outline.nodes[0]["title"] = "参考文献"
+    outline.save(update_fields=["nodes"])
+    policy = setup(source, admin_user, monkeypatch)
+    run = policy.latest_run
+    nodes = runner.prepare(run)
+    container = run.structure.nodes.filter(kind="references", children__isnull=False).distinct().get()
+    assert container.pk not in {n.pk for n in nodes}
+    assert container.children.exists()
+    assert all(not n.children.exists() for n in nodes)
+    ranges = [(s.page_id,s.start,s.end) for n in nodes for s in n.segments.all()]
+    assert len(ranges) == len(set(ranges))
+    assert len(nodes) == run.structure.nodes.filter(children__isnull=True).count()
+    artifact = run.artifacts.get(stage=1,unit="source")
+    artifact.input_manifest.pop("selection_version")
+    artifact.save(update_fields=["input_manifest"])
+    old = m.CurationArtifact.objects.create(run=run,stage=2,unit="window:0",status="empty",
+        output={"summary":"retained old result"},cache_key="legacy",output_hash="old")
+    with pytest.raises(ValidationError,match="正文范围选取规则"):
+        runner.prepare(run)
+    policy.requested_hash = "legacy-selection"
+    policy.save(update_fields=["requested_hash"])
+    # The historical run was created from the previous selection fingerprint.
+    # Its request ID cannot be the current deterministic ID produced by setup.
+    run.request_id = uuid4()
+    run.save(update_fields=["request_id"])
+    newer = compilation.reconcile(source)
+    assert newer.pk != run.pk and newer.execution_mode == "agent"
+    run.refresh_from_db()
+    assert run.status == "canceled"
+    old.refresh_from_db()
+    assert old.output == {"summary":"retained old result"}
+    assert len(runner.prepare(newer)) == len(nodes)
+    assert m.CurationRun.objects.count() == 2
+
+
 def test_ocr_line_packing_preserves_codepoint_ranges_and_note_boundaries():
     from types import SimpleNamespace as Row
     from catalog.services.intelligence import windows, source_rows

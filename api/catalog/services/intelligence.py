@@ -13,6 +13,7 @@ from catalog.services.intelligence_changes import submit_draft, uuid_value, prop
 from common.task_runtime import queue_or_wait, renew_demand_lease
 
 STAGES = ["文献读取", "章节分析", "全书综合", "实体匹配", "学术陈述", "知识页编纂", "变更集", "管理员审核"]
+SOURCE_SELECTION_VERSION = "leaf-ranges-v1"
 STRING = {"type": "string"}
 ENTITY_SCHEMA = {"type": "object", "required": ["label", "kind", "definition", "context"], "properties": {
     "label": STRING, "kind": {"type":"string", "enum": list(m.Entity.Kind.values)}, "definition": STRING, "context": STRING}}
@@ -277,10 +278,13 @@ def prepare(run):
     structure = current_structure(run.document_revision, prepare=True)
     start = run.scope.get("start", 1)
     end = run.scope.get("end", run.document_revision.asset.page_count)
-    nodes = list(structure.nodes.filter(kind__in=["paragraph","footnote","table","references","unresolved"], segments__page__page_number__gte=start,
+    nodes = list(structure.nodes.filter(kind__in=["paragraph","footnote","table","references","unresolved"], children__isnull=True, segments__page__page_number__gte=start,
         segments__page__page_number__lte=end).distinct().order_by("order").prefetch_related("segments__page"))
-    source_input = {"structure_hash":structure.input_hash,"scope":run.scope}
+    source_input = {"structure_hash":structure.input_hash,"scope":run.scope,"selection_version":SOURCE_SELECTION_VERSION}
     prepared = run.artifacts.filter(stage=1, unit="source", status="succeeded").only("input_manifest", "output_hash").first()
+    if (prepared and prepared.input_manifest.get("selection_version") != SOURCE_SELECTION_VERSION
+            and run.artifacts.filter(stage=2).exists()):
+        raise ValidationError("正文范围选取规则已更新；请从原文工作区接续编纂，旧窗口与审核记录保留。", code="source_selection_updated")
     if (run.structure_id == structure.pk and prepared and prepared.input_manifest == source_input
             and "total_nodes" in run.coverage):
         # Immutable structure + identical scope: retain the coverage ledger.
