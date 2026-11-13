@@ -166,3 +166,81 @@ def test_compilation_missing_pages_are_limited_to_selected_range(source, admin_u
     assert data['coverage']['missing_text_pages']==[] and 'included_nodes' not in data['coverage']
     run.refresh_from_db()
     assert run.coverage['missing_text_pages']==[2]
+
+
+def test_resume_retains_coverage_without_rewriting_long_source_ledger(source, admin_user, monkeypatch):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    policy = setup(source, admin_user, monkeypatch)
+    artifact = next_packet(policy, admin_user)
+    submit(artifact, admin_user, {"summary":"fixture", "questions":[], "entities":[], "assertions":[]})
+    next_packet(policy, admin_user)
+    run = m.CurationRun.objects.get(pk=policy.latest_run_id)
+    assert run.coverage["completed_windows"] >= 1
+    previous = dict(run.coverage)
+    source_artifact = run.artifacts.get(stage=1, unit="source")
+    source_output = source_artifact.output
+    assert source_output["included_nodes"] and "included_nodes" not in previous
+    assert previous["source_artifact_id"] == str(source_artifact.pk)
+    assert previous["source_manifest_hash"] == source_artifact.output_hash
+    with CaptureQueriesContext(connection) as queries:
+        runner.prepare(run)
+    assert run.coverage == previous
+    assert not any(q["sql"].lstrip().startswith(("UPDATE", "INSERT")) and
+                   ("catalog_curationrun" in q["sql"] or "catalog_curationartifact" in q["sql"]) for q in queries)
+    source_artifact.refresh_from_db()
+    assert source_artifact.output == source_output
+    # Existing rows are compacted without discarding either progress or ranges.
+    run.coverage["included_nodes"] = source_output["included_nodes"]
+    run.save(update_fields=["coverage"])
+    runner.prepare(run)
+    run.refresh_from_db()
+    assert run.coverage == previous
+    source_artifact.refresh_from_db()
+    assert source_artifact.output == source_output
+    # Prompt changes invalidate coverage even with an unchanged model identity.
+    with monkeypatch.context() as changed:
+        changed.setattr(runner, "PROMPT_VERSION", runner.PROMPT_VERSION + "-test")
+        with pytest.raises(compilation.AgentStagePending):
+            runner.execute(run, compilation.run_configuration(run), None)
+        run.refresh_from_db()
+        assert run.coverage["completed_windows"] == run.coverage["read_characters"] == 0
+    run.coverage = previous
+    run.save(update_fields=["coverage"])
+    # A genuinely different model configuration cannot inherit read coverage.
+    config = compilation.run_configuration(run)
+    config.temperature = 1
+    with pytest.raises(compilation.AgentStagePending):
+        runner.execute(run, config, None)
+    run.refresh_from_db()
+    assert run.coverage["completed_windows"] == run.coverage["read_characters"] == 0
+
+
+@pytest.mark.parametrize("origin", ["wiki_agent", "wiki_compilation", "intelligence", "external"])
+def test_generated_patch_cannot_self_certify_human_edit(source, admin_user, origin):
+    from catalog.services import intelligence_changes as changes
+    from catalog.services.knowledge_core import page_content, apply_page_patch
+    from catalog.services.knowledge_sources import digest
+    page = m.KnowledgePage.objects.create(work=source.asset.edition.work, slug="protected", title="人工正文")
+    block_id, item_id = str(uuid4()), str(uuid4())
+    entity = m.Entity.objects.create(kind="concept", label="来源概念")
+    block = {"id":block_id, "type":"analysis", "text":"人工保留的解释",
+        "references":[{"type":"entity", "id":str(entity.pk)}]}
+    apply_page_patch({"page_id":str(page.pk), "operation":"add", "block_id":block_id,
+        "block":block, "human_edited":True}, admin_user, request_key="human-original", origin="human")
+    original = page_content(page)[0][0]
+    payload = {"page_id":str(page.pk), "operation":"replace", "block_id":block_id,
+        "base_hash":digest(original), "block":{**block,"text":"机器建议"}, "human_edited":True}
+    draft = changes.submit_draft(source, [{"id":item_id, "kind":"wiki_patch", "payload":payload}],
+        admin_user, request_id=uuid4(), origin=origin)
+    assert not draft.items.get().payload.get("human_edited")
+    draft = changes.review(draft.pk,[{"id":item_id,"decision":"accepted"}],admin_user,expected_version=draft.version)
+    result = changes.apply(draft.pk,[item_id],admin_user,request_id=uuid4(),expected_version=draft.version)
+    assert item_id in result["blocked"] and not result["saved"]
+    assert page_content(page)[0][0] == original
+    draft.refresh_from_db()
+    edited = {**draft.items.get().payload,"block":{**block,"text":"管理员核对后的修改"}}
+    draft = changes.review(draft.pk,[{"id":item_id,"decision":"accepted","payload":edited}],admin_user,expected_version=draft.version)
+    result = changes.apply(draft.pk,[item_id],admin_user,request_id=uuid4(),expected_version=draft.version)
+    assert item_id in result["saved"] and not result["blocked"]
+    assert page_content(page)[0][0]["human_edited"]

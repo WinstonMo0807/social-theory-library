@@ -1,3 +1,9 @@
+## 2026-11-13 Mac mini 主服务与 NAS 稳定性
+
+- 用户已确定新架构大部分服务由Mac mini承担，NAS主要存储；目标包括网站/API/PostgreSQL/Redis/Meilisearch及知识计算。机器到货前继续本机开发和真实原文阅读，不将Mac安装、恢复或资源能力标为已验证。
+- NAS现有正式服务稳定优先。候选beat/worker因实测内存和IO压力已温和暂停，保留断点、队列、旧索引及内网查看入口；不要在后续接续时自动恢复重任务。实际状态见CURRENT_PROGRESS及docs/DEPLOYMENT顶部。
+- 数据库与活动索引目标使用Mac本地磁盘，NAS保留文件/备份。迁移期间只有一个正式写入端。公网、正式数据库切换、DNS和隧道仍等用户最后授权，MCP不动、Intelligence不恢复。
+
 ## 2026-11-13 RAG / Wiki 研究与 Intelligence 撤下
 
 - 用户明确同时要求从本轮方案排除 STL Intelligence，并撤下内网独立工作台，留待以后重新开发。独立任务创建、阶段列表和恢复操作已从前端移除；共享证据、人工编辑、审核、发布和历史数据保留，审核入口为 `/admin/knowledge/review`。旧 URL 仅兼容跳转，不删除共用后端模型或历史数据。

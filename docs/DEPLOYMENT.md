@@ -1,3 +1,9 @@
+## 2026-11-13 候选批任务暂停，目标迁至 Mac mini
+
+因宿主实际内存/IO等待，已温和停止 `stl-intelligence-demo-index-beat` 和 `stl-intelligence-demo-worker`，均ExitCode0，无OOM；不清队列/索引/数据库。最后任务write_timeout，断点133保留，不能记录为成功。API、候选搜索、Windows5174保留。正式API、worker、数据库、MCP和隧道未修改。不要按下面历史步骤自动重启候选批任务，先完成资源与迁移核验。
+
+用户已选Mac mini承担大部分服务、NAS主要存储。目标把活动数据库/Redis/Meilisearch放在Mac本地，保留NAS文件路径与唯一正式写入。新机器尚未到货，未执行迁移或生成用于正式切换的最终配置。测量、备份与迁移门槛见 [组合方案](stl4/RAG_WIKI_MACMINI_COMBINATION_20261113.md)。本轮两项编纂修复仅本机验证，未上传/重启NAS。
+
 ## 2026-11-13 内网持续 Wiki 候选
 
 候选API、worker及限定beat已温和重载成功。前端发现node_modules junction共用默认Vite缓存导致pdfjs-dist返回504，现候选`cacheDir=../tmp/intelligence-web/node_modules/.vite`并显式预处理pdfjs-dist，重启后实见同版PDF。该目录在本工作区忽略的tmp中，不清理原工作区依赖/缓存；配置含node_modules路径以兼容当前Vinext/Vite的依赖转换。选项语义核对 [Vite cacheDir](https://vite.dev/config/shared-options#cachedir)。仍为内网Vite候选，无开机自启或正式发行部署变更。

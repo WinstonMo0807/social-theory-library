@@ -85,7 +85,11 @@ def submit_draft(revision, proposals, actor, *, request_id, origin="external", r
         dependencies = [str(uuid_value(v)) for v in item.get("dependencies", [])]
         if kind not in KINDS or not isinstance(item.get("payload"), dict) or set(dependencies) - set(keys) or key in dependencies:
             raise ValidationError("建议类型、内容或依赖无效。")
-        payload = item["payload"]
+        payload = dict(item["payload"])
+        if kind == "wiki_patch" and origin != "human":
+            # A generated draft cannot certify its own human review. Only the
+            # editor's review operation may mark a modified block as edited.
+            payload.pop("human_edited", None)
         references=candidate_references(payload)
         if references-set(keys) or key in references:
             raise ValidationError("建议中的身份引用不属于当前变更集。")

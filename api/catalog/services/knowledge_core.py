@@ -315,7 +315,7 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
         raise ValidationError("知识页补丁须指定稳定区块和操作。")
     if (operation == "add" and current is not None) or (operation != "add" and (current is None or digest(current) != payload.get("base_hash"))):
         raise ValidationError({"conflict": "该区块已修改，请对照当前正文重新审核。", "block_id": key})
-    if operation != "add" and origin == "intelligence" and current and (
+    if operation != "add" and origin != "human" and current and (
             current.get("human_edited") or current.get("origin") in {"human","manual","migration"}) and not payload.get("human_edited"):
         raise ValidationError({"conflict":"此区块包含人工正文，请在可视化编辑器中审阅并明确修改后再保存。","block_id":key})
     if operation != "delete":

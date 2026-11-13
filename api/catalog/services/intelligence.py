@@ -235,16 +235,33 @@ def prepare(run):
     end = run.scope.get("end", run.document_revision.asset.page_count)
     nodes = list(structure.nodes.filter(kind__in=["paragraph","footnote","table","references","unresolved"], segments__page__page_number__gte=start,
         segments__page__page_number__lte=end).distinct().order_by("order").prefetch_related("segments__page"))
+    source_input = {"structure_hash":structure.input_hash,"scope":run.scope}
+    prepared = run.artifacts.filter(stage=1, unit="source", status="succeeded").only("input_manifest", "output_hash").first()
+    if (run.structure_id == structure.pk and prepared and prepared.input_manifest == source_input
+            and "total_nodes" in run.coverage):
+        # Immutable structure + identical scope: retain the coverage ledger.
+        # Each agent response resumes here; rewriting a long book's complete
+        # node manifest per window makes database work quadratic in book size.
+        coverage = {k:v for k,v in run.coverage.items() if k != "included_nodes"}
+        coverage.update(source_artifact_id=str(prepared.pk), source_manifest_hash=prepared.output_hash)
+        if coverage != run.coverage:
+            # Compact legacy runs once; the complete ledger stays in stage 1.
+            m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(coverage=coverage)
+        run.structure, run.coverage = structure, coverage
+        return nodes
     manifest = [{"node_id":str(n.pk),"chapter_id":str(n.parent_id),"content_hash":n.content_hash,
         "segments":[{"page_number":s.page.page_number,"start":s.start,"end":s.end,"content_hash":s.content_hash}
                     for s in n.segments.all() if start <= s.page.page_number <= end]} for n in nodes]
     coverage = {**structure.coverage, "scope":run.scope, "included_nodes":manifest,
         "excluded_pages": list(range(1,start))+list(range(end+1,run.document_revision.asset.page_count+1)),
         "read_nodes":0, "total_nodes":len(nodes), "analysis_complete":False}
-    m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(structure=structure, coverage=coverage)
-    run.structure, run.coverage = structure, coverage
-    _save_artifact(run,1,"source",{"structure_hash":structure.input_hash,"scope":run.scope},coverage,
+    artifact = _save_artifact(run,1,"source",source_input,coverage,
         elapsed=round((time.monotonic()-started)*1000))
+    # Frequent progress updates must not rewrite thousands of immutable ranges.
+    progress = {k:v for k,v in coverage.items() if k != "included_nodes"}
+    progress.update(source_artifact_id=str(artifact.pk), source_manifest_hash=artifact.output_hash)
+    m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(structure=structure, coverage=progress)
+    run.structure, run.coverage = structure, progress
     return nodes
 
 
@@ -451,9 +468,15 @@ def execute(run, config, lease):
     planned = list(windows(nodes, config, run.scope))
     total_characters = sum(row["end"]-row["start"] for _, rows in planned for row in source_rows(rows))
     read_characters = 0
-    run.coverage.update(total_windows=len(planned), completed_windows=0,
-        total_characters=total_characters, read_characters=0, coverage_unit="unicode_code_point")
-    m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(coverage=run.coverage)
+    analysis_plan_hash = digest([PROMPT_VERSION, ANALYSIS_SCHEMA, identity(config),
+        run.structure.input_hash, run.structure.parser_version, run.scope])
+    # Do not temporarily reset a partially read book to zero on every resume.
+    if run.coverage.get("analysis_plan_hash") != analysis_plan_hash or run.coverage.get("total_windows") != len(planned) or run.coverage.get("total_characters") != total_characters:
+        run.coverage.update(total_windows=len(planned), completed_windows=0, read_nodes=0,
+            total_characters=total_characters, read_characters=0, coverage_unit="unicode_code_point",
+            analysis_plan_hash=analysis_plan_hash, analysis_complete=False)
+        run.coverage.pop("interpretation_status", None)
+        m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(coverage=run.coverage)
     for index, (chapter, rows) in enumerate(planned):
         chapter_node = m.DocumentNode.objects.get(pk=chapter)
         chapter_path, parent = [], chapter_node
@@ -470,8 +493,9 @@ def execute(run, config, lease):
         analyses.append(artifact)
         read_nodes.update(row["node_id"] for row in rows if row["node_complete"])
         read_characters += sum(row["end"]-row["start"] for row in model_rows)
-        run.coverage.update(read_nodes=len(read_nodes), completed_windows=len(analyses), read_characters=read_characters)
-        m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(coverage=run.coverage)
+        if len(analyses) > run.coverage.get("completed_windows", 0):
+            run.coverage.update(read_nodes=len(read_nodes), completed_windows=len(analyses), read_characters=read_characters)
+            m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(coverage=run.coverage)
     synthesis = {"summary":"","development":[],"limitations":[]}
     for i, artifact in enumerate(analyses):
         data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_hash":artifact.output_hash,"position":i}
