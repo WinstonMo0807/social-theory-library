@@ -85,7 +85,7 @@ def _harmless_pipeline_side_effects():
         patch("ingestion.services.pipeline.queue_semantic_job"),
         patch("ingestion.services.pipeline.queue_page_label_job"),
         patch("ingestion.services.pipeline.generate_cover_candidates", return_value=[]),
-        patch("ingestion.services.pipeline.generate_theory_review_tasks", return_value=0),
+        patch("catalog.intelligence_tasks.refresh_source.apply_async"),
         patch("ingestion.services.pipeline.detect_publication_places", return_value=[]),
     ):
         yield
@@ -200,6 +200,12 @@ def test_postgres_ocr_pdf_locks_only_asset_with_nullable_source_asset(
         width=595,
         height=842,
     )
+    # The coordinate contract now requires provenance from the actual PDF;
+    # width/height alone must not bypass source geometry validation.
+    from catalog.services.page_geometry import native_geometry
+    with fitz.open(stream=payload, filetype="pdf") as pdf:
+        page.geometry = native_geometry(pdf[0])
+    page.save(update_fields=["geometry"])
     TextBlock.objects.create(
         page=page,
         order=0,

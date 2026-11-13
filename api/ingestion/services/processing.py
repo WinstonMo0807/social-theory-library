@@ -309,6 +309,9 @@ def _update_ocr_edition_if_current(job, *, expected_status=None, **fields):
 
 
 def _dispatch_processing_job(job_id: str, job_type: str, task_id: str) -> bool:
+    if job_type == ProcessingJob.JobType.LOGICAL_STRUCTURE:
+        from catalog.services.knowledge_source_updates import dispatch_source_update
+        return dispatch_source_update(job_id, task_id)
     if job_type == ProcessingJob.JobType.TEXT_EXTRACTION and ProcessingJob.objects.filter(pk=job_id, stats__operation__in=["outline_export", "page_mapping_export"]).exists():
         from catalog.services.outline_exports import dispatch_export
         return dispatch_export(job_id, task_id)
@@ -348,6 +351,7 @@ def recover_stalled_processing_jobs(*, limit: int = 100, job_id=None) -> dict[st
     queue_cutoff = now - timedelta(seconds=settings.INGESTION_QUEUE_STALLED_SECONDS)
     stage_cutoff = now - timedelta(seconds=settings.INGESTION_STAGE_STALLED_SECONDS)
     supported_types = {
+        ProcessingJob.JobType.LOGICAL_STRUCTURE,
         ProcessingJob.JobType.EDITORIAL_ASSISTANCE,
         ProcessingJob.JobType.TEXT_EXTRACTION,
         ProcessingJob.JobType.OCR,

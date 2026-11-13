@@ -1,3 +1,9 @@
+## 2026-11-14 复用入库恢复与跳过占用来源
+
+正文结构同步仍是ProcessingJob.logical_structure。它现在进入原recover_stalled_processing_jobs与统一dispatcher，使用原claim/task_id/heartbeat/max_attempts，不增加队列数据库。Celery路由显式列出refresh_source，使Redis消息存在性检查覆盖该队列；已排队/未知队列状态不误当丢失，人工暂停保持。共享intelligence任务名称只是后端兼容，不恢复独立工作台。
+
+订阅接续采用PostgreSQL skip_locked，占用项保留标志，其他来源继续。原短事务、模型/索引分离和唯一编纂服务保持。本机PostgreSQL与真实Meilisearch验证见stl4/POSTGRES_REHEARSAL_20261114.md。
+
 ## 2026-11-14 交互等待预算、窗口计划与接续退避
 
 统一retrieve_channel以请求内ContextVar共享可选推理预算，不建立跨请求失败缓存。默认8秒用于剩余HTTP超时及后续调用准入，交互触发只通知冷服务而不等其启动；后台推理沿原超时。已有Discovery会话保存安全数值耗时，来源/权限仍在模型调用后重查。可选知识图数据库故障在事务边界内隔离、明确警告，保留已校验原文。图可见性按本次限定陈述集批量查询，继续同一assertion_public规则，不放宽撤回、历史版本或身份归并判断。

@@ -1,5 +1,7 @@
 from uuid import uuid4
+from datetime import timedelta
 import pytest
+from django.utils import timezone
 from tests.test_knowledge_core import source
 from catalog import models as m
 from catalog.services.knowledge_sources import build_structure, current_structure, node_text
@@ -7,6 +9,69 @@ from catalog.services.document_structure import install_structure, ADAPTER_VERSI
 from catalog.services.knowledge_source_updates import schedule_source_update, execute_source_update
 
 pytestmark=pytest.mark.django_db
+
+
+def test_source_job_broker_failure_and_worker_loss_resume_same_source(source, monkeypatch, django_capture_on_commit_callbacks, settings):
+    from catalog.intelligence_tasks import refresh_source
+    from catalog.services import knowledge_source_updates as updates
+    from ingestion.models import ProcessingJob
+    from ingestion.services.processing import recover_stalled_processing_jobs, _claim_processing_job
+    def unavailable(**kwargs):
+        raise ConnectionError("fixture broker offline")
+    monkeypatch.setattr(refresh_source, "apply_async", unavailable)
+    with django_capture_on_commit_callbacks(execute=True):
+        job = schedule_source_update(source)
+    job.refresh_from_db()
+    assert job.status == "failed" and job.error_code == "queue_unavailable"
+    sends = []
+    monkeypatch.setattr(refresh_source, "apply_async", lambda **kw:sends.append(kw))
+    with django_capture_on_commit_callbacks(execute=True):
+        assert recover_stalled_processing_jobs(job_id=job.pk)["requeued"] == 1
+    job.refresh_from_db()
+    crashed_token = job.task_id
+    assert sends[-1]["task_id"] == crashed_token and sends[-1]["queue"] == "intelligence"
+    assert _claim_processing_job(job.pk, task_id=crashed_token)[1]
+    settings.INGESTION_STAGE_STALLED_SECONDS = 1
+    ProcessingJob.objects.filter(pk=job.pk).update(heartbeat_at=timezone.now()-timedelta(minutes=5))
+    with django_capture_on_commit_callbacks(execute=True):
+        assert recover_stalled_processing_jobs(job_id=job.pk)["requeued"] == 1
+    job.refresh_from_db()
+    assert job.task_id != crashed_token
+    calls = []
+    original = updates.current_structure
+    def counted(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+    monkeypatch.setattr(updates, "current_structure", counted)
+    execute_source_update(job.pk, crashed_token)
+    assert not calls
+    execute_source_update(job.pk, job.task_id)
+    execute_source_update(job.pk, job.task_id)
+    job.refresh_from_db()
+    assert job.status == "succeeded" and job.attempt == 2 and len(calls) == 1
+    assert job.stats["model_calls"] == 0 and job.stats["revision_id"] == str(source.pk)
+
+
+def test_source_job_recovery_preserves_queued_delivery_and_manual_pause(source, monkeypatch, django_capture_on_commit_callbacks, settings):
+    from common import broker_presence
+    from catalog.intelligence_tasks import refresh_source
+    from ingestion.models import ProcessingJob
+    from ingestion.services.processing import recover_stalled_processing_jobs
+    sends = []
+    monkeypatch.setattr(refresh_source, "apply_async", lambda **kw:sends.append(kw))
+    job = schedule_source_update(source)
+    settings.INGESTION_QUEUE_STALLED_SECONDS = 1
+    ProcessingJob.objects.filter(pk=job.pk).update(updated_at=timezone.now()-timedelta(minutes=5))
+    for queued in (None, frozenset({job.task_id})):
+        monkeypatch.setattr(broker_presence, "broker_delivery_ids", lambda:queued)
+        with django_capture_on_commit_callbacks(execute=True):
+            assert recover_stalled_processing_jobs(job_id=job.pk)["requeued"] == 0
+    monkeypatch.setattr(broker_presence, "broker_delivery_ids", lambda:frozenset())
+    with django_capture_on_commit_callbacks(execute=True):
+        assert recover_stalled_processing_jobs(job_id=job.pk)["requeued"] == 1
+    assert sends == [{"args":[str(job.pk), job.task_id], "task_id":job.task_id, "queue":"intelligence"}]
+    ProcessingJob.objects.filter(pk=job.pk).update(status="paused")
+    assert recover_stalled_processing_jobs(job_id=job.pk)["requeued"] == 0
 
 
 def test_outline_remap_retains_cross_page_and_footnote_sources(source):

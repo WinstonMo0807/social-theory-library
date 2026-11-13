@@ -102,8 +102,10 @@ def reconcile_pending():
     for key in ids:
         try:
             with transaction.atomic():
-                subscription = m.KnowledgeCompilation.objects.select_for_update().get(pk=key)
-                if (not subscription.enabled or not subscription.pending_refresh
+                # Overlapping beat/delivery recovery must not wait behind a
+                # source already being edited or reconciled by another worker.
+                subscription = m.KnowledgeCompilation.objects.select_for_update(skip_locked=True).filter(pk=key).first()
+                if (not subscription or not subscription.enabled or not subscription.pending_refresh
                         or subscription.next_refresh_at and subscription.next_refresh_at > timezone.now()):
                     continue
                 revision = subscription.latest_run.document_revision if subscription.latest_run_id else subscription.edition.active_catalog_revision.document_revision

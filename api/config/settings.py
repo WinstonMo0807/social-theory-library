@@ -411,6 +411,7 @@ DISCOVERY_EMBEDDING_DIMENSIONS = max(
     min(4096, int(os.getenv("DISCOVERY_EMBEDDING_DIMENSIONS", "384"))),
 )
 CELERY_TASK_ROUTES = {
+    "catalog.intelligence.refresh_source": {"queue": "intelligence"},
     "accounts.tasks.deliver_account_link": {"queue": "celery"},
     "catalog.tasks.run_discovery_search": {"queue": DISCOVERY_QUERY_TASK_QUEUE},
     "catalog.tasks.run_discovery_deep": {"queue": DISCOVERY_QUERY_TASK_QUEUE},
