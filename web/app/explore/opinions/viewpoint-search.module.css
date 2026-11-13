@@ -504,6 +504,17 @@
 .resultJump>button,.resultJump>p>button{display:flex;align-items:center;justify-content:center;width:100%;border:1px solid var(--line);background:transparent;padding:9px;margin-top:12px;cursor:pointer;border-radius:5px;font:13px var(--sans);color:var(--ink)}
 .resultJump>p{font-size:13px;color:var(--muted)}.resultJump button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .resultCard{scroll-margin-top:calc(var(--search-header-height,var(--header-height)) + 20px)}
+/* Keep all original text in the DOM for selection, find-in-page and anchors.
+   Only long, collapsed lists skip offscreen layout/paint; active content and print stay complete.
+   Initial estimates come from the local 692px/327px card fixtures; auto remembers measured size. */
+@media screen {
+ .cardList:has(> :nth-child(7)) > .resultCard:nth-child(n+4):not(.selectedCard, :focus-within, :target, :has(details[open]), :has([aria-expanded="true"])) {
+  content-visibility:auto;contain-intrinsic-block-size:auto 1100px;
+ }
+}
+@media screen and (max-width:760px) {
+ .cardList:has(> :nth-child(7)) > .resultCard:nth-child(n+4) { contain-intrinsic-block-size:auto 1400px; }
+}
 @media(max-width:1320px) and (min-width:1101px){.page .resultLayout{grid-template-columns:180px minmax(0,1fr) 280px;gap:16px}.page .resultLayout.summaryHidden{grid-template-columns:180px minmax(0,1fr)}.page .resultCard,.page .resultCard.selectedCard{padding:18px}.page .evidenceInspector{padding:14px}}
 @media(max-width:1100px){.page .resultLayout,.page .resultLayout.summaryHidden{grid-template-columns:190px minmax(0,1fr);gap:18px}.page .evidenceInspector{display:none}}
 @media(max-width:760px){.page .resultLayout,.page .resultLayout.summaryHidden{display:flex;flex-direction:column;gap:16px}.page .resultLayout>*{width:100%}.resultJump{position:static;max-height:280px}.jumpTools{grid-template-columns:1fr 1fr}.resultJump nav>button{padding:10px}.page .resultCard,.page .resultCard.selectedCard{padding:17px}.page .resultCard .evidenceBook{grid-template-columns:64px minmax(0,1fr);gap:13px}.page .resultCard .evidenceBook>img,.page .resultCard .coverMissing{width:64px;height:96px}.page .resultCard .evidenceBook h3{font-size:21px}}

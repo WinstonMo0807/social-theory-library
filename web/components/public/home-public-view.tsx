@@ -10,6 +10,7 @@ import type { HomeSections } from "@/lib/api/home.types";
 import type { HomeLayoutPreview } from "@/lib/api/home.types";
 import { EditorialByline } from "./editorial-directory";
 import { HomeCuratedSection } from "./home-curated-section";
+import { editorialImageSources } from "@/lib/performance-assets";
 
 export type HomeViewData = {
   config: SiteConfig; works: Work[]; scholars: Scholar[]; topics: LibraryTopic[];
@@ -33,7 +34,7 @@ export function HomePublicView({ config, works, scholars, topics, randomWorks, i
   return <div className="stl4-home">
     <section className="stl4-home-hero" data-edit-section="home" aria-labelledby="home-title">
       <div className="stl4-hero-picture">
-        <picture><img src={config.home_hero_image || "/editorial/generated-20261030/home.webp"} alt={config.home_hero_alt || "公共阅览室中的书籍、书架与读者"} width={643} height={278} fetchPriority="high" /></picture>
+        <picture><img src={config.home_hero_image || "/editorial/generated-20261030/home.webp"} {...editorialImageSources(config.home_hero_image || "/editorial/generated-20261030/home.webp", "(max-width: 760px) 100vw, 56vw")} alt={config.home_hero_alt || "公共阅览室中的书籍、书架与读者"} width={643} height={278} fetchPriority="high" /></picture>
       </div>
       <div className="stl4-hero-copy">
         <h1 id="home-title">{config.home_title_left_lines.join("")}<br />{config.home_title_right_lines.join("")}</h1>

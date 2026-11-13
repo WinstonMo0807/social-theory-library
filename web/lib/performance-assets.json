@@ -1,0 +1,182 @@
+{
+  "preferencesSha256": "5dd778fb418ce969af882d4e3533533110310e5d795d73767b7d231946dc21f8",
+  "images": {
+    "/editorial/generated-20261030/about.webp": {
+      "sha256": "13a18f1a8be4a8f0359031641d1fb5d58a4e722c5cc93f246cb6fb60ad5a31e1",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/book-spines.webp": {
+      "sha256": "e5ffe50fc109df3ebe9473bbbd8d19c82d1471e2af987ebd1788a6a32c14fed4",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/book-stack.webp": {
+      "sha256": "daa481f6c57ba815f31a5cbb9dd40e162e1b3802fe79b9479817efb213e37640",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/bookshelf.webp": {
+      "sha256": "9919f5de1de4deae012deabf2cb28cca3a23529d3424ce8f92564e4c9bc98b4a",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/branches.webp": {
+      "sha256": "ebee1b99eb9e29d754eb6a1160211e8350ebf6efe222bb8fdc99af9b463d2f1f",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/editorial.webp": {
+      "sha256": "b18e2e799ab1f7244f37e18727d669f69923313043effda57c19e3ccdb970e98",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/explore.webp": {
+      "sha256": "340c4b49ad0962377507914073334215d9f46b3f7f7ab3f18dd01eabf074f25a",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/feedback.webp": {
+      "sha256": "5d07b571226b58fb8aceeae5bd6481a363ab3c5a98c476945de474232525d3af",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/globe.webp": {
+      "sha256": "fe45cf15cd6aaffe4188389d6146156fd70f1e2b6de10431aea9d28ad24f297f",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/home.webp": {
+      "sha256": "ae504c4198158fdbb1e1413e0be195dd176f9e35026cae713763cbc2e6f84e01",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/library.webp": {
+      "sha256": "b68ac62c12ec4b9827b8e86236957902dc8ee59f84222adae1d3c8024c8519b2",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/open-book.webp": {
+      "sha256": "b338a7c1ad39a6781f0ca505e28eb3d580153c36c074630f0caf6cf8daf81b84",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/original.webp": {
+      "sha256": "356f1bd02b90e11863a7aed467f59ffc9d8a7730dd8ce4f63ffbe0fa06f759f2",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/questions.webp": {
+      "sha256": "fdd642c31d829a4bc4ab3f6f0c52171ee9b7195db0f130a46420f623bee7753a",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/reading.webp": {
+      "sha256": "e2f1e58e06e272b26b959354760c4fb6bb1ea6ff9e3f4e5e27db64b91c9abaee",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/scholars.webp": {
+      "sha256": "9e5879a1856c8a2031bd04fe85a187e05e9844b4a8b3a240df689ab3601a691f",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/stone-wall.webp": {
+      "sha256": "0f87d2542ae6f46f01dd6806e0edff93c5e2368fd933f9386991a8c9987d4769",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    },
+    "/editorial/generated-20261030/support.webp": {
+      "sha256": "341bff609a83b81c874a83267324736390ebaed69ce6cfc5d896e992c81db67e",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/theories.webp": {
+      "sha256": "6def40f4d82e1d640903875a6681d81fabbef97dba110a144a2b9a390506935b",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/topics.webp": {
+      "sha256": "8893c807fe16ec2a7826cdbb6a854bd28642eb4596f746ca53c9798323e50241",
+      "width": 1536,
+      "height": 1024,
+      "widths": [
+        480,
+        960
+      ]
+    },
+    "/editorial/generated-20261030/viewpoints.webp": {
+      "sha256": "d2c69938bf1befca4b3c9cf1ff9894cf604c0e80b13515ffcf9495819359e96a",
+      "width": 768,
+      "height": 512,
+      "widths": [
+        480
+      ]
+    }
+  }
+}

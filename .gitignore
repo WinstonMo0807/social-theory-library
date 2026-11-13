@@ -184,3 +184,7 @@ Desktop.ini
 *.swo
 *~
 ~$*
+
+# Reproducible public performance variants; generated from source art at build time.
+web/public/assets/performance/
+web/styles/tokens/type-fonts.generated.css

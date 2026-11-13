@@ -1,6 +1,7 @@
 import { ActionMenuBehavior } from "@/components/ui/action-menu-behavior";
 import type { Metadata } from "next";
 import Script from "next/script";
+import { preferencesBootstrapSource } from "@/lib/performance-assets";
 import "./globals.css";
 import "./editorial-v2.css";
 import "./editorial-workspaces.css";
@@ -10,7 +11,7 @@ import "../styles/knowledge-v307.css";
 import "../styles/features/home/home-stl4.css";
 import "../styles/tokens/appearance.css";
 import "../styles/layout/brand-identity.css";
-import "../styles/tokens/type-fonts.css";
+import "../styles/tokens/type-fonts.generated.css";
 import "../styles/tokens/typography.css";
 import "../styles/tokens/typeface.css";
 import "../styles/layout/site-masthead.css";
@@ -68,8 +69,7 @@ export default async function RootLayout({
     <html lang="zh-CN" data-typeset="A" data-typeface="balanced" suppressHydrationWarning>
       <head>
         <Script src="/runtime-config.js" strategy="beforeInteractive" />
-        <Script src="/appearance-init.js" strategy="beforeInteractive" />
-        <Script src="/typography-init.js?v=20261029" strategy="beforeInteractive" />
+        <Script src={preferencesBootstrapSource} strategy="beforeInteractive" />
       </head>
       <body>
         <PublicSessionProvider>

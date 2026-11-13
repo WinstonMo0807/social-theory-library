@@ -8,6 +8,7 @@ import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import type { SiteConfig } from "@/lib/site-config";
 import styles from "./home-feature-story.module.css";
 import { EditorialDiscoveryArt, ScholarDiscoveryArt, TheoryDiscoveryArt } from "./welcome-discovery-art";
+import { editorialImageSources } from "@/lib/performance-assets";
 
 import { welcomeContent, type WelcomeConfig, type WelcomeCopy, type WelcomeBook as StoryBook, type WelcomeDiscovery } from "@/lib/welcome";
 type BrandConfig = Pick<SiteConfig, "site_name" | "wordmark_lines">;
@@ -55,7 +56,7 @@ function DiscoveryView({ kind, discovery, interactive = false }: { kind: "schola
   </div>;
   if (kind === "topics") return <div className={styles.topicIndex} inert={!interactive}>{discovery.topics.length ? discovery.topics.map(topic => <Link href={`/topics/${topic.slug}`} key={topic.slug}><span>{topic.name}</span><ArrowRight size={18} /></Link>) : <div><span>从关心的问题出发</span><ArrowRight size={18} /></div>}</div>;
   return <Link href={discovery.issue?.href || '/recommendations'} className={styles.issueFeature} inert={!interactive}>
-    <img src={discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp"} alt="" width={720} height={460} loading="lazy" />
+    <img src={discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp"} {...editorialImageSources(discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp", "(max-width: 760px) 100vw, 50vw")} alt="" width={720} height={460} loading="lazy" decoding="async" />
     <div><strong>{discovery.issue?.title || "跟随策划，展开阅读"}</strong>{discovery.issue?.introduction ? <p>{discovery.issue.introduction}</p> : null}<ArrowRight size={21} /></div>
   </Link>;
 }
@@ -168,7 +169,7 @@ export function HomeFeatureStory({ books, closingImage, brandConfig, compareCopy
     <section className={styles.principles} aria-labelledby="welcome-principles"><div className={styles.sectionHeading}><h2 id="welcome-principles">{texts.principles_title}</h2></div><div className={styles.principleGrid}>
       <div><h3>{texts.principle_source_title}</h3><p>{texts.principle_source_body}</p></div><div><h3>{texts.principle_context_title}</h3><p>{texts.principle_context_body}</p></div><div><h3>{texts.principle_debate_title}</h3><p>{texts.principle_debate_body}</p></div><div><h3>{texts.principle_judgment_title}</h3><p>{texts.principle_judgment_body}</p></div>
     </div></section>
-    <section className={styles.invitation} aria-labelledby="welcome-invitation"><div><h2 id="welcome-invitation">{texts.invitation_title}</h2><p>{texts.invitation_body}</p><Link href="/explore" className={styles.textLink}>浏览馆藏 <ArrowRight size={18} aria-hidden="true" /></Link></div><img src={closingImage} alt="" width={1536} height={1024} loading="lazy" /></section>
+    <section className={styles.invitation} aria-labelledby="welcome-invitation"><div><h2 id="welcome-invitation">{texts.invitation_title}</h2><p>{texts.invitation_body}</p><Link href="/explore" className={styles.textLink}>浏览馆藏 <ArrowRight size={18} aria-hidden="true" /></Link></div><img src={closingImage} {...editorialImageSources(closingImage, "(max-width: 760px) 100vw, 50vw")} alt="" width={1536} height={1024} loading="lazy" decoding="async" /></section>
     <section className={styles.faq} aria-labelledby="welcome-faq"><h2 id="welcome-faq">{texts.faq_title}</h2><div>
       <section data-content-section><header data-section-heading>{texts.faq_read_title}<Plus size={20} aria-hidden="true" /></header><p>{texts.faq_read_body}</p></section>
       <section data-content-section><header data-section-heading>{texts.faq_cite_title}<Plus size={20} aria-hidden="true" /></header><p>{texts.faq_cite_body}</p></section>

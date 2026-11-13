@@ -9,6 +9,7 @@ import type { EditorialCard, EditorialCurator, EditorialDirectory, EditorialSear
 import styles from "./editorial.module.css";
 import { MediaPlacement } from "@/components/media-placement";
 import type { MediaDisplayUse } from "@/lib/media-usage";
+import { editorialImageSources } from "@/lib/performance-assets";
 
 export const editorialValue = (params: EditorialSearchParams, key: string) => { const value = params[key]; return Array.isArray(value) ? value[0] || "" : value || ""; };
 export function editorialHref(params: EditorialSearchParams, patch: Record<string, string | undefined> = {}) {
@@ -24,7 +25,7 @@ export function EditorialImage({ src, className = "", portrait = false, retry = 
   const [failedSource, setFailedSource] = useState("");
   const failed=!!src&&failedSource===src;
   const fallback=scholar ? <ScholarPortraitFallback name={scholar.name} identity={scholar.identity} className={className}/> : <span className={`${className} ${styles.imageMissing}`}><span role="img" aria-label={failed?"图片暂不可用":src?"本位置不展示配图":portrait?"未提供公开头像":"暂未提供配图"}>{portrait ? <UserRound size={20} strokeWidth={1} /> : <ImageOff size={28} strokeWidth={1} />}</span>{retry && failed ? <button type="button" onClick={() => setFailedSource("")}>重新加载</button> : null}</span>;
-  return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} alt="" loading={loading} onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
+  return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} {...editorialImageSources(src, portrait ? "96px" : "(max-width: 760px) 100vw, 50vw")} alt="" loading={loading} decoding={loading === "eager" ? "auto" : "async"} onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
 }
 export function EditorialByline({ curator, date }: { curator: EditorialCurator; date: string | null }) {
   return <div className={styles.byline}>{curator.name ? <EditorialImage key={curator.portrait_url} src={curator.portrait_url} portrait className={styles.avatar} /> : null}
