@@ -12,6 +12,11 @@ export async function requireReaderSession(path: string, params: Record<string, 
       for (const value of Array.isArray(values) ? values : values === undefined ? [] : [values]) query.append(key, value);
     }
     const next = path + (query.size ? `?${query}` : "");
-    redirect(`/login?next=${encodeURIComponent(next)}`);
+    // An expired access cookie can still have a valid remembered session.
+    // Refresh in the browser so rotated HttpOnly cookies reach the reader.
+    const { cookies } = await import("next/headers");
+    const refreshName = process.env.JWT_REFRESH_COOKIE_NAME || "stl_refresh";
+    const resume = (await cookies()).has(refreshName) ? "&resume=1" : "";
+    redirect(`/login?next=${encodeURIComponent(next)}${resume}`);
   }
 }
