@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import type { IssueBlock, IssueResolvedSource } from "@/lib/api/recommendation-issues.types";
 import { CollectionLink } from "@/components/collection-link";
 import { SharedCitationButton } from "@/components/shared-citation-overlay";
@@ -26,7 +28,7 @@ export function IssueBlockView({ block }: { block: IssueBlock }) {
   if (block.type === "link") return <p><a href={block.url} rel="noopener noreferrer"><IssueInline block={block}/></a></p>;
   if (block.type === "evidence") {
     const source = sources[0];
-    return <div>{source?.text ? <blockquote><p>{source.text}</p><cite><SourceLink source={source} /></cite>{source.type === "span" ? <SharedCitationButton reference={{ evidence_span_id: source.id }} selectedText={source.text} /> : null}</blockquote> : <p>原文尚未核实。</p>}{block.text ? <IssueProse block={block}/> : null}</div>;
+    return <div>{source?.text ? <blockquote><p><SourceText text={(source.text) || ""} /></p><cite><SourceLink source={source} /></cite>{source.type === "span" ? <SharedCitationButton reference={{ evidence_span_id: source.id }} selectedText={source.text} /> : null}</blockquote> : <p>原文尚未核实。</p>}{block.text ? <IssueProse block={block}/> : null}</div>;
   }
   if (block.type === "comparison") return <div>{block.text ? <IssueProse block={block}/> : null}<table><caption>不同作者的论述与原文依据</caption><thead><tr><th scope="col">作者</th>{block.dimensions?.map(dimension => <th scope="col" key={dimension}>{dimension}</th>)}</tr></thead><tbody>{block.rows?.map(row => <tr key={row.person_id}><th scope="row">{sources.find(source => source.type === "person" && source.id === row.person_id)?.title || "作者身份待核对"}</th>{block.dimensions?.map(dimension => {
     const cell = row.cells.find(candidate => candidate.dimension === dimension);

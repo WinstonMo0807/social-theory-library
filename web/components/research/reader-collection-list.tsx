@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import Link from "next/link";
 import { ArrowRight, CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
@@ -117,7 +119,7 @@ export function ReaderCollectionList({ kind }: { kind: CollectionKind }) {
     <header className="stl4-research-heading"><h1>{page.title}</h1><p>{page.subtitle}</p></header>
     <section className="stl4-research-panel"><ResearchCenterNav active={page.nav} counts={{ [page.nav]: rows.length }} />
       {rows.length ? <div className="stl4-research-list">{rows.map(row => <article className="stl4-research-card" key={row.id}>
-        <div className="stl4-research-card-copy"><h3>{row.title}</h3>{row.quote ? <blockquote>{row.quote}</blockquote> : null}{row.text ? <p>{row.text}</p> : null}
+        <div className="stl4-research-card-copy"><h3>{row.title}</h3>{row.quote ? <blockquote><SourceText text={(row.quote) || ""} /></blockquote> : null}{row.text ? <p>{row.text}</p> : null}
           {row.summary ? <details data-disclosure="collection"><summary>查看任务记录</summary><p>{row.summary}</p></details> : null}
           <time dateTime={row.updatedAt}>{Number.isNaN(Date.parse(row.updatedAt)) ? "更新时间未知" : new Date(row.updatedAt).toLocaleDateString("zh-CN")}</time></div>
         <span className="stl4-research-status is-neutral"><i aria-hidden="true" />{row.status}</span>

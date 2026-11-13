@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
@@ -89,7 +91,7 @@ export function ResearchComparisonActivity({ workspace }: { workspace: Workspace
     {rows.length > 1 ? <label>补充检索轮次<select data-stl-select value={current.id} onChange={event => setSelectedTurn(event.target.value)}>{rows.map((turn, index) => <option key={turn.id} value={turn.id}>{index + 1} · {turn.data.question}</option>)}</select></label> : null}
     <section data-content-section><header data-section-heading><Search size={13}/>本轮材料（{references.length}）· 核对后加入选材</header>
       {references.map(ref => { const key = researchEvidenceKey(ref), added = selected.has(key), href = researchReaderHref(ref); return <article key={key}>
-        <h3>{ref.title || "原文证据"}</h3><p>{ref.source_status === "available" ? ref.quote || ref.text || "请打开原文核对。" : "来源暂不可用，原引用记录保留。"}</p>
+        <h3>{ref.title || "原文证据"}</h3><p><SourceText text={(ref.source_status === "available" ? ref.quote || ref.text || "请打开原文核对。" : "来源暂不可用，原引用记录保留。") || ""} /></p>
         <div className="stl4-comparison-inline-actions">{href ? <Link href={href} target="_blank" rel="noreferrer">查看原文</Link> : null}
           <button type="button" disabled={pending || added || ref.source_status !== "available"} onClick={() => void run(() => changeResearchSelection(record.id, { expected_revision: record.revision, expected_owner_id: workspace.session.user?.id,
             request_id: requestId(`comparison-selection:${record.id}:${key}`), action: "add", references: [researchEvidenceReference(ref)] }), "已加入当前选材。请在对应比较格中明确选入依据，已有判断继续保留。")}>{added ? "已加入选材" : "加入选材"}</button>

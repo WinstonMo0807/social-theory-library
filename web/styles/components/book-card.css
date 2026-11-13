@@ -189,12 +189,17 @@
 
 .book-summary {
   margin-top: var(--stl-space-4);
-  line-height: 1.45;
+  font-size: max(15px, var(--stl-readable-body));
+  line-height: 1.75;
+  overflow-wrap: anywhere;
 }
 
 .book-actions {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px 18px;
   padding-top: var(--stl-space-admin);
 }
 
@@ -203,11 +208,17 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
+  line-height: 1.5;
+  max-width: 100%;
+  white-space: normal;
   padding: var(--stl-space-1) 0;
   cursor: pointer;
   font-size: max(calc(10px + var(--font-bump)), var(--stl-readable-ui));
   transition: transform var(--stl-motion-press) var(--ease-out);
 }
+.book-actions svg { flex: none; }
+@media (pointer:coarse) { .book-actions :is(button,a) { min-height:44px; } }
 
 .book-card.dense {
   min-height: auto;

@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -59,12 +61,12 @@ export default async function SemanticWorkResultsPage({
                   {item.chapter_title ? <span>{item.chapter_title}</span> : null}
                   {item.section_title ? <span>{item.section_title}</span> : null}
                 </p>
-                <blockquote><Quote size={18} fill="currentColor" />{item.snippet}</blockquote>
+                <blockquote><Quote size={18} fill="currentColor" /><SourceText text={(item.snippet) || ""} /></blockquote>
                 {item.context_before || item.context_after ? (
                   <section data-content-section className="semantic-context">
                     <header data-section-heading>展开前后文</header>
                     {item.context_before ? <p>{item.context_before}</p> : null}
-                    <blockquote>{item.snippet}</blockquote>
+                    <blockquote><SourceText text={(item.snippet) || ""} /></blockquote>
                     {item.context_after ? <p>{item.context_after}</p> : null}
                   </section>
                 ) : null}

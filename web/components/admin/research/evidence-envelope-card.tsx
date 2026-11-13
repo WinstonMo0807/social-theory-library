@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import { ExternalLink } from "lucide-react";
 import { normalizeEvidenceEnvelope } from "./evidence-envelope";
 
@@ -14,7 +16,7 @@ export function EvidenceEnvelopeCard({ evidence, compact = false }: { evidence: 
         <span><strong>{row.title}</strong>{row.authors.length ? <small>{row.authors.join("、")}</small> : null}</span>
         {row.stale ? <b>证据已失效</b> : percentage ? <b>质量 {percentage}</b> : null}
       </header>
-      <blockquote>{row.text}</blockquote>
+      <blockquote><SourceText text={row.text} /></blockquote>
       <div className="admin-evidence-locator">
         {row.page ? <span>PDF 第 {row.page} 页</span> : <span>页码待核对</span>}
         {row.printedPageLabel && row.printedPageLabel !== row.page ? <span>印刷页 {row.printedPageLabel}</span> : null}

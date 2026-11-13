@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import { CollectionLink } from "@/components/collection-link";
 import type { EvidenceCurationItem } from "@/lib/api/evidence-curation.types";
 
@@ -10,7 +12,7 @@ export function EvidenceCurationView({ items, preview = false }: { items: Eviden
     return <section id={`curated-${item.id || item.source_id}`} key={item.id || `${item.source_type}:${item.source_id}`} data-edit-row={index}>
       {groupChanged ? <h2>{item.group_title}</h2> : null}
       <article className="evidence-curation-quote">
-        <blockquote>{source.text}</blockquote>
+        <blockquote><SourceText text={(source.text) || ""} /></blockquote>
         <p className="evidence-curation-citation">{source.work_title} · {source.edition_label || "出版信息待补"}{source.page_start ? ` · PDF 第 ${source.page_start}${source.page_end && source.page_end !== source.page_start ? `–${source.page_end}` : ""} 页` : " · 页码待核对"}{source.printed_label ? ` · 印刷页 ${source.printed_label}` : ""}</p>
         {item.reason ? <div className="evidence-curation-reason"><strong>关联说明</strong><p>{item.reason}</p></div> : null}
         {preview && !source.public_eligible ? <p className="form-message">此来源尚未满足公开条件，仅管理员可见。</p> : null}

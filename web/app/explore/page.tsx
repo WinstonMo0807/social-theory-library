@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -625,7 +627,7 @@ function SemanticExplorePage({
                         <div>
                           <p>{item.title}</p>
                           {item.authors.length ? <small>{item.authors.join("、")}{item.publication_year ? ` · ${item.publication_year}` : ""}</small> : null}
-                          <blockquote className="semantic-comparison-excerpt"><span>{item.snippet}</span></blockquote>
+                          <blockquote className="semantic-comparison-excerpt"><span><SourceText text={(item.snippet) || ""} compact /></span></blockquote>
                           <small>PDF 第 {item.page_index} 页{item.printed_label ? ` · 书页 ${item.printed_label}` : ""}</small>
                           <CollectionLink href={item.reader_url} aria-label={`打开《${item.title}》PDF 第 ${item.page_index} 页核对原文`}>回到原文 <ArrowRight size={14} /></CollectionLink>
                         </div>
@@ -763,12 +765,12 @@ function SemanticPassageBlock({
         {item.chapter_title ? <span>{item.chapter_title}</span> : null}
         {item.section_title ? <span>{item.section_title}</span> : null}
       </p>
-      <blockquote><Quote size={18} fill="currentColor" aria-hidden="true" /><span className="semantic-snippet">{item.snippet}</span></blockquote>
+      <blockquote><Quote size={18} fill="currentColor" aria-hidden="true" /><span className="semantic-snippet"><SourceText text={(item.snippet) || ""} compact /></span></blockquote>
       {item.context_before || item.context_after ? (
         <section data-content-section className="semantic-context">
           <header data-section-heading>查看上下文</header>
           {item.context_before ? <p>{item.context_before}</p> : null}
-          <blockquote>{item.snippet}</blockquote>
+          <blockquote><SourceText text={(item.snippet) || ""} /></blockquote>
           {item.context_after ? <p>{item.context_after}</p> : null}
         </section>
       ) : null}
@@ -996,7 +998,7 @@ function PassageResultGroup({
               </p>
               <blockquote>
                 <Quote size={16} fill="currentColor" aria-hidden="true" />
-                <span>{passage.snippet}</span>
+                <span><SourceText text={(passage.snippet) || ""} compact /></span>
               </blockquote>
             </div>
             <div className="passage-table-actions" role="cell">

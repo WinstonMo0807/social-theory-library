@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { TheorySectionHeading } from "@/components/theory-system-ui";
@@ -63,7 +65,7 @@ export function CuratedClaimSections({
                       : `PDF 第 ${evidence.locator.page} 页`;
                     return (
                       <blockquote key={evidence.id}>
-                        <p>{evidence.text}</p>
+                        <p><SourceText text={evidence.text} /></p>
                         <footer>
                           <span>{author ? `${author} · ` : ""}《{evidence.source.work_title}》 · {locator}</span>
                           <Link href={evidence.reader_url}>查看原文 <ArrowRight size={14} /></Link>

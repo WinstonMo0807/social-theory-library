@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
@@ -18,7 +20,7 @@ const years = (person: { birth_year: number | null; death_year: number | null })
 export function UsageSource({ usage }: { usage: TheoryConceptUsage }) {
   const source = usage.source;
   return <div className={styles.source}>
-    <blockquote>{source.text}</blockquote>
+    <blockquote><SourceText text={(source.text) || ""} /></blockquote>
     <p>《{source.work_title}》{source.edition_label ? ` · ${source.edition_label}` : ""}{source.printed_label ? ` · 印刷页 ${source.printed_label}` : ` · PDF 第 ${source.page_start}${source.page_end !== source.page_start ? `–${source.page_end}` : ""} 页`}</p>
     <div className={styles.inlineActions}>
       <Link href={source.reader_url} target="_blank" rel="noopener noreferrer">阅读原文<ExternalLink size={14} /></Link>
@@ -145,7 +147,7 @@ export function TheoryRelations({ node }: { node: KnowledgeNodeDetail }) {
         <div className={mode === "evidence" ? styles.fullWidth : styles.relationList}>
           {mode !== "evidence" ? <div className={styles.relationChoices}>{rows.map(row => <button key={row.id} type="button" aria-pressed={row.id === selected?.id} onClick={() => setSelectedId(row.id)}><span>{target(row).name}</span><small>{row.relation_label}</small><ChevronDown size={14} /></button>)}</div> : <label className={styles.relationSelect}>选择关系<select data-stl-select value={selected?.id || ""} onChange={event => setSelectedId(event.target.value)}>{rows.map(row => <option key={row.id} value={row.id}>{target(row).name} · {row.relation_label}</option>)}</select></label>}
           {selected ? <article className={styles.relationEvidence} aria-live="polite"><header><h3>{selected.source_name} {selected.direction === "undirected" ? "—" : selected.direction === "bidirectional" ? "↔" : "→"} {selected.target_name}</h3><span>{selected.relation_label}</span></header>{selected.description ? <p>{selected.description}</p> : null}
-            <RelationSourceQuote material={selected.source_material}/>{(selected.evidence || []).length ? selected.evidence!.map(evidence => <div key={evidence.id}><blockquote>{evidence.quote}</blockquote><p>《{evidence.work_title}》 · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">核对这条关系的原文<ExternalLink size={14} /></Link> : null}</div>) : null}
+            <RelationSourceQuote material={selected.source_material}/>{(selected.evidence || []).length ? selected.evidence!.map(evidence => <div key={evidence.id}><blockquote><SourceText text={(evidence.quote) || ""} /></blockquote><p>《{evidence.work_title}》 · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</p>{evidence.reader_href ? <Link href={evidence.reader_href} target="_blank" rel="noopener noreferrer">核对这条关系的原文<ExternalLink size={14} /></Link> : null}</div>) : null}
             <Link href={`/theories/nodes/${target(selected).slug}`}>查看{target(selected).name}<ArrowRight size={14} /></Link>
           </article> : null}
         </div>

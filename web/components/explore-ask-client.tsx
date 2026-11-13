@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 import { submitSearchOnEnter } from "@/lib/search-submit-key";
@@ -878,7 +880,7 @@ function ExploreAskWorkspace({ initialQuestion = "", initialScope = GLOBAL_LIBRA
                 <h3>{source.work_title ?? source.title ?? "馆藏原文"}</h3>
                 <p>{printedLabel ? `书页 ${printedLabel}` : source.page_index ? `PDF 第 ${source.page_index} 页` : "页码待核对"}</p>
                 {source.passage_language ? <small>原文语言 {source.passage_language}</small> : null}
-                {source.quote || source.snippet ? <blockquote>{source.quote ?? source.snippet}</blockquote> : null}
+                {source.quote || source.snippet ? <blockquote><SourceText text={(source.quote ?? source.snippet) || ""} /></blockquote> : null}
                 {!source.quote && !source.snippet && source.available !== false && source.id ? (
                   <button type="button" onClick={() => void showSourceDetail(sources.messageId, source)}>查看摘录</button>
                 ) : null}

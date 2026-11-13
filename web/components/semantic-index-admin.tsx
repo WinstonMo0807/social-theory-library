@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 
@@ -452,7 +454,7 @@ export function SemanticIndexAdmin() {
               <article key={item.id}>
                 <strong>{item.relevance} · {item.title}</strong>
                 <span>{item.printed_label ? `引用第 ${item.printed_label} 页 · ` : ""}PDF 第 {item.page_index} 页</span>
-                <p>{item.snippet}</p>
+                <p><SourceText text={(item.snippet) || ""} /></p>
                 <label className="evaluation-relevance-field">
                   <span>评估相关性</span>
                   <select data-stl-select

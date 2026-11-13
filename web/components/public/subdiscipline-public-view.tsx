@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import { DefaultCover } from "@/components/default-cover";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,7 +17,7 @@ const relatedPhotos = ["related-columns-final-r2.png", "related-street-final-r2.
 
 function SourceExcerpt({ source }: { source: SubdisciplineSource }) {
   return <blockquote className={styles.sourceExcerpt}>
-    {source.quote ? <p>{source.quote}</p> : null}
+    {source.quote ? <p><SourceText text={(source.quote) || ""} /></p> : null}
     <cite>《{source.title}》{source.edition_label ? ` · ${source.edition_label}` : ""} · {source.printed_page_label ? `印刷页 ${source.printed_page_label}` : `PDF 第 ${source.pdf_page} 页`}</cite>
     {source.reader_href ? <Link href={source.reader_href} target="_blank" rel="noopener noreferrer">核对原文<ExternalLink size={12} aria-hidden="true" /></Link> : null}
   </blockquote>;

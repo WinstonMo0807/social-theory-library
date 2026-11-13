@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 
@@ -167,7 +169,7 @@ function BookNotesWorkspace({ assetId, bootstrap }: { assetId: string; bootstrap
                 <strong>第 {note.selector.page_index ?? 1} 页</strong>
                 <time>{new Date(note.created_at).toLocaleString("zh-CN")}</time>
               </header>
-              <blockquote>{note.quote || "未保存所选原文"}</blockquote>
+              <blockquote><SourceText text={(note.quote || "未保存所选原文") || ""} /></blockquote>
               <p>{note.body_text || "这条笔记没有补充文字。"}</p>
             </div>
             <span className="reader-data-actions">

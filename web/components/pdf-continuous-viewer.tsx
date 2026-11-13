@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import type {
   PDFDocumentLoadingTask,
@@ -313,7 +315,7 @@ function ContinuousPdfPage({
             >
               <header><strong>笔记</strong><time>{note.createdAt}</time></header>
               <span>{note.body || note.quote || "页面笔记"}</span>
-              {note.quote ? <small>原文：{note.quote}</small> : null}
+              {note.quote ? <small>原文：<SourceText text={(note.quote) || ""} compact /></small> : null}
               <div>
                 <button type="button" onClick={() => onNoteSelect(note.id)}>定位</button>
                 <button type="button" aria-label={`删除第 ${pageNumber} 页笔记`} onClick={() => onNoteDelete(note.id)}><Trash2 size={13} /> 删除</button>

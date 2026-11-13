@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { LoadingState } from "@/components/ui/loading-state";
 
@@ -100,7 +102,7 @@ function ReaderEvidence({ evidence }: { evidence: unknown }) {
   const row = normalizeEvidenceEnvelope(evidence);
   return <article className="admin-evidence-envelope is-compact">
     <header><strong>{row.title}</strong>{row.stale ? <span>资料需要重新核对</span> : null}</header>
-    <blockquote>{row.text}</blockquote>
+    <blockquote><SourceText text={row.text} /></blockquote>
     <div className="admin-evidence-locator">{row.page ? <span>第 {row.page} 页</span> : null}{row.section ? <span>{row.section}</span> : null}</div>
     <footer>{row.readerUrl ? <a href={row.readerUrl} target="_blank" rel="noreferrer">查看馆藏原文 <ExternalLink size={12} /></a> : row.sourceUrl ? <a href={row.sourceUrl} target="_blank" rel="noreferrer">查看资料 <ExternalLink size={12} /></a> : null}</footer>
   </article>;

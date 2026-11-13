@@ -287,6 +287,11 @@
 :is(.page,.filterDialog) .filterGrid fieldset small { font-size:max(12px, var(--stl-readable-meta)); }
 :is(.page,.filterDialog) .filterGrid > label { font-size:max(13px, var(--stl-readable-meta)); padding:10px 0; }
 .page .resultsHeader { min-height:38px; padding:4px 0 12px; }
+.readableExcerpt { margin-block:16px; padding:20px 0 16px; border-block:1px solid var(--line); }
+.citationPreview .citationText { font:400 max(16px,var(--stl-readable-body))/1.8 var(--serif); color:var(--ink); overflow-wrap:anywhere; white-space:pre-wrap; user-select:text; }
+.summaryActions > div { flex-wrap:wrap; gap:8px; }
+.summaryActions :is(button,a) { min-height:38px; height:auto; white-space:normal; line-height:1.5; }
+.contextColumns :is(.contextMatch,.contextBlock) > p { max-inline-size:42em; margin-block:16px; }
 .page .resultsHeader h2,.page .resultsHeader span { font:max(13px, var(--stl-readable-meta)) var(--serif); }
 .viewControls select { font:max(12px, var(--stl-readable-ui)) var(--serif); background:var(--surface); }
 .viewControls button { min-width:36px; }
@@ -306,7 +311,7 @@
 .resultCard footer { font-size:max(13px, var(--stl-readable-meta)); }
 .resultCard .evidenceTags { margin:4px 0; }
 .evidenceTags span { background:var(--night-tint,#f4ead3); color:var(--night-gold,#9b7025); font:max(12px, var(--stl-readable-meta))/1.5 var(--serif); }
-.evidenceInspector { top:94px; margin-top:-132px; max-height:calc(100dvh - 108px); padding:16px; scrollbar-gutter:auto; }
+.evidenceInspector { top:94px; margin-top:0; max-height:calc(100dvh - 108px); padding:20px; scrollbar-gutter:stable; }
 .evidenceInspector > header { margin-bottom:18px; }
 .evidenceInspector > header h2 { font-weight:700; }
 .compactBook { grid-template-columns:76px minmax(0,1fr); gap:18px; }

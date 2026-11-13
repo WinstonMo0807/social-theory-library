@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "./ui";
@@ -66,7 +68,7 @@ export function WorkDetailEvidence({ work, preview }: { work: Work; preview: boo
                     <div className="work-theory-evidence-list">
                       {association.evidence.slice(0, 3).map((evidence) => (
                         <div key={evidence.id}>
-                          <p>{evidence.quote}</p>
+                          <p><SourceText text={(evidence.quote) || ""} /></p>
                           {preview ? <span>PDF 第 {evidence.page_number} 页</span> : (
                             <Link href={evidence.reader_href}>
                               PDF 第 {evidence.page_number}{evidence.page_end && evidence.page_end !== evidence.page_number ? `–${evidence.page_end}` : ""} 页

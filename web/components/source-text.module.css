@@ -1,0 +1,2 @@
+.text { color:var(--ink,#252521); font-family:var(--serif); font-size:max(16px,var(--stl-readable-body,16px)); font-weight:400; line-height:1.85; letter-spacing:normal; text-align:start; white-space:pre-wrap; overflow-wrap:anywhere; word-break:normal; tab-size:4; }
+.text[data-compact] { font-size:inherit; line-height:1.7; }

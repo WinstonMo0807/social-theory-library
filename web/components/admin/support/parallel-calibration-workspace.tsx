@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { confirmAction } from "@/lib/ui-dialog";
 
@@ -78,7 +80,7 @@ function Passage({ value, side, absent }: { value: ResolvedEvidence | null; side
   const href = available ? calibrationReaderPath(value.reader_url) : "";
   return <div className={parallel.source}><h4>{side}</h4>{!value ? <p>{absent}</p> : !available ? <p role="status">此段原文已变化或不可用，已收起原文内容。</p> : <>
     <strong>{value.title || "当前原文"}</strong><p>{value.pdf_page ? `PDF 第 ${value.pdf_page} 页` : "页码待核对"}{value.printed_label ? ` · 书内页码 ${value.printed_label}` : ""}</p>
-    <blockquote>{value.quote || value.text || "此定位没有可显示的原文。"}</blockquote>
+    <blockquote><SourceText text={(value.quote || value.text || "此定位没有可显示的原文。") || ""} /></blockquote>
     {href ? <Link href={href} target="_blank" rel="noopener noreferrer">查看原文位置<ArrowUpRight size={12} /></Link> : null}
   </>}</div>;
 }

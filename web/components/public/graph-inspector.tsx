@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
@@ -23,7 +25,7 @@ export function GraphInspector({ graph, node, edge, onNode, onEdge, onCenter, on
       {edge.status !== "published" ? <p className={styles.candidateNotice}>此关系尚未公开，不能作为已确认的学术关系使用。{graph.candidate_access.review_href ? <Link href={graph.candidate_access.review_href}>进入后台核对依据</Link> : null}</p> : null}
       <h3>概要说明</h3><p>{edge.description || "这条关系尚未提供公开说明。"}</p>
       {edge.evidence.length ? <h3>相关原文</h3> : null}
-      {edge.evidence.length ? <ul className={styles.evidenceList}>{edge.evidence.map(item => <li key={item.id}><strong>{item.title}</strong>{item.edition_label ? <small>{item.edition_label}</small> : null}<blockquote>{item.quote}</blockquote><small>{item.printed_page_label ? `印刷页 ${item.printed_page_label} · ` : ""}PDF 第 {item.pdf_page} 页</small><CollectionLink href={item.reader_href}>查看原文<ArrowRight size={13} /></CollectionLink></li>)}</ul> : null}
+      {edge.evidence.length ? <ul className={styles.evidenceList}>{edge.evidence.map(item => <li key={item.id}><strong>{item.title}</strong>{item.edition_label ? <small>{item.edition_label}</small> : null}<blockquote><SourceText text={(item.quote) || ""} /></blockquote><small>{item.printed_page_label ? `印刷页 ${item.printed_page_label} · ` : ""}PDF 第 {item.pdf_page} 页</small><CollectionLink href={item.reader_href}>查看原文<ArrowRight size={13} /></CollectionLink></li>)}</ul> : null}
       {edge.evidence_truncated ? <p className={styles.muted}>当前展示前 {edge.evidence.length} 条原文依据。</p> : null}
       <div className={styles.detailActions}>{source ? <button type="button" onClick={() => onNode(source)}>查看{source.name}</button> : null}{target ? <button type="button" onClick={() => onNode(target)}>查看{target.name}</button> : null}</div>
     </> : node ? <>
