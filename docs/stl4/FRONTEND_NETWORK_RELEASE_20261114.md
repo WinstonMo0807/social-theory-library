@@ -59,3 +59,18 @@ A阶段最终回执：2026-11-14 04:20:20 +0800，Web modern-web-r3 / 2f9a85cff8
 GitHub指南来源（星数为本次核验快照）：[Lighthouse](https://github.com/GoogleChrome/lighthouse)、[Front-End Performance Checklist](https://github.com/thedaviddias/Front-End-Performance-Checklist)、[web-vitals](https://github.com/GoogleChrome/web-vitals)、[Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci)。本轮采用其测量、压缩、关键请求、响应图片、缓存边界和回归预算建议；没有运行Lighthouse评分或采集真实用户p75，不把代码检查称为CWV达标。
 
 最终网络候选追加核查：Vinext自定义字体缓存头与默认头会叠加产生重复max-age，因此未采用该方案。改用标准assets路径及字体真实内容SHA，原字体CSS仅由构建派生替换资源URL，unicode-range/font-display/字重保持；HTTP验证只有一条一年immutable。r1仅暂存未发布，最终r2重新完成类型、构建、压缩、预算与网络测试。最终公共CSS1253685字节（比原1643025减少23.7%），Brotli169873字节。
+
+响应式补充：浏览器级viewport覆盖没有实际生效，后改为390px iframe承载完整本机候选；扣除滚动条后document.clientWidth与scrollWidth同为375px。首页标题、分行导航与响应首图完整呈现，无横向溢出，截图home-narrow-document.jpg。此为真实窄文档布局检查，不是手机触摸/设备模拟；iframe内菜单点击自动化未成功，未计作移动菜单交互通过。本机API配图未代理，不作为公网缺图证据。
+
+## 最终发布与真实网络结果
+
+## 2026-11-14 前端与网络优化已发布
+
+按用户最新授权完成两批代码发布。A提交26a0d125于04:20:20上线modern-web-r3；B提交3a1616ff于04:48:23上线network-web-r2（Web 10a38bf0337d）。B的3184运行文件逐项SHA一致、5入口最终200，106其他容器身份/配置保持。随后为Web补本站VINEXT_TRUSTED_HOSTS，并只将edge的Web协议头改为真实转发协议，修复匿名探索登录地址HTTP绕行；公网HTTPS与内网HTTP跳转各自保持，来源主机白名单与Web未暴露端口已核对。首轮协议补修因内网错误升级HTTPS被检查拦下并已自动回退；最终双入口通过后，准确配置发布时刻为2026-11-13T20:57:05Z，镜像未变。
+
+公共CSS原始1643025→1253685字节（减少23.7%），源站/公网Brotli169873字节；原公网已压缩，不将源站降幅当整体公网提速。首页静态图197846→90022字节（960px）/32692字节（480px）；浏览器实选960px。启动初始化3→2请求，202份字体按内容哈希长期缓存，配置no-store，长结果离屏绘制优化，首页/欢迎页流式外壳。内网同入口匿名各3次，首页首字节中位数4458.5→59.1ms，优化后完整HTML中位数4270.0ms；这不是LCP或真实用户p75。公网首页本次首字节样本[924.1, 454, 452]ms，完整HTML[6326.7, 4829.3, 4473]ms。
+
+类型、构建、1048压缩副本解码与体积预算通过；本轮24项既有、3项图谱、2项网络、1项代理定向测试通过。公网首页、账户、后台实看；没有宣称152路由/230页视觉图集全量正式验收或Lighthouse评分。未改API/数据/任务架构、原PDF、DNS、隧道；备份与代码/配置回退保留。共享HEAD与原暂存保持。前后对照output/frontend-network-20261114/report.html，完整记录docs/stl4/FRONTEND_NETWORK_RELEASE_20261114.md。
+
+
+公网回执包含最终200入口，其中匿名探索实际为307到登录后200，不代表访客获准使用探索。公网网络采样原始JSON保留了代理修正前的HTTP Location；最终正确协议见output/frontend-network-20261114/proxy-after.json。

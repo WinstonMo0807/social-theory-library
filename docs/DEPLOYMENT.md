@@ -1,3 +1,11 @@
+## 2026-11-14 Web性能发布与代理协议
+
+现用Web镜像social-theory-library-web:4.0.0-20261114-network-web-r2（sha256:10a38bf0337d5828530363cd92c36698a15b6e628d6f2ce8eca7f2a77e80aa68）。构建会生成静态br/gzip、响应图片、字体内容哈希副本及派生字体CSS；运行配置不预压缩。源文件及许可证保留，生成产物不进Git。正常使用package.json的prebuild/build流程，不跳过prepare-performance-assets。
+
+compose.public.yaml为Web设置VINEXT_TRUSTED_HOSTS=${LIBRARY_DOMAIN}。生产Web无宿主机发布端口，仅在既有backend网络由edge访问；edge按公网/内网入口设置X-Forwarded-Proto。该白名单让Vinext保持公网HTTPS登录跳转，拒绝外国X-Forwarded-Host；内网HTTP仍正常。若改变Web暴露方式，必须重新审查代理信任，不能把这一设置复制到不受控直连服务。
+
+本次替换Web，随后补单一代理环境变量和edge转给Web的一行协议头；API所用library_forwarded_proto规则保持，API、worker、数据、DNS与隧道未变。完整备份SHA复核，两个代码发布及配置发布各自保留受保护的旧compose命令和回退脚本。活动配置入口仍为既有20261107-r1/public/compose-command.json。具体回执见stl4/FRONTEND_NETWORK_RELEASE_20261114.md。
+
 ## 2026-11-14 S4 公网发布
 
 最终Web：`social-theory-library-web:4.0.0-20261114-s4-web-r9`，`sha256:796503b4b14a690668c282182f76c7ddf6eab0244c15421b912a73f11b3b2b9e`，时间 `2026-11-14T03:59:27+08:00`。API为`200d52cae66c`，普通worker为`d1711e519d36`。只更新这三角色，未迁移数据库；Web最终校验1891文件及106个受保护服务。回退入口 `/volume2/library/stl-releases/20261114-s4-research-r1/recovery-web-r9/rollback-web.py` 恢复r8；此前r8/r7/r6/r5到r2、首次三角色恢复链保留。完整备份与详细验证见 `docs/stl4/S4_RESEARCH_RELEASE_20261114.md`。
