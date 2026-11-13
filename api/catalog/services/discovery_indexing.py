@@ -391,13 +391,43 @@ def _commit_keyword_batch(job, generation, header, batch):
         return
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "来源已变化，停止旧批次写入。")
-    wait_index_task(meili("POST", f"/indexes/{generation.uid}/documents", batch))
+    task = meili("POST", f"/indexes/{generation.uid}/documents", batch)
+    if task.get("taskUid") is None:
+        raise DiscoveryIndexError("missing_task", "索引服务未返回可核对的写入任务。")
+    # A slow Meilisearch task outlives the worker slice. Persist its receipt so
+    # the next delivery checks that task instead of resubmitting the same batch.
+    _guard_job(job, stats={**job.stats, "keyword_write": {"task_uid": task["taskUid"],
+        "documents": {row["id"]: row["input_hash"] for row in batch}}})
+    _finish_keyword_write(job, generation, header)
+    batch.clear()
+
+
+def _finish_keyword_write(job, generation, header):
+    pending = job.stats.get("keyword_write")
+    if not pending:
+        return
+    if not _is_current(job, generation, header):
+        raise DiscoveryIndexError("superseded", "来源已变化，不再接收旧索引回执。")
+    try:
+        wait_index_task({"taskUid": pending["task_uid"]}, timeout=1)
+    except DiscoveryIndexError as exc:
+        if exc.code == "write_failed":
+            # Retain the failed receipt for diagnostics; an explicit retry may
+            # submit a new task. A timeout keeps the pending receipt unchanged.
+            _guard_job(job, stats={**{k:v for k,v in job.stats.items() if k != "keyword_write"},
+                "last_keyword_write": {**pending, "status": "failed"}})
+        raise
     with transaction.atomic():
         ProcessingJob.objects.select_for_update().get(pk=job.pk)
         if not _is_current(job, generation, header):
             raise DiscoveryIndexError("superseded", "来源已变化，旧批次不标记就绪。")
-        DiscoveryDocument.objects.filter(pk__in=[row["id"] for row in batch]).update(keyword_ready=True, indexed_at=timezone.now())
-    batch.clear()
+        docs = DiscoveryDocument.objects.filter(pk__in=pending["documents"], generation=generation,
+            source_type=header["source_type"], source_id=header["source_id"], source_revision=header["source_revision"])
+        if {str(key):value for key,value in docs.values_list("pk", "input_hash")} != pending["documents"]:
+            raise DiscoveryIndexError("superseded", "索引回执与当前原文批次不一致，不标记就绪。")
+        docs.update(keyword_ready=True, indexed_at=timezone.now())
+        _guard_job(job, stats={**{k:v for k,v in job.stats.items() if k != "keyword_write"},
+            "last_keyword_write": {"task_uid": pending["task_uid"], "status": "succeeded", "count": len(pending["documents"])}})
 
 
 def _write_chunk(job, generation, header, unit, child, *, contributions=None, keyword_batch=None):
@@ -548,6 +578,7 @@ def process_source(job, generation):
         raise DiscoveryIndexError("superseded", "索引任务归属已更新，旧任务已停止。")
     if _reader_query_active():
         return False  # Do not prepare structure or index settings ahead of a reader.
+    _finish_keyword_write(job, generation, header)
     contributions = contribution_projection(source, access_statuses=[header["access_status"]]) if kind == "edition" else None
     state, _ = DiscoverySourceState.objects.get_or_create(generation=generation, source_type=kind, source_id=source_id)
     # Cooperative slice: finish/acknowledge the current write before yielding.
@@ -793,6 +824,14 @@ def _run_job(job_id, task_id):
         finish_builds()
     except Exception as exc:
         code = getattr(exc, "code", "index_job_failed")
+        if code == "write_timeout" and job.stats.get("keyword_write"):
+            with transaction.atomic():
+                current = ProcessingJob.objects.select_for_update().filter(pk=job.pk, task_id=task_id, status="running").first()
+                if current:
+                    _enqueue_job(current, countdown=30)
+                    ProcessingJob.objects.filter(pk=current.pk, task_id=current.task_id, status="pending").update(
+                        error_code="waiting_index", error_message="检索服务正在确认本批写入，已保留回执，稍后自动接续。")
+            return
         if code == "inference_busy":
             # Reader reranking shares one bounded CPU model process. Admission
             # pressure is a queued wait, not three rapid permanent failures.

@@ -183,6 +183,71 @@ def test_keyword_batches_wait_for_external_success(monkeypatch):
     assert all(m.DiscoveryDocument.objects.get(pk=row["id"]).keyword_ready for batch in batches for row in batch)
 
 
+def test_slow_keyword_task_resumes_receipt_without_resending_or_retry_penalty(monkeypatch):
+    _, _, _, generation, job, old = indexing_source()
+    generation.config_snapshot["context_fields_version"] = 1
+    generation.save()
+    job.status = "pending"
+    job.attempt = 2
+    job.stats.update(action="source", generation_id=str(generation.pk))
+    job.save()
+    batches, ready = [], [False]
+    def meili(method, path, data=None, **kwargs):
+        if path.endswith("/search"):
+            return {"hits": []}
+        if path.endswith("/documents"):
+            batches.append(list(data))
+        return {"taskUid": 71}
+    def acknowledge(task, **kwargs):
+        assert task["taskUid"] == 71
+        if not ready[0]:
+            raise projection.DiscoveryIndexError("write_timeout")
+    monkeypatch.setattr(indexing, "meili", meili)
+    monkeypatch.setattr(indexing, "wait_index_task", acknowledge)
+    monkeypatch.setattr(indexing, "finish_builds", lambda: None)
+    old_task = job.task_id
+    indexing._run_job(job.pk, job.task_id)
+    job.refresh_from_db()
+    assert job.status == "pending" and job.error_code == "waiting_index" and job.attempt == 2
+    assert job.task_id != old_task and job.stats["keyword_write"]["task_uid"] == 71
+    assert len(batches) == 1 and not job.stats.get("completed_units")
+    new = m.DiscoveryDocument.objects.exclude(pk__in=[d.pk for d in old])
+    assert new.exists() and not new.filter(keyword_ready=True).exists()
+    indexing._run_job(job.pk, old_task)  # Delayed delivery cannot consume a new lease.
+    ready[0] = True
+    indexing._run_job(job.pk, job.task_id)
+    job.refresh_from_db()
+    assert job.status == "succeeded" and job.attempt == 2 and len(batches) == 1
+    assert "keyword_write" not in job.stats and job.stats["last_keyword_write"]["status"] == "succeeded"
+    assert not new.filter(keyword_ready=False).exists()
+    assert m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in old], keyword_ready=True, vector_ready=True).count() == len(old)
+
+
+@pytest.mark.parametrize("changed", ["document", "owner"])
+def test_late_keyword_receipt_cannot_confirm_changed_source_batch(monkeypatch, changed):
+    edition, _, _, generation, job, old = indexing_source()
+    generation.config_snapshot["context_fields_version"] = 1
+    generation.save()
+    monkeypatch.setattr(indexing, "meili", lambda *args, **kwargs: {"taskUid": 72})
+    def pending(*args, **kwargs):
+        raise projection.DiscoveryIndexError("write_timeout")
+    monkeypatch.setattr(indexing, "wait_index_task", pending)
+    with pytest.raises(projection.DiscoveryIndexError):
+        indexing.process_source(job, generation)
+    job.refresh_from_db()
+    assert job.stats["keyword_write"]["task_uid"] == 72
+    new = m.DiscoveryDocument.objects.exclude(pk__in=[d.pk for d in old])
+    if changed == "document":
+        new.update(input_hash="changed-after-send")
+    else:
+        m.DiscoverySourceState.objects.filter(generation=generation, source_id=edition.pk).update(job=None)
+    monkeypatch.setattr(indexing, "wait_index_task", lambda *args, **kwargs: None)
+    with pytest.raises(projection.DiscoveryIndexError) as error:
+        indexing.process_source(job, generation)
+    assert error.value.code == "superseded" and not new.filter(keyword_ready=True).exists()
+    assert m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in old], keyword_ready=True).count() == len(old)
+
+
 def test_keyword_worker_does_not_invoke_configured_embedding(monkeypatch, settings):
     _,_,_,generation,job,old = indexing_source()
     generation.config_snapshot["embedding_artifact"] = "configured-but-not-on-this-worker"
@@ -212,7 +277,7 @@ def test_short_ocr_units_batch_and_resume_only_after_acknowledgement(monkeypatch
         if path.endswith("/search"):return {"hits":[]}
         if path.endswith("/documents"):batches.append(list(data))
         return {"taskUid":len(batches)}
-    def acknowledge(result):
+    def acknowledge(result, **kwargs):
         if len(batches)==2:raise projection.DiscoveryIndexError("write_failed")
     monkeypatch.setattr(indexing,"meili",meili)
     monkeypatch.setattr(indexing,"wait_index_task",acknowledge)
@@ -221,7 +286,7 @@ def test_short_ocr_units_batch_and_resume_only_after_acknowledgement(monkeypatch
     assert job.stats["completed_units"]==20
     assert m.DiscoveryDocument.objects.exclude(pk__in=[v.pk for v in old]).filter(keyword_ready=True).count()==20
     batches.clear()
-    monkeypatch.setattr(indexing,"wait_index_task",lambda result:None)
+    monkeypatch.setattr(indexing,"wait_index_task",lambda result,**kwargs:None)
     assert indexing.process_source(job,generation)
     assert [len(v) for v in batches]==[20,5]
     job.refresh_from_db()
