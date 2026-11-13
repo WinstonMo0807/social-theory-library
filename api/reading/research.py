@@ -245,6 +245,15 @@ def references(values, user):
     output, seen = [], set()
     for raw in bounded_list(values, "references"):
         ref = resolve_reference(raw, user, strict=True)
+        if raw.get("selected_text"):
+            from .shared_citation_views import selection_range
+            selected = text(raw["selected_text"], "selected_text", 20000, True)
+            if ref.get("anchors"):
+                raise ValidationError({"selected_text": "跨页原文请保留完整锚点，或分别选择段落。"})
+            start, end = selection_range(ref["quote"], selected)
+            offset = ref.get("selection_start", 0)
+            ref = resolve_reference({**compact_reference(ref), "selection_start": offset + start,
+                "selection_end": offset + end}, user, strict=True)
         key = reference_identity(ref)
         if key not in seen:
             output.append(compact_reference(ref))
@@ -619,7 +628,7 @@ def start_turn(request, project_id, data):
     existing = project.turns.filter(request_id=request_id).first()
     question = text(data.get("question"), "question", 1200, True)
     fingerprint = request_fingerprint(data, ("question", "parent_id", "scope", "mode", "statement", "subclaims",
-        "active_subclaim_id", "expand_from_parent", "return_context"))
+        "active_subclaim_id", "expand_from_parent", "return_context", "context_refs"))
     if len(question) < 2:
         raise ValidationError({"question": "至少输入 2 个字符。"})
     if existing:
@@ -632,6 +641,7 @@ def start_turn(request, project_id, data):
         raise ValidationError({"parent_id": "分支必须属于当前研究。"})
     payload = unpack(project)
     scope = scope_snapshot(data.get("scope", unpack(parent).get("scope") if parent else payload["scope"]), request.user)
+    context_refs = references(bounded_list(data["context_refs"], "context_refs", 20), request.user) if "context_refs" in data else payload.get("selections", [])
     mode = data.get("mode", "search")
     if mode not in {"search", "counterargument"}:
         raise ValidationError({"mode": "研究模式无效。"})
@@ -657,7 +667,8 @@ def start_turn(request, project_id, data):
         task_id=str(uuid4()), data_ciphertext=pack({"request_fingerprint": fingerprint, "question": question, "scope": scope, "mode": mode,
         "statement": statement, "subclaims": subclaims, "active_subclaim_id": active_subclaim_id,
         "search_question": search_question, **({"query_plan": query_plan} if query_plan else {}),
-        "analysis_statement": statement, "input_revision": project.revision, "selected_refs": payload.get("selections", []),
+        "analysis_statement": statement, "input_revision": project.revision, "selected_refs": context_refs,
+        "context_explicit": "context_refs" in data,
         "project_snapshot": {"title": payload.get("title", ""), "notes": payload.get("notes", "")},
         "result_refs": unpack(parent).get("result_refs", []) if parent and data.get("expand_from_parent") is True else [],
         "analysis": [], "warnings": [], "parent_id": str(parent.id) if parent else None,

@@ -6,15 +6,22 @@ import { SourceText } from "./source-text";
 import { MediaPlacement } from "./media-placement";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { S4Search } from "./s4-search";
+import { SourceCitationPanel } from "./source-citation-panel";
+import { SearchResearchDock } from "./research/search-research-dock";
+import { opinionResultHref } from "@/lib/api/opinion-entry.client";
+import type { ResolvedEvidence } from "@/lib/api/research.client";
 import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
-import { actOnDiscoverySearch, canKeepDiscoveryContext, canRetryDiscoveryRead, createDiscoverySearch, discoveryCoverageRows, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
+import { actOnDiscoverySearch, canKeepDiscoveryContext, canRetryDiscoveryRead, createDiscoverySearch, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
 import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "@/lib/api/discovery.types";
 import type { SearchPayload } from "@/lib/api/search.types";
 import { CollectionLink } from "./collection-link";
 import { EvidenceContextBody, EvidenceResultCard, EvidenceSummary } from "./discovery-evidence-detail";
+import { SearchableFacet } from "./search-reading-workbench";
 import { DiscoveryDocumentProgress } from "./discovery-document-progress";
 import { SavedWorkStatusProvider } from "./save-work-button";
 import { Dialog } from "./ui/dialog";
@@ -40,6 +47,9 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   initialQuery: string; initialFilters: DiscoveryFilters; legacyRelation?: boolean;
 }) {
   const { t } = useEvidenceLanguage();
+  const router=useRouter();
+  const [researchCitation,setResearchCitation]=useState<ResolvedEvidence>();
+  const [researchSeed,setResearchSeed]=useState<{ref:ResolvedEvidence;serial:number}>();
   const { state: publicSession } = usePublicSession();
   const savedGuestSearch = useRef("");
   const cacheKey = JSON.stringify([initialQuery, initialFilters]);
@@ -324,6 +334,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   const selected = result?.passages.find(item => item.id === selectedId) || result?.passages[0] || null;
   const returnTo = (item: DiscoveryPassage) => `/explore/evidence?${retryParams}#material-${item.id}`;
   function selectEvidence(item: DiscoveryPassage) {
+    setResearchCitation(undefined);
     setSelectedId(item.id); setSummaryHidden(false);
     if (window.matchMedia("(max-width: 1000px)").matches) setSummaryOpen(true);
   }
@@ -346,18 +357,20 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   function setYearRange(low: string, high: string) {
     setFilters(current => { const next: DiscoveryFilters = { ...current, year_min: low, year_max: high }; delete next.year; delete next.years; return next; });
   }
+  const searchableField = (name: string, title: string, options: SearchPayload["facets"]["authors"] = []) => <SearchableFacet key={name} title={t(title)} name={name} options={options} selected={Array.isArray(filters[name]) ? filters[name] : filters[name] ? [filters[name]] : []} onSelectionChange={values => setFilters(current => { const next = { ...current }; if(values.length) next[name] = values; else delete next[name]; return next; })} />;
   const filterFields = <>
     <div className={styles.filterGrid}>
       {choiceField("document_type", t("文献类型"), facets?.document_types)}
-      {choiceField("theories", t("理论流派"), facets?.theories)}
+      {searchableField("theories", "理论流派", facets?.theories)}
       <fieldset><legend>{t("年份")}</legend><div className={styles.yearRange}><label><span className="sr-only">{t("起始年")}</span><input type="number" name="year_min" min="1" max="3000" value={first(filters.year_min)} onChange={e => setYearRange(e.target.value, first(filters.year_max))} placeholder={t("起始年")} /></label><span aria-hidden="true">−</span><label><span className="sr-only">{t("结束年")}</span><input type="number" name="year_max" min="1" max="3000" value={first(filters.year_max)} onChange={e => setYearRange(first(filters.year_min), e.target.value)} placeholder={t("结束年")} /></label></div>
         {evidenceYears.map(([label, low, high]) => <label key={label}><input type="radio" name="year_preset" checked={!first(filters.year) && !first(filters.years) && first(filters.year_min) === low && first(filters.year_max) === high} onChange={() => setYearRange(low, high)} />{t(label)}</label>)}
       </fieldset>
       {choiceField("availability", t("可读版本"), [{ value: "readable", label: t("有在线阅读") }, { value: "pdf", label: t("有 PDF") }, { value: "zh_translation", label: t("有中译本") }])}
-      <section data-content-section className={styles.extraFilters}><header data-section-heading>{t("更多筛选")}</header>
-      {choiceField("language", t("文献语言"), facets?.languages)}
-      {([ ["author", t("责任者"), facets?.authors], ["topics", t("主题"), facets?.topics], ["concept", t("概念"), facets?.concepts] ] as const).map(([name, label, options]) => <label key={name}><span>{t(label)}</span><select data-stl-select name={name} value={first(filters[name])} onChange={event => setFilters(current => ({ ...current, [name]: event.target.value }))}><option value="">{t("不限")}</option>{first(filters[name]) && !options?.some(row => row.value === first(filters[name])) ? <option value={first(filters[name])}>{t("当前选择")}</option> : null}{options?.map(row => <option key={row.value} value={row.value}>{row.label}</option>)}</select>{Array.isArray(filters[name]) ? filters[name].slice(1).map(value => <input key={value} type="hidden" name={name} value={value} />) : null}</label>)}
-      </section>
+      {searchableField("author", "责任者", facets?.authors)}
+      {searchableField("topics", "主题", facets?.topics)}
+      {searchableField("concept", "概念", facets?.concepts)}
+      {searchableField("language", "文献语言", facets?.languages)}
+
     </div>
     {Object.entries(filters).filter(([name, value]) => !["document_type", "author", "theories", "topics", "concept", "language", "year_min", "year_max", "availability"].includes(name) && first(value)).map(([name, value]) => <span className={styles.filterChip} key={name}>{t(filterLabels[name] || "已有范围")}{(Array.isArray(value) ? value : [value]).map(entry => <input type="hidden" key={entry} name={name} value={entry} />)}<button type="button" aria-label={t("取消{label}筛选", { label: t(filterLabels[name] || "已有范围") })} onClick={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })}><X size={12} /></button></span>)}
     {facetBusy ? <LoadingState variant="compact">{t("正在读取馆内筛选项……")}</LoadingState> : null}
@@ -365,43 +378,35 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     <div className={styles.actions}><button className="button secondary" type="submit">{t("应用范围并检索")}</button>{selectedCount ? <Link href={initialQuery ? `/explore/evidence?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>{t("清除全部筛选")}</Link> : null}</div>
   </>;
   return <SavedWorkStatusProvider workIds={result?.passages.map(item => item.work.id) || []}><div className={`page-shell ${styles.page}`}>
-    <header className={styles.evidenceHead}>
-      <p className={styles.breadcrumb}><Link href="/explore">{t("书库检索")}</Link><span>/</span>{t("原文证据")}</p>
-      <h1>{t("原文证据结果")}</h1>
-      <form className={styles.searchForm} action="/explore/evidence">
-        <div className={styles.queryRow}><Search size={19} aria-hidden="true" /><label className="sr-only" htmlFor="discovery-query">{t("概念、研究问题或观点线索")}</label><input ref={queryInputRef} id="discovery-query" type="search" name="q" required minLength={2} maxLength={500} value={queryInput} onChange={event => setQueryInput(event.target.value)} placeholder={t("输入概念、研究问题或观点线索")} />{queryInput ? <button className={styles.queryClear} type="button" aria-label={t("清除检索问题")} onClick={() => { setQueryInput(""); queryInputRef.current?.focus(); }}><X size={16} /></button> : null}<button className="button" type="submit" aria-label={t("搜索原文证据")}><span>{t("搜索")}</span><Search size={16} aria-hidden="true" /></button></div>
-        {Object.entries(filters).flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).filter(Boolean).map(entry => <input type="hidden" key={`${name}-${entry}`} name={name} value={entry} />))}
-      </form>
-    </header>
+    <S4Search mode="viewpoint" initialQuery={initialQuery} onSearch={value=>router.push(opinionResultHref(value,filters))}/>
 
-    {legacyRelation ? <p className={styles.notice}>{t("这个旧链接中的问题和文献筛选已保留。新版按相关原文、知识与策展呈现，不再按支持或相斥分类。")}</p> : null}
+
+    {legacyRelation ? <p className={styles.notice}>{t("这个旧链接中的问题和文献筛选已保留。新版直接呈现相关原文。")}</p> : null}
     {error ? <div className={styles.error} role="alert"><strong>{t("本次请求未完成")}</strong><p>{t(error)}</p>{result ? <button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}>{t("重新读取本次结果")}</button> : <a className="button secondary" href={retryHref}>{t("重新检索")}</a>}</div> : null}
     {result?.warnings?.length ? <div className={styles.notice} role="status">{result.warnings.map((warning, index) => <p key={index}>{typeof warning === "string" ? warning : warning.message}</p>)}</div> : null}
-    {result?.source_changed ? <p className={styles.notice}>{t("资料或访问范围已有变化，已重新核验当前结果。重新检索可使用最新馆藏与策展内容。")}</p> : null}
+    {result?.source_changed ? <p className={styles.notice}>{t("资料或访问范围已有变化，已重新核验当前结果。重新检索可使用最新馆藏。")}</p> : null}
 
     <div className={styles.mobileFilters}>{[t("文献类型"), t("理论流派"), t("年份")].map(label => <button key={label} type="button" aria-label={t("按{label}筛选", { label: t(label) })} onClick={() => { setFilterOpen(true); void loadFacets(); }}>{t(label)}<ChevronDown size={12} /></button>)}<span className="sr-only">{selectedCount ? t("已选择{count}组条件", { count: selectedCount }) : t("全部范围")}</span></div>
     <Dialog open={filterOpen} onRequestClose={() => setFilterOpen(false)} className={styles.filterDialog} aria-labelledby="evidence-filter-title"><header className={styles.dialogHeader}><h2 id="evidence-filter-title">{t("筛选原文材料")}</h2><button type="button" onClick={() => setFilterOpen(false)} aria-label={t("关闭筛选")}><X size={18} /></button></header><form action="/explore/evidence"><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></Dialog>
+    <div className={styles.horizontalFilters} onFocusCapture={()=>void loadFacets()} onPointerEnter={()=>void loadFacets()}><form action="/explore/evidence"><input type="hidden" name="q" value={initialQuery}/>{filterFields}</form></div>
     <div className={`${styles.resultLayout} ${summaryHidden ? styles.summaryHidden : ""}`}>
-      <aside className={styles.filterSidebar} aria-label={t("筛选馆藏原文")} onFocusCapture={() => void loadFacets()} onPointerEnter={() => void loadFacets()}><form action="/explore/evidence"><input type="hidden" name="q" value={initialQuery} />{filterFields}</form></aside>
+      
       <section className={styles.results} id="discovery-passages" aria-label={t("原文检索结果")}>
         <header className={styles.resultsHeader}><div><h2>{t("检索结果")}</h2><span>{result ? t("已显示 {count} 段", { count: `${result.passages.length}${typeof result.count === "number" ? ` / ${result.count}` : ""}` }) : initialQuery ? t("等待检索结果") : t("等待输入")}</span></div><div className={styles.viewControls}><label><span className="sr-only">{t("结果排序")}</span><select data-stl-select aria-label={t("结果排序")} value={result?.sort || "relevance"} disabled={!result || Boolean(busy)} onChange={event => void sessionAction("sort", event.target.value as DiscoverySort)}><option value="relevance">{t("相关性排序")}</option><option value="year_desc">{t("出版年份从新到旧")}</option><option value="year_asc">{t("出版年份从旧到新")}</option></select></label><button type="button" aria-label={t("列表视图")} aria-pressed={view === "list"} onClick={() => setView("list")}><List size={17} /></button><button type="button" aria-label={t("网格视图")} aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={17} /></button></div></header>
         {(busy === "create" || isRunning) ? <div className={styles.progress} role="status"><LoaderCircle size={18} className={styles.spinner} /><div><strong>{busy === "create" ? t("正在创建检索") : result?.expansion_count ? t("正在扩大研究范围") : t(statusLabels[result?.status || "running"])}</strong><p>{result?.status_message || t("后台正在查找并排序材料。你可以先阅读已找到的结果。")}</p>{result?.completed_channels?.length ? <small>{t("已完成：")}{result.completed_channels.map(name => t(channelLabels[name] || name)).join("、")}</small> : null}{result ? <DiscoveryDeepProgress result={result} /> : null}</div>{result ? <button type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("cancel")}>{t("取消检索")}</button> : null}</div> : null}
         {pollPaused && isRunning ? <div className={styles.notice}><p>{t("自动更新已暂停，后台任务可能仍在继续。可重新读取进度或取消任务。")}</p><button className="button secondary" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}>{t("继续读取进度")}</button></div> : null}
         {result && !isRunning ? <><p className={styles.resultStatus} role="status">{t(statusLabels[result.status])}{result.mode === "expanded" ? t(" · 已扩大检索预算") : ""}{result.status_message ? ` · ${result.status_message}` : ""}</p><DiscoveryDeepProgress result={result} /></> : null}
+        {result?.coverage_summary?.partial ? <p className={styles.resultStatus} role="status">{t("部分文献仍在准备中，本次结果尚未覆盖全部馆藏。")}</p> : null}
         {(result?.added_count || 0) > 0 ? <p className={styles.resultStatus} role="status">{t("本轮新增 {count} 段可阅读原文", { count: result?.added_count || 0 })}</p> : null}
-        <div className={`${styles.cardList} ${view === "grid" ? styles.resultGrid : ""}`}>{result?.passages.map((item, index) => <EvidenceResultCard key={item.id} item={item} index={index} selected={selected?.id === item.id && !summaryHidden} fresh={item.is_new === true} onSelect={() => selectEvidence(item)} onContext={() => void openContext(item)} />)}</div>
-        {!result?.passages.length && !isRunning && busy !== "create" ? <section className={styles.empty}><FileSearch size={29} aria-hidden="true" /><h3>{!initialQuery ? t("从你关心的问题开始") : result?.status === "failed" ? t("原文通道暂未完成") : result?.status === "canceled" ? t("本次检索已取消") : error ? t("还没有可显示的结果") : t("本次未找到可展示的原文")}</h3><p>{!initialQuery ? t("输入概念、开放问题或近似引句。结果直接回到馆内材料，你也可以沿知识与策展线索继续阅读。") : t("未找到结果。可以改写问题、扩大范围，或浏览相关知识与策展。")}</p>{initialQuery ? <Link href={`/explore/original?context=global&q=${encodeURIComponent(initialQuery)}`} className="button secondary">{t("转到原文检索")}<ArrowRight size={14} /></Link> : null}</section> : null}
+        <div className={`${styles.cardList} ${view === "grid" ? styles.resultGrid : ""}`}>{result?.passages.map((item, index) => <EvidenceResultCard key={item.id} item={item} index={index} selected={selected?.id === item.id && !summaryHidden} fresh={item.is_new === true} returnTo={returnTo(item)} onSelect={() => selectEvidence(item)} onContext={() => void openContext(item)} onFollowup={()=>setResearchSeed({ref:asResearchMaterial(item),serial:Date.now()})} />)}</div>
+        {!result?.passages.length && !isRunning && busy !== "create" ? <section className={styles.empty}><FileSearch size={29} aria-hidden="true" /><h3>{!initialQuery ? t("从你关心的问题开始") : result?.status === "failed" ? t("原文通道暂未完成") : result?.status === "canceled" ? t("本次检索已取消") : error ? t("还没有可显示的结果") : t("本次未找到可展示的原文")}</h3><p>{!initialQuery ? t("输入概念、研究问题或近似引句，查找馆内相关原文。") : t("可以调整关键词、减少筛选条件，或扩大检索范围。")}</p>{initialQuery ? <Link href={`/explore/original?context=global&q=${encodeURIComponent(initialQuery)}`} className="button secondary">{t("转到原文检索")}<ArrowRight size={14} /></Link> : null}</section> : null}
         {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? t("正在读取") : t("查看更多材料")}<ChevronDown size={15} /></button> : null}{(result.can_retry || result.status === "failed" || result.status === "partial") && !isRunning ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("retry")}>{busy === "retry" ? t("正在重试") : result.status === "canceled" ? t("基于保留材料继续检索") : t("重试当前范围")}<RefreshCw size={14} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? t("正在提交") : t("扩大研究范围")}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />{t("刷新本次结果")}</button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void restart()}>{busy === "restart" ? t("正在重新开始") : t("重新开始检索")}</button> : null}</div><p>{t("默认展示三段。查看更多读取本次已找到的材料；扩大研究范围会继续查找材料，已找到的原文会保留。")}</p></footer> : null}
         {result?.documents && (result.documents.tracked > 0 || result.documents.excluded_count > 0) ? <DiscoveryDocumentProgress data={result.documents} busy={Boolean(busy)} onRemove={id => { pollStarted.current = Date.now(); void documentAction(id, true); }} onView={id => void documentAction(id)} onAdjust={() => { setFilterOpen(true); void loadFacets(); }} /> : null}
+        <SearchResearchDock question={initialQuery} filters={result?.filters||initialFilters} materials={(result?.passages||[]).map(asResearchMaterial)} seed={researchSeed} onInspect={ref=>{setResearchCitation(ref);setSummaryHidden(false);if(window.matchMedia('(max-width:1100px)').matches)setSummaryOpen(true);}}/>
       </section>
-      {!summaryHidden ? <aside className={styles.evidenceInspector} aria-labelledby="evidence-summary-title"><header><h2 id="evidence-summary-title">{t("证据摘要")}</h2><button type="button" aria-label={t("关闭证据摘要")} onClick={() => setSummaryHidden(true)}><X size={18} /></button></header>{selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => void openContext(selected)} /> : <p className={styles.help}>{t("选择结果可查看来源、页码和原文。")}</p>}</aside> : null}
+      {!summaryHidden ? <aside className={styles.evidenceInspector} aria-labelledby="evidence-summary-title"><header><h2 id="evidence-summary-title">{t("出处与引用")}</h2><button type="button" aria-label={t("关闭出处与引用")} onClick={() => setSummaryHidden(true)}><X size={18} /></button></header>{researchCitation ? <SourceCitationPanel input={{reference:researchCitation}}/> : selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => void openContext(selected)} /> : <p className={styles.help}>{t("选择结果可查看来源、页码和原文。")}</p>}</aside> : null}
     </div>
-    <div className={styles.inspector} aria-label={t("相关知识与策展推荐")}>
-        <section id="discovery-entities"><header><h2>{t("相关知识")}</h2><span>{result?.entities.length || 0}</span></header><p className={styles.help}>{t("相关学者、理论与主题。观点出处请核对原文。")}</p>{result?.entities.map(item => <DiscoveryEntityCard key={`${item.kind}-${item.id}`} item={item} />)}{!result?.entities.length ? <p className={styles.sideEmpty}>{isRunning ? t("知识通道正在查找。") : initialQuery ? t("本次暂无相关知识入口。") : t("检索后在这里查看相关知识。")}</p> : null}</section>
-        <section id="discovery-curation"><header><h2>{t("策展推荐")}</h2><span>{result?.curation.length || 0}</span></header><p className={styles.help}>{t("管理员已发布的导读和推荐理由，独立标明来源。")}</p>{result?.curation.map(item => <DiscoveryCurationCard key={item.id} item={item} />)}{!result?.curation.length ? <p className={styles.sideEmpty}>{isRunning ? t("策展通道正在查找。") : initialQuery ? t("本次暂无相关策展推荐。") : t("检索后在这里查看阅读推荐。")}</p> : null}</section>
-        <DiscoveryCoverageDetails result={result} />
-    </div>
-    <Dialog open={summaryOpen && Boolean(selected)} onRequestClose={() => setSummaryOpen(false)} className={styles.summaryDialog} aria-labelledby="mobile-evidence-summary"><header className={styles.dialogHeader}><h2 id="mobile-evidence-summary">{t("证据摘要")}</h2><button type="button" onClick={() => setSummaryOpen(false)} aria-label={t("关闭证据摘要")}><X size={20} /></button></header>{selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => { setSummaryOpen(false); void openContext(selected); }} /> : null}</Dialog>
+    <Dialog open={summaryOpen && Boolean(selected||researchCitation)} onRequestClose={() => setSummaryOpen(false)} className={styles.summaryDialog} aria-labelledby="mobile-evidence-summary"><header className={styles.dialogHeader}><h2 id="mobile-evidence-summary">{t("出处与引用")}</h2><button type="button" onClick={() => setSummaryOpen(false)} aria-label={t("关闭出处与引用")}><X size={20} /></button></header>{researchCitation ? <SourceCitationPanel input={{reference:researchCitation}}/> : selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => { setSummaryOpen(false); void openContext(selected); }} /> : null}</Dialog>
     <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><h2 id="discovery-context-title">{t("原文上下文")}</h2><button type="button" aria-label={t("关闭上下文")} onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <LoadingState variant="compact">{t("正在读取原文上下文……")}</LoadingState> : contextError ? <div role="alert"><p>{t(contextError)}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>{t("重试读取上下文")}</button></div> : context && contextItem ? <EvidenceContextBody key={context.result_id} item={contextItem} context={context} returnTo={returnTo(contextItem)} onOpenCandidate={item => void openContext(item)} /> : null}</div></Dialog>
   </div></SavedWorkStatusProvider>;
 
@@ -426,7 +431,7 @@ export function DiscoveryEntityCard({ item }: { item: DiscoveryEntity }) {
   const href = internalHref(item.url);
   const [failedPortrait, setFailedPortrait] = useState("");
   const fallback = item.kind === "scholar" || item.kind === "scholar_profile" ? <ScholarPortraitFallback name={item.title} identity={href || item.id} className={styles.scholarFallback}/> : null;
-  return <article className={styles.entityCard}>{item.portrait_url && failedPortrait !== item.portrait_url ? <MediaPlacement uses={item.portrait_media?.display_uses} fallback={fallback}><img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setFailedPortrait(item.portrait_url || "")} /></MediaPlacement> : fallback}<div><small>{t(kindLabels[item.kind] || "知识条目")}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p>{item.excerpt}</p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
+  return <article className={styles.entityCard}>{item.portrait_url && failedPortrait !== item.portrait_url ? <MediaPlacement uses={item.portrait_media?.display_uses} fallback={fallback}><img src={normalizePublicResourceUrl(item.portrait_url)} alt="" width={48} height={60} loading="lazy" onError={() => setFailedPortrait(item.portrait_url || "")} /></MediaPlacement> : fallback}<div><small>{t(kindLabels[item.kind] || "知识条目")}</small><h3>{href ? <CollectionLink href={href}>{item.title}<ArrowRight size={12} /></CollectionLink> : item.title}</h3>{item.excerpt ? <p><SourceText text={(item.excerpt) || ""} /></p> : null}{item.match_basis?.length ? <small>{item.match_basis.join(" · ")}</small> : null}</div></article>;
 }
 
 export function DiscoveryCurationCard({ item, preview = false }: { item: DiscoveryCuration; preview?: boolean }) {
@@ -446,8 +451,5 @@ function DiscoveryDeepProgress({ result }: { result: DiscoverySearch }) {
   </div>;
 }
 
-function DiscoveryCoverageDetails({ result }: { result: DiscoverySearch | null }) {
-  const { t } = useEvidenceLanguage();
-  const coverage = result?.coverage_summary;
-  return <section className={styles.coverage}><section data-content-section><header data-section-heading>{t("本次检索覆盖")}</header>{coverage?.message ? <p>{coverage.message}</p> : !result ? <p>{t("开始检索后显示实际覆盖状态。")}</p> : null}{coverage?.partial ? <p>{t("当前仍有文献等待文本或索引更新，本次检索覆盖尚未完整。")}</p> : null}<dl>{discoveryCoverageRows(coverage).map(({ key, label, value }) => <div key={key}><dt>{t(label)}</dt><dd>{value}</dd></div>)}</dl><p>{t("覆盖只说明当前可检索的资料范围，不表示已经找齐所有相关论证。")}</p>{result?.corpus_version ? <p className={styles.version}>{t("资料版本")}{result.corpus_version}</p> : null}</section></section>;
-}
+
+function asResearchMaterial(item:DiscoveryPassage):ResolvedEvidence {return {reference_id:item.id,evidence_span_id:item.evidence_span_id,asset_id:item.asset_id,document_revision_id:item.document_revision_id,pdf_page:item.pdf_page,printed_label:item.printed_page,title:item.work.title,work_id:item.work.id,edition_id:item.edition_id,quote:item.excerpt,source_status:'available',reader_url:item.reader_url,authors:item.authors,cover_url:item.bibliography?.cover_url};}

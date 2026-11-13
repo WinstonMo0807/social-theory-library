@@ -4,7 +4,7 @@ export function clampOffset(offset, base, viewport, margin = 8) {
   return { x: limit(offset.x, base.left, base.width, viewport.width), y: limit(offset.y, base.top, base.height, viewport.height) };
 }
 
-export function createReaderFloatingLayout(root, storageKey) {
+export function createReaderFloatingLayout(root, storageKey, options = {}) {
   let offsets = {}, active = null, disposed = false;
   const desktop = () => window.matchMedia('(min-width: 761px)').matches;
   try {
@@ -21,7 +21,8 @@ export function createReaderFloatingLayout(root, storageKey) {
     const old = element._readerOffset || { x: 0, y: 0 };
     const rect = element.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-    const next = clampOffset(proposed, { left: rect.left - old.x, top: rect.top - old.y, width: rect.width, height: rect.height }, viewport());
+    const bounds = options.bounds?.getBoundingClientRect();
+    const next = clampOffset(proposed, { left: rect.left - old.x - (bounds?.left || 0), top: rect.top - old.y - (bounds?.top || 0), width: rect.width, height: rect.height }, bounds ? { width: bounds.width, height: bounds.height } : viewport());
     element.style.translate = `${next.x}px ${next.y}px`;
     element.dataset.readerMoved = String(Boolean(next.x || next.y));
     element._readerOffset = next;
@@ -74,6 +75,7 @@ export function createReaderFloatingLayout(root, storageKey) {
   window.addEventListener('blur', end);
   window.addEventListener('resize', refresh);
   const observer = new ResizeObserver(refresh); observer.observe(root);
+  if (options.bounds && options.bounds !== root) observer.observe(options.bounds);
   refresh();
   return {
     refresh,

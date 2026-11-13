@@ -5,14 +5,14 @@ import { flushSync } from "react-dom";
 import { createReaderFloatingLayout, type FloatingLayout } from "@/lib/reader-floating-layout.mjs";
 import styles from "./reader-floating-controls.module.css";
 
-export function useReaderFloatingLayout(root: RefObject<HTMLDivElement | null>, owner: string) {
+export function useReaderFloatingLayout(root: RefObject<HTMLDivElement | null>, owner: string, contain = false) {
   const controller = useRef<FloatingLayout | null>(null);
   useLayoutEffect(() => {
     if (!root.current) return;
-    const layout = createReaderFloatingLayout(root.current, `stl-reader-layout-v1:${owner}`);
+    const layout = createReaderFloatingLayout(root.current, `stl-reader-layout-v1:${owner}`, contain ? {bounds: root.current} : undefined);
     controller.current = layout;
     return () => { layout.destroy(); controller.current = null; };
-  }, [root, owner]);
+  }, [root, owner, contain]);
   useLayoutEffect(() => { controller.current?.refresh(); });
   return () => controller.current?.reset();
 }

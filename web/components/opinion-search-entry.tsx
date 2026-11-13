@@ -4,6 +4,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
+import { S4Search } from "./s4-search";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clock3, FileText, Info, Layers, Search, UserRound, X } from "lucide-react";
@@ -57,15 +58,10 @@ export function OpinionSearchEntry({ initialFilters = {} }: { initialFilters?: D
   }
   return <div className={styles.page}>
     <nav className={styles.breadcrumb} aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/explore">书库检索</Link><ChevronRight size={12} /><span>观点检索</span></nav>
-    <header className={styles.header}><h1>观点检索</h1><p>输入问题，查找相关原文。</p></header>
-    <form className={styles.queryForm} onSubmit={submit} action="/explore/evidence">
-      <div className={styles.queryBox}><label className="sr-only" htmlFor="opinion-question">你的研究问题</label><textarea onKeyDown={submitSearchOnEnter} enterKeyHint="search" title="回车检索，Shift + 回车换行" ref={field} id="opinion-question" name="q" value={query} onChange={event => { setQuery(event.target.value); setMessage(""); }} maxLength={500} rows={1} placeholder="请输入你的问题…" aria-describedby="opinion-count" />
-        {query ? <button type="button" className={styles.clear} aria-label="清除问题" onClick={() => { setQuery(""); field.current?.focus(); }}><X size={15} /></button> : null}<span className={styles.counter} id="opinion-count" aria-live="polite">{query.length}/500</span></div>
-      <button type="submit" className={styles.searchButton} disabled={!ready || pending}><Search size={22} />{pending ? "正在进入检索…" : "检索原文"}</button>
-    </form>
+    <S4Search mode="viewpoint" onSearch={value=>{if(scope!=="all"&&!selected.length&&!hasInheritedScope){setMessage("请先选择有效检索范围。");return;}setQuery(value);router.push(opinionResultHref(value,{...extras,...currentScopes}));}} />
     {message ? <p className={styles.alert} role="alert"><CircleAlert size={18} />{message}</p> : null}
     {scope !== "all" && selected.length === 0 && !hasInheritedScope ? <p className={styles.alert} role="status"><CircleAlert size={18} />请先选择当前公开的{title.replace("特定", "")}，核对范围后再检索。</p> : null}
-    <section className={styles.scopeSection} aria-labelledby="opinion-scope-title"><h2 id="opinion-scope-title">选择检索范围 <Info size={16} aria-label="范围用于原文检索；知识与策展按问题提供线索" /></h2>
+    <section className={styles.scopeSection} aria-labelledby="opinion-scope-title"><h2 id="opinion-scope-title">选择检索范围 <Info size={16} aria-label="限定查找原文的文献范围" /></h2>
       <div className={styles.scopeCards} role="radiogroup" aria-label="检索范围">{scopes.map((item, index) => <button type="button" role="radio" aria-checked={scope === item.key} tabIndex={scope === item.key ? 0 : -1} key={item.key} onClick={() => chooseScope(item.key)} onKeyDown={event => {
         const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 0;
         if (!delta) return;

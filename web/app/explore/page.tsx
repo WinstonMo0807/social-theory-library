@@ -1,3 +1,5 @@
+
+import { SourceText } from "@/components/source-text";
 import { requireReaderSession } from "@/lib/reader-access.server";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -25,7 +27,8 @@ import { SemanticResultActions } from "@/components/semantic-result-actions";
 import { SearchClickTracker, UsageTracker } from "@/components/usage-tracker";
 import { semanticResponseLabel } from "@/lib/semantic-search-ui";
 import { SearchModeSwitch } from "@/components/search-mode-switch";
-import { SearchReadingWorkbench, SearchReadingCard, SearchReadingPreview, SearchableFacet } from "@/components/search-reading-workbench";
+import { S4SearchRoute } from "@/components/s4-search";
+import { SearchReadingWorkbench, SearchReadingCard, SearchReadingPreview, SearchReadingResearch, SearchableFacet } from "@/components/search-reading-workbench";
 import { loadHotSearches, loadSearch, loadSemanticSearch } from "@/lib/api/search.server";
 import type { SearchFacetOption, SearchFilters, SemanticSearchPayload, SemanticSearchResult } from "@/lib/api/search.types";
 
@@ -160,19 +163,7 @@ export default async function ExplorePage({
       <SearchClickTracker query={query} source="exact_search" />
       <SearchReadingWorkbench works={results.works}>
       <div className="page-shell explore-page stl4-explore-original-page">
-        <section className="explore-workbench-head exact-workbench-head">
-          <div className="explore-workbench-title">
-            <h1>原文检索</h1>
-            <p>在题名、责任者、知识实体与全文中定位可核对的原文，并精确回到 PDF 页面。</p>
-          </div>
-          <div className="explore-query-column">
-            <form className="explore-search" action="/explore/original">
-              <input type="hidden" name="context" value="global" />
-              <SearchField defaultValue={query} />
-              <button className="button" type="submit">
-                搜索
-              </button>
-            </form>
+        <S4SearchRoute mode="original" initialQuery={query} href={buildExploreHref(params,{})}/>
             <nav className="result-tabs" aria-label="搜索结果类别">
               {[
                 ["all", "全部", resultCount(results.counts)],
@@ -196,9 +187,7 @@ export default async function ExplorePage({
                 </Link>
               ))}
             </nav>
-          </div>
-          <SearchModeSwitch mode="exact" query={query} />
-        </section>
+
 
         <ExactMobileFilters
           params={params}
@@ -625,7 +614,7 @@ function SemanticExplorePage({
                         <div>
                           <p>{item.title}</p>
                           {item.authors.length ? <small>{item.authors.join("、")}{item.publication_year ? ` · ${item.publication_year}` : ""}</small> : null}
-                          <blockquote className="semantic-comparison-excerpt"><span>{item.snippet}</span></blockquote>
+                          <blockquote className="semantic-comparison-excerpt"><span><SourceText text={(item.snippet) || ""} compact /></span></blockquote>
                           <small>PDF 第 {item.page_index} 页{item.printed_label ? ` · 书页 ${item.printed_label}` : ""}</small>
                           <CollectionLink href={item.reader_url} aria-label={`打开《${item.title}》PDF 第 ${item.page_index} 页核对原文`}>回到原文 <ArrowRight size={14} /></CollectionLink>
                         </div>
@@ -763,12 +752,12 @@ function SemanticPassageBlock({
         {item.chapter_title ? <span>{item.chapter_title}</span> : null}
         {item.section_title ? <span>{item.section_title}</span> : null}
       </p>
-      <blockquote><Quote size={18} fill="currentColor" aria-hidden="true" /><span className="semantic-snippet">{item.snippet}</span></blockquote>
+      <blockquote><Quote size={18} fill="currentColor" aria-hidden="true" /><span className="semantic-snippet"><SourceText text={(item.snippet) || ""} compact /></span></blockquote>
       {item.context_before || item.context_after ? (
         <section data-content-section className="semantic-context">
           <header data-section-heading>查看上下文</header>
           {item.context_before ? <p>{item.context_before}</p> : null}
-          <blockquote>{item.snippet}</blockquote>
+          <blockquote><SourceText text={(item.snippet) || ""} /></blockquote>
           {item.context_after ? <p>{item.context_after}</p> : null}
         </section>
       ) : null}
@@ -996,7 +985,7 @@ function PassageResultGroup({
               </p>
               <blockquote>
                 <Quote size={16} fill="currentColor" aria-hidden="true" />
-                <span>{passage.snippet}</span>
+                <span><SourceText text={(passage.snippet) || ""} compact /></span>
               </blockquote>
             </div>
             <div className="passage-table-actions" role="cell">

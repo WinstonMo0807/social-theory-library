@@ -10,7 +10,7 @@ export type EvidenceAnchor = {
   evidence_span_id?: string; asset_id?: string; document_revision_id?: string; pdf_page?: number; content_hash?: string;
   selection_start?: number; selection_end?: number;
 };
-export type EvidenceReference = EvidenceAnchor & { anchors?: EvidenceAnchor[] };
+export type EvidenceReference = EvidenceAnchor & { anchors?: EvidenceAnchor[]; selected_text?: string };
 export type ResolvedEvidence = EvidenceAnchor & ReaderGeometryBox & {
   reference_id?: string; id?: string; source_status: string; text?: string; reader_url?: string | null;
   work_id?: string; edition_id?: string; title?: string; printed_label?: string;
@@ -213,7 +213,7 @@ export function listResearchTurns(projectId: string, page = 1, signal?: AbortSig
 }
 export type ResearchTurnCommand = {
   projectId: string; expandTurnId?: string;
-  data: Revision & NewRequest & { question: string; scope: QueryScope; parent_id?: string; mode: "search" };
+  data: Revision & NewRequest & { question: string; scope: QueryScope; parent_id?: string; mode: "search"; context_refs?: EvidenceReference[]; return_context?: Record<string,unknown> };
 };
 export async function sendResearchTurnCommand(command: ResearchTurnCommand, ownerId: string) {
   const path = command.expandTurnId ? `${researchRecordPath("research-turns", command.expandTurnId)}expand/` : `${researchRecordPath("research-projects", command.projectId)}turns/`;

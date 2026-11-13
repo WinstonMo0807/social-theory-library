@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 
 import { LoadingState } from "@/components/ui/loading-state";
@@ -17,7 +19,7 @@ export function PlacementSourcePicker({ owner, kind, onChoose }: { owner: string
   const resource = usePersistentWorkspace<SourcePage>(`/catalog/admin/content-placements/sources/?${new URLSearchParams({type:kind,q:search,page:String(page)})}`, owner, undefined, load);
   return <section><div className={styles.search}><label><span>{{span:"检索已定位的原文",edition:"检索馆藏版本",node:"检索理论与概念",scholar:"检索公开学者",issue:"检索公开策划"}[kind]}</span><input maxLength={200} value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); setSearch(query.trim()); setPage(1); } }} /></label><button type="button" onClick={() => {setSearch(query.trim());setPage(1);resource.reload();}}>查找</button></div>
     {resource.error ? <p role="alert">{resource.error}<button type="button" onClick={resource.reload}>重新读取</button></p> : !resource.data ? <LoadingState variant="compact" role="status">正在读取材料…</LoadingState> : <><p>共 {resource.data.count} 项 · 第 {page} 页</p><ul className={styles.sourceList}>{resource.data.results.map(row => <li key={`${row.target.id}:${row.target.edition_id || ""}`}>
-      {typeof row.source.image_url === "string" && row.source.image_url ? <img src={normalizePublicResourceUrl(row.source.image_url)} alt="" loading="lazy" /> : null}<div><strong>{row.source.title}</strong><p>{String(row.source.edition_label || "")}{row.source.page_start ? ` · PDF ${row.source.page_start}` : ""}</p>{row.source.text ? <blockquote>{row.source.text}</blockquote> : null}<small>{row.source.public_eligible ? "当前可公开，发布时仍会复核" : "尚不能公开，可先保留草稿"}</small></div><button type="button" onClick={() => onChoose(row)}>选取</button>
+      {typeof row.source.image_url === "string" && row.source.image_url ? <img src={normalizePublicResourceUrl(row.source.image_url)} alt="" loading="lazy" /> : null}<div><strong>{row.source.title}</strong><p>{String(row.source.edition_label || "")}{row.source.page_start ? ` · PDF ${row.source.page_start}` : ""}</p>{row.source.text ? <blockquote><SourceText text={(row.source.text) || ""} /></blockquote> : null}<small>{row.source.public_eligible ? "当前可公开，发布时仍会复核" : "尚不能公开，可先保留草稿"}</small></div><button type="button" onClick={() => onChoose(row)}>选取</button>
     </li>)}</ul>{!resource.data.results.length ? <p>没有符合条件的材料。请调整关键词或先完成原文定位。</p> : null}<nav className={styles.pagination} aria-label="材料分页"><button type="button" disabled={!resource.data.previous} onClick={() => setPage(value => value - 1)}>上一页</button><button type="button" disabled={!resource.data.next} onClick={() => setPage(value => value + 1)}>下一页</button></nav></>}
   </section>;
 }

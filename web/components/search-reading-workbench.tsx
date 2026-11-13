@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { SearchResearchDock } from "./research/search-research-dock";
+import { SourceCitationPanel } from "./source-citation-panel";
+import type { ResolvedEvidence } from "@/lib/api/research.client";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowRight, BookOpen, ChevronDown, Eye, FileText, Search, X } from "lucide-react";
 import type { Work } from "@/lib/data";
@@ -12,21 +15,22 @@ import { AssetDownloadButton } from "./asset-download-button";
 import { Dialog } from "./ui/dialog";
 import styles from "./search-reading-workbench.module.css";
 
-const PreviewContext = createContext<{ work?: Work; select: (work: Work, focus?: boolean) => void }>({ select: () => {} });
+const PreviewContext = createContext<{ work?: Work; citation?: ResolvedEvidence; inspect?: (ref:ResolvedEvidence)=>void; select: (work: Work, focus?: boolean) => void }>({ select: () => {} });
 
 export function SearchReadingWorkbench({ works, children }: { works: Work[]; children: ReactNode }) {
   const [selected, setSelected] = useState<Work>();
+  const [citation,setCitation]=useState<ResolvedEvidence>();
   const [mobileOpen, setMobileOpen] = useState(false);
   const work = works.find(row => row.editionId === selected?.editionId && row.workId === selected?.workId) || works[0];
   function select(next: Work, focus = false) {
-    setSelected(next);
+    setSelected(next);setCitation(undefined);
     if (window.matchMedia("(max-width: 1100px)").matches) setMobileOpen(true);
     else if (focus) document.getElementById("search-reading-preview")?.focus();
   }
-  return <PreviewContext.Provider value={{ work, select }}><div className={styles.scope}>{children}</div>
+  return <PreviewContext.Provider value={{ work, select, citation, inspect:ref=>{setCitation(ref);if(window.matchMedia("(max-width: 1100px)").matches)setMobileOpen(true);} }}><div className={styles.scope}>{children}</div>
     <Dialog open={mobileOpen} onRequestClose={() => setMobileOpen(false)} aria-label="作品预览" className={styles.mobilePreview}>
       <header><h2>作品预览</h2><button aria-label="关闭作品预览" onClick={() => setMobileOpen(false)}><X size={20}/></button></header>
-      {work ? <PreviewDetails work={work}/> : null}
+      {citation ? <SourceCitationPanel input={{reference:citation}}/> : work ? <PreviewDetails work={work}/> : null}
     </Dialog>
   </PreviewContext.Provider>;
 }
@@ -55,33 +59,38 @@ export function SearchReadingCard({ work }: { work: Work }) {
 }
 
 function PreviewDetails({ work }: { work: Work }) {
-  const [tab, setTab] = useState("summary");
+  const [tab, setTab] = useState("citation");
   const versions = work.versions || (work.version ? [work.version] : []);
   return <div className={styles.details} key={work.editionId}>
-    <div className={styles.previewCover}><BookCover work={work} size="normal"/></div>
+    {tab!=="citation"&&<><div className={styles.previewCover}><BookCover work={work} size="normal"/></div>
     <p className={styles.meta}>{work.kind} · {work.year}</p><h2>{work.title}</h2><p className={styles.author}>{work.author}</p>
-    <WorkActions work={work}/>
-    <div className={styles.tabs} role="tablist" aria-label="作品资料"><button role="tab" aria-selected={tab === "summary"} onClick={() => setTab("summary")}>简介</button><button role="tab" aria-selected={tab === "versions"} onClick={() => setTab("versions")}>出版版本{versions.length ? ` · ${versions.length}` : ""}</button></div>
-    {tab === "summary" ? <div className={styles.prose}>{work.summary.split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}</div> : <div className={styles.versions}>{versions.map(version => <div key={version.id}><p>{[version.publisher, version.publication_year, version.version_label].filter(Boolean).join(" · ")}</p>{version.readable_asset ? <div><Link href={`/reader/${version.readable_asset.id}`}>在线阅读<ArrowRight size={14}/></Link><AssetDownloadButton assetId={version.readable_asset.id}/></div> : <span>仅书目信息</span>}<SharedCitationButton editionId={version.id}>引用此版本</SharedCitationButton></div>)}</div>}
+    <WorkActions work={work}/></>}
+    <div className={styles.tabs} role="tablist" aria-label="作品资料"><button role="tab" aria-selected={tab === "citation"} onClick={() => setTab("citation")}>引用</button><button role="tab" aria-selected={tab === "summary"} onClick={() => setTab("summary")}>简介</button><button role="tab" aria-selected={tab === "versions"} onClick={() => setTab("versions")}>出版版本{versions.length ? ` · ${versions.length}` : ""}</button></div>
+    {tab === "citation" ? <SourceCitationPanel input={{editionId:work.editionId}}/> : tab === "summary" ? <div className={styles.prose}>{work.summary.split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}</div> : <div className={styles.versions}>{versions.map(version => <div key={version.id}><p>{[version.publisher, version.publication_year, version.version_label].filter(Boolean).join(" · ")}</p>{version.readable_asset ? <div><Link href={`/reader/${version.readable_asset.id}`}>在线阅读<ArrowRight size={14}/></Link><AssetDownloadButton assetId={version.readable_asset.id}/></div> : <span>仅书目信息</span>}<SharedCitationButton editionId={version.id}>引用此版本</SharedCitationButton></div>)}</div>}
     <Link className={styles.fullDetail} href={`/works/${work.slug}`}>完整作品资料<ArrowRight size={16}/></Link>
   </div>;
 }
 
+export function SearchReadingResearch({question}:{question:string}) {
+  const {work,inspect}=useContext(PreviewContext);
+  return <SearchResearchDock question={question} filters={work?.workId?{work_ids:[work.workId]}:{}} filterAvailable={Boolean(work?.workId)} materials={[]} onInspect={inspect} filterLabel="当前所选作品"/>;
+}
+
 export function SearchReadingPreview() {
-  const { work } = useContext(PreviewContext);
-  return <aside className={styles.preview} id="search-reading-preview" tabIndex={-1} aria-label="作品预览"><header><FileText size={16}/><span>作品预览</span></header>
-    {work ? <PreviewDetails key={`${work.workId}:${work.editionId}`} work={work}/> : <p className={styles.empty}>选择一部文献，查看简介与出版版本。</p>}
+  const { work, citation } = useContext(PreviewContext);
+  return <aside className={styles.preview} id="search-reading-preview" tabIndex={-1} aria-label="作品预览"><header><FileText size={16}/><span>出处与引用</span></header>
+    {citation ? <SourceCitationPanel input={{reference:citation}}/> : work ? <PreviewDetails key={`${work.workId}:${work.editionId}`} work={work}/> : <p className={styles.empty}>选择一部文献，查看简介与出版版本。</p>}
   </aside>;
 }
 
-export function SearchableFacet({ title, name, options, selected }: { title: string; name: string; options: SearchFacetOption[]; selected: string[] }) {
+export function SearchableFacet({ title, name, options, selected, onSelectionChange }: { title: string; name: string; options: SearchFacetOption[]; selected: string[]; onSelectionChange?: (values: string[]) => void }) {
   const fieldset = useRef<HTMLFieldSetElement>(null);
   const [query, setQuery] = useState("");
   const [chosen, setChosen] = useState(selected);
   const selectionKey = JSON.stringify(selected);
   useEffect(() => {
     const reset = () => { setChosen(JSON.parse(selectionKey)); setQuery(""); };
-    reset();
+    setChosen(JSON.parse(selectionKey));
     const form = fieldset.current?.closest("form");
     form?.addEventListener("reset", reset);
     return () => form?.removeEventListener("reset", reset);
@@ -90,6 +99,6 @@ export function SearchableFacet({ title, name, options, selected }: { title: str
   const matches = rows.filter(row => row.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   return <fieldset ref={fieldset} className={styles.facet}><legend>{title}</legend><details><summary><span>{chosen.length ? `已选 ${chosen.length} 项` : `全部${title}`}</span><ChevronDown size={15}/></summary><div className={styles.facetMenu}>
     <label className={styles.facetSearch}><Search size={15}/><input type="search" aria-label={`搜索${title}选项`} value={query} onChange={event => setQuery(event.target.value)} placeholder={`搜索${title}`}/></label>
-    <div className={styles.facetOptions}>{rows.map(option => <label key={option.value} hidden={!matches.includes(option)}><input type="checkbox" name={name} value={option.value} checked={chosen.includes(option.value)} onChange={event => setChosen(current => event.target.checked ? [...current, option.value] : current.filter(v => v !== option.value))}/><span>{option.label}</span><small>{option.count}</small></label>)}{!matches.length ? <p>{rows.length ? "没有匹配的选项" : "当前结果没有可用选项"}</p> : null}</div>
+    <div className={styles.facetOptions}>{rows.map(option => <label key={option.value} hidden={!matches.includes(option)}><input type="checkbox" name={name} value={option.value} checked={chosen.includes(option.value)} onChange={event => { const next = event.target.checked ? [...chosen, option.value] : chosen.filter(v => v !== option.value); setChosen(next); onSelectionChange?.(next); }}/><span>{option.label}</span><small>{option.count}</small></label>)}{!matches.length ? <p>{rows.length ? "没有匹配的选项" : "当前结果没有可用选项"}</p> : null}</div>
   </div></details></fieldset>;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 
 import { LoadingState } from "@/components/ui/loading-state";
@@ -68,6 +70,6 @@ export function IssueSuggestions({issueId,version,disabled,blocks,request,onInse
       {!page.results.length?<p className={styles.empty}>本批没有可用建议。可更换关键词或查看下一批。</p>:null}
       <footer><span>{page.notice} · 第 {page.batch} 批 · <time dateTime={page.checked_at}>{new Date(page.checked_at).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})}</time>核对</span><button type="button" disabled={locked} onClick={refresh}>重新读取</button></footer>
     </>}
-    <Dialog open={Boolean(selected)} onRequestClose={()=>setSelected(null)} className={styles.dialog} aria-label="材料建议详情">{selected?<><header><h2>{selected.source.title}</h2><button type="button" aria-label="关闭材料详情" onClick={()=>setSelected(null)}><X size={18}/></button></header><div className={styles.sourceReadOnly}><p>{selected.source.edition_label}</p>{selected.source.summary?<p>{selected.source.summary}</p>:null}{selected.source.text?<blockquote>{selected.source.text}</blockquote>:null}{sourceHref?<a href={sourceHref} target="_blank" rel="noopener noreferrer">打开资料原页 ↗</a>:<p>当前资料没有可打开的公开页面。</p>}</div><p>{selected.reason}</p><button type="button" disabled={locked||stale||included(selected)||blocks.length>=150} onClick={()=>insert(selected)}>{included(selected)?"已在正文":"插入到文章"}</button></>:null}</Dialog>
+    <Dialog open={Boolean(selected)} onRequestClose={()=>setSelected(null)} className={styles.dialog} aria-label="材料建议详情">{selected?<><header><h2>{selected.source.title}</h2><button type="button" aria-label="关闭材料详情" onClick={()=>setSelected(null)}><X size={18}/></button></header><div className={styles.sourceReadOnly}><p>{selected.source.edition_label}</p>{selected.source.summary?<p>{selected.source.summary}</p>:null}{selected.source.text?<blockquote><SourceText text={(selected.source.text) || ""} /></blockquote>:null}{sourceHref?<a href={sourceHref} target="_blank" rel="noopener noreferrer">打开资料原页 ↗</a>:<p>当前资料没有可打开的公开页面。</p>}</div><p>{selected.reason}</p><button type="button" disabled={locked||stale||included(selected)||blocks.length>=150} onClick={()=>insert(selected)}>{included(selected)?"已在正文":"插入到文章"}</button></>:null}</Dialog>
   </section>;
 }

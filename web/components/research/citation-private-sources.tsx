@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 
 import { LoadingState } from "@/components/ui/loading-state";
@@ -118,5 +120,5 @@ export function CitationPrivateReferencePreview({ reference, ownerId }: { refere
   const current = source.data;
   const valid = reference.source_status === "available" && current?.data.parsed === true && !isTaskRunning(current.status)
     && (current.data.source_generation ?? current.generation) === reference.source_generation;
-  return <section className="stl4-audit-private-reference"><h3><LockKeyhole size={12} />本人来源原文</h3>{!valid ? <p role={source.loading ? "status" : "alert"}>{source.loading ? "正在核对私人来源权限与版本…" : source.error || "私人来源已删除、重新解析或暂不可用，旧片段不再显示。"}</p> : <><strong>{reference.title || reference.filename}</strong><p>{reference.citation}</p><small>{auditLocation(reference.location)}</small><blockquote>{reference.quote}</blockquote><button type="button" onClick={() => setOpen(value => !value)}>{open ? "收起私人原稿" : "查看本人来源原稿"}</button>{open ? <CitationPrivateSourceDocument record={current!} ownerId={ownerId} focus={{ key: `${reference.source_id}:${reference.source_generation}:${reference.unit_id}`, unitId: reference.unit_id, location: reference.location, text: reference.quote }} /> : null}</>}</section>;
+  return <section className="stl4-audit-private-reference"><h3><LockKeyhole size={12} />本人来源原文</h3>{!valid ? <p role={source.loading ? "status" : "alert"}>{source.loading ? "正在核对私人来源权限与版本…" : source.error || "私人来源已删除、重新解析或暂不可用，旧片段不再显示。"}</p> : <><strong>{reference.title || reference.filename}</strong><p>{reference.citation}</p><small>{auditLocation(reference.location)}</small><blockquote><SourceText text={(reference.quote) || ""} /></blockquote><button type="button" onClick={() => setOpen(value => !value)}>{open ? "收起私人原稿" : "查看本人来源原稿"}</button>{open ? <CitationPrivateSourceDocument record={current!} ownerId={ownerId} focus={{ key: `${reference.source_id}:${reference.source_generation}:${reference.unit_id}`, unitId: reference.unit_id, location: reference.location, text: reference.quote }} /> : null}</>}</section>;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import Link from "next/link";
 import { ArrowRight, BookOpen, FileText } from "lucide-react";
@@ -31,7 +33,7 @@ export function ResearchEvidenceCard({ reference, index, href, selected, status,
   return <article className="stl4-research-evidence has-bibliography" data-selected={selected || undefined}>
     <label className="stl4-evidence-number"><input type="checkbox" checked={selected} disabled={disabled} onChange={onToggle} aria-label={`${selected ? "移除" : "选入"}${title}`}/><span>{index + 1}</span></label>
     <ResearchEvidenceCover reference={reference}/>
-    <div className="stl4-evidence-copy"><div className="stl4-evidence-title"><h3>{title}</h3>{available && researchDocumentTypes[reference.document_type || ""] ? <span>{researchDocumentTypes[reference.document_type!]}</span> : null}</div><p className="stl4-evidence-bibliography">{metadata}</p><small>{researchEvidenceLocation(reference)}</small><blockquote>{available ? reference.quote || reference.text || "暂无可提取原文，请打开原件核对。" : "来源已变化或暂不可用。旧引用不会自动替换成另一版本的同页内容。"}</blockquote></div>
+    <div className="stl4-evidence-copy"><div className="stl4-evidence-title"><h3>{title}</h3>{available && researchDocumentTypes[reference.document_type || ""] ? <span>{researchDocumentTypes[reference.document_type!]}</span> : null}</div><p className="stl4-evidence-bibliography">{metadata}</p><small>{researchEvidenceLocation(reference)}</small><blockquote><SourceText text={(available ? reference.quote || reference.text || "暂无可提取原文，请打开原件核对。" : "来源已变化或暂不可用。旧引用不会自动替换成另一版本的同页内容。") || ""} /></blockquote></div>
     <div className="stl4-evidence-actions"><button type="button" aria-pressed={selected} className={selected ? "is-selected" : undefined} disabled={disabled} onClick={onToggle}>{status ? `${status} · 撤回` : selected ? "已选 · 移除" : "加入选材"}</button>{href ? <Link href={href}>查看原文 <ArrowRight size={14}/></Link> : <small>原文定位待核对</small>}</div>
   </article>;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { createPortal } from "react-dom";
 import type { AuditData, AuditEntry, AuditFinding, AuditOccurrence, PrivateCitationReference, ResearchRecord, ResolvedEvidence } from "@/lib/api/research.client";
@@ -18,7 +20,7 @@ function SourceReference({ reference }: { reference: ResolvedEvidence }) {
     <p><strong>{reference.title || "原文材料"}</strong>{reference.authors?.length ? ` · ${reference.authors.join("、")}` : ""}</p>
     {reference.citation ? <p>{reference.citation}</p> : null}
     <p>{anchors.map(anchor => [anchor.pdf_page ? `PDF 第 ${anchor.pdf_page} 页` : "文件页码待核对", anchor.printed_label ? `书内页码 ${anchor.printed_label}` : ""].filter(Boolean).join(" · ")).join("；")}</p>
-    {reference.quote || reference.text ? <blockquote>{reference.quote || reference.text}</blockquote> : <p>当前未提供可显示的原文文字。</p>}
+    {reference.quote || reference.text ? <blockquote><SourceText text={(reference.quote || reference.text) || ""} /></blockquote> : <p>当前未提供可显示的原文文字。</p>}
     {href ? <p><a href={href}>返回书库核对原文</a></p> : null}
   </div>;
 }
@@ -35,7 +37,7 @@ function Findings({ findings }: { findings: AuditFinding[] }) {
 
 function PrivateSourceReference({ reference }: { reference: PrivateCitationReference }) {
   if (reference.source_status !== "available") return <p className="stl4-audit-print-note">私人来源已移除、变化或不可访问；不展示旧片段。</p>;
-  return <div className="stl4-audit-print-source"><p><strong>{reference.title || reference.filename || "本人来源文件"}</strong> · 本人选定来源</p>{reference.citation ? <p>{reference.citation}</p> : null}<p>{auditLocation(reference.location)}</p>{reference.quote ? <blockquote>{reference.quote}</blockquote> : <p>当前未提供可显示的原文文字。</p>}<p className="stl4-audit-print-note">此来源仅本人可见，未进入公共馆藏。文字匹配仍须核对版本、页码与上下文。</p></div>;
+  return <div className="stl4-audit-print-source"><p><strong>{reference.title || reference.filename || "本人来源文件"}</strong> · 本人选定来源</p>{reference.citation ? <p>{reference.citation}</p> : null}<p>{auditLocation(reference.location)}</p>{reference.quote ? <blockquote><SourceText text={(reference.quote) || ""} /></blockquote> : <p>当前未提供可显示的原文文字。</p>}<p className="stl4-audit-print-note">此来源仅本人可见，未进入公共馆藏。文字匹配仍须核对版本、页码与上下文。</p></div>;
 }
 
 function Bibliography({ entries }: { entries: AuditEntry[] }) {

@@ -11,6 +11,12 @@
   cursor: pointer;
   font-size: max(calc(var(--stl-type-label) + var(--font-bump)), var(--stl-readable-ui));
   font-weight: 680;
+  font-family: var(--sans);
+  line-height: 1.5;
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
   transition: background-color var(--stl-motion-control) var(--ease-out), color var(--stl-motion-control) var(--ease-out), transform var(--stl-motion-press) var(--ease-out);
 }
 
@@ -18,3 +24,11 @@
   background: transparent;
   color: var(--ink);
 }
+.button > svg { flex: 0 0 auto; }
+.button:disabled, .button[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.button[aria-busy="true"] { cursor: progress; }
+@media (hover:hover) {
+  .button:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"]):hover { box-shadow: inset 0 0 0 1px currentColor; }
+  .button.secondary:not(:disabled):not([aria-disabled="true"]):hover { background: var(--wash); }
+}
+@media (pointer:coarse) { .button { min-block-size:44px; } }

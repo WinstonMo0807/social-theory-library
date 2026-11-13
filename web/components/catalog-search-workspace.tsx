@@ -3,6 +3,7 @@
 import { LoadingState } from "@/components/ui/loading-state";
 
 import Link from "next/link";
+import { S4Search } from "./s4-search";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, ChevronDown, ChevronRight, CircleAlert, Grid2X2, List, RefreshCw, Search, SlidersHorizontal, Undo2, X } from "lucide-react";
@@ -10,7 +11,7 @@ import { ApiRequestError } from "@/lib/api";
 import { catalogFilters, catalogHref, catalogParams, clearCatalogFilters, defaultCatalogMatches, readCatalogSearch, type CatalogSearchPayload } from "@/lib/api/catalog-search.client";
 import type { SearchFacetOption } from "@/lib/api/search.types";
 import { Dialog } from "./ui/dialog";
-import { SearchReadingWorkbench, SearchReadingCard, SearchReadingPreview, SearchableFacet } from "./search-reading-workbench";
+import { SearchReadingWorkbench, SearchReadingCard, SearchReadingPreview, SearchReadingResearch, SearchableFacet } from "./search-reading-workbench";
 import { adaptApiWork } from "@/lib/public-data-adapters";
 import { SavedWorkStatusProvider } from "./save-work-button";
 import { UsageTracker, SearchClickTracker } from "./usage-tracker";
@@ -72,20 +73,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
   return <>
     {data ? <><UsageTracker eventType="search_submit" query={query} resultCount={data.pagination.total} source="exact_search" scope="catalog" /><SearchClickTracker query={query} source="exact_search" /></> : null}
     <SearchReadingWorkbench works={(data?.works || []).map(adaptApiWork)}><main className="stl4-catalog-page">
-      <section className="stl4-catalog-hero" aria-labelledby="catalog-title">
-        <div className="stl4-catalog-hero-copy">
-          <nav aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/explore">书库检索</Link><ChevronRight size={12} /><span>馆藏检索</span></nav>
-          <h1 id="catalog-title">馆藏检索与文献列表</h1>
-          <p>按题名、作者、材料类型或年份寻找具体文献，<br />也能转向正文研究。</p>
-          <div className="stl4-catalog-query-row"><form className="stl4-catalog-query" onSubmit={submitQuery} action="/explore/original" key={`q:${query}`}>
-            <Search size={17} aria-hidden="true" /><label className="sr-only" htmlFor="catalog-query">检索馆藏</label>
-            <input id="catalog-query" name="q" type="search" maxLength={500} defaultValue={query} placeholder="题名、作者、关键词……" />
-            <button type="submit">搜索</button>
-          </form>
-          <Link className="stl4-catalog-opinions" href={`/explore/opinions${query ? `?q=${encodeURIComponent(query)}` : ""}`}>进入观点检索 <ArrowRight size={14} /></Link></div>
-        </div>
-        <div className="stl4-catalog-hero-media" aria-hidden="true" />
-      </section>
+      <S4Search key={query} mode="original" initialQuery={query} onSearch={value=>router.push(catalogHref(key,{q:value,page:null}))}/>
 
       <div className="stl4-catalog-layout">
         <aside className="stl4-catalog-sidebar" aria-label="馆藏筛选">
@@ -114,6 +102,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
             {data.pagination.page < data.pagination.total_pages ? <Link href={catalogHref(key, { page: String(data.pagination.page + 1) })}>下一页</Link> : <span>下一页</span>}
           </nav> : null}
           <p className="stl4-catalog-crosslink"><Link href={`/explore?context=global&q=${encodeURIComponent(query)}`}>同时查找学者、主题与原文片段 <ArrowRight size={13} /></Link></p>
+          <SearchReadingResearch question={query}/>
         </section>
         <SearchReadingPreview/>
       </div>

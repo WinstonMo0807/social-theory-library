@@ -1,4 +1,5 @@
 "use client";
+import { SourceText } from "@/components/source-text";
 
 import { confirmAction } from "@/lib/ui-dialog";
 
@@ -105,7 +106,7 @@ function Notebook({ owner, assetId, initialKind }: { owner: string; assetId?: st
         {focus ? <button className={styles.closeDetail} disabled={Boolean(editing)} onClick={() => setFocus(null)}><X size={15} />关闭详情</button> : null}
         {detail.error ? <Failure message={detail.error} retry={detail.reload} /> : row ? <>
           <div className={styles.sectionTitle}><h2>{labels[row.kind]}</h2>{row.source.source_status === "available" && row.source.reader_url ? <Link href={row.source.reader_url}>回到原文 →</Link> : null}</div>
-          {row.saved_quote ? <blockquote>{row.saved_quote}<footer>保存时的原文摘录 · PDF 第 {row.pdf_page} 页</footer></blockquote> : <p className={styles.muted}>{row.label || "此处尚未保存摘录文字。"}</p>}
+          {row.saved_quote ? <blockquote><SourceText text={row.saved_quote} /><footer>保存时的原文摘录 · PDF 第 {row.pdf_page} 页</footer></blockquote> : <p className={styles.muted}>{row.label || "此处尚未保存摘录文字。"}</p>}
           {row.notice ? <p className={styles.notice}>{row.notice} 自己写下的内容仍可查看和编辑。</p> : null}
           <div className={styles.sourceCard}>{row.work.cover_url ? <MediaPlacement uses={row.work.cover_media?.display_uses} fallback={<BookOpen size={25} />}><Image src={row.work.cover_url} alt={`${row.work.title}封面`} width={58} height={82} unoptimized /></MediaPlacement> : <BookOpen size={25} />}<div><h3>{row.work.title}</h3><p>{row.work.authors.join("、") || "作者待核对"}{row.work.year ? ` · ${row.work.year}` : ""}</p><small>PDF 第 {row.pdf_page} 页{row.source.printed_label ? ` · 书内页码 ${row.source.printed_label}` : ""}</small>{row.work.href ? <Link href={row.work.href}>查看作品信息 →</Link> : null}</div></div>
           <div className={styles.sectionTitle}><h2>{row.kind === "bookmark" ? "书签名称" : "我的笔记"}</h2>{!editing ? <button onClick={() => { setAdding(false); setEditing(row); }}>编辑</button> : null}</div>

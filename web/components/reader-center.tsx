@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { confirmAction } from "@/lib/ui-dialog";
 
@@ -587,7 +589,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
               .map((item) => (
                 <article className="reader-data-row" key={item.id}>
                   <Highlighter size={17} />
-                  <div><strong>{(item.work ? adaptWork(item.work).title : "来源当前不可用")}</strong><blockquote>{item.quote || "未保存引文"}</blockquote>{item.body_text ? <p>{item.body_text}</p> : null}</div>
+                  <div><strong>{(item.work ? adaptWork(item.work).title : "来源当前不可用")}</strong><blockquote><SourceText text={(item.quote || "未保存引文") || ""} /></blockquote>{item.body_text ? <p>{item.body_text}</p> : null}</div>
                   <span className="reader-data-actions"><CollectionLink href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开 <ArrowRight size={14} /></CollectionLink><ActionButton type="button" state={pendingAction === `delete-record:annotations:${item.id}` ? "pending" : "idle"} pendingLabel="删除中" disabled={Boolean(pendingAction) && pendingAction !== `delete-record:annotations:${item.id}`} onClick={() => void deleteRecord("annotations", item.id)}>删除</ActionButton></span>
                 </article>
               ))}
@@ -613,7 +615,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
                     {group.previews.map((item) => (
                       <article key={item.id}>
                         <small>第 {item.selector.page_index ?? 1} 页 · {new Date(item.created_at).toLocaleString("zh-CN", { timeZone: "Asia/Hong_Kong" })}</small>
-                        <blockquote>{item.quote || "未保存所选原文"}</blockquote>
+                        <blockquote><SourceText text={(item.quote || "未保存所选原文") || ""} /></blockquote>
                         <p>{item.body_text || "这条笔记没有补充文字。"}</p>
                         <span className="reader-data-actions">
                           <CollectionLink href={`/reader/${item.asset}?page=${item.selector.page_index ?? 1}&focus=${item.id}`}>打开原页 <ArrowRight size={13} /></CollectionLink>

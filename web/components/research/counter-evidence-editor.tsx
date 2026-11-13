@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { confirmAction } from "@/lib/ui-dialog";
 
@@ -32,7 +34,7 @@ export function CounterEvidenceEditor({ row, revision, busy, running, error, onS
     if (await onSave({ id: row.id, action: "confirm", expected_revision: expected, relation, note: note.trim(), attribution, scope_note: scopeNote.trim(), save_as_note: saveNote })) onClose();
   }
   return <section className="stl4-counter-editor" aria-label="纠正证据分类"><header><h2>选中的证据</h2><button type="button" disabled={busy} onClick={close}>返回结果列表</button></header>
-    {available ? <><div className="stl4-counter-editor-source"><ResearchEvidenceCover reference={row.reference}/><div><h3>{row.reference.title || "原文材料"}</h3><p>{row.reference.citation || row.reference.authors?.join("、")}</p><CounterLocation row={row} />{href ? <Link className="stl4-counter-button" href={href} target="_blank" rel="noreferrer">查看原文</Link> : <small>当前未提供完整原文入口，请重新读取来源。</small>}</div></div><h3>原文内容（节选）</h3><blockquote>{row.reference.quote || row.reference.text || "尚未提供原文文字，请打开原文核对。"}</blockquote>
+    {available ? <><div className="stl4-counter-editor-source"><ResearchEvidenceCover reference={row.reference}/><div><h3>{row.reference.title || "原文材料"}</h3><p>{row.reference.citation || row.reference.authors?.join("、")}</p><CounterLocation row={row} />{href ? <Link className="stl4-counter-button" href={href} target="_blank" rel="noreferrer">查看原文</Link> : <small>当前未提供完整原文入口，请重新读取来源。</small>}</div></div><h3>原文内容（节选）</h3><blockquote><SourceText text={(row.reference.quote || row.reference.text || "尚未提供原文文字，请打开原文核对。") || ""} /></blockquote>
       <section className="stl4-counter-initial"><h3>系统初步结果</h3><p>候选分类：<strong>{counterRelations[suggestion?.relation || "insufficient_evidence"] || "待复核"}</strong></p><p>{suggestion?.reason || row.reason || "尚未取得关系建议，需要本人回到原文判断。"}</p>{suggestion?.scope_difference ? <p>范围差异提示：{suggestion.scope_difference}</p> : null}<p>归属线索：{counterAttributions[row.candidate_statement?.attribution || "uncertain"]}</p><small>初步结果保留。人工纠正只影响本人的分类记录。</small></section></> : <p className="stl4-counter-warning" role="alert">原文已变化、撤回或不可访问，旧片段与系统分析不再显示。前次人工记录保留，需重新取得原文后核对。</p>}
     {row.status === "awaiting_analysis" ? <p role="status">已找到原文，正在分析关系。请等待完成；若处理失败，可重试。</p> : null}<form onSubmit={event => void submit(event)}><fieldset disabled={busy || !reviewable}><legend>人工更正分类</legend>{Object.entries(counterRelations).map(([key, label]) => <label key={key}><input type="radio" name={`counter-relation-${row.id}`} checked={relation === key} onChange={() => setRelation(key as CounterRelation)} />{label}</label>)}</fieldset>
       <label>观点归属<select data-stl-select value={attribution} disabled={busy || !reviewable} onChange={event => setAttribution(event.target.value as CounterAttribution)}>{Object.entries(counterAttributions).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>

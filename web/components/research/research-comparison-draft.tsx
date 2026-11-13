@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
@@ -21,7 +23,7 @@ export function ResearchComparisonGenerate({ workspace, dimension, onClose }: { 
   return <Dialog open onRequestClose={() => { if (!pending) onClose(); }} className="stl4-research-dialog stl4-comparison-editor" aria-labelledby="comparison-generate-title">
     <form onSubmit={event => { event.preventDefault(); if (!valid) return; const data = { dimension, reference_ids: ids }; void run(() => generateResearchComparison(record.id, { ...data, expected_revision: record.revision, request_id: requestId(JSON.stringify(data)) }), "比较草稿已加入原研究队列，已有笔记保留。").then(ok => { if (ok) onClose(); }); }}>
       <h2 id="comparison-generate-title">生成比较草稿</h2><p>维度：{dimension}。所选原文将发送给书库配置的 API 服务。原有笔记保留。</p>
-      <fieldset><legend>本次依据（已选 {ids.length} / 最多20条）</legend>{readable.map(ref => { const key = researchEvidenceKey(ref); return <label className="stl4-comparison-source" key={key}><input type="checkbox" checked={ids.includes(key)} disabled={pending || !ids.includes(key) && ids.length >= 20} onChange={event => setIds(rows => event.target.checked ? [...rows, key] : rows.filter(id => id !== key))}/><span><strong>{ref.title || "原文材料"} · PDF 第 {ref.pdf_page || "—"} 页</strong><span>{ref.quote || ref.text || "打开原文核对"}</span></span></label>; })}{!readable.length ? <p>还没有可用原文。请先加入选材，或重新核对已变化的来源。</p> : null}</fieldset>
+      <fieldset><legend>本次依据（已选 {ids.length} / 最多20条）</legend>{readable.map(ref => { const key = researchEvidenceKey(ref); return <label className="stl4-comparison-source" key={key}><input type="checkbox" checked={ids.includes(key)} disabled={pending || !ids.includes(key) && ids.length >= 20} onChange={event => setIds(rows => event.target.checked ? [...rows, key] : rows.filter(id => id !== key))}/><span><strong>{ref.title || "原文材料"} · PDF 第 {ref.pdf_page || "—"} 页</strong><span><SourceText text={(ref.quote || ref.text || "打开原文核对") || ""} compact /></span></span></label>; })}{!readable.length ? <p>还没有可用原文。请先加入选材，或重新核对已变化的来源。</p> : null}</fieldset>
       <p>生成后请核对原文，再保存为比较笔记。材料过长时会提示减少选材。</p>
       {actionError ? <p role="alert">{actionError}<button type="button" disabled={pending} onClick={workspace.refresh}>读取最新研究状态</button></p> : null}
       <footer><button type="button" disabled={pending} onClick={onClose}>返回</button><button type="submit" disabled={pending || !valid || record.archived}>{pending ? "正在提交……" : "使用所选原文生成"}</button></footer>

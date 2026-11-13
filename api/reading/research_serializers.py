@@ -14,6 +14,8 @@ class EvidenceAnchorInput(serializers.Serializer):
 
 class EvidenceReferenceInput(EvidenceAnchorInput):
     anchors = EvidenceAnchorInput(many=True, required=False, help_text="跨页引用按顺序传 1—20 个同文件同修订的单页锚点。")
+    selected_text = serializers.CharField(max_length=20000, required=False, allow_blank=False, trim_whitespace=False,
+        help_text="可选的精确选段；服务器仅忽略排版空白进行唯一匹配，再保存原文范围。")
 
 
 class QueryScopeInput(serializers.Serializer):
@@ -124,6 +126,8 @@ class TurnCreateInput(RevisionInput):
     question = serializers.CharField(min_length=2, max_length=1200)
     parent_id = serializers.UUIDField(required=False)
     scope = QueryScopeInput(required=False)
+    context_refs = EvidenceReferenceInput(many=True, required=False, max_length=20,
+        help_text="本轮明确选择的参考原文，独立于项目选材及检索范围；空数组表示不使用参考。")
     mode = serializers.ChoiceField(choices=["search", "counterargument"], default="search")
     statement = StatementInput(required=False)
     subclaims = SubclaimInput(many=True, required=False)

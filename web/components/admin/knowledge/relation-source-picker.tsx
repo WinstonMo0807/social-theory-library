@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { confirmAction } from "@/lib/ui-dialog";
 
@@ -36,7 +38,7 @@ export function RelationSourcePicker({ owner, value, saved, material, onChange, 
   return <section ref={section} tabIndex={-1} className={`${styles.panel} ${styles.sourceAnchor}`} aria-label="关系的原文依据">
     <h3>依据来源与原文位置</h3>
     {value ? <>
-      {details?.available ? <><strong>{details.title || "原题名待补"}</strong><p>{details.edition_label}{details.pdf_page ? ` · PDF 第 ${details.pdf_page} 页` : ""}</p><blockquote>{details.quote}</blockquote>{details.reader_href ? <a href={details.reader_href} target="_blank" rel="noopener">查看准确版本与原文 ↗</a> : null}</> : <p>原引用仍保留，当前不能核对原文。请重新读取或选择准确材料。</p>}
+      {details?.available ? <><strong>{details.title || "原题名待补"}</strong><p>{details.edition_label}{details.pdf_page ? ` · PDF 第 ${details.pdf_page} 页` : ""}</p><blockquote><SourceText text={(details.quote) || ""} /></blockquote>{details.reader_href ? <a href={details.reader_href} target="_blank" rel="noopener">查看准确版本与原文 ↗</a> : null}</> : <p>原引用仍保留，当前不能核对原文。请重新读取或选择准确材料。</p>}
       {details?.detail ? <p role="status">{details.detail}</p> : null}{details && !details.public_eligible ? <small>当前不能作为公开关系的原文依据。</small> : null}
       <button type="button" onClick={async () => { if ((await confirmAction("移除此原文引用吗？原材料和文字出处保留，关系修改仍需保存或明确确认。"))) { onChange(null); setPicked(null); setOpen(false); } }}>移除此原文引用</button>
     </> : <p>可从馆藏选择准确原文。已有的文字出处保留为书目信息，不冒充可定位引文。</p>}

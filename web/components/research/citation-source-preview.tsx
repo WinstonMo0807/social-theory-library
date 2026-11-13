@@ -2,6 +2,8 @@
 
 
 import { LoadingState } from "@/components/ui/loading-state";
+import { SourceExcerpt } from "@/components/source-excerpt";
+import { SourceText as ReadableSourceText } from "@/components/source-text";
 import { ChevronLeft, ChevronRight, ExternalLink, Minus, Plus } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
 import { apiRequest } from "@/lib/api";
@@ -23,7 +25,7 @@ function SourceText({ reference }: { reference: ResolvedEvidence }) {
   const text = reference.source_status === "available" ? reference.quote || reference.text : "";
   const href = researchReaderHref(reference);
   return <div className="stl4-citation-source-text">
-    {text ? <blockquote>{text}</blockquote> : <p>这条材料尚无可显示的原文片段。</p>}
+    {text ? <SourceExcerpt text={text} /> : <p>这条材料尚无可显示的原文片段。</p>}
     <p>{reference.source_status === "available" ? "尚无完整页定位，以上为当前可用的原文片段。" : "来源当前不可用，请返回报告重新核对。"}</p>
     {href ? <a href={href} target="_blank" rel="noopener noreferrer">在新窗口打开原文 <ExternalLink size={13} /></a> : null}
   </div>;
@@ -130,7 +132,7 @@ function SourceDocument({ reference, assetId, revisionId, initialPage }: {
                 <h4>PDF 第 {index} 页{row?.printed_label ? ` · 书内页码 ${row.printed_label}` : ""}{index === page ? " · 当前页" : ""}</h4>
                 {row?.chapter_title ? <p className="stl4-citation-source-caption">{row.chapter_title}</p> : null}
                 {error ? <p role="alert">{error} <button type="button" onClick={() => retryPagePayload(index)}>重试</button></p> :
-                  row ? <p className="stl4-citation-source-prose">{row.text || "这一页尚无可提取的文字，请查看 PDF 原文。"}</p> : <LoadingState role="status">正在读取这一页的上下文……</LoadingState>}
+                  row ? <p className="stl4-citation-source-prose"><ReadableSourceText text={row.text || "这一页尚无可提取的文字，请查看 PDF 原文。"} /></p> : <LoadingState role="status">正在读取这一页的上下文……</LoadingState>}
               </section>;
             })}
           </div> : null}

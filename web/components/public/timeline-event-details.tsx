@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { useId, useState } from "react";
 import Link from "next/link";
@@ -65,7 +67,6 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
           <dt>时间</dt><dd>{timelineDate(event)}<small>{precisionLabels[event.date_precision]}{event.start_year !== null && event.end_year !== null && event.start_year !== event.end_year ? ` · ${event.start_year}—${event.end_year} 年` : ""}</small></dd>
           <dt>类型</dt><dd>{timelineTypeLabels[event.event_type] || event.event_type}</dd>
           <dt>事件版本</dt><dd>{subject ? `${subject.title}${subject.version_label ? ` · ${subject.version_label}` : ""}` : subjectMessage}</dd>
-          <dt>来源状态</dt><dd>{sourceLabels[event.source_status]}</dd>
         </dl>
         <h3>事件介绍</h3>
         {event.description ? <div className={styles.description}><p>{event.description}</p></div> : <p className={styles.muted}>尚无公开的事件介绍。</p>}
@@ -74,7 +75,6 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
           {event.scholars.length ? <><h3>相关学者</h3><div className={styles.people}>{event.scholars.map(person => <Link href={person.href} key={person.id}>{person.portrait_url ? <MediaPlacement uses={person.portrait_media?.display_uses} fallback={<ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.personFallback}/>} ><img src={person.portrait_url} alt="" /></MediaPlacement> : <ScholarPortraitFallback name={person.name} identity={person.href || person.id} className={styles.personFallback}/>}<span>{person.name}</span></Link>)}</div></> : null}
           {event.topics.length ? <><h3>相关主题</h3><div className={styles.chips}>{event.topics.map(topic => <Link href={topic.href} key={topic.id}>{topic.name}</Link>)}</div></> : null}
           {event.relations.length ? <><h3>涉及对象</h3><ul className={styles.objectList}>{event.relations.map((row, rowIndex) => <li key={`${row.type}-${row.id}-${rowIndex}`}>{row.href ? <Link href={row.href}>{row.name}<ArrowRight size={12} aria-hidden="true" /></Link> : <span>{row.name}</span>}{row.description ? <p>{row.description}</p> : null}</li>)}</ul></> : <p className={styles.muted}>没有可公开的关联对象。</p>}
-          {event.source ? <><h3>来源说明</h3><p>{event.source}</p></> : null}
         </section>
         {!standalone ? <Link className={styles.textLink} href={`/theories/events/${event.id}`}>查看事件完整页面<ArrowRight size={13} aria-hidden="true" /></Link> : null}
       </> : index === 1 ? <>
@@ -84,14 +84,12 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
         {event.related_count > event.related_events.length ? <Link className={styles.textLink} href={timelineHref("/theories/timeline", {}, { related_to: event.id })}>查看全部 {event.related_count} 个相关事件<ArrowRight size={13} aria-hidden="true" /></Link> : null}
       </> : index === 2 ? <>
         <h3>已确认的引用与影响关系</h3>
-        <p className={styles.muted}>仅列出本事件明确关联的理论对象之间已发布的关系；关系依据与事件出处分别核验。</p>
         {event.knowledge_relations.length ? <>
           <p className={styles.rangeNote}>展示 {event.knowledge_relations.length} / {event.knowledge_relation_count} 条正式关系</p>
           <ul className={styles.influences}>{event.knowledge_relations.map(relation => <li key={relation.id}>
             <div><Link href={`/theories/nodes/${relation.source_slug}`}>{relation.source_name}</Link><span>{relation.direction === "undirected" ? "—" : "→"} {relation.relation_label} {relation.direction === "undirected" ? "—" : "→"}</span><Link href={`/theories/nodes/${relation.target_slug}`}>{relation.target_name}</Link></div>
             {relation.description ? <p>{relation.description}</p> : null}
-            {relation.evidence_source ? <p className={styles.muted}>{relation.evidence_source}</p> : null}
-            {relation.evidence?.length ? relation.evidence.map(evidence => <blockquote key={evidence.id}><p>{evidence.quote}</p>{evidence.reader_href ? <CollectionLink href={evidence.reader_href}>{evidence.work_title} · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</CollectionLink> : <span>关系原文当前不可用</span>}</blockquote>) : <p className={styles.muted}>这条关系尚无可阅读的原文片段。</p>}
+            {relation.evidence?.length ? relation.evidence.map(evidence => <blockquote key={evidence.id}><p><SourceText text={(evidence.quote) || ""} /></p>{evidence.reader_href ? <CollectionLink href={evidence.reader_href}>{evidence.work_title} · {evidence.printed_page_label || `PDF 第 ${evidence.page_number} 页`}</CollectionLink> : <span>关系原文当前不可用</span>}</blockquote>) : <p className={styles.muted}>这条关系尚无可阅读的原文片段。</p>}
             <Link className={styles.textLink} href={`/theories/nodes/${relation.source_slug}/relations`}>查看该理论对象的关系</Link>
           </li>)}</ul>
         </> : <p className={styles.emptySmall}>暂无已确认的引用与影响关系。</p>}
@@ -101,11 +99,10 @@ export function TimelineEventDetails({ event, actionPath = "/theories/timeline",
           <p className={styles.sourceIdentity}>{source.title}{source.edition_label ? ` · ${source.edition_label}` : ""}</p>
           <p className={styles.muted}>{source.printed_page_label ? `印刷页 ${source.printed_page_label} · ` : ""}PDF 第 {source.pdf_page} 页</p>
           {subject && source.edition_id !== subject.edition_id ? <p className={styles.sourceNotice}>此处引用来自独立的证据版本，与事件版本分别对应。</p> : null}
-          {source.quote ? <blockquote className={styles.sourceQuote}>{source.quote}</blockquote> : <p className={styles.muted}>该来源未公开摘录，请在原文中核对。</p>}
+          {source.quote ? <blockquote className={styles.sourceQuote}><SourceText text={(source.quote) || ""} /></blockquote> : <p className={styles.muted}>该来源未公开摘录，请在原文中核对。</p>}
           <CollectionLink className={styles.sourceButton} href={source.reader_href}>打开来源原文<BookOpen size={15} aria-hidden="true" /></CollectionLink>
           <div className={styles.downloadActions} role="group" aria-label="证据版本下载"><AssetDownloadButton assetId={source.asset_id} /></div>
         </> : <p className={styles.emptySmall}>{sourceLabels[event.source_status]}。</p>}
-        {event.source ? <p className={styles.muted}>来源说明：{event.source}</p> : null}
         <Link className={styles.textLink} href={feedbackHref}>{source ? "反馈来源问题" : "提交来源线索"}<ArrowRight size={13} aria-hidden="true" /></Link>
       </>}
     </div>)}

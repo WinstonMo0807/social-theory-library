@@ -75,7 +75,7 @@ def collect_research_turn(turn_id, generation, task_id):
                 if payload.get("mode") == "counterargument":
                     from .research import counterargument_query
                     query_plan = counterargument_query(payload.get("analysis_statement", payload["statement"]), search_question)
-                elif turn.parent_id:
+                elif turn.parent_id or payload.get("selected_refs"):
                     from .local_analysis import plan_followup
                     history, parent = [], turn.parent
                     for _ in range(3):
@@ -83,7 +83,8 @@ def collect_research_turn(turn_id, generation, task_id):
                             break
                         history.insert(0, {"question": unpack(parent)["question"]})
                         parent = parent.parent
-                    selected = [resolve_reference(ref, user) for ref in payload.get("selected_refs", [])[:5]]
+                    context_limit = 20 if payload.get("context_explicit") else 5
+                    selected = [resolve_reference(ref, user) for ref in payload.get("selected_refs", [])[:context_limit]]
                     from .research import plan_memory_rows, search_memories
                     # Search only notes currently authorized by this owner for this research project.
                     context = {"kind": "project", "id": str(turn.project_id)}

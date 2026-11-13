@@ -1,0 +1,6 @@
+.panel{padding:0 22px 24px;color:var(--ink,#252420);min-width:0}
+.actions{display:grid;gap:8px;margin-top:20px}
+.actions>button,.actions>a{display:flex;align-items:center;justify-content:center;gap:9px;min-height:42px;padding:10px 13px;border:1px solid var(--line,#ddd6ca);border-radius:6px;background:var(--surface,#fffefa);color:var(--ink,#252420);font:500 14px/1.5 var(--sans,sans-serif);text-decoration:none;cursor:pointer}
+.actions>a:first-child{background:#252420;color:#fffefa!important;border-color:#252420}
+.actions>button:hover,.actions>a:hover{box-shadow:0 3px 10px #30271915;border-color:#b08b49}
+.actions>button:focus-visible,.actions>a:focus-visible{outline:2px solid #b08b49;outline-offset:3px}

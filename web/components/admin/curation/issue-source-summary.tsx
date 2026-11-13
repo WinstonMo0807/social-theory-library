@@ -1,4 +1,6 @@
 "use client";
+import { SourceText } from "@/components/source-text";
+
 
 import { BookOpen, FileText, Heading, Image, Lightbulb, Link, Quote, Route, Scale, Text, UserRound, Waypoints } from "lucide-react";
 import type { IssueBlock, IssueResolvedSource } from "@/lib/api/recommendation-issues.types";
@@ -25,7 +27,7 @@ export function IssueSourceSummary({source}:{source:IssueResolvedSource}) {
       {source.section?<div><dt>引用位置</dt><dd>{source.section}</dd></div>:null}
       {source.summary&&!book?<div><dt>资料说明</dt><dd>{source.summary}</dd></div>:null}
     </dl>
-    {source.text?<div className={styles.sourceExcerpt}><span>原文</span><blockquote>{source.text}</blockquote></div>:null}
+    {source.text?<div className={styles.sourceExcerpt}><span>原文</span><blockquote><SourceText text={(source.text) || ""} /></blockquote></div>:null}
     <div className={styles.sourceActions}>{href?<a href={href} target="_blank" rel="noopener noreferrer"><BookOpen size={14}/>{source.reader_url===href?"查看原文":"查看资料"} ↗</a>:source.edit_url?.startsWith("/admin/")?<a href={source.edit_url} target="_blank" rel="noopener">查看处理状态 ↗</a>:null}</div>
   </section>;
 }

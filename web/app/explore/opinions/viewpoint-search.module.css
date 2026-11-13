@@ -1,4 +1,16 @@
 .page { min-height: calc(100vh - var(--header-height)); }
+.page .resultLayout{grid-template-columns:minmax(0,1fr) minmax(290px,340px)}
+.page .resultLayout.summaryHidden{grid-template-columns:minmax(0,1fr)}
+.horizontalFilters{padding:18px 20px;margin-bottom:22px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.horizontalFilters .filterGrid{display:flex;flex-wrap:wrap;align-items:start;gap:12px;margin:0}
+.horizontalFilters .filterGrid>fieldset{flex:1 1 150px;min-width:140px;margin:0;padding:0;border:0}
+.horizontalFilters .filterGrid>fieldset>legend{font-size:13px;margin-bottom:8px}
+.horizontalFilters .filterGrid>fieldset:has(.yearRange){flex-basis:250px}
+.horizontalFilters .filterGrid>fieldset:has(.yearRange)>label{display:inline-flex;margin:7px 12px 0 0;font-size:12px}
+.horizontalFilters .filterGrid>fieldset:has(.yearRange)>label input{min-height:0;width:auto}
+.horizontalFilters form>button{margin-top:14px}
+.page .evidenceInspector{position:sticky;top:20px;max-height:calc(100dvh - 40px);overflow:auto}
+@media(max-width:1100px){.page .resultLayout{grid-template-columns:minmax(0,1fr)}.horizontalFilters{display:none}}
 .searchForm { min-width: 0; margin: 0; }
 .queryRow { display: flex; align-items: center; gap: 12px; min-height: 48px; padding-left: 14px; border: 1px solid var(--line-dark); border-radius: 8px; background: var(--surface); }
 .queryRow > svg { flex-shrink: 0; color: var(--muted); }
@@ -287,6 +299,11 @@
 :is(.page,.filterDialog) .filterGrid fieldset small { font-size:max(12px, var(--stl-readable-meta)); }
 :is(.page,.filterDialog) .filterGrid > label { font-size:max(13px, var(--stl-readable-meta)); padding:10px 0; }
 .page .resultsHeader { min-height:38px; padding:4px 0 12px; }
+.readableExcerpt { margin-block:16px; padding:20px 0 16px; border-block:1px solid var(--line); }
+.citationPreview .citationText { font:400 max(16px,var(--stl-readable-body))/1.8 var(--serif); color:var(--ink); overflow-wrap:anywhere; white-space:pre-wrap; user-select:text; }
+.summaryActions > div { flex-wrap:wrap; gap:8px; }
+.summaryActions :is(button,a) { min-height:38px; height:auto; white-space:normal; line-height:1.5; }
+.contextColumns :is(.contextMatch,.contextBlock) > p { max-inline-size:42em; margin-block:16px; }
 .page .resultsHeader h2,.page .resultsHeader span { font:max(13px, var(--stl-readable-meta)) var(--serif); }
 .viewControls select { font:max(12px, var(--stl-readable-ui)) var(--serif); background:var(--surface); }
 .viewControls button { min-width:36px; }
@@ -306,7 +323,7 @@
 .resultCard footer { font-size:max(13px, var(--stl-readable-meta)); }
 .resultCard .evidenceTags { margin:4px 0; }
 .evidenceTags span { background:var(--night-tint,#f4ead3); color:var(--night-gold,#9b7025); font:max(12px, var(--stl-readable-meta))/1.5 var(--serif); }
-.evidenceInspector { top:94px; margin-top:-132px; max-height:calc(100dvh - 108px); padding:16px; scrollbar-gutter:auto; }
+.evidenceInspector { top:94px; margin-top:0; max-height:calc(100dvh - 108px); padding:20px; scrollbar-gutter:stable; }
 .evidenceInspector > header { margin-bottom:18px; }
 .evidenceInspector > header h2 { font-weight:700; }
 .compactBook { grid-template-columns:76px minmax(0,1fr); gap:18px; }
@@ -425,3 +442,35 @@
 }
 
 .scholarFallback { width: 48px; height: 60px; border-radius: 4px; }
+
+/* Accepted B reading layout: fixed filters, full-width excerpts and quiet book headers. */
+.page { background:var(--night-paper,#f7f4ee); }
+.page .resultCard { display:block; border:1px solid var(--line); border-radius:10px; padding:28px 32px; background:var(--surface); }
+.page .resultCard.selectedCard { border-color:var(--gold); margin-left:0; padding-left:32px; }
+.page .cardList { gap:20px; }
+.page .resultNumber { display:none; }
+.page .resultContent { display:block; }
+.page .resultCard .selectEvidence { display:block; }
+.page .resultCard .evidenceBook { display:grid; grid-template-columns:88px minmax(0,1fr); align-items:center; gap:22px; }
+.page .resultCard .evidenceBook>img,.page .resultCard .coverMissing { grid-area:auto; width:88px; height:132px; }
+.page .resultCard .evidenceBook>div { grid-area:auto; }
+.page .resultCard .evidenceBook h3 { font-size:25px; line-height:1.45; }
+.page .resultCard .selectQuote { cursor:text; }
+.page .readableExcerpt { border:0; margin:22px 0; padding:0; }
+.page .resultCard .evidenceTags { margin-top:16px; }
+.page .resultCard footer { justify-content:flex-start; gap:16px; border-top:1px solid var(--line); padding-top:18px; }
+.page .cardSave { top:22px; right:16px; }
+.page .filterSidebar,.page .evidenceInspector { background:var(--surface); border-radius:10px; }
+.page .filterSidebar { top:calc(var(--header-height) + 16px); max-height:calc(100dvh - var(--header-height) - 32px); overflow:auto; }
+:is(.page,.filterDialog) .filterGrid input[type=search] { width:100%; height:36px; min-width:0; font-size:14px; padding:6px; }
+:is(.page,.filterDialog) .filterGrid label[hidden] { display:none; }
+.page .resultGrid .resultCard { padding:20px; }
+.page .resultGrid .evidenceBook { grid-template-columns:64px minmax(0,1fr); gap:14px; }
+.page .resultGrid .evidenceBook>img,.page .resultGrid .coverMissing { width:64px; height:96px; }
+.page .resultGrid .evidenceBook h3 { font-size:21px; }
+@media(max-width:800px) { .page .resultCard,.page .resultCard.selectedCard { padding:20px; } .page .resultCard .evidenceBook { grid-template-columns:64px minmax(0,1fr); gap:16px; } .page .resultCard .evidenceBook>img,.page .resultCard .coverMissing { width:64px; height:96px; } .page .resultCard .evidenceBook h3 { font-size:21px; } }
+
+/* Accepted S4: horizontal filters, fixed source/citation columns. */
+.page .resultLayout{grid-template-columns:minmax(0,1fr) minmax(290px,340px)}
+.page .resultLayout.summaryHidden{grid-template-columns:minmax(0,1fr)}
+@media(max-width:1100px){.page .resultLayout{grid-template-columns:minmax(0,1fr)}.page .evidenceInspector{display:none}}

@@ -10,7 +10,8 @@ export function researchEvidenceReference(reference: EvidenceReference): Evidenc
   if (reference.anchors?.length) return { anchors: reference.anchors.map(researchEvidenceReference) };
   const anchor = { asset_id: reference.asset_id, document_revision_id: reference.document_revision_id,
     pdf_page: reference.pdf_page, evidence_span_id: reference.evidence_span_id, content_hash: reference.content_hash,
-    ...(reference.selection_start !== undefined ? { selection_start: reference.selection_start, selection_end: reference.selection_end } : {}) };
+    ...(reference.selection_start !== undefined ? { selection_start: reference.selection_start, selection_end: reference.selection_end } : {}),
+    ...(reference.selected_text ? { selected_text: reference.selected_text } : {}) };
   return Object.fromEntries(Object.entries(anchor).filter(([, value]) => value !== null && value !== undefined)) as EvidenceReference;
 }
 
