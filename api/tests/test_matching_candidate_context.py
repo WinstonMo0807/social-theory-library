@@ -38,3 +38,30 @@ def test_match_context_distinguishes_responsibility_and_source_claims(source,adm
     assert payload["candidates"][0]["label"]=="同名人物"
     assert all(v["title"]==source.asset.edition.work.title for v in payload["candidates"][0]["related_works"])
     assert changeset.items.get().payload["candidates"][0]["label"]=="伪造身份"  # Original proposal remains auditable.
+
+
+def test_short_person_reference_retrieves_bounded_comparisons_without_merging(source, admin_user):
+    from catalog import models as m
+    from catalog.services.knowledge_core import match_entities
+    max_weber=m.Entity.objects.create(kind="person",label="马克斯·韦伯",definition="社会学家")
+    ernst_weber=m.Entity.objects.create(kind="person",label="恩斯特·海因里希·韦伯",definition="生理学家")
+    m.Entity.objects.create(kind="concept",label="韦伯方法论")
+    matches=match_entities("韦伯","person")
+    assert {r['id'] for r in matches}=={str(max_weber.pk),str(ernst_weber.pk)}
+    assert all(r['match_basis']=='person_name_fragment' and not r['automatic_same_identity'] for r in matches)
+    assert len(match_entities("韦伯","person",limit=1))==1
+    assert not match_entities("韦伯","concept")
+    assert not match_entities("韦","person") and not match_entities(" ","person")
+    changeset=submit_draft(source,[{"id":str(uuid4()),"kind":"entity","dependencies":[],"payload":{
+        "kind":"person","label":"韦伯","candidates":[{"id":str(max_weber.pk),
+            "reason":"已证明同一人物", "match_basis":"external_identifier", "automatic_same_identity":True}]}}],
+        admin_user,request_id=uuid4())
+    candidate=changeset_data(changeset,admin_user)["items"][0]["payload"]["candidates"][0]
+    assert candidate["match_basis"]=="person_name_fragment"
+    assert "不能据此归并" in candidate["reason"] and not candidate["automatic_same_identity"]
+    max_weber.label="无关人物";max_weber.save(update_fields=["label"])
+    candidate=changeset_data(changeset,admin_user)["items"][0]["payload"]["candidates"][0]
+    assert candidate["match_basis"]=="proposed_comparison"
+    exact=m.Entity.objects.create(kind="person",label="韦伯",context="另一个来源的待审身份")
+    assert [r['id'] for r in match_entities("韦伯","person")]==[str(exact.pk)]
+    assert m.Entity.objects.count()==4 and not m.Entity.objects.filter(merged_into__isnull=False).exists()

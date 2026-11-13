@@ -41,7 +41,8 @@ def changeset_data(changeset, actor):
                     continue
             # External proposals are untrusted: display current library context,
             # never caller-invented aliases, identifiers or associated works.
-            item["payload"]["candidates"] = [matching_candidate(entity) for entity in m.Entity.objects.filter(pk__in=ids)]
+            item["payload"]["candidates"] = [matching_candidate(entity, query=item["payload"].get("label", ""))
+                for entity in m.Entity.objects.filter(pk__in=ids)]
         if item["kind"] == "alias":
             from uuid import UUID
             from catalog.services.knowledge_core import entity_data

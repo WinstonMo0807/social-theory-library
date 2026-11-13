@@ -50,13 +50,22 @@ def entity_data(entity, *, public=False):
 def match_entities(label, kind, *, limit=12):
     # Names only retrieve candidates. Even one exact name does not merge identity.
     from catalog.services.knowledge_entity_queries import entity_query
-    rows = entity_query(m.Entity.objects.filter(kind=kind), query=label, exact=True)[:min(limit, 30)]
+    label = str(label).strip()
+    if not label or len(label) > 240:
+        return []
+    scope = m.Entity.objects.filter(kind=kind)
+    rows = list(entity_query(scope, query=label, exact=True)[:min(limit, 30)])
+    fragment = not rows and kind == "person" and 2 <= len(label) <= 80
+    if fragment:
+        # Books commonly cite surnames. Retrieve a small comparison set rather
+        # than treating a missing exact alias as proof that the person is new.
+        rows = list(entity_query(scope, query=label)[:min(limit, 30)])
     from catalog.services.knowledge_identity import canonical_entity
     candidates = {value.pk: value for row in rows if (value := canonical_entity(row))}
-    return [matching_candidate(row) for row in candidates.values()]
+    return [matching_candidate(row, query=label) for row in candidates.values()]
 
 
-def matching_candidate(entity):
+def matching_candidate(entity, *, query=None):
     """Bounded catalogue context; responsibility is distinct from a claim role."""
     works = []
     if entity.person_id:
@@ -71,8 +80,21 @@ def matching_candidate(entity):
             "title": row.work.title, "source_type": "assertion_source", "role": row.assertion.predicate,
             "role_label": row.assertion.predicate, "assertion_id": str(row.assertion_id), "text": row.assertion.text,
             "citation": row.citation, "status": row.assertion.status})
-    return {**entity_data(entity), "related_works": works, "related_works_scope": "up_to_12_contributions_and_12_confirmed_assertion_sources",
+    result = {**entity_data(entity), "related_works": works, "related_works_scope": "up_to_12_contributions_and_12_confirmed_assertion_sources",
         "reason": "名称或已确认异名匹配，身份仍须审核", "automatic_same_identity": False}
+    if query is not None:
+        query = str(query).strip().casefold()
+        names = [str(result["label"]).casefold(), *[str(a["text"]).casefold()
+            for a in result["aliases"] if a["review_status"] == "confirmed"]]
+        if query not in names:
+            # Recompute from authoritative identity text, never a draft's reason.
+            if entity.kind == "person" and 2 <= len(query) <= 80 and any(query in n for n in names):
+                result.update(match_basis="person_name_fragment",
+                    reason="姓氏或姓名片段匹配，仅供身份比较；须核对人物资料和作品，不能据此归并。")
+            else:
+                result.update(match_basis="proposed_comparison",
+                    reason="草稿提出的比较对象，当前名称与已确认异名未匹配；请核对身份依据。")
+    return result
 
 
 @transaction.atomic
