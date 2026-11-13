@@ -1,3 +1,7 @@
+## 2026-11-13 确定性回执更新
+
+09d07a20已更新候选intelligence.py并核对SHA256，回退包backup-resume-receipts-09d07a20-20261113224757/source-before.tar.gz；仅API重启，worker/beat仍停止。治理36个Wiki产物已保存，后续按2个产物一批、批次前后检查正式与候选ready。新窗口恢复分支尚未部署。现有SSH禁止端口转发，本轮没有改动SSH策略或发布数据库端口。公网、正式库、MCP未变更。
+
 ## 2026-11-13 部章目录修复部署
 
 4cc5a57e的document_outline、outline_automatic、knowledge_sources三份运行文件已部署并核对哈希，仅候选API于14:00:49 UTC重启。源码回退包backup-outline-fragments-4cc5a57e-20261113220005/source-before.tar.gz；数据包backup-foucault-outline-v11-20261113/source-and-compilation-before.dump为58,670,914字节，SHA256 8fdda903a57de83cabc350b8cf47b161a4f23ccb7815f7666784df0efb2263e5，pg_restore清单224行，未实际恢复。

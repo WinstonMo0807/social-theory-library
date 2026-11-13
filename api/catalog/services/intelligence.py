@@ -14,6 +14,9 @@ from common.task_runtime import queue_or_wait, renew_demand_lease
 
 STAGES = ["文献读取", "章节分析", "全书综合", "实体匹配", "学术陈述", "知识页编纂", "变更集", "管理员审核"]
 SOURCE_SELECTION_VERSION = "leaf-ranges-v1"
+ANALYSIS_PROMPT = (
+    "按文献顺序分析全部输入段落。引文偏移采用各段给定的原始页面起点，Unicode code point，结束不含。列出研究问题、概念、方法及有直接证据的陈述。"
+    "主张者不等于书籍作者；额外参与者在participants标明quoted/criticized等角色，并在entities逐一列出。conditions只填写原文支持的时间、地区、人群、研究对象和概念用法，未知留空。")
 STRING = {"type": "string"}
 ENTITY_SCHEMA = {"type": "object", "required": ["label", "kind", "definition", "context"], "properties": {
     "label": STRING, "kind": {"type":"string", "enum": list(m.Entity.Kind.values)}, "definition": STRING, "context": STRING}}
@@ -530,9 +533,71 @@ def compile_wiki(run, proposals, config, lease, *, synthesis=None):
     return results
 
 
-def execute(run, config, lease):
-    # A new lease must not retain in-memory receipts from an earlier attempt.
-    run._artifact_cache = {}
+def _analysis_plan_hash(run, config, structure):
+    return digest([PROMPT_VERSION, ANALYSIS_SCHEMA, identity(config),
+        structure.input_hash, structure.parser_version, run.scope])
+
+
+def _completed_analyses(run, config, lease):
+    """Resume immutable completed windows without rebuilding every OCR node.
+
+    Read saved inputs and current immutable page text in bounded book queries.
+    Every raw range and quotation is still checked; this is not output-only
+    caching. Changed structure/scope/model/prompt falls back to planning.
+    """
+    total = run.coverage.get("total_windows", 0)
+    if (not config.enabled or not total or run.coverage.get("completed_windows") != total
+            or run.coverage.get("read_characters") != run.coverage.get("total_characters")):
+        return None
+    _guard(run, lease)
+    structure = current_structure(run.document_revision)
+    if (not structure or structure.pk != run.structure_id
+            or run.coverage.get("analysis_plan_hash") != _analysis_plan_hash(run, config, structure)):
+        return None
+    source = run.artifacts.filter(stage=1, unit="source", status="succeeded").only("input_manifest", "output_hash").first()
+    if (not source or str(source.pk) != run.coverage.get("source_artifact_id")
+            or source.output_hash != run.coverage.get("source_manifest_hash")
+            or source.input_manifest != {"structure_hash":structure.input_hash,"scope":run.scope,"selection_version":SOURCE_SELECTION_VERSION}):
+        return None
+    receipts = {a.unit:a for a in run.artifacts.filter(stage=2).only(
+        "id", "run_id", "stage", "unit", "cache_key", "schema_version", "status", "input_manifest", "output", "output_hash")}
+    if set(receipts) != {f"window:{i}" for i in range(total)}:
+        return None
+    analyses = [receipts[f"window:{i}"] for i in range(total)]
+    page_numbers, characters = set(), 0
+    for artifact in analyses:
+        data = artifact.input_manifest
+        key = digest([PROMPT_VERSION, 2, {k:v for k,v in data.items() if k != "revision"},
+            ANALYSIS_PROMPT, ANALYSIS_SCHEMA, identity(config)])
+        if (artifact.status not in {"succeeded", "empty"} or artifact.schema_version != PROMPT_VERSION
+                or artifact.cache_key != key or data.get("revision") != str(run.document_revision_id)
+                or data.get("work_id") != str(run.work_id) or data.get("work_title") != run.work.title
+                or data.get("parser_version") != structure.parser_version):
+            return None
+        if artifact.output_hash != digest(artifact.output):
+            raise ValidationError("已保存的分析产物哈希不符，不能继续编纂。")
+        for row in data["ranges"]:
+            page_numbers.add(row["page_number"])
+            characters += row["end"] - row["start"]
+    if characters != run.coverage.get("total_characters"):
+        return None
+    pages = {number:(text, checksum) for number,text,checksum in run.document_revision.page_snapshots.filter(
+        page_number__in=page_numbers).values_list("page_number", "text", "content_hash")}
+    if set(pages) != page_numbers or any(digest(text) != checksum for text,checksum in pages.values()):
+        raise ValidationError("已保存的正文快照缺失或哈希不符，不能继续编纂。")
+    for artifact in analyses:
+        rows = artifact.input_manifest["ranges"]
+        for row in rows:
+            text = pages[row["page_number"]][0]
+            if not 0 <= row["start"] < row["end"] <= len(text) or text[row["start"]:row["end"]] != row["text"]:
+                raise ValidationError("已保存的分析窗口与固定修订原文不符。")
+        validate_analysis(artifact.output, rows)
+    run.structure = structure
+    run._artifact_cache[2] = receipts
+    return analyses
+
+
+def _analyze_windows(run, config, lease):
     nodes = prepare(run)
     if not config.enabled:
         m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="waiting_configuration",stage=2)
@@ -544,8 +609,7 @@ def execute(run, config, lease):
     paths = chapter_paths(run.structure, (chapter for chapter, _ in planned))
     total_characters = sum(row["end"]-row["start"] for _, rows in planned for row in source_rows(rows))
     read_characters = 0
-    analysis_plan_hash = digest([PROMPT_VERSION, ANALYSIS_SCHEMA, identity(config),
-        run.structure.input_hash, run.structure.parser_version, run.scope])
+    analysis_plan_hash = _analysis_plan_hash(run, config, run.structure)
     # Do not temporarily reset a partially read book to zero on every resume.
     if run.coverage.get("analysis_plan_hash") != analysis_plan_hash or run.coverage.get("total_windows") != len(planned) or run.coverage.get("total_characters") != total_characters:
         run.coverage.update(total_windows=len(planned), completed_windows=0, read_nodes=0,
@@ -559,8 +623,7 @@ def execute(run, config, lease):
         artifact = _model_artifact(run,2,f"window:{index}",{"revision":str(run.document_revision_id), "work_id":str(run.work_id),
             "work_title":run.work.title,
             "parser_version":run.structure.parser_version,"chapter_path":chapter_path,"ranges":model_rows},
-            "按文献顺序分析全部输入段落。引文偏移采用各段给定的原始页面起点，Unicode code point，结束不含。列出研究问题、概念、方法及有直接证据的陈述。"
-            "主张者不等于书籍作者；额外参与者在participants标明quoted/criticized等角色，并在entities逐一列出。conditions只填写原文支持的时间、地区、人群、研究对象和概念用法，未知留空。", ANALYSIS_SCHEMA,config,lease,
+            ANALYSIS_PROMPT, ANALYSIS_SCHEMA,config,lease,
             validate=lambda output: validate_analysis(output, model_rows))
         analyses.append(artifact)
         read_nodes.update(row["node_id"] for row in rows if row["node_complete"])
@@ -568,6 +631,20 @@ def execute(run, config, lease):
         if len(analyses) > run.coverage.get("completed_windows", 0):
             run.coverage.update(read_nodes=len(read_nodes), completed_windows=len(analyses), read_characters=read_characters)
             m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(coverage=run.coverage)
+    return analyses
+
+
+def execute(run, config, lease):
+    # A new lease must not retain in-memory receipts from an earlier attempt.
+    run._artifact_cache = {}
+    analyses = _completed_analyses(run, config, lease)
+    if analyses is None:
+        analyses = _analyze_windows(run, config, lease)
+        if analyses is None:
+            return
+    else:
+        m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(
+            status="running", started_at=timezone.now(), model_identity=identity(config))
     synthesis = {"summary":"","development":[],"limitations":[]}
     summary = None
     for i, artifact in enumerate(analyses):
@@ -636,8 +713,8 @@ def execute(run, config, lease):
     _save_artifact(run,7,"changeset",{"proposal_ids":[p["id"] for p in proposals]}, {"changeset_id":str(changeset.pk)},lease=lease)
     _guard(run,lease)
     missing = [page for page in run.coverage.get("missing_text_pages",[]) if page not in run.coverage["excluded_pages"]]
-    complete = bool(nodes) and not missing and len(read_nodes) == len(nodes)
+    complete = bool(run.coverage.get("total_nodes")) and not missing and run.coverage.get("read_nodes") == run.coverage["total_nodes"]
     m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(stage=8,
         status="partial" if not complete else "succeeded" if proposals else "empty",finished_at=timezone.now(),
-        coverage={**run.coverage,"read_nodes":len(read_nodes),"analysis_complete":complete,
+        coverage={**run.coverage,"analysis_complete":complete,
                   "interpretation_status":"pending_human_review"})

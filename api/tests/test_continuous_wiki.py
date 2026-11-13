@@ -79,6 +79,48 @@ def test_complete_empty_book_cache_and_idempotent_agent_receipts(source, admin_u
     assert second.status == "empty" and not second.artifacts.filter(status="waiting_agent").exists()
 
 
+def test_completed_windows_resume_without_ocr_node_reconstruction(source, admin_user, monkeypatch):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    policy=setup(source,admin_user,monkeypatch)
+    for _ in range(10):
+        artifact=next_packet(policy,admin_user)
+        if artifact.stage==3:
+            break
+        assert artifact.stage==2
+        submit(artifact,admin_user,{"summary":"fixture","questions":[],"entities":[],"assertions":[]})
+    else:
+        pytest.fail("Did not reach ordered synthesis")
+    run=m.CurationRun.objects.get(pk=policy.latest_run_id)
+    config=compilation.run_configuration(run)
+    coverage=dict(run.coverage)
+    def unexpected(*args,**kwargs):
+        pytest.fail("Completed source windows were reconstructed")
+    with monkeypatch.context() as resumed:
+        resumed.setattr(runner,"prepare",unexpected)
+        with CaptureQueriesContext(connection) as queries:
+            with pytest.raises(compilation.AgentStagePending):
+                runner.execute(run,config,None)
+        assert not any('catalog_documentnode"' in q['sql'] for q in queries)
+    run.refresh_from_db()
+    assert run.coverage==coverage
+    run._artifact_cache={}
+    assert runner._completed_analyses(run,config,None)
+    with monkeypatch.context() as changed:
+        changed.setattr(runner,"ANALYSIS_PROMPT",runner.ANALYSIS_PROMPT+' Changed instructions.')
+        assert runner._completed_analyses(run,config,None) is None
+    config.temperature=1
+    assert runner._completed_analyses(run,config,None) is None
+    config=compilation.run_configuration(run)
+    # Simulate storage corruption in the isolated test DB. The application's
+    # immutable model manager deliberately offers no update operation.
+    with connection.cursor() as cursor:
+        cursor.execute('UPDATE catalog_revisionpage SET text = %s WHERE document_revision_id = %s',
+            ['被破坏的快照',source.pk.hex])
+    with pytest.raises(ValidationError,match="快照"):
+        runner._completed_analyses(run,config,None)
+
+
 def test_policy_pausing_preserves_products_and_blocks_late_write(source, admin_user, monkeypatch):
     policy = setup(source, admin_user, monkeypatch)
     artifact = next_packet(policy, admin_user)
