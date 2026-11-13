@@ -68,14 +68,15 @@ export function EvidenceSummary({ item, returnTo, onContext }: { item: Discovery
   const [preview, setPreview] = useState<SharedCitationPreview | null>(null);
   const [previewError, setPreviewError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const citationKey = JSON.stringify({ reference: passageReference(item), selectedText: item.excerpt });
   useEffect(() => {
     const request = new AbortController();
     setPreview(null); setPreviewError(""); setManual(""); setCopyState("");
-    void previewSharedCitation({ reference: passageReference(item), selectedText: item.excerpt }, request.signal)
+    void previewSharedCitation(JSON.parse(citationKey), request.signal)
       .then(value => { if (!request.signal.aborted) setPreview(value); })
       .catch(reason => { if (!request.signal.aborted) setPreviewError(reason instanceof Error ? reason.message : "引用信息读取失败，请重试。"); });
     return () => request.abort();
-  }, [item, attempt]);
+  }, [citationKey, attempt]);
   const href = discoveryReaderHref(item, returnTo);
   async function copy() {
     if (copying) return;

@@ -15,6 +15,7 @@ import type { ResolvedEvidence } from "@/lib/api/research.client";
 import { ScholarPortraitFallback } from "@/components/default-scholar-portrait";
 import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Quote, RefreshCw, Search, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import { actOnDiscoverySearch, canKeepDiscoveryContext, canRetryDiscoveryRead, createDiscoverySearch, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
 import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "@/lib/api/discovery.types";
@@ -48,6 +49,8 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
 }) {
   const { t } = useEvidenceLanguage();
   const router=useRouter();
+  const pageRoot=useRef<HTMLDivElement>(null);
+  useEffect(()=>{const header=document.querySelector<HTMLElement>('header.site-header'),root=pageRoot.current;if(!header||!root)return;const update=()=>root.style.setProperty('--search-header-height',`${Math.ceil(header.getBoundingClientRect().height)}px`);update();const observer=new ResizeObserver(update);observer.observe(header);return()=>observer.disconnect();},[]);
   const [researchCitation,setResearchCitation]=useState<ResolvedEvidence>();
   const [researchSeed,setResearchSeed]=useState<{ref:ResolvedEvidence;serial:number}>();
   const { state: publicSession } = usePublicSession();
@@ -62,6 +65,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   const [view, setView] = useState<"list" | "grid">("list");
   const restored = useRef(false);
   const [result, setResult] = useState<DiscoverySearch | null>(null);
+  const mobileSummary = useMediaQuery("(max-width: 1100px)");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(initialQuery ? "create" : "");
   const [pollPaused, setPollPaused] = useState(false);
@@ -336,7 +340,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   function selectEvidence(item: DiscoveryPassage) {
     setResearchCitation(undefined);
     setSelectedId(item.id); setSummaryHidden(false);
-    if (window.matchMedia("(max-width: 1000px)").matches) setSummaryOpen(true);
+    if (window.matchMedia("(max-width: 1100px)").matches) setSummaryOpen(true);
   }
   const retryHref = initialQuery ? `/explore/evidence?${retryParams}` : "/explore/opinions";
   const closeContext = () => { contextRevision.current += 1; contextItemRef.current = null; setContextItem(null); setContext(null); };
@@ -377,7 +381,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     {facetError ? <p role="alert">{t(facetError)}<button type="button" className="text-link" onClick={() => void loadFacets()}>{t("重试读取筛选项")}</button></p> : null}
     <div className={styles.actions}><button className="button secondary" type="submit">{t("应用筛选")}</button>{selectedCount ? <Link href={initialQuery ? `/explore/evidence?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>{t("清除全部筛选")}</Link> : null}</div>
   </>;
-  return <SavedWorkStatusProvider workIds={result?.passages.map(item => item.work.id) || []}><div className={`page-shell ${styles.page}`}>
+  return <SavedWorkStatusProvider workIds={result?.passages.map(item => item.work.id) || []}><div ref={pageRoot} className={`page-shell ${styles.page}`}>
     <S4Search mode="viewpoint" initialQuery={initialQuery} onSearch={value=>router.push(opinionResultHref(value,filters))}/>
 
 
@@ -404,9 +408,9 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
         {result?.documents && (result.documents.tracked > 0 || result.documents.excluded_count > 0) ? <DiscoveryDocumentProgress data={result.documents} busy={Boolean(busy)} onRemove={id => { pollStarted.current = Date.now(); void documentAction(id, true); }} onView={id => void documentAction(id)} onAdjust={() => { setFilterOpen(true); void loadFacets(); }} /> : null}
         <SearchResearchDock question={initialQuery} searchPhase={busy==="create"||isRunning?"running":error||result?.status==="failed"?"error":!initialQuery?"idle":result?.passages.length?"ready":"empty"} filters={result?.filters||initialFilters} materials={(result?.passages||[]).map(asResearchMaterial)} seed={researchSeed} onInspect={ref=>{setResearchCitation(ref);setSummaryHidden(false);if(window.matchMedia('(max-width:1100px)').matches)setSummaryOpen(true);}}/>
       </section>
-      {!summaryHidden ? <aside className={styles.evidenceInspector} aria-labelledby="evidence-summary-title"><header><h2 id="evidence-summary-title">{t("出处与引用")}</h2><button type="button" aria-label={t("关闭出处与引用")} onClick={() => setSummaryHidden(true)}><X size={18} /></button></header>{researchCitation ? <SourceCitationPanel input={{reference:researchCitation}}/> : selected ? <SourceCitationPanel key={selected.id} input={{reference:asResearchMaterial(selected)}} returnTo={returnTo(selected)}/> : <p className={styles.help}>{t("选择结果可查看来源、页码和原文。")}</p>}</aside> : null}
+      {!summaryHidden ? <aside className={styles.evidenceInspector} aria-labelledby="evidence-summary-title"><header><h2 id="evidence-summary-title">{t("出处与引用")}</h2><button type="button" aria-label={t("关闭出处与引用")} onClick={() => setSummaryHidden(true)}><X size={18} /></button></header>{mobileSummary === false ? researchCitation ? <SourceCitationPanel input={{reference:researchCitation}}/> : selected ? <SourceCitationPanel key={selected.id} input={{reference:asResearchMaterial(selected)}} returnTo={returnTo(selected)}/> : <p className={styles.help}>{t("选择结果可查看来源、页码和原文。")}</p> : null}</aside> : null}
     </div>
-    <Dialog open={summaryOpen && Boolean(selected||researchCitation)} onRequestClose={() => setSummaryOpen(false)} className={styles.summaryDialog} aria-labelledby="mobile-evidence-summary"><header className={styles.dialogHeader}><h2 id="mobile-evidence-summary">{t("出处与引用")}</h2><button type="button" onClick={() => setSummaryOpen(false)} aria-label={t("关闭出处与引用")}><X size={20} /></button></header>{researchCitation ? <SourceCitationPanel input={{reference:researchCitation}}/> : selected ? <SourceCitationPanel key={selected.id} input={{reference:asResearchMaterial(selected)}} returnTo={returnTo(selected)}/> : null}</Dialog>
+    <Dialog open={mobileSummary === true && summaryOpen && Boolean(selected||researchCitation)} onRequestClose={() => setSummaryOpen(false)} className={styles.summaryDialog} aria-labelledby="mobile-evidence-summary"><header className={styles.dialogHeader}><h2 id="mobile-evidence-summary">{t("出处与引用")}</h2><button type="button" onClick={() => setSummaryOpen(false)} aria-label={t("关闭出处与引用")}><X size={20} /></button></header>{mobileSummary === true && summaryOpen ? researchCitation ? <SourceCitationPanel input={{reference:researchCitation}}/> : selected ? <SourceCitationPanel key={selected.id} input={{reference:asResearchMaterial(selected)}} returnTo={returnTo(selected)}/> : null : null}</Dialog>
     <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><h2 id="discovery-context-title">{t("原文上下文")}</h2><button type="button" aria-label={t("关闭上下文")} onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <LoadingState variant="compact">{t("正在读取原文上下文……")}</LoadingState> : contextError ? <div role="alert"><p>{t(contextError)}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>{t("重试读取上下文")}</button></div> : context && contextItem ? <EvidenceContextBody key={context.result_id} item={contextItem} context={context} returnTo={returnTo(contextItem)} onOpenCandidate={item => void openContext(item)} /> : null}</div></Dialog>
   </div></SavedWorkStatusProvider>;
 

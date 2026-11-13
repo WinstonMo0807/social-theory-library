@@ -72,7 +72,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
 
   return <>
     {data ? <><UsageTracker eventType="search_submit" query={query} resultCount={data.pagination.total} source="exact_search" scope="catalog" /><SearchClickTracker query={query} source="exact_search" /></> : null}
-    <SearchReadingWorkbench works={(data?.works || []).map(adaptApiWork)}><main className="stl4-catalog-page">
+    <SearchReadingWorkbench works={(data?.works || []).map(adaptApiWork)}><div className="stl4-catalog-page">
       <S4Search key={query} mode="original" initialQuery={query} onSearch={value=>router.push(catalogHref(key,{q:value,page:null}))}/>
 
       <div className="stl4-catalog-layout">
@@ -106,7 +106,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
         </section>
         <SearchReadingPreview/>
       </div>
-    </main></SearchReadingWorkbench>
+    </div></SearchReadingWorkbench>
     <Dialog open={mobileFilters} onRequestClose={() => setMobileFilters(false)} initialFocusRef={mobileClose} className="stl4-catalog-filter-dialog" aria-labelledby="catalog-filters-title">
       <header><button ref={mobileClose} type="button" onClick={() => setMobileFilters(false)}>取消</button><h2 id="catalog-filters-title">筛选条件</h2><Link href={clear} onClick={() => setMobileFilters(false)}>清除全部</Link></header>
       <form onSubmit={submitFilters} action="/explore/original" key={`mobile:${key}:${mobileFilters}`}>

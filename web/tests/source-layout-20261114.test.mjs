@@ -7,6 +7,8 @@ test('quantitative layout hints preserve uncertainty and require no services',()
   assert.equal(sourceLayoutHint('表3:组织团结的凝聚力量表的题器构成\n变量名\nQ27_1\n我的工作能力经常得到肯定'),'table');
   assert.equal(sourceLayoutHint('测量模型如下：\n\nX= T+S+e\n\n其中X是观测值。'),'formula');
   assert.equal(sourceLayoutHint('类别\t数量\t比例\n甲\t10\t.25'),'table');
+  assert.equal(sourceLayoutHint('图2 社会关系网络\n甲 乙 丙'),'figure');
+  assert.equal(sourceLayoutHint('表3组织团结的量表\nQ27_1'),'table');
   assert.equal(sourceLayoutHint('作者认为表述与社会经验有关，本文提出三种解释。'),null);
 });
 test('short OCR continuations join while real paragraphs and source characters remain',()=>{

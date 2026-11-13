@@ -18,7 +18,7 @@ export function DiscoverySourcePage({item}:{item:DiscoveryPassage}) {
   const hint=sourceLayoutHint(item.excerpt),[open,setOpen]=useState(false);
   const excerpt=<SourceExcerpt text={item.excerpt} preserveLayout={Boolean(hint)} label={`原文节选${/ocr/i.test(item.source_kind)?' · OCR':''}`} location={`${item.printed_page?`书页 ${item.printed_page} · `:''}PDF ${item.pdf_page}`} marginalia={[item.work.title,item.printed_page||'']} validateSource={async()=>{await previewSharedCitation({reference:passageReference(item),selectedText:item.excerpt});}}/>;
   return <div className={styles.source}>
-    <div className={styles.tools}>{hint&&<span>{hint==='table'?'含表格或量表':'含公式'} · 按原页核对</span>}<button type="button" aria-expanded={open} onClick={()=>setOpen(value=>!value)}><FileImage size={16}/>{open?'收起原页':'查看原页'} · PDF {item.pdf_page}</button></div>
+    <div className={styles.tools}>{hint&&<span>{hint==='table'?'含表格或量表':hint==='figure'?'含图示':'含公式'} · 按原页核对</span>}<button type="button" aria-expanded={open} onClick={()=>setOpen(value=>!value)}><FileImage size={16}/>{open?'收起原页':'查看原页'} · PDF {item.pdf_page}</button></div>
     {open&&<SourcePageCanvas item={item} onClose={()=>setOpen(false)}/>}
     {hint?<details className={styles.ocr}><summary>查看 OCR 文字对照</summary><p>列关系、公式和数字以原页为准。</p>{excerpt}</details>:excerpt}
   </div>;
