@@ -99,8 +99,68 @@ def test_changed_wiki_context_reuses_source_analysis(source, admin_user, monkeyp
     assert newer.latest_run_id != policy.latest_run_id
     next_packet(newer, admin_user)
     copied = newer.latest_run.artifacts.get(stage=2, unit=artifact.unit)
-    assert copied.output == output and copied.status in {"succeeded","empty"}
+    assert copied.output == output and copied.status == "empty"
     assert copied.usage["model_calls"] == 0
+    assert copied.usage["reused_from_artifact_id"] == str(artifact.pk)
+    assert copied.usage["reused_output_hash"] == copied.output_hash
+
+
+def test_long_resume_reuses_own_receipts_without_rewriting_or_per_window_queries(source, admin_user, monkeypatch):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    from catalog.services.knowledge_sources import digest
+    from catalog.services.intelligence_provider import identity
+    policy = setup(source, admin_user, monkeypatch)
+    run = policy.latest_run
+    config = compilation.run_configuration(run)
+    earlier = runner.create_run(source, admin_user, request_id=uuid4(), execution_mode="agent")
+    output = {"summary":"fixture", "questions":[], "entities":[], "assertions":[]}
+    records, inputs = [], []
+    for i in range(80):
+        data = {"revision":str(source.pk), "work_id":str(run.work_id), "window":i}
+        key = digest([runner.PROMPT_VERSION, 2, {k:v for k,v in data.items() if k!="revision"},
+            "fixture prompt", runner.ANALYSIS_SCHEMA, identity(config)])
+        inputs.append(data)
+        for owner in (earlier, run):
+            records.append(m.CurationArtifact(run=owner, stage=2, unit=f"window:{i}", cache_key=key,
+                status="empty", output=output, output_hash=digest(output),
+                usage={"model_calls":0, "agent_responses":1}, executor_id="original agent"))
+    m.CurationArtifact.objects.bulk_create(records)
+    own = {a.unit:a.pk for a in records if a.run_id==run.pk}
+    validated = []
+    with CaptureQueriesContext(connection) as queries:
+        for i, data in enumerate(inputs):
+            result = runner._model_artifact(run, 2, f"window:{i}", data, "fixture prompt",
+                runner.ANALYSIS_SCHEMA, config, None, validate=lambda value:validated.append(value))
+            assert result.pk == own[f"window:{i}"] and result.status == "empty"
+    assert len(validated) == 80
+    assert len(queries) <= 2
+    assert not any(q["sql"].lstrip().startswith(("UPDATE", "INSERT")) for q in queries)
+    # The same unit with changed input cannot inherit the completed receipt.
+    with pytest.raises(compilation.AgentStagePending):
+        runner._model_artifact(run, 2, "window:0", {**inputs[0],"window":"changed"},
+            "fixture prompt", runner.ANALYSIS_SCHEMA, config, None)
+    pending = run.artifacts.get(stage=2, unit="window:0")
+    assert pending.status == "waiting_agent" and pending.input_manifest["window"] == "changed"
+
+
+def test_long_window_chapter_paths_batch_unique_ancestors(source):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    from catalog.services.knowledge_sources import build_structure
+    structure = build_structure(source)
+    root = structure.nodes.get(kind="document")
+    chapters = [m.DocumentNode(structure=structure, document_revision=source, parent=root,
+        kind="chapter", title=f"章{i}", order=1000+i) for i in range(3)]
+    m.DocumentNode.objects.bulk_create(chapters)
+    sections = [m.DocumentNode(structure=structure, document_revision=source, parent=chapters[i%3],
+        kind="section", title=f"节{i}", order=1100+i) for i in range(15)]
+    m.DocumentNode.objects.bulk_create(sections)
+    with CaptureQueriesContext(connection) as queries:
+        paths = runner.chapter_paths(structure, [str(s.pk) for s in sections]*20)
+    assert len(queries) <= 3
+    for i, section in enumerate(sections):
+        assert paths[str(section.pk)] == [root.title, f"章{i%3}", f"节{i}"]
 
 
 def test_human_destination_edit_queues_only_related_subscription(source, admin_user, monkeypatch):

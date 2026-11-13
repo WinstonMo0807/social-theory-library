@@ -173,17 +173,21 @@ def _guard(run, lease=None):
     return current
 
 
-def _save_artifact(run, stage, unit, data, output, *, config=None, result=None, lease=None, elapsed=0, cache_key=None):
+def _save_artifact(run, stage, unit, data, output, *, config=None, result=None, lease=None, elapsed=0, cache_key=None, reused_from=None):
     _guard(run, lease)
     model = identity(config) if config else {}
     key = cache_key or digest([PROMPT_VERSION, stage, data, model])
     with transaction.atomic():
         m.CurationRun.objects.select_for_update().get(pk=run.pk)
         _guard(run, lease)
+        no_candidates = stage == 2 and not output.get("entities") and not output.get("assertions")
+        usage = {"model_calls":result.attempts, "tokens":result.usage, "cost":None} if result else {"model_calls":0}
+        if reused_from:
+            usage.update(reused_from_artifact_id=str(reused_from.pk), reused_output_hash=reused_from.output_hash)
         artifact, _ = m.CurationArtifact.objects.update_or_create(run=run, stage=stage, unit=unit, defaults={
-            "cache_key":key, "schema_version":PROMPT_VERSION, "status":"succeeded" if output else "empty",
+            "cache_key":key, "schema_version":PROMPT_VERSION, "status":"empty" if not output or no_candidates else "succeeded",
             "input_manifest": data, "output":output, "output_hash":digest(output), "model_identity":model,
-            "usage": {"model_calls":result.attempts, "tokens":result.usage, "cost":None} if result else {"model_calls":0},
+            "usage": usage,
             "elapsed_ms":elapsed, "executor_id":lease.executor_id if lease else "", "error":{}})
         m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(stage=stage, updated_at=timezone.now())
     return artifact
@@ -194,13 +198,26 @@ def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, valid
     # identity must match before reusing interpretation; revalidate every quote.
     cache_data = {k:v for k,v in data.items() if k != "revision"} if stage == 2 else data
     key = digest([PROMPT_VERSION, stage, cache_data, prompt, schema, identity(config)])
-    cached = m.CurationArtifact.objects.filter(cache_key=key, status__in=["succeeded","empty"]).first()
+    # A resume walks the earlier outputs to reconstruct the ordered fold. Read
+    # each stage's completed receipts once, without reloading their source text
+    # or rewriting a receipt just because another run has the same cache key.
+    stages = getattr(run, "_artifact_cache", None)
+    if stages is None:
+        stages = run._artifact_cache = {}
+    if stage not in stages:
+        stages[stage] = {a.unit:a for a in run.artifacts.filter(stage=stage, status__in=["succeeded","empty"])
+            .only("id", "run_id", "stage", "unit", "cache_key", "status", "output", "output_hash")}
+    own = stages[stage].get(unit)
+    cached = own if own and own.cache_key == key else m.CurationArtifact.objects.filter(
+        cache_key=key, status__in=["succeeded","empty"]).order_by("created_at", "id").first()
     if cached:
         if validate:
             validate(cached.output)
         if cached.run_id == run.pk and cached.unit == unit:
             return cached
-        return _save_artifact(run, stage, unit, data, cached.output, config=config, lease=lease, cache_key=key)
+        saved = _save_artifact(run, stage, unit, data, cached.output, config=config, lease=lease, cache_key=key, reused_from=cached)
+        stages[stage][unit] = saved
+        return saved
     _guard(run, lease)
     if run.execution_mode == "agent":
         from catalog.services.knowledge_compilation import queue_agent_stage
@@ -224,8 +241,35 @@ def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, valid
             "usage": {"model_calls": None, "cost": None}, "elapsed_ms": round((time.monotonic()-started)*1000),
             "error": {"code": type(exc).__name__, "message": str(exc)[:1200]}})
         raise
-    return _save_artifact(run, stage, unit, data, result.data, config=config, result=result, lease=lease,
+    saved = _save_artifact(run, stage, unit, data, result.data, config=config, result=result, lease=lease,
         elapsed=round((time.monotonic()-started)*1000), cache_key=key)
+    stages[stage][unit] = saved
+    return saved
+
+
+def chapter_paths(structure, chapter_ids):
+    """Fetch unique ancestors by depth, not once for every resumed window."""
+    requested = {str(key) for key in chapter_ids}
+    rows, pending = {}, requested
+    while pending:
+        batch = {str(row["id"]):row for row in structure.nodes.filter(pk__in=pending).values("id", "parent_id", "title")}
+        if set(batch) != pending:
+            raise ValidationError("章节节点不属于当前正文结构。")
+        rows.update(batch)
+        pending = {str(row["parent_id"]) for row in batch.values() if row["parent_id"]} - rows.keys()
+    paths = {}
+    for key in requested:
+        path, seen, cursor = [], set(), key
+        while cursor:
+            if cursor in seen:
+                raise ValidationError("正文层级存在循环，不能编纂。")
+            seen.add(cursor)
+            row = rows[cursor]
+            if row["title"]:
+                path.insert(0, row["title"])
+            cursor = str(row["parent_id"]) if row["parent_id"] else None
+        paths[key] = path
+    return paths
 
 
 def prepare(run):
@@ -460,6 +504,8 @@ def compile_wiki(run, proposals, config, lease):
 
 
 def execute(run, config, lease):
+    # A new lease must not retain in-memory receipts from an earlier attempt.
+    run._artifact_cache = {}
     nodes = prepare(run)
     if not config.enabled:
         m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="waiting_configuration",stage=2)
@@ -468,6 +514,7 @@ def execute(run, config, lease):
     analyses = []
     read_nodes = set()
     planned = list(windows(nodes, config, run.scope))
+    paths = chapter_paths(run.structure, (chapter for chapter, _ in planned))
     total_characters = sum(row["end"]-row["start"] for _, rows in planned for row in source_rows(rows))
     read_characters = 0
     analysis_plan_hash = digest([PROMPT_VERSION, ANALYSIS_SCHEMA, identity(config),
@@ -480,11 +527,7 @@ def execute(run, config, lease):
         run.coverage.pop("interpretation_status", None)
         m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(coverage=run.coverage)
     for index, (chapter, rows) in enumerate(planned):
-        chapter_node = m.DocumentNode.objects.get(pk=chapter)
-        chapter_path, parent = [], chapter_node
-        while parent:
-            if parent.title: chapter_path.insert(0,parent.title)
-            parent = parent.parent
+        chapter_path = paths[chapter]
         model_rows = source_rows(rows)
         artifact = _model_artifact(run,2,f"window:{index}",{"revision":str(run.document_revision_id), "work_id":str(run.work_id),
             "work_title":run.work.title,
