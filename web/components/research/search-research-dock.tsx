@@ -18,23 +18,29 @@ import { useResearchProject } from "./use-research-project";
 import { researchEvidenceLocation } from "./research-evidence-card";
 import styles from "./search-research-dock.module.css";
 
-type Props = { question: string; filters?: DiscoveryFilters; filterLabel?: string; filterAvailable?: boolean; materials: ResolvedEvidence[]; seed?: { ref: ResolvedEvidence; serial: number }; onInspect?: (ref: ResolvedEvidence) => void };
+type Props = { question: string; searchPhase?: 'idle'|'running'|'ready'|'empty'|'error'; filters?: DiscoveryFilters; filterLabel?: string; filterAvailable?: boolean; materials: ResolvedEvidence[]; seed?: { ref: ResolvedEvidence; serial: number }; onInspect?: (ref: ResolvedEvidence) => void };
 const statusNames: Record<string,string>={queued:"已排队",running:"正在检索",completed:"已完成",partial:"部分完成",failed:"处理未完成",canceled:"已取消"};
 const running=(status?:string)=>status==='running'||status==='queued';
 const exactReference=(ref:ResolvedEvidence)=>({...researchEvidenceReference(ref),...(!ref.anchors?.length&&(ref.quote||ref.text)?{selected_text:ref.quote||ref.text}:{})});
 const messageOf=(e:unknown)=>e instanceof Error?e.message:'请求未完成，请重试。';
 
 export function SearchResearchDock(props: Props) {
-  const {state:session}=useSessionBootstrap(), owner=String(session.user?.id||'');
-  return owner?<OwnedDock key={owner} {...props} owner={owner}/>:<p>登录后可以在这里继续研究。</p>;
+  const {state:session,retry}=useSessionBootstrap(), owner=String(session.user?.id||'');
+  if(session.status==='loading'||session.status==='unknown')return <div className={styles.sessionState}><LoadingState variant="compact">正在读取我的研究…</LoadingState></div>;
+  if(session.status==='authenticated'&&owner)return <OwnedDock key={owner} {...props} owner={owner}/>;
+  return <section className={styles.sessionState} aria-label="继续研究"><GitBranch size={18}/><strong>继续研究</strong>{session.status==='unauthenticated'?<a href={`/login?next=${encodeURIComponent(typeof location==='undefined'?'/explore/opinions':location.pathname+location.search)}`}>登录后保留问题与选材<ArrowRight size={16}/></a>:<><span>{session.message||'暂时无法读取研究状态'}</span><button type="button" onClick={retry}>重新读取</button></>}</section>;
 }
 function OwnedDock(props:Props&{owner:string}) {
-  const [open,setOpen]=useState(false),[projectId,setProjectId]=useState(''),[projects,setProjects]=useState<ResearchRecord<ProjectData>[]>([]);
+  const region=useRef<HTMLElement>(null);
+  const [open,setOpen]=useState(true),[projectId,setProjectId]=useState(''),[projects,setProjects]=useState<ResearchRecord<ProjectData>[]>([]);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[page,setPage]=useState(1),[more,setMore]=useState(false);
   const [title,setTitle]=useState(props.question.slice(0,240)||'新的研究'),[find,setFind]=useState('');
   const createAttempt=useRef<Parameters<typeof createResearchProject>[0]|null>(null), lock=useRef(false);
+  const previousTitle=useRef(title);
+  const phase=props.searchPhase||(props.question?'ready':'idle');
+  useEffect(()=>{const next=props.question.slice(0,240)||'新的研究',previous=previousTitle.current;setTitle(old=>old===previous?next:old);previousTitle.current=next;setOpen(true);},[props.question]);
   useEffect(()=>{const id=new URLSearchParams(location.search).get('research');if(id&&/^[a-f0-9-]{36}$/i.test(id)){setProjectId(id);setOpen(true);}},[]);
-  useEffect(()=>{if(props.seed)setOpen(true);},[props.seed]);
+  useEffect(()=>{if(!props.seed)return;setOpen(true);const frame=requestAnimationFrame(()=>region.current?.scrollIntoView({block:'start'}));return()=>cancelAnimationFrame(frame);},[props.seed]);
   useEffect(()=>{if(!open)return;const controller=new AbortController();void withPrivateOwner(props.owner,()=>listResearchRecords<ProjectData>('research-projects',page,controller.signal),controller.signal).then(data=>{if(!controller.signal.aborted){setProjects(old=>page===1?data.results:[...old,...data.results]);setMore(Boolean(data.next));}}).catch(reason=>{if(!controller.signal.aborted)setError(messageOf(reason));});return()=>controller.abort();},[open,page,props.owner]);
   function select(id:string){setProjectId(id);const url=new URL(location.href);if(id)url.searchParams.set('research',id);else url.searchParams.delete('research');history.replaceState(history.state,'',url);}
   async function create(){if(lock.current||!title.trim())return;lock.current=true;setBusy(true);setError('');
@@ -42,13 +48,14 @@ function OwnedDock(props:Props&{owner:string}) {
     try{const next=await withPrivateOwner(props.owner,()=>createResearchProject(data));select(next.id);createAttempt.current=null;}
     catch(reason){setError(messageOf(reason));if(reason instanceof ApiRequestError&&!(reason instanceof PrivateOwnerVerificationError)&&[400,403,409,422].includes(reason.status))createAttempt.current=null;}
     finally{lock.current=false;setBusy(false);}}
-  return <section className={styles.workspace} aria-label="同页连续研究">
+  return <section ref={region} className={styles.workspace} aria-label="同页连续研究">
     {!open?<button type="button" className={styles.launch} onClick={()=>setOpen(true)}><GitBranch size={18}/>继续研究<ArrowRight size={17}/></button>:<>
-      <div className={styles.projectBar}><label>我的研究<select aria-label="当前研究" disabled={busy} value={projectId} onChange={event=>select(event.target.value)}><option value="">新建或选择研究</option>{projectId&&!projects.some(row=>row.id===projectId)&&<option value={projectId}>当前研究</option>}{projects.filter(row=>!row.archived).map(row=><option key={row.id} value={row.id}>{row.data.title}</option>)}</select></label><button type="button" onClick={()=>setOpen(false)}>收起研究区</button></div>
+      <div className={styles.projectBar}><strong><GitBranch size={17}/>继续研究</strong><label><span className="sr-only">我的研究</span><select aria-label="当前研究" disabled={busy} value={projectId} onChange={event=>select(event.target.value)}><option value="">新建或选择研究</option>{projectId&&!projects.some(row=>row.id===projectId)&&<option value={projectId}>当前研究</option>}{projects.filter(row=>!row.archived).map(row=><option key={row.id} value={row.id}>{row.data.title}</option>)}</select></label><button type="button" onClick={()=>setOpen(false)}>收起</button></div>
+      <p className={styles.searchState} role="status">{phase==='running'?(props.materials.length?'正在检索，可先使用已找到的原文继续研究。':'正在检索，找到原文后可选择书籍或段落继续追问。'):phase==='idle'?'输入问题开始检索，或选择已有研究继续。':phase==='empty'?'本次未找到原文，可以调整问题或选择已有研究继续。':phase==='error'?'本次检索未完成，已有研究和选材仍保留。':props.materials.length?`本次已显示 ${props.materials.length} 段原文，可选入下一轮。`:'可限定当前作品，也可以选择其他书籍继续研究。'}</p>
       {error&&<p role="alert">{error}</p>}
       {projectId?<ResearchEditor key={projectId} {...props} id={projectId} onClose={()=>setOpen(false)}/>:<div className={styles.setup}>
-        <label>研究名称<input maxLength={240} value={title} disabled={busy||Boolean(createAttempt.current)} onChange={event=>setTitle(event.target.value)}/></label><button type="button" className="button" disabled={busy||!title.trim()} onClick={()=>void create()}><Plus size={17}/>{busy?'正在建立研究…':createAttempt.current?'重试原创建请求':'建立研究'}</button>
-        <label>查找我的研究<input type="search" value={find} onChange={event=>setFind(event.target.value)}/></label><div className={styles.projectList}>{projects.filter(row=>!row.archived&&row.data.title.includes(find)).map(row=><button type="button" key={row.id} onClick={()=>select(row.id)}>{row.data.title}<ArrowRight size={15}/></button>)}</div>{more&&<button type="button" onClick={()=>setPage(p=>p+1)}>读取更多研究</button>}
+        {(phase!=='idle'&&(phase!=='running'||props.materials.length>0)||props.seed)&&<div className={styles.createRow}><label><span className="sr-only">研究名称</span><input aria-label="研究名称" maxLength={240} value={title} disabled={busy||Boolean(createAttempt.current)} onChange={event=>setTitle(event.target.value)}/></label><button type="button" className="button" disabled={busy||!title.trim()} onClick={()=>void create()}><Plus size={17}/>{busy?'正在建立研究…':createAttempt.current?'重试原创建请求':'以此开始研究'}</button></div>}
+        {(projects.length>0||more)&&<details className={styles.findProject}><summary>查找已有研究<ChevronDown size={15}/></summary><label><span className="sr-only">查找我的研究</span><input type="search" aria-label="查找我的研究" value={find} onChange={event=>setFind(event.target.value)}/></label><div className={styles.projectList}>{projects.filter(row=>!row.archived&&row.data.title.includes(find)).map(row=><button type="button" key={row.id} onClick={()=>select(row.id)}>{row.data.title}<ArrowRight size={15}/></button>)}</div>{more&&<button type="button" onClick={()=>setPage(p=>p+1)}>读取更多研究</button>}</details>}
       </div>}
     </>}
   </section>;

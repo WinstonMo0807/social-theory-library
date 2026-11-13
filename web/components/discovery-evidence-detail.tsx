@@ -14,6 +14,7 @@ import { SaveWorkButton } from "./save-work-button";
 import { SharedCitationButton } from "./shared-citation-overlay";
 import { SourceText } from "./source-text";
 import { SourceExcerpt } from "./source-excerpt";
+import { DiscoverySourcePage } from "./discovery-source-page";
 import { LoadingState } from "./ui/loading-state";
 import styles from "@/app/explore/opinions/viewpoint-search.module.css";
 
@@ -42,14 +43,14 @@ export function EvidenceBook({ item, compact = false, onSelect }: { item: Discov
 
 export function EvidenceQuote({ item }: { item: DiscoveryPassage }) {
   const { t } = useEvidenceLanguage();
-  return <div className={styles.readableExcerpt}><SourceExcerpt key={item.id} text={item.excerpt} label={`${t("原文节选")}${/ocr/i.test(item.source_kind) ? " · OCR" : ""}`} location={`${item.printed_page ? `${t("书页 {page}", { page: item.printed_page })} · ` : ""}PDF ${item.pdf_page}`} marginalia={[item.work.title, item.printed_page || ""]} validateSource={async () => { await previewSharedCitation({ reference: passageReference(item), selectedText: item.excerpt }); }} /></div>;
+  return <div className={styles.readableExcerpt}><DiscoverySourcePage key={item.id} item={item}/></div>;
 }
 
 export function EvidenceResultCard({ item, index, selected, fresh, onSelect, onContext, onFollowup, returnTo }: {
   item: DiscoveryPassage; index: number; selected: boolean; fresh: boolean; onSelect: () => void; onContext: () => void; onFollowup?: () => void; returnTo?: string;
 }) {
   const { t } = useEvidenceLanguage();
-  return <article className={`${styles.resultCard} ${selected ? styles.selectedCard : ""}`} id={`material-${item.id}`} onClick={event => { if((event.target as HTMLElement).closest("button,a,input,textarea,select,summary,label")) return; if(window.getSelection()?.toString().trim()) return; onSelect(); }}>
+  return <article tabIndex={-1} className={`${styles.resultCard} ${selected ? styles.selectedCard : ""}`} id={`material-${item.id}`} onClick={event => { if((event.target as HTMLElement).closest("button,a,input,textarea,select,summary,label")) return; if(window.getSelection()?.toString().trim()) return; onSelect(); }}>
     <span className={styles.resultNumber}>{index + 1}</span><div className={styles.resultContent}>
       <div className={styles.selectEvidence}><EvidenceBook item={item} onSelect={onSelect} /></div>
       <div className={styles.evidenceTags}>{fresh ? <span>{t("本轮新增")}</span> : null}<span>{t("含原文证据")}</span>{item.attribution?.status && item.attribution.status !== "unknown" ? <span>{item.attribution.label}</span> : null}</div>

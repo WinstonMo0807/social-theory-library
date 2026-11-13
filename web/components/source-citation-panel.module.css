@@ -4,3 +4,5 @@
 .actions>a:first-child{background:#252420;color:#fffefa!important;border-color:#252420}
 .actions>button:hover,.actions>a:hover{box-shadow:0 3px 10px #30271915;border-color:#b08b49}
 .actions>button:focus-visible,.actions>a:focus-visible{outline:2px solid #b08b49;outline-offset:3px}
+
+.panel{padding:0;overflow-wrap:anywhere}.actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.actions>a{grid-column:1/-1}.actions>button,.actions>a{font-size:13px;white-space:nowrap;min-width:0;padding:10px 6px}.actions svg{flex:none}.panel h3{overflow-wrap:anywhere}.panel :global(p){line-height:1.75}

@@ -1,6 +1,6 @@
 /** Presentation only. Never use this text for source matching, offsets or storage. */
 export function formatSourceText(value: string, { joinSpacedLines = true }: { joinSpacedLines?: boolean } = {}): string {
-  const lines = value.replace(/\r\n?/g, "\n").replace(/\u00ad[ \t]*\n[ \t]*/g, "").replace(/\u00ad/g, "").split("\n");
+  const lines = value.replace(/\r\n?/g, "\n").replace(/\u00ad[ \t]*\n[ \t]*/g, "").replace(/\u00ad/g, "").replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, "\n\n").split("\n");
   const output: string[] = [];
   let paragraph = "";
   let previousLine = "";
@@ -15,7 +15,7 @@ export function formatSourceText(value: string, { joinSpacedLines = true }: { jo
       // OCR sometimes inserts an empty row after every printed line. Join only
       // an unfinished prose sentence; headings, lists, tables and paragraph
       // punctuation remain boundaries. This never changes source offsets.
-      const continuation = joinSpacedLines && paragraph && previousLine.length >= 18 && next.length >= 8
+      const continuation = joinSpacedLines && paragraph && previousLine.length >= 18 && next.length >= 1
         && /\p{Script=Han}/u.test(previousLine) && /\p{Script=Han}/u.test(next)
         && !/[。！？.!?；;：:][”’」』）)]?\s*[①-⑳\d\[\]]*$/u.test(previousLine)
         && !listItem.test(next) && !/^\s*(?:第[一二三四五六七八九十\d]+[章节篇]|\d+\s*$)/u.test(next)
@@ -41,6 +41,9 @@ export function omitSourceMarginalia(value: string, candidates: readonly string[
   const lines = value.replace(/\r\n?/g, "\n").split("\n");
   const visible = lines.map((text, index) => ({ text: text.trim(), index })).filter(row => row.text);
   const known = new Set(candidates.map(text => text.trim()).filter(Boolean));
-  const edges = new Set([...visible.slice(0, 3), ...visible.slice(-2)].filter(row => known.has(row.text)).map(row => row.index));
+  // A known running title can carry its page number on the same OCR line.
+  // Match the whole edge line; never strip a number from ordinary prose.
+  const isKnown = (text: string) => known.has(text) || [...known].some(title => title.length >= 3 && !/^\d+$/.test(title) && (text.replace(/\s+[0-9０-９]{1,5}$/, '') === title || text.replace(/^[0-9０-９]{1,5}\s+/, '') === title));
+  const edges = new Set([...visible.slice(0, 3), ...visible.slice(-2)].filter(row => isKnown(row.text)).map(row => row.index));
   return lines.filter((_, index) => !edges.has(index)).join("\n").trim();
 }

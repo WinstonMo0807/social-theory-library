@@ -20,4 +20,8 @@
 .header { margin:0 0 18px; align-items:center; }
 .toolbar { margin:0 0 18px; align-self:start; }
 .texts,.footer,.error,.manual { grid-column:1/-1; }
+.texts { max-inline-size:none; width:100%; }
+.texts>p { margin:0 0 .85em; line-height:1.85; }
+.texts>p:last-child { margin-bottom:0; }
+.texts :global(.source-text) { line-height:inherit; }
 @media(max-width:600px) { .header { display:grid; gap:5px; } .header>span { font-size:12px; } .toolbar { margin-bottom:14px; } }

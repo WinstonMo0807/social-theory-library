@@ -5,6 +5,7 @@ import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
 import { S4Search } from "./s4-search";
+import { SearchResearchDock } from "./research/search-research-dock";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clock3, FileText, Info, Layers, Search, UserRound, X } from "lucide-react";
@@ -73,7 +74,7 @@ export function OpinionSearchEntry({ initialFilters = {} }: { initialFilters?: D
       {inheritedGroups.length ? <div className={styles.inherited}><p>保留入口指定的范围，检索时按当前公开资料核对。修改一种范围会保留其他限制。</p><div className={styles.chips}>{inheritedGroups.map(item => <button type="button" key={item.key} onClick={() => openPicker(item.key)}>已限定{item.title.replace("特定", "")} · 修改</button>)}</div></div> : null}
       {Object.keys(extras).length ? <p className={styles.quiet}>本次还保留了入口附带的 {Object.keys(extras).length} 组筛选条件，结果页可继续调整。</p> : null}
     </section>
-    <section className={styles.examples} aria-labelledby="opinion-examples-title"><header><h2 id="opinion-examples-title">试试这些问题</h2></header><div>{exampleQuestions.map(example => <button type="button" key={example} onClick={() => { setQuery(example); setMessage(""); field.current?.focus(); }}><Search size={17} /><span>{example}</span><ArrowRight size={17} /></button>)}</div></section>
+    <SearchResearchDock question="" searchPhase="idle" filters={{...extras,...currentScopes}} materials={[]}/>
     <RecentResearch />
     <Dialog open={picker} onRequestClose={() => setPicker(false)} className={styles.scopeDialog} aria-labelledby="scope-dialog-title"><header><h2 id="scope-dialog-title">选择检索范围</h2><button type="button" aria-label="关闭范围选择" onClick={() => setPicker(false)}><X size={20} /></button></header>
       <div className={styles.dialogScopes}>{scopes.map(item => <label key={item.key}><item.icon size={22} /><span><strong>{item.title}</strong><small>{item.detail}</small></span><input type="radio" name="scope-choice" value={item.key} checked={draftScope === item.key} onChange={() => { setDraftScope(item.key); setDraftSelected(item.key === scope ? selected : []); }} /></label>)}</div>
