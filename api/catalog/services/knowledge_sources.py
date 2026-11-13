@@ -21,7 +21,7 @@ from catalog.services.page_geometry import validated_geometry, locator_geometry
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
 
-STRUCTURE_VERSION = "stl-raw-structure-v2"
+STRUCTURE_VERSION = "stl-raw-structure-v3"
 LOCATOR_VERSION = "stl-locator-v1"
 
 
@@ -143,6 +143,27 @@ def _outline_heading(page_text, raw):
         offset = _locate_title(page_text, candidate)
         if offset is not None:
             return candidate, offset
+    # A confirmed correction changes the display spelling, not the retained
+    # source observation. Resolve that observation exactly on the same page;
+    # neither edit distance nor normalized-text offsets can supply a locator.
+    if raw.get("source") == "manual" and raw.get("calibration_status") == "confirmed":
+        offsets = set()
+        position = raw.get("normalized_position") or []
+        for candidate in raw.get("candidate_sources") or []:
+            location = candidate.get("source_locator") or {}
+            box = location.get("normalized_bbox") or []
+            if (candidate.get("source") != "generated_heading" or candidate.get("pdf_page") != raw.get("pdf_page")
+                    or location.get("geometry_status") != "validated" or len(box) != 4
+                    or not all(type(v) in (int, float) and 0 <= v <= 1 for v in box)
+                    or not (box[0] < box[2] and box[1] < box[3])):
+                continue
+            if len(position) == 2 and any(abs(a-b) > .04 for a,b in zip(position,box[:2])):
+                continue
+            offset = _locate_title(page_text, candidate.get("title", ""))
+            if offset is not None:
+                offsets.add(offset)
+        if len(offsets) == 1:
+            return clean, offsets.pop()
     return title, None
 
 
@@ -225,7 +246,8 @@ def build_structure(revision):
             stack.pop()
         parent = stack[-1][1] if stack else root
         row = node(_heading_kind(heading["title"], heading["level"]), heading["start"], end,
-                   title=heading["title"], parent=parent, source={"outline_id": heading["id"], "precision": "verified_text"})
+                   title=heading["title"], parent=parent, source={"outline_id": heading["id"], "precision": "verified_text",
+                       "title_alignment": "retained_observation" if _locate_title(by_page[heading["pdf_page"]].text, heading["title"]) is None else "exact"})
         stack.append((heading["level"], row))
         chapter_ranges.append((heading["start"], end, row))
     for page in pages:
@@ -240,7 +262,7 @@ def build_structure(revision):
     # Long OCR books must not issue two database writes for every printed line.
     DocumentNode.objects.bulk_create(pending_nodes, batch_size=1000)
     DocumentNodeSegment.objects.bulk_create(pending_segments, batch_size=1000)
-    previous = revision.structures.filter(parser__in=["docling", "docling_outline_remap", "human_correction", "human_outline_remap"]).exclude(outline_revision=outline).order_by("-created_at").first()
+    previous = revision.structures.filter(parser__in=["docling", "docling_outline_remap", "human_correction", "human_outline_remap"]).order_by("-created_at").first()
     if previous:
         return _retain_parsed_leaves(previous, structure, starts)
     return structure
@@ -253,7 +275,7 @@ def _retain_parsed_leaves(previous, baseline, starts):
         .filter(children__isnull=True).prefetch_related("segments__page"))
     if not leaves:
         return baseline
-    key=digest(["outline-remap-v1",baseline.input_hash,previous.input_hash])
+    key=digest(["outline-remap-v2",baseline.input_hash,previous.input_hash])
     existing=DocumentStructure.objects.filter(document_revision=baseline.document_revision,input_hash=key).first()
     if existing: return existing
     preserved = {k:v for k,v in previous.coverage.items() if k in {"parse_batches","parser_scope","docling_items",
@@ -270,28 +292,53 @@ def _retain_parsed_leaves(previous, baseline, starts):
         return (min((starts[s.page.page_number]+s.start for s in segments),default=0),
                 max((starts[s.page.page_number]+s.end for s in segments),default=0))
     positions={n.pk:bounds(n) for n in [*headings,*leaves]}
-    ordered=sorted([*headings,*leaves],key=lambda n:(positions[n.pk][0],
-        0 if n.kind=="document" else 1 if n in headings else 2,n.order))
-    order={n.pk:i for i,n in enumerate(ordered)}
-    mapping={}
-    for old in headings:
-        mapping[old.pk]=DocumentNode.objects.create(structure=structure,document_revision=baseline.document_revision,
-            parent=mapping.get(old.parent_id),kind=old.kind,order=order[old.pk],title=old.title,
-            content_hash=old.content_hash,source=old.source)
-    root=next(mapping[n.pk] for n in headings if n.kind=="document")
+    root=next(n for n in headings if n.kind=="document")
+    parents={n.pk:n.parent_id for n in headings}
+    retained=[]
+    for old in previous.nodes.filter(kind__in=["chapter","section","part","preface","appendix"],
+            source__docling_ref__isnull=False).prefetch_related("segments__page"):
+        start,end=bounds(old)
+        if any(positions[n.pk][0]==start for n in headings if n.kind!="document"):
+            continue  # The current calibrated outline owns this heading.
+        containers=[n for n in headings if n.kind!="document" and positions[n.pk][0]<=start<positions[n.pk][1]]
+        parent=min(containers,key=lambda n:positions[n.pk][1]-positions[n.pk][0]) if containers else root
+        end=min(end,positions[parent.pk][1])
+        if end<=start: continue
+        positions[old.pk]=(start,end);parents[old.pk]=parent.pk;retained.append(old)
+    retained_ids={n.pk for n in retained}
+    canonical_parents=dict(parents)
+    for old in retained:
+        if old.parent_id in retained_ids and canonical_parents[old.pk]==canonical_parents[old.parent_id]:
+            a,b=positions[old.parent_id];start,end=positions[old.pk]
+            if a<=start and end<=b: parents[old.pk]=old.parent_id
+    all_headings=[*headings,*retained]
     for old in leaves:
         start,end=positions[old.pk]
-        containers=[n for n in headings if n.kind!="document" and positions[n.pk][0]<=start and end<=positions[n.pk][1]]
-        parent=mapping[min(containers,key=lambda n:positions[n.pk][1]-positions[n.pk][0]).pk] if containers else root
-        mapping[old.pk]=DocumentNode.objects.create(structure=structure,document_revision=baseline.document_revision,
-            parent=parent,kind=old.kind,order=order[old.pk],title=old.title,content_hash=old.content_hash,
-            source={**old.source,"retained_from_node":str(old.pk)})
-    for old in [*headings,*leaves]:
-        DocumentNodeSegment.objects.bulk_create([DocumentNodeSegment(node=mapping[old.pk],page=seg.page,
-            order=seg.order,start=seg.start,end=seg.end,content_hash=seg.content_hash) for seg in old.segments.all()])
-    for ref in DocumentNodeReference.objects.filter(source_id__in=mapping,target_id__in=mapping):
-        DocumentNodeReference.objects.create(source=mapping[ref.source_id],target=mapping[ref.target_id],
-            kind=ref.kind,label=ref.label,provenance=ref.provenance)
+        containers=[n for n in all_headings if n.kind!="document" and positions[n.pk][0]<=start and end<=positions[n.pk][1]]
+        parents[old.pk]=(min(containers,key=lambda n:(positions[n.pk][1]-positions[n.pk][0],-n.order)) if containers else root).pk
+    heading_ids={n.pk for n in all_headings}
+    ordered=sorted([*all_headings,*leaves],key=lambda n:(positions[n.pk][0],
+        0 if n.kind=="document" else 1 if n.pk in heading_ids else 2,n.order))
+    mapping={};segments=[]
+    for ordinal,old in enumerate(ordered):
+        ranges=[]
+        for seg in old.segments.all():
+            end=min(seg.end,positions[old.pk][1]-starts[seg.page.page_number]) if old.pk in retained_ids else seg.end
+            if end>seg.start: ranges.append((seg,end))
+        changed=old.pk in retained_ids and positions[old.pk]!=bounds(old)
+        kind="section" if old.pk in retained_ids and parents[old.pk]!=root.pk else old.kind
+        mapping[old.pk]=DocumentNode(structure=structure,document_revision=baseline.document_revision,
+            kind=kind,order=ordinal,title=old.title,
+            content_hash=digest([s.page.text[s.start:b] for s,b in ranges]) if changed else old.content_hash,
+            source={**old.source,"retained_from_node":str(old.pk)} if old not in headings else old.source)
+        segments += [DocumentNodeSegment(node=mapping[old.pk],page=s.page,order=i,start=s.start,end=b,
+            content_hash=digest(s.page.text[s.start:b]) if b!=s.end else s.content_hash) for i,(s,b) in enumerate(ranges)]
+    for old_id,row in mapping.items(): row.parent=mapping.get(parents.get(old_id))
+    DocumentNode.objects.bulk_create(mapping.values(),batch_size=1000)
+    DocumentNodeSegment.objects.bulk_create(segments,batch_size=1000)
+    DocumentNodeReference.objects.bulk_create([DocumentNodeReference(source=mapping[ref.source_id],target=mapping[ref.target_id],
+        kind=ref.kind,label=ref.label,provenance=ref.provenance)
+        for ref in DocumentNodeReference.objects.filter(source_id__in=mapping,target_id__in=mapping)])
     return structure
 
 

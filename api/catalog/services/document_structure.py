@@ -163,6 +163,8 @@ def parse_pdf(path, *, checksum, pages, artifacts_path):
             "prov":[p.model_dump(mode="json") for p in item.prov]})
     return {"schema":ADAPTER_VERSION,"parser_version":DOCLING_VERSION,"source_checksum":checksum,
         "pages":list(pages),"heading_hierarchy_enabled":True,"ocr_performed":False,
+        "page_sizes":{str(number):{"width":page.size.width,"height":page.size.height}
+            for number,page in result.document.pages.items()},
         "items":items,"status":str(result.status.value)}
 
 
@@ -181,6 +183,28 @@ def align_text(raw, quoted):
     if begin < 0 or text.find(needle, begin+1) >= 0:
         return None
     return positions[begin], positions[begin+len(needle)-1]+1
+
+
+def _repeated_margin_heading(row, pages, page_sizes):
+    """Repeated OCR variants in a parser-verified top margin, never body edits."""
+    from difflib import SequenceMatcher
+    import math
+    if row["label"] != "section_header" or len(row["segments"]) != 1 or len(row.get("prov",[])) != 1:
+        return False
+    page,start,_=row["segments"][0]
+    title="".join(row.get("text","").split())
+    height=(page_sizes.get(str(page.page_number)) or {}).get("height")
+    box=row["prov"][0].get("bbox") or {}
+    numbers=[height,box.get("t"),box.get("b")]
+    if (start>=100 or len(title)<8 or not all(type(v) in (int,float) and math.isfinite(v) for v in numbers)
+            or height<=0 or box.get("coord_origin") not in {"TOPLEFT","BOTTOMLEFT"}):
+        return False
+    top,bottom=(box["t"],box["b"]) if box["coord_origin"]=="TOPLEFT" else (height-box["t"],height-box["b"])
+    if not 0<=top<bottom<=height*.16: return False
+    # The tolerance is only for recognizing repeated page furniture. The exact
+    # already-validated raw range is retained; it is never an evidence locator.
+    return sum(any(SequenceMatcher(None,title,"".join(line.split()),autojunk=False).ratio()>=.9
+        for line in p.text[:100].splitlines() if line.strip()) for p in pages)>=3
 
 
 def install_structure(revision, parsed):
@@ -249,19 +273,28 @@ def install_structure(revision, parsed):
             segment = node.segments.first()
             if not segment:
                 continue
+            if node.source.get("docling_ref") and bounds[0]<=segment.page.page_number<=bounds[1]:
+                continue  # Reparse replaces parser headings only in this scope.
             depth, parent = 1, node.parent
             while parent and parent.kind != "document":
                 depth, parent = depth+1, parent.parent
             headings.append({"title":node.title,"kind":node.kind,"level":depth,"start":starts[segment.page.page_number]+segment.start,"source":node.source})
         retained=[]
         for row in mapped:
-            title="".join(row.get("text","").split())
-            repeated = row["label"] == "section_header" and not any(h["start"]==row["start"] for h in headings) and title and sum(
-                title in "".join(p.text[:100].split()) for p in pages) >= 3
+            repeated = not any(h["start"]==row["start"] for h in headings) and _repeated_margin_heading(row,pages,parsed.get("page_sizes") or {})
             if repeated:
                 ignored.append({**row,"label":"page_header"})
             else: retained.append(row)
         mapped=retained
+        canonical=sorted((h for h in headings if h["source"].get("outline_id")),key=lambda h:(h["start"],h["level"]))
+        def container(start):
+            return next((h for i,h in reversed(list(enumerate(canonical))) if h["start"]<start<next(
+                (v["start"] for v in canonical[i+1:] if v["level"]<=h["level"]),total)),None)
+        levels={}
+        for row in mapped:
+            if row["label"]=="section_header" and type(row.get("level")) is int and 1<=row["level"]<=6:
+                parent=container(row["start"])
+                if parent: levels[parent["start"]]=min(levels.get(parent["start"],6),row["level"])
         for row in mapped:
             if row["label"] != "section_header" or any(h["start"] == row["start"] for h in headings):
                 continue
@@ -269,8 +302,11 @@ def install_structure(revision, parsed):
             if type(level) is not int or not 1 <= level <= 6:
                 gaps.append({"ref":row["ref"],"reason":"heading_level_unresolved"})
                 continue
-            headings.append({"title":row["text"][:600],"kind":_heading_kind(row["text"],level),"level":level,
-                "start":row["start"],"source":{"docling_ref":row["ref"],"heading_hierarchy_enabled":True}})
+            parent=container(row["start"])
+            effective=level+max(0,parent["level"]+1-levels[parent["start"]]) if parent else level
+            headings.append({"title":row["text"][:600],"kind":_heading_kind(row["text"],effective),"level":effective,
+                "start":row["start"],"source":{"docling_ref":row["ref"],"heading_hierarchy_enabled":True,
+                    "parser_level":level,"parser_scope":bounds,"provenance":row["prov"],"level_basis":"calibrated_outline" if parent else "docling"}})
         headings.sort(key=lambda h:(h["start"],h["level"]))
         for old in previous.coverage.get("ignored_ranges",[]):
             if not bounds[0] <= old["page"] <= bounds[1]:

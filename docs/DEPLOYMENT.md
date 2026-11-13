@@ -1,3 +1,7 @@
+## 2026-11-13 长书恢复补丁部署
+
+83f7b332仅更新候选intelligence.py，逐文件哈希一致。备份backup-resume-83f7b332-20261113172532/source-before.tar.gz；候选API于09:26:16.990096243 UTC启动。正式ready200/0.161秒、候选200/0.616秒、5174入口200/0.319秒；此前一次请求超时不解释为零命中。worker/beat保持停止，mem/io full PSI avg60为9.70%/12.58%，仍有等待。无新增迁移或全馆索引重建。
+
 ## 2026-11-13 自动维护补丁运行更新
 
 隔离候选现为f766829f相关API运行源码。仅更新source_schedule.py、discovery_indexing.py、knowledge_publication.py，哈希逐项一致；备份位于候选根目录backup-maintenance-f766829f-20261113164348/source-before.tar.gz，无新增数据库迁移。只重启候选API，08:45:23 UTC正常启动，退出码0、无OOM。候选worker/beat保持停止，未恢复后台负载或启动全馆重建。
