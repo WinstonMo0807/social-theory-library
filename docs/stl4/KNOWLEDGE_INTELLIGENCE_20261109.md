@@ -1,19 +1,19 @@
-# Knowledge Core / Intelligence 内网候选
+# Knowledge Core / RAG / Wiki 内网候选
 
-更新：2026-11-11。代码检查点 `cac1f5cc`，任务分支 `codex/stl-knowledge-intelligence`。本说明只描述独立内网候选；正式数据库、公网、DNS及Cloudflare Tunnel没有由本任务切换。实际执行记录见 [CURRENT_PROGRESS](../../CURRENT_PROGRESS.md)，早期方案、对比资料和逐阶段限制保留在[历史检查点](KNOWLEDGE_INTELLIGENCE_CHECKPOINTS_20261109_11.md)。
+更新：2026-11-13。任务分支 `codex/stl-knowledge-intelligence`。用户已撤下独立 Intelligence 工作台，并将其从本轮方案排除；共用审核与历史保留。MCP由用户报告已另行完成并推送公网，本轮不再开发或部署。本说明只描述独立内网候选；正式数据库、公网、DNS及Cloudflare Tunnel没有由本任务切换。实际执行记录见 [CURRENT_PROGRESS](../../CURRENT_PROGRESS.md)，早期方案、对比资料和逐阶段限制保留在[历史检查点](KNOWLEDGE_INTELLIGENCE_CHECKPOINTS_20261109_11.md)。
 
 ## 入口和当前完成范围
 
 |入口|实际业务|
 |---|---|
-|[原文与检索](http://192.168.5.3:5174/admin/sources)|指定作品/版本/正文修订，分别查看阅读、关键词、语义、策展、发布状态；检查结构与章节上下文、脚注、实际PDF；人工跨页段落校正；原文选取、核验和陈述草稿；检验与登录读者同范围的真实检索。|
+|[原文与检索](http://192.168.5.3:5174/admin/sources)|指定作品/版本/正文修订，分别查看阅读、关键词、语义、发布状态；检查结构与章节上下文、脚注、实际PDF；人工跨页段落校正；原文选取、核验和陈述草稿；检验与登录读者同范围的真实检索。|
 |[知识编纂](http://192.168.5.3:5174/admin/knowledge)|知识页/陈述/实体目录；正文区块与实际公开组件预览、类型资料及异名；来源依赖、反向引用、局部待更新与修订；跨页编纂提交同一ChangeSet。|
-|[STL Intelligence](http://192.168.5.3:5174/admin/intelligence)|指定修订和范围的任务；八阶段及章节产物；实体区分、陈述、Wiki patch和证据集中审核；决定持久化、依赖闭合保存、预览及候选发布。|
-|[模型设置](http://192.168.5.3:5174/admin/intelligence/settings)|复用原Provider配置与能力开关。用户选择自行接入OpenAI-compatible API；当前真实生成模型未启用。|
+|[审核与发布](http://192.168.5.3:5174/admin/knowledge/review)|知识编纂的共用审核子页，保留实体、陈述、Wiki patch和证据集中审核、决定持久化、依赖闭合保存、预览及候选发布；不再展示独立分析任务。|
+|[管理设置](http://192.168.5.3:5174/admin/settings)|复用原Provider配置与能力开关。用户选择自行接入OpenAI-compatible API；当前真实生成模型未启用。|
 
 保持AdminShell、STL书页/人物符号、纸白、炭黑和砂金。编辑预览复用公开组件，窄屏证据抽屉保留编辑状态。公开 `/` 欢迎页、`/home`、作品/学者/理论/主题/学科等URL与视觉保持。
 
-RAG负责来源检索和上下文，Wiki负责有来源的持续编纂，Intelligence负责分析产物与建议。检索本身不写正式知识。私人笔记、问答和连续研究默认不进入全馆Wiki输入。
+RAG负责来源检索和上下文，Wiki保留有来源的编纂、修订与审核。持续自动编纂仍是后续目标；依赖标记失效不等于自动完成重编。独立 Intelligence 前端已撤下，原 `/admin/intelligence` 地址按变更清单或来源上下文跳转；共享后端与历史产物仍保留。检索本身不写正式知识。私人笔记、问答和连续研究默认不进入全馆Wiki输入。
 
 ## 正式数据与唯一业务入口
 
@@ -57,7 +57,9 @@ Meilisearch继续负责原文关键词、向量、融合和发布投影；Postgr
 
 索引协调器仍每5分钟执行，消息有效期3600秒，避免排在单worker的多个切片后失效。来源归属、task_id、发布修订和内容哈希在写入/完成时复核，旧任务不能退役新任务投影。
 
-## Intelligence 与管理员自行接入模型
+## 保留的分析后端与模型适配（不代表当前工作台或真实分析已完成）
+
+以下记录保留代码的实现边界。2026-11-13 已排除并撤下独立前端，未删除共用后端、任务历史或凭据；没有新增分析调用。当前候选仅有3份阶段一成功产物，模型产物0。后续重做前不能以以下代码结构宣称真实整书分析完成。
 
 固定DocETL 0.3.0、LiteLLM 1.108.3、MCP 2.3.0、Docling 2.149.0；计算依赖与API环境分开。DocETL的薄适配委托既有AIClient transport，无独立LiteLLM Proxy、额外密钥或默认外呼。
 

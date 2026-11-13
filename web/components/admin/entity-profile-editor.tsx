@@ -40,7 +40,7 @@ export function EntityProfileEditor({ entityId }: { entityId: string }) {
     <EntityProfileFields kind={data.kind} value={profile} disabled={busy} onChange={value => { setProfile(value); setSaved(""); }} />
     <section className={s.preview} aria-label="类型资料展示预览"><h2>{data.label}</h2><EntityProfileContent kind={data.kind} profile={profile} /></section>
     <button className={s.primary} disabled={busy || !dirty} onClick={() => void submit()}>提交资料并审核</button>
-    {error && <p className={s.error} role="alert">{error}</p>}{saved && <p role="status">审核稿已保存。<Link href={`/admin/intelligence?changeset=${saved}`}>打开审核工作台</Link></p>}
+    {error && <p className={s.error} role="alert">{error}</p>}{saved && <p role="status">审核稿已保存。<Link href={`/admin/knowledge/review?changeset=${saved}`}>打开审核工作台</Link></p>}
   </div></details>}</>;
 }
 
@@ -59,6 +59,6 @@ function EntityAliasEditor({ entityId, label, baseHash }: { entityId: string; la
     <div className={s.aliasCompose}><div className={s.profileFields}>{([{ key: "text", label: "异名", max: 600 }, { key: "language", label: "语言（选填）", max: 32 }, { key: "script", label: "书写方式（选填）", max: 32 }] as const).map(field => <label key={field.key} className={field.key === "text" ? s.profileWide : undefined}>{field.label}<input maxLength={field.max} disabled={busy || !!saved} value={value[field.key]} onChange={e => setValue({ ...value, [field.key]: e.target.value })} /></label>)}</div>
     <section className={s.aliasPreview} aria-label="异名展示预览"><small>知识页中的展示</small><h2>{label}</h2><EntityAliases aliases={value.text.trim() ? [value] : []} /></section></div>
     <button className={s.primary} disabled={busy || !value.text.trim() || !!saved} onClick={() => void submit()}>提交异名并审核</button>
-    {error && <p className={s.error} role="alert">{error}</p>}{saved && <p role="status">审核稿已保存。<Link href={`/admin/intelligence?changeset=${saved}`}>打开审核工作台</Link></p>}
+    {error && <p className={s.error} role="alert">{error}</p>}{saved && <p role="status">审核稿已保存。<Link href={`/admin/knowledge/review?changeset=${saved}`}>打开审核工作台</Link></p>}
   </div></details>;
 }

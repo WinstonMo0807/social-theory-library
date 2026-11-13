@@ -19,7 +19,7 @@ type Draft={document:Snapshot;profile:Profile;activeKey:string;credential:"keep"
 type Props={profileKey?:string;onSaved?:()=>void;onBusyChange?:(value:boolean)=>void};
 const path="/reading/admin/ai-runtime-profiles/";
 const keyFor=(owner:string)=>`stl-ai-profile-save:${owner}`;
-const labels:Record<string,string>={private_research:"私人研究 API",metadata_extraction:"元数据提取",library_qa:"STL 智能助手",field_enrichment_optional:"联网补全判断",entity_reasoning:"实体推理",claim_extraction:"观点提取",claim_attribution:"观点归属",claim_stance:"观点立场",rerank:"结果重排",theory_reasoning:"理论推理",knowledge_relation_reasoning:"知识关系推理",debate_discovery:"争鸣发现",reading_path_generation:"阅读路径生成",curation_reasoning:"STL Intelligence"};
+const labels:Record<string,string>={private_research:"私人研究 API",metadata_extraction:"元数据提取",library_qa:"STL 智能助手",field_enrichment_optional:"联网补全判断",entity_reasoning:"实体推理",claim_extraction:"观点提取",claim_attribution:"观点归属",claim_stance:"观点立场",rerank:"结果重排",theory_reasoning:"理论推理",knowledge_relation_reasoning:"知识关系推理",debate_discovery:"争鸣发现",reading_path_generation:"阅读路径生成",curation_reasoning:"知识编纂推理"};
 const draftFor=(data:Snapshot,profile:Profile):Draft=>({document:data,profile,activeKey:data.active[profile.capability],credential:"keep",secret:"",endpoint:"",confirmDelete:false});
 function profileInput(row:Profile,owner:boolean):Input["profiles"][number]{
   return {key:row.key,capability:row.capability,provider:row.provider,model:row.model,enabled:row.enabled,temperature:row.temperature,max_output_tokens:row.max_output_tokens,

@@ -18,10 +18,10 @@ export type LibrarySource = { revision_id: string; asset_id: string; edition_id:
   index_counts: { total?: number; keywords?: number; vectors?: number; expected?: number }; index_error: string; index_job: { id: string; status: string } | null;
   curation: { id: string; status: string } | null; catalog_url: string; outline_url: string; ocr_url: string; work_url?: string; reader_url: string };
 
-export function KnowledgeNavigation({ active, workId, revisionId }: { active: "sources" | "pages" | "intelligence"; workId?: string; revisionId?: string }) {
+export function KnowledgeNavigation({ active, workId, revisionId }: { active: "sources" | "pages" | "review"; workId?: string; revisionId?: string }) {
   const context = new URLSearchParams(); if (workId) context.set("work_id", workId); if (revisionId) context.set("revision", revisionId);
   return <nav className={s.navigation} aria-label="知识工作区">{[
-    ["sources", "/admin/sources", "原文与检索"], ["pages", "/admin/knowledge", "知识编纂"], ["intelligence", "/admin/intelligence", "Intelligence"],
+    ["sources", "/admin/sources", "原文与检索"], ["pages", "/admin/knowledge", "知识编纂"], ["review", "/admin/knowledge/review", "审核与发布"],
   ].map(([key, path, label]) => <Link key={key} href={`${path}${context.size ? `?${context}` : ""}`} aria-current={active === key ? "page" : undefined}>{label}</Link>)}</nav>;
 }
 

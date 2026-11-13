@@ -16,7 +16,6 @@ type Context = { title: string; segments: SourceSegment[]; chapter_path: string[
 type Hit = { id: string; title?: string; work_title?: string; excerpt: string; locator?: SourceLocator; node_id?: string; pdf_page?: number; page_start?: number; coverage?: string };
 type Results = { status: string; results: Hit[]; warnings: { code: string; message: string }[]; elapsed_ms: number };
 const ready: Record<string, string> = { ready: "可检索", partial: "部分就绪", pending: "待索引", unavailable: "服务待恢复", blocked: "需处理" };
-const runStates: Record<string, string> = { waiting_configuration: "待配置模型", waiting: "等待执行", running: "分析中", succeeded: "待审核", partial: "部分完成", empty: "完成 · 无建议", failed: "执行失败", canceled: "已取消" };
 
 export function SourceWorkspace() {
   const query = useSearchParams(), router = useRouter(), revision = query.get("revision") || "", work = query.get("work_id") || "";
@@ -90,10 +89,10 @@ export function SourceWorkspace() {
     {error && <div className={s.error} role="alert">{error} <button onClick={() => setAttempt(v => v + 1)}>重新读取</button></div>}
     {!revision ? <>
       <form className={s.toolbar} onSubmit={e => { e.preventDefault(); setSearch(filter); }}><label>查找文献<input type="search" value={filter} onChange={e => setFilter(e.target.value)} placeholder="作品名称" /></label><button type="submit"><Search size={16} />查找</button><button type="button" onClick={() => setView(v => v === "search" ? "text" : "search")}>检验全库检索</button></form>
-      <div className={s.tableWrap}><table className={s.table}><thead><tr><th>文献与来源</th><th>阅读</th><th>关键词</th><th>语义</th><th>策展</th><th>公开状态</th></tr></thead><tbody>{rows.map(row => <tr key={row.revision_id}>
+      <div className={s.tableWrap}><table className={s.table}><thead><tr><th>文献与来源</th><th>阅读</th><th>关键词</th><th>语义</th><th>公开状态</th></tr></thead><tbody>{rows.map(row => <tr key={row.revision_id}>
         <td><Link href={`/admin/sources?revision=${row.revision_id}&work_id=${row.work_id}`}>{row.title}</Link><small>{row.edition_label || "馆藏版本"} · 修订 {row.revision_number} · {row.pages} 页</small></td>
         <td data-label="阅读">{row.readable ? "可阅读" : "待处理"}</td><td data-label="关键词" className={s.state} data-ready={row.keywords === "ready"}>{ready[row.keywords]}</td><td data-label="语义" className={s.state} data-ready={row.semantic === "ready"}>{ready[row.semantic]}</td>
-        <td data-label="策展">{row.curation ? <Link href={`/admin/intelligence?run=${row.curation.id}&work_id=${row.work_id}`}>{runStates[row.curation.status] || row.curation.status}</Link> : "尚未分析"}</td><td data-label="公开状态">{row.published ? "已发布修订" : "内部修订"}</td>
+        <td data-label="公开状态">{row.published ? "已发布修订" : "内部修订"}</td>
       </tr>)}</tbody></table></div>{!loaded && !error && <p role="status" className={s.empty}>正在读取来源状态…</p>}{loaded && !rows.length && <p className={s.empty}>没有符合筛选的文献。</p>}
       {rows.length === 200 && <p className={s.muted}>当前显示前 200 个来源，请按作品名称缩小范围。</p>}
     </> : <div className={s.toolbar}><Link href="/admin/sources"><ArrowLeft size={15} />全部来源</Link><div className={s.segmented}><button aria-pressed={view === "text"} onClick={() => setView("text")}>正文结构</button><button aria-pressed={view === "search"} onClick={() => setView("search")}>检验检索</button></div>
