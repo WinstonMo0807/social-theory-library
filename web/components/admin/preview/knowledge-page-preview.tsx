@@ -259,7 +259,7 @@ function KnowledgePagePreview({ objectType, objectId }: { objectType: string; ob
         `[data-module-id="${CSS.escape(moduleId)}"]`,
       );
       if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
         target.setAttribute("data-preview-target", "true");
       } else {
         setAnchorMessage("此栏目尚无内容。请返回编辑页补充。");

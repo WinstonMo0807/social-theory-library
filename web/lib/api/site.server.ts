@@ -7,9 +7,11 @@ import type { SiteStats, AboutPageBlock } from "./site.types";
 import { cache } from "react";
 
 // Keep recovery navigation available when the service fails. Never substitute content.
+// Request-local deduplication only: publication/withdrawal must be visible on the next request.
+const requestSiteConfig = cache(() => serverRequest<SiteConfig>("/catalog/site-config/", { timeoutMs: 5000 }));
 export const loadSiteChromeConfig = cache(async () => {
   try {
-    return { config: await serverRequest<SiteConfig>("/catalog/site-config/"), unavailable: false };
+    return { config: await requestSiteConfig(), unavailable: false };
   } catch {
     return { config: defaultSiteConfig, unavailable: true };
   }
@@ -17,7 +19,7 @@ export const loadSiteChromeConfig = cache(async () => {
 
 export async function loadSiteConfig(): Promise<SiteConfig> {
   try {
-    return await serverRequest<SiteConfig>("/catalog/site-config/");
+    return await requestSiteConfig();
   } catch (error) {
     if (!allowDemoFallback) throw error;
     return defaultSiteConfig;

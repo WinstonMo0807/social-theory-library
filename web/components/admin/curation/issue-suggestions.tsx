@@ -1,5 +1,6 @@
 "use client";
 import { SourceText } from "@/components/source-text";
+import { isImeComposing } from "@/lib/search-submit-key";
 
 
 
@@ -57,7 +58,7 @@ export function IssueSuggestions({issueId,version,disabled,blocks,request,onInse
   return <section className={styles.suggestions} aria-label="智能材料建议">
     <header><h2>智能建议 <small>{page?`(${page.results.length})`:""}</small></h2><div><button type="button" disabled={locked||!page?.has_more} onClick={()=>setBatch(value=>value+1)}><RefreshCw size={13}/>换一批</button><button type="button" aria-label="收起材料建议" onClick={onClose}><X size={16}/></button></div></header>
     <p>根据已保存文章的关键词与标题查找公开资料。可自行调整查询；每条建议须单独核对和采用。</p>
-    <div className={styles.sourceSearch}><label><span className="sr-only">材料建议关键词</span><input type="search" maxLength={200} placeholder={page?.query || "输入材料关键词…"} value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();if(!locked){setSearch(query.trim());refresh();}}}}/></label><button type="button" disabled={locked} onClick={()=>{setSearch(query.trim());refresh();}}>查找建议</button></div>
+    <div className={styles.sourceSearch}><label><span className="sr-only">材料建议关键词</span><input type="search" maxLength={200} placeholder={page?.query || "输入材料关键词…"} value={query} onChange={event=>setQuery(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!isImeComposing(event)){event.preventDefault();if(!locked){setSearch(query.trim());refresh();}}}}/></label><button type="button" disabled={locked} onClick={()=>{setSearch(query.trim());refresh();}}>查找建议</button></div>
     <nav aria-label="材料建议类型">{[["all","全部"],["work","书目"],["person","人物"],["concept","概念"]].map(([value,label])=><button type="button" key={value} disabled={locked} aria-pressed={kind===value} onClick={()=>{setKind(value);setBatch(1);}}>{label}</button>)}</nav>
     {message?<p role="status">{message}{pending&&!busy?<button type="button" onClick={()=>{setPending(null);setBatch(1);setAttempt(value=>value+1);}}>重新读取核对</button>:null}</p>:null}
     {error?<p role="alert">{error}<button type="button" onClick={refresh}>重试读取</button></p>:!page?<LoadingState variant="compact" role="status">正在查找公开材料…</LoadingState>:<>

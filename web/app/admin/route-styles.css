@@ -1,0 +1,19 @@
+/* Route-owned styles, retaining their original cascade order. */
+@import "../../styles/layout/admin-shell.css";
+@import "../../styles/features/admin/dashboard.css";
+@import "../../styles/components/admin-page-title.css";
+@import "../../styles/components/admin-primitives.css";
+@import "../../styles/features/admin/upload-pipeline.css";
+@import "../../styles/features/admin/metadata-review.css";
+@import "../../styles/features/admin/relations-and-attempts.css";
+@import "../../styles/features/admin/entity-editors.css";
+@import "../../styles/layout/admin-responsive.css";
+@import "../../styles/features/admin/relation-preview-and-publication.css";
+@import "../../styles/features/admin/publication-desk.css";
+@import "../../styles/features/admin/metadata-candidates.css";
+@import "../../styles/features/admin/processing-review.css";
+@import "../../styles/features/admin/authority-fields.css";
+@import "../../styles/features/admin/stl4-admin.css";
+@import "../../styles/features/admin/fixed-page-editor.css";
+@import "../../styles/features/admin/workspace-v307.css";
+@import "../../styles/features/center-layout.css";

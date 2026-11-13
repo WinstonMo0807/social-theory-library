@@ -55,7 +55,8 @@
 
   .site-header {
     grid-template-columns: 1fr auto;
-    min-height: var(--header-height);
+    /* Measured --header-height is an output for content offsets, not a sizing input. */
+    min-height: 66px;
     padding: 11px 18px;
   }
 

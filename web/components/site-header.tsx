@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { logoutCurrentSession } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { confirmUnsavedBeforeAccountChange } from "@/lib/use-unsaved-form";
@@ -47,6 +47,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
   const user = session.status === "authenticated" && session.user ? session.user : null;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const navigationReturn = usePublicNavigationReturn(`${pathname}${searchParams.size ? `?${searchParams}` : ""}`, menuButtonRef);
   const [menuSearch, setMenuSearch] = useState("");
   const isActive = (href: string) => href === "/home" ? pathname === "/home" || pathname === "/layout-preview"
@@ -92,6 +93,30 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
   ];
   const headerNavigation = supportRoute ? [...navigation, ["/about", "关于"]] : navigation;
 
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header || preview || reader) return;
+    const rootStyle = document.documentElement.style;
+    const previousHeight = rootStyle.getPropertyValue("--header-height");
+    let measuredHeight = "";
+    const updateHeight = () => {
+      const nextHeight = `${Math.ceil(header.getBoundingClientRect().height)}px`;
+      if (nextHeight === measuredHeight) return;
+      measuredHeight = nextHeight;
+      rootStyle.setProperty("--header-height", measuredHeight);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(header, { box: "border-box" });
+    return () => {
+      observer.disconnect();
+      if (rootStyle.getPropertyValue("--header-height") === measuredHeight) {
+        if (previousHeight) rootStyle.setProperty("--header-height", previousHeight);
+        else rootStyle.removeProperty("--header-height");
+      }
+    };
+  }, [pathname, preview, reader]);
+
   useEffect(() => {
     document.body.classList.toggle("menu-open", open);
     return () => document.body.classList.remove("menu-open");
@@ -128,6 +153,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
 
   return (
     <header
+      ref={headerRef}
       data-edit-section={preview ? "brand" : undefined}
       data-stl-research-workspace={researchWorkspaceRoute||undefined}
       data-stl-research-analysis={researchAnalysisReference}
@@ -201,8 +227,8 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
       </div>
       {logoutError && !open ? <p className="site-navigation-returned" role="alert">{logoutError}</p> : null}
       {navigationReturn.returned ? <p className="site-navigation-returned" role="status">{t("已返回先前页面")}</p> : null}
-      {open ? (
-        <Drawer open={open} onRequestClose={closeMenu} initialFocusRef={closeButtonRef} className="site-menu-layer" id="site-menu" aria-labelledby="site-menu-title">
+      {(
+        <Drawer open={open} inert={!open} onRequestClose={closeMenu} initialFocusRef={closeButtonRef} className="site-menu-layer" id="site-menu" aria-labelledby="site-menu-title">
           <button className="site-menu-backdrop" type="button" aria-label={t("关闭菜单")} onClick={closeMenu} />
           <aside className="site-menu-panel" aria-labelledby="site-menu-title">
             <header className="site-menu-head">
@@ -277,7 +303,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
             </footer>
           </aside>
         </Drawer>
-      ) : null}
+      )}
     </header>
   );
 }

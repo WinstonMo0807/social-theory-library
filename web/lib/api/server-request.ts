@@ -26,7 +26,7 @@ export class ServerApiError extends Error {
   }
 }
 
-export async function serverRequest<T>(path: string, options: { forwardSession?: boolean } = {}): Promise<T> {
+export async function serverRequest<T>(path: string, options: { forwardSession?: boolean; timeoutMs?: number } = {}): Promise<T> {
   let sessionCookie = "";
   if (options.forwardSession) {
     const { cookies } = await import("next/headers");
@@ -38,6 +38,7 @@ export async function serverRequest<T>(path: string, options: { forwardSession?:
   const response = await fetch(`${SERVER_API}${path}`, {
     cache: "no-store",
     redirect: "error",
+    signal: AbortSignal.timeout(options.timeoutMs ?? 45000),
     headers: {
       accept: "application/json",
       // Reader and exploration opt in. Never forward refresh cookies or browser headers.

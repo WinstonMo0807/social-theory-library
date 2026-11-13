@@ -5,6 +5,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { apiRequest } from "@/lib/api";
+import { isImeComposing } from "@/lib/search-submit-key";
 import { graphKindLabels, type GraphKind } from "@/lib/api/graph.types";
 import styles from "./theory-graph.module.css";
 
@@ -26,7 +27,7 @@ export function GraphCenterSearch({ disabled, onSelect }: { disabled?: boolean; 
     finally { if (!controller.signal.aborted) setBusy(false); }
   }
   return <details data-disclosure="collection" className={styles.centerSearch}><summary>选择或搜索中心节点<Search size={14} /></summary>
-    <form onSubmit={event => { event.preventDefault(); void search(); }}>
+    <form onKeyDown={event => { if (event.key === "Enter" && isImeComposing(event)) event.preventDefault(); }} onSubmit={event => { event.preventDefault(); void search(); }}>
       <label>条目类型<select data-stl-select value={kind} onChange={event => setKind(event.target.value as GraphKind)}>{Object.entries(graphKindLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <div><input aria-label="搜索公开图谱节点" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索节点、学者、概念…" /><button type="submit" disabled={busy} aria-label="搜索图谱中心"><Search size={16} /></button></div>
     </form>
@@ -53,7 +54,7 @@ export function GraphDisciplineFilter({ value, onChange }: { value: string; onCh
     finally { if (!controller.signal.aborted) setBusy(false); }
   }
   return <details data-disclosure="collection" className={styles.disciplinePicker} onToggle={event => { if (event.currentTarget.open && !result && !busy && !error) void load(); }}><summary>学科范围{value ? " · 已限定" : " · 全部学科"}<ChevronDown size={13} /></summary>
-    <div className={styles.disciplineSearch}><input aria-label="搜索公开学科" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void load(); } }} /><button type="button" aria-label="查找学科" disabled={busy} onClick={() => void load()}><Search size={14} /></button></div>
+    <div className={styles.disciplineSearch}><input aria-label="搜索公开学科" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !isImeComposing(event)) { event.preventDefault(); void load(); } }} /><button type="button" aria-label="查找学科" disabled={busy} onClick={() => void load()}><Search size={14} /></button></div>
     <label><input type="radio" name="graph-discipline" checked={!value} onChange={() => onChange("")} />全部学科</label>
     {busy ? <LoadingState role="status">正在读取学科…</LoadingState> : error ? <p role="alert">{error}<button type="button" onClick={() => void load()}>重试读取学科</button></p> : result ? <><div className={styles.disciplineChoices}>{result.results.map(row => <label key={row.id}><input type="radio" name="graph-discipline" checked={value === row.id || value === row.slug} onChange={() => onChange(row.slug)} />{row.name}</label>)}</div><p>共 {result.count} 个公开学科</p><div className={styles.pagination}><button type="button" disabled={!result.previous} onClick={() => void load(result.page - 1, result.query)}>上一页学科</button><span>{result.page}</span><button type="button" disabled={!result.next} onClick={() => void load(result.page + 1, result.query)}>下一页学科</button></div></> : null}
   </details>;

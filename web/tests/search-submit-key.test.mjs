@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { submitSearchOnEnter } from "../lib/search-submit-key.ts";
+import { isImeComposing, submitSearchOnEnter } from "../lib/search-submit-key.ts";
 
 function press(overrides = {}, disabled = false) {
   const calls = { prevented: 0, submitted: 0 };
@@ -18,4 +18,11 @@ test("IME composition and newline shortcuts never submit search", () => {
   for (const event of [{ shiftKey: true }, { ctrlKey: true }, { metaKey: true }, { altKey: true }, { nativeEvent: { isComposing: true, keyCode: 13 } }, { nativeEvent: { isComposing: false, keyCode: 229 } }, { key: "a" }]) {
     assert.deepEqual(press(event), { prevented: 0, submitted: 0 });
   }
+});
+
+test("tag, picker and navigation handlers distinguish an IME commit from Enter", () => {
+  for (const nativeEvent of [{ isComposing: true, keyCode: 13 }, { isComposing: false, keyCode: 229 }]) {
+    assert.equal(isImeComposing({ nativeEvent }), true);
+  }
+  assert.equal(isImeComposing({ nativeEvent: { isComposing: false, keyCode: 13 } }), false);
 });

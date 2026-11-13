@@ -17,6 +17,7 @@ export type HomeViewData = {
   issues?: RecommendationIssue[]; issueCount?: number | null; sections?: HomeSections;
   homeLayout?: HomeLayoutPreview | null;
   preview?: boolean;
+  reserveReadingSpace?: boolean;
 };
 
 function HomeSectionState({ section, empty }: { section?: HomeSections[keyof HomeSections]; empty: string }) {
@@ -27,7 +28,7 @@ function HomeSectionState({ section, empty }: { section?: HomeSections[keyof Hom
   </div>;
 }
 
-export function HomePublicView({ config, works, scholars, topics, randomWorks, issue, issues, issueCount, hotSearches, sections, homeLayout, preview = false }: HomeViewData) {
+export function HomePublicView({ config, works, scholars, topics, randomWorks, issue, issues, issueCount, hotSearches, sections, homeLayout, preview = false, reserveReadingSpace = false }: HomeViewData) {
   const editions = issues ?? (issue ? [issue] : []);
   return <div className="stl4-home">
     <section className="stl4-home-hero" data-edit-section="home" aria-labelledby="home-title">
@@ -43,7 +44,7 @@ export function HomePublicView({ config, works, scholars, topics, randomWorks, i
       </div>
     </section>
     {sections?.config.status === "unavailable" ? <p className="stl4-small-status" role="status">网站文案暂时无法加载，当前显示系统默认介绍。</p> : null}
-    {preview ? null : <HomeContinueReading />}
+    {preview ? null : <HomeContinueReading reserveSpace={reserveReadingSpace} />}
     {sections?.home_layout?.status === "unavailable" ? <p role="alert" className="stl4-small-status">首页编排暂时无法读取，当前显示公开内容目录。</p> : null}
     {homeLayout?.featured != null ? <HomeCuratedSection area="featured" cards={homeLayout.featured}/> : <section className="stl4-home-section" data-edit-section="recommendations" aria-labelledby="home-issues">
       <header className="stl4-home-heading"><h2 id="home-issues">特别策划</h2><div>{issueCount != null ? <span className="stl4-issue-count">{issueCount} 期</span> : null}<Link href="/recommendations">查看全部 <ArrowRight size={15} /></Link></div></header>

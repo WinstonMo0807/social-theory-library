@@ -5,8 +5,6 @@ import "./globals.css";
 import "./editorial-v2.css";
 import "./editorial-workspaces.css";
 import "../styles/features/home/home-v307.css";
-import "../styles/features/admin/fixed-page-editor.css";
-import "../styles/features/admin/workspace-v307.css";
 import "../styles/features/admin/evidence-curation.css";
 import "../styles/knowledge-v307.css";
 import "../styles/features/home/home-stl4.css";

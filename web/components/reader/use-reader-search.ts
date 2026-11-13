@@ -34,6 +34,7 @@ export function useReaderSearch({ assetId, documentRevisionId = "", initialQuery
   jumpToPage: (page: number, behavior?: ScrollBehavior) => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
+  const [searchComposing, setSearchComposing] = useState(false);
   const [searchMatches, setSearchMatches] = useState<SearchMatch[]>([]);
   const [activeSearchMatch, setActiveSearchMatch] = useState(0);
   const [searchCandidatesOpen, setSearchCandidatesOpen] = useState(false);
@@ -48,7 +49,7 @@ export function useReaderSearch({ assetId, documentRevisionId = "", initialQuery
   const focusPath = initialEvidence ? `/catalog/theory-system/evidence/${encodeURIComponent(initialEvidence)}/focus/`
     : initialPassage ? `/catalog/passages/${encodeURIComponent(initialPassage)}/focus/` : "";
   const focusKey = focusPath ? `${assetId}:${documentRevisionId}:${focusPath}` : "";
-  const currentMatches = queryText && searchState.key === searchKey && searchState.status === "ready" ? searchMatches : [];
+  const currentMatches = !searchComposing && queryText && searchState.key === searchKey && searchState.status === "ready" ? searchMatches : [];
 
   useEffect(() => {
     if (!focusPath) return;
@@ -84,6 +85,7 @@ export function useReaderSearch({ assetId, documentRevisionId = "", initialQuery
   }, [focusPath, focusKey, jumpToPage, requestPagePayload, assetId, documentRevisionId, attempt]);
 
   useEffect(() => {
+    if (searchComposing) return;
     const request = new AbortController();
     queueMicrotask(() => {
       if (request.signal.aborted) return;
@@ -122,7 +124,7 @@ export function useReaderSearch({ assetId, documentRevisionId = "", initialQuery
       request.abort();
       window.clearTimeout(timer);
     };
-  }, [queryText, searchKey, assetId, documentRevisionId]);
+  }, [queryText, searchKey, assetId, documentRevisionId, searchComposing]);
 
   function jumpToFirstSearchMatch() {
     if (currentMatches[0]) {
@@ -143,13 +145,13 @@ export function useReaderSearch({ assetId, documentRevisionId = "", initialQuery
   }
 
   return {
-    query, setQuery, searchMatches: currentMatches, setSearchMatches,
+    query, setQuery, searchComposing, setSearchComposing, searchMatches: currentMatches, setSearchMatches,
     activeSearchMatch: searchState.key === searchKey ? activeSearchMatch : 0,
-    searchCandidatesOpen: Boolean(queryText && searchState.key === searchKey && searchCandidatesOpen),
+    searchCandidatesOpen: Boolean(!searchComposing && queryText && searchState.key === searchKey && searchCandidatesOpen),
     setSearchCandidatesOpen, passageFocus: focusState.key === focusKey ? focusState.focus : null,
     sourceError: focusState.key === focusKey ? focusState.error : "",
     searchError: queryText && searchState.key === searchKey ? searchState.error : "",
-    searchLoading: Boolean(queryText && (searchState.key !== searchKey || searchState.status === "loading")), retrySearch,
+    searchLoading: Boolean(!searchComposing && queryText && (searchState.key !== searchKey || searchState.status === "loading")), retrySearch,
     jumpToFirstSearchMatch, jumpToSearchMatch,
   };
 }

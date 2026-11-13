@@ -20,11 +20,11 @@ export function editorialHref(params: EditorialSearchParams, patch: Record<strin
   return `/recommendations${query.size ? `?${query}` : ""}`;
 }
 
-export function EditorialImage({ src, className = "", portrait = false, retry = false, displayUses, scholar }: { src: string; className?: string; portrait?: boolean; retry?: boolean; displayUses?:readonly MediaDisplayUse[]; scholar?: {name:string; identity:string} }) {
+export function EditorialImage({ src, className = "", portrait = false, retry = false, displayUses, scholar, loading = "lazy" }: { src: string; className?: string; portrait?: boolean; retry?: boolean; displayUses?:readonly MediaDisplayUse[]; scholar?: {name:string; identity:string}; loading?: "lazy" | "eager" }) {
   const [failedSource, setFailedSource] = useState("");
   const failed=!!src&&failedSource===src;
   const fallback=scholar ? <ScholarPortraitFallback name={scholar.name} identity={scholar.identity} className={className}/> : <span className={`${className} ${styles.imageMissing}`}><span role="img" aria-label={failed?"图片暂不可用":src?"本位置不展示配图":portrait?"未提供公开头像":"暂未提供配图"}>{portrait ? <UserRound size={20} strokeWidth={1} /> : <ImageOff size={28} strokeWidth={1} />}</span>{retry && failed ? <button type="button" onClick={() => setFailedSource("")}>重新加载</button> : null}</span>;
-  return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} alt="" loading="lazy" onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
+  return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} alt="" loading={loading} onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
 }
 export function EditorialByline({ curator, date }: { curator: EditorialCurator; date: string | null }) {
   return <div className={styles.byline}>{curator.name ? <EditorialImage key={curator.portrait_url} src={curator.portrait_url} portrait className={styles.avatar} /> : null}

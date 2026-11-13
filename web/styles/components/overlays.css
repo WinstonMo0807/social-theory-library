@@ -37,7 +37,7 @@
   color: var(--ink);
 }
 
-html:has(.ui-drawer:is([open],[data-content-section])) { overflow: hidden; }
+html:has(dialog:modal, .ui-drawer[data-content-section]) { overflow: hidden; }
 
 .ui-drawer::backdrop {
   background: rgb(10 10 10 / 34%);

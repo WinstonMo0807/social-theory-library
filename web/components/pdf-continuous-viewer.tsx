@@ -10,7 +10,7 @@ import type {
 import type { TextLayer } from "pdfjs-dist/types/src/display/text_layer";
 import { LoadingState } from "./ui/loading-state";
 import { Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { CanonicalBlock, PageHighlight } from "./pdf-canvas";
 import {
   displayedHighlightBox, displayedReaderBox, rotateReaderBox, rotateReaderPoint,
@@ -446,6 +446,15 @@ export function PdfContinuousViewer({
     [renderedPageCount],
   );
 
+  const updateVisiblePage = useEffectEvent((visibility: Map<number, number>) => {
+    let bestPage = currentPage;
+    let bestRatio = 0;
+    visibility.forEach((ratio, page) => {
+      if (ratio > bestRatio) { bestRatio = ratio; bestPage = page; }
+    });
+    if (bestRatio > 0.02 && bestPage !== currentPage) onPageChange(bestPage);
+  });
+
   useEffect(() => {
     const viewer = viewerRef.current;
     const scrollRoot = viewer?.closest<HTMLElement>(".reader-document");
@@ -488,15 +497,7 @@ export function PdfContinuousViewer({
           const page = Number((entry.target as HTMLElement).dataset.pageNumber);
           if (page) visibility.set(page, entry.isIntersecting ? entry.intersectionRatio : 0);
         });
-        let bestPage = currentPage;
-        let bestRatio = 0;
-        visibility.forEach((ratio, page) => {
-          if (ratio > bestRatio) {
-            bestRatio = ratio;
-            bestPage = page;
-          }
-        });
-        if (bestRatio > 0.02 && bestPage !== currentPage) onPageChange(bestPage);
+        updateVisiblePage(visibility);
       },
       { root: scrollRoot, threshold: [0, 0.08, 0.2, 0.4, 0.6, 0.8, 1] },
     );
@@ -510,8 +511,6 @@ export function PdfContinuousViewer({
       currentPageObserver.disconnect();
     };
   }, [
-    currentPage,
-    onPageChange,
     onRequestPage,
     pdfDocument,
     renderedPageCount,

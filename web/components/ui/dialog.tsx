@@ -10,9 +10,14 @@ export type DialogProps = Omit<ComponentPropsWithoutRef<"dialog">, "open" | "onC
 };
 
 /** Native modal behavior supplies focus containment and background inertness. */
-export function Dialog({ open, onRequestClose, initialFocusRef, onOpen, onKeyDown, children, ...props }: DialogProps) {
+export function Dialog({ open, onRequestClose, initialFocusRef, onOpen, onKeyDown, onPointerDown, onPointerCancel, children, ...props }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const backdropPress = useRef(false);
+  function outside(dialog: HTMLDialogElement, x: number, y: number) {
+    const bounds = dialog.getBoundingClientRect();
+    return x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom;
+  }
   const enter = useEffectEvent(() => {
     onOpen?.();
     initialFocusRef?.current?.focus();
@@ -21,6 +26,7 @@ export function Dialog({ open, onRequestClose, initialFocusRef, onOpen, onKeyDow
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+    backdropPress.current = false;
     let frame = 0;
     if (open && !dialog.open) {
       openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -42,7 +48,14 @@ export function Dialog({ open, onRequestClose, initialFocusRef, onOpen, onKeyDow
     };
   }, []);
 
-  return <dialog {...props} ref={dialogRef} onKeyDown={(event) => {
+  return <dialog {...props} ref={dialogRef} onPointerDown={(event) => {
+    onPointerDown?.(event);
+    backdropPress.current = !event.defaultPrevented && event.isPrimary && event.button === 0
+      && event.target === event.currentTarget && outside(event.currentTarget, event.clientX, event.clientY);
+  }} onPointerCancel={(event) => {
+    backdropPress.current = false;
+    onPointerCancel?.(event);
+  }} onKeyDown={(event) => {
     onKeyDown?.(event);
     if (event.defaultPrevented || event.key !== "Tab") return;
     // Native modal inertness protects the page, but Tab at an edge may move
@@ -61,7 +74,9 @@ export function Dialog({ open, onRequestClose, initialFocusRef, onOpen, onKeyDow
     event.preventDefault();
     onRequestClose?.();
   }} onClick={(event) => {
-    if (event.target === event.currentTarget) onRequestClose?.();
+    const startedOutside = backdropPress.current;
+    backdropPress.current = false;
+    if (startedOutside && event.target === event.currentTarget && outside(event.currentTarget, event.clientX, event.clientY)) onRequestClose?.();
   }}>{children}</dialog>;
 }
 

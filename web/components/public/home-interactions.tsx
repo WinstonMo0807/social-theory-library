@@ -6,7 +6,7 @@ import { useEffect, useState, useTransition, type FormEvent, type ReactNode } fr
 import { ArrowRight, BookOpen, LoaderCircle, Search, Shuffle } from "lucide-react";
 import { usePublicSession } from "@/components/public-session-provider";
 import { ScholarPortrait } from "@/components/ui";
-import { apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
+import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import type { Scholar, Work } from "@/lib/data";
 import type { ApiWork } from "@/lib/api/public-catalog";
 import type { LibraryTopic } from "@/lib/api/topics.types";
@@ -60,11 +60,12 @@ export function HomeRandomBook({ works, section }: { works: Work[]; section?: Ho
 }
 
 type ProgressRow = { id: string; asset: string; current_page: number; progress_ratio: number; updated_at?: string; work: ApiWork | null };
-export function HomeContinueReading() {
-  const { state: session } = usePublicSession();
+export function HomeContinueReading({ reserveSpace = false }: { reserveSpace?: boolean }) {
+  const { state: session, retry: retrySession } = usePublicSession();
   const userId = session.status === "authenticated" ? session.user?.id : undefined;
   const [result, setResult] = useState<{ owner: number; row?: ProgressRow; error?: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [failedCover, setFailedCover] = useState("");
   useEffect(() => {
     if (userId === undefined) return;
     const controller = new AbortController();
@@ -75,9 +76,21 @@ export function HomeContinueReading() {
     return () => { controller.abort(); unsubscribe(); };
   }, [userId, attempt]);
   // Do not show the previous account's private row while a new session loads.
-  if (userId === undefined || result?.owner !== userId || (!result.row && !result.error)) return null;
+  if (userId === undefined || result?.owner !== userId || (!result.row && !result.error)) {
+    if (!reserveSpace && userId === undefined) return null;
+    if (session.status === "temporary_error" || session.status === "forbidden") {
+      return <aside className="stl4-continue" role="status"><p>{session.status === "temporary_error" ? "阅读位置暂时无法核对。" : session.message}</p><button type="button" onClick={retrySession}>重新核对</button></aside>;
+    }
+    const loading = session.status === "loading" || (userId !== undefined && result?.owner !== userId);
+    return <aside className="stl4-continue" aria-busy={loading}>
+      <span className="stl4-continue-cover"><BookOpen size={24} aria-hidden="true" /></span>
+      <div><span>继续阅读</span><p role="status">{loading ? "正在读取阅读位置…" : userId === undefined ? "登录后继续上次阅读。" : "尚无阅读记录。"}</p></div>
+      {loading ? <span className="stl4-continue-placeholder" aria-hidden="true" /> : <Link href={userId === undefined ? "/login?next=%2Fhome" : "/explore/original"}>{userId === undefined ? "登录" : "浏览馆藏"}<ArrowRight size={16} /></Link>}
+    </aside>;
+  }
   if (result.error) return <aside className="stl4-continue" role="status"><p>{result.error}</p><button type="button" onClick={() => setAttempt(value => value + 1)}>重试</button></aside>;
   const row = result.row!;
   if (!row.work) return <aside className="stl4-continue"><p>上次阅读的来源当前不可用，阅读位置仍保留。</p><Link href="/account">查看读者中心</Link></aside>;
-  return <aside className="stl4-continue"><span className="stl4-continue-cover">{row.work.cover ? <img src={row.work.cover} alt={`${row.work.title}封面`} width={44} height={64} /> : <BookOpen size={24} aria-label="尚未提供封面" />}</span><div><span>继续阅读 <small>仅本人可见</small></span><h2>{row.work.title}</h2><p>PDF 第 {row.current_page} 页 · 已读 {Math.round(Math.min(1, Math.max(0, row.progress_ratio)) * 100)}%{row.updated_at && Number.isFinite(Date.parse(row.updated_at)) ? <> · 上次阅读 <time dateTime={row.updated_at}>{new Date(row.updated_at).toLocaleDateString("zh-CN")}</time></> : null}</p></div><Link href={`/reader/${encodeURIComponent(row.asset)}?page=${row.current_page}`}>继续阅读 <ArrowRight size={16} /></Link></aside>;
+  const cover = row.work.cover;
+  return <aside className="stl4-continue"><span className="stl4-continue-cover">{cover && failedCover !== cover ? <img src={normalizePublicResourceUrl(cover)} alt={`${row.work.title}封面`} width={44} height={64} onError={() => setFailedCover(cover)} /> : <BookOpen size={24} aria-label={cover ? "封面暂不可用" : "尚未提供封面"} />}</span><div><span>继续阅读 <small>仅本人可见</small></span><h2>{row.work.title}</h2><p>PDF 第 {row.current_page} 页 · 已读 {Math.round(Math.min(1, Math.max(0, row.progress_ratio)) * 100)}%{row.updated_at && Number.isFinite(Date.parse(row.updated_at)) ? <> · 上次阅读 <time dateTime={row.updated_at}>{new Date(row.updated_at).toLocaleDateString("zh-CN")}</time></> : null}</p></div><Link href={`/reader/${encodeURIComponent(row.asset)}?page=${row.current_page}`}>继续阅读 <ArrowRight size={16} /></Link></aside>;
 }

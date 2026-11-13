@@ -87,7 +87,7 @@ body:has([data-graph-kind="scholar"]) .brand-graph-variants [data-brand-variant=
 .site-header[data-stl-support="about"] { min-height: 80px; padding-block: 9px; padding-inline: 3.5%; }
 .site-header[data-stl-support="article"] { min-height: 60px; padding-block: 7px; }
 .site-header[data-stl-support] .desktop-nav { gap: clamp(22px,2.6vw,34px); justify-content: flex-end; }
-.site-header[data-stl-support] .desktop-nav a.active { color: var(--night-gold,#af671c); }
+.site-header[data-stl-support] .desktop-nav a.active { color: var(--stl-accent-warning,#785b1e); }
 .site-header[data-stl-support] .desktop-nav a.active::after { background: currentColor; }
 .site-header[data-stl-account="true"] { min-height: 60px; padding-block: 7px; }
 
@@ -216,12 +216,12 @@ body:has([data-graph-kind="scholar"]) .brand-graph-variants [data-brand-variant=
 .brand-reference-lockup[data-brand-variant="evidence"] { width:220px; }
 .site-header[data-stl-explore="evidence"] { min-height:70px; padding:8px 26px; gap:26px; background:var(--night-white,#fdfcf9); }
 .site-header[data-stl-explore="evidence"] .desktop-nav { gap:26px; font-weight:600; }
-.site-header[data-stl-explore="evidence"] .desktop-nav a.active { color:var(--night-gold,#9a712e); }
+.site-header[data-stl-explore="evidence"] .desktop-nav a.active { color:var(--stl-accent-warning,#785b1e); }
 .site-header[data-stl-explore="evidence"] .desktop-nav a.active::after { background:currentColor; }
 .site-header[data-stl-explore="evidence"] .header-actions { gap:14px; }
 .evidence-language-switch{display:flex;align-items:center;gap:3px;flex-shrink:0;font:max(12px, var(--stl-readable-meta))/1.2 var(--font-sans),sans-serif;white-space:nowrap;color:var(--night-ink,#082541)}
 .evidence-language-switch button{padding:8px 2px;min-width:22px;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;cursor:pointer}
-.evidence-language-switch button[aria-pressed=true]{color:var(--night-gold,#ae812f)}
+.evidence-language-switch button[aria-pressed=true]{color:var(--stl-accent-warning,#785b1e)}
 .evidence-language-switch span{color:var(--night-muted,#7b8590)}
 .evidence-language-switch button:focus-visible{outline:2px solid var(--night-gold,#ae812f);outline-offset:2px}
 html[lang=en] .site-header[data-stl-explore="evidence"] .desktop-nav{gap:18px;white-space:nowrap}

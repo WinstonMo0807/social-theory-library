@@ -1,7 +1,7 @@
 "use client";
 import { mediaGraphicClass } from "@/components/media-placement";
 
-import { useEffect, useId, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useId, useMemo, useRef, useState, type PointerEvent } from "react";
 import { LocateFixed, Maximize, Minus, Plus } from "lucide-react";
 import type { GraphEdge, GraphNode, PublicTheoryGraph } from "@/lib/api/graph.types";
 import styles from "./theory-graph.module.css";
@@ -12,9 +12,11 @@ export function GraphCanvas({ graph, selectedNode, selectedEdge, onNode, onEdge,
   zoom: number; offset: Point; onTransform: (zoom: number, offset: Point) => void;
 }) {
   const panel = useRef<HTMLDivElement>(null), svg = useRef<SVGSVGElement>(null);
-  const drag = useRef<{ pointer: number; x: number; y: number; original: Point } | null>(null);
+  const layer = useRef<SVGGElement>(null), frame = useRef(0);
+  const drag = useRef<{ pointer: number; x: number; y: number; original: Point; latest: Point; scale: number; zoom: number } | null>(null);
   const [notice, setNotice] = useState("");
   const key = useId().replace(/:/g, "");
+  const nodesById = useMemo(() => new Map(graph.nodes.map(node => [node.id, node])), [graph.nodes]);
   const positions = useMemo(() => {
     const result = new Map<string, Point & { radius: number }>();
     for (const level of [0, 1, 2, 3]) {
@@ -30,11 +32,40 @@ export function GraphCanvas({ graph, selectedNode, selectedEdge, onNode, onEdge,
   }, [graph.nodes]);
   const transform = useRef({ zoom, offset, onTransform });
   useEffect(() => { transform.current = { zoom, offset, onTransform }; }, [zoom, offset, onTransform]);
+  function paint(currentZoom: number, point: Point) {
+    layer.current?.setAttribute("transform", `translate(${point.x} ${point.y}) translate(500 350) scale(${currentZoom}) translate(-500 -350)`);
+  }
+  function finishDrag() {
+    const current = drag.current;
+    drag.current = null;
+    cancelAnimationFrame(frame.current);
+    frame.current = 0;
+    if (!current) return;
+    if (svg.current?.hasPointerCapture(current.pointer)) svg.current.releasePointerCapture(current.pointer);
+    paint(current.zoom, current.latest);
+    if (current.latest.x !== current.original.x || current.latest.y !== current.original.y) {
+      transform.current.offset = current.latest;
+      transform.current.onTransform(current.zoom, current.latest);
+    }
+  }
+  useLayoutEffect(() => {
+    // Restored views and new graph data take precedence over an unfinished drag.
+    drag.current = null;
+    cancelAnimationFrame(frame.current);
+    frame.current = 0;
+    paint(zoom, offset);
+  }, [zoom, offset.x, offset.y, graph]);
+  useEffect(() => {
+    const observer = new ResizeObserver(() => finishDrag());
+    if (svg.current) observer.observe(svg.current);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame.current); drag.current = null; };
+  }, []);
   useEffect(() => {
     const element = svg.current;
     function wheel(event: WheelEvent) {
       if (!event.ctrlKey) return;
       event.preventDefault();
+      finishDrag();
       const current = transform.current;
       current.onTransform(Math.max(.15, Math.min(4, current.zoom + (event.deltaY < 0 ? .1 : -.1))), current.offset);
     }
@@ -42,15 +73,22 @@ export function GraphCanvas({ graph, selectedNode, selectedEdge, onNode, onEdge,
     return () => element?.removeEventListener("wheel", wheel);
   }, []);
   function down(event: PointerEvent<SVGSVGElement>) {
-    if (event.button !== 0 || (event.target as Element).closest('[role="button"]')) return;
+    if (!event.isPrimary || drag.current || event.button !== 0 || (event.target as Element).closest('[role="button"]')) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, original: offset };
+    drag.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, original: offset, latest: offset,
+      scale: 1000 / Math.max(1, event.currentTarget.getBoundingClientRect().width), zoom };
   }
   function move(event: PointerEvent<SVGSVGElement>) {
     const current = drag.current;
     if (!current || current.pointer !== event.pointerId) return;
-    const scale = 1000 / Math.max(1, event.currentTarget.getBoundingClientRect().width);
-    onTransform(zoom, { x: current.original.x + (event.clientX - current.x) * scale, y: current.original.y + (event.clientY - current.y) * scale });
+    current.latest = { x: current.original.x + (event.clientX - current.x) * current.scale, y: current.original.y + (event.clientY - current.y) * current.scale };
+    if (!frame.current) frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      if (drag.current) paint(drag.current.zoom, drag.current.latest);
+    });
+  }
+  function end(event: PointerEvent<SVGSVGElement>) {
+    if (event.pointerId === drag.current?.pointer) finishDrag();
   }
   async function fullscreen() {
     try {
@@ -62,18 +100,18 @@ export function GraphCanvas({ graph, selectedNode, selectedEdge, onNode, onEdge,
   }
   return <div className={styles.canvas} ref={panel}>
     <div className={styles.canvasLegend}><strong>图例</strong><span><i data-kind="center" />中心节点</span><span><i data-kind="scholar" />学者 / 人物</span><span><i data-kind="topic" />概念 / 主题</span><span>→ 有方向关系</span><span>— 无方向关系</span>{graph.candidate_count !== null ? <span>┄ 待审核候选关系</span> : null}</div>
-    <svg ref={svg} viewBox="0 0 1000 740" role="group" aria-label="知识关系图，可选择节点或关系" onPointerDown={down} onPointerMove={move} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
+    <svg ref={svg} viewBox="0 0 1000 740" role="group" aria-label="知识关系图，可选择节点或关系" onPointerDown={down} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}>
       <defs><marker id={`${key}-arrow`} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M 0 0 L 7 3.5 L 0 7 Z" fill="context-stroke" /></marker>
         {graph.nodes.filter(node => node.image_url && node.kind === "scholar").map(node => { const point = positions.get(node.id)!; return <clipPath id={`${key}-${node.entity_id}`} key={node.id}><circle cx={point.x} cy={point.y} r={point.radius - 2} /></clipPath>; })}
       </defs>
-      <g transform={`translate(${offset.x} ${offset.y}) translate(500 350) scale(${zoom}) translate(-500 -350)`}>
+      <g ref={layer} transform={`translate(${offset.x} ${offset.y}) translate(500 350) scale(${zoom}) translate(-500 -350)`}>
         {[...graph.edges, ...graph.candidate_edges].map(edge => {
           const from = positions.get(edge.source), to = positions.get(edge.target);
           if (!from || !to) return null;
           const length = Math.hypot(to.x - from.x, to.y - from.y) || 1, dx = (to.x - from.x) / length, dy = (to.y - from.y) / length;
           const x1 = from.x + dx * (from.radius + 4), y1 = from.y + dy * (from.radius + 4), x2 = to.x - dx * (to.radius + 5), y2 = to.y - dy * (to.radius + 5);
           const active = selectedEdge === edge.id;
-          return <g key={edge.id} role="button" tabIndex={0} aria-label={`${edge.status !== "published" ? "待审核候选：" : ""}${graph.nodes.find(node => node.id === edge.source)?.name} ${edge.relation_label} ${graph.nodes.find(node => node.id === edge.target)?.name}`} aria-pressed={active} className={`${styles.graphEdge} ${active ? styles.activeEdge : ""} ${edge.status !== "published" ? styles.candidateEdge : ""}`} onClick={() => onEdge(edge)} onKeyDown={event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); onEdge(edge); } }}>
+          return <g key={edge.id} role="button" tabIndex={0} aria-label={`${edge.status !== "published" ? "待审核候选：" : ""}${nodesById.get(edge.source)?.name} ${edge.relation_label} ${nodesById.get(edge.target)?.name}`} aria-pressed={active} className={`${styles.graphEdge} ${active ? styles.activeEdge : ""} ${edge.status !== "published" ? styles.candidateEdge : ""}`} onClick={() => onEdge(edge)} onKeyDown={event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); onEdge(edge); } }}>
             <line className={styles.edgeHitArea} x1={x1} y1={y1} x2={x2} y2={y2} />
             <line x1={x1} y1={y1} x2={x2} y2={y2} markerEnd={edge.direction === "undirected" ? undefined : `url(#${key}-arrow)`} markerStart={edge.direction === "bidirectional" ? `url(#${key}-arrow)` : undefined} />
             {graph.edges.length <= 18 || active ? <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 7} textAnchor="middle">{edge.relation_label}</text> : null}<title>{edge.relation_label}</title>

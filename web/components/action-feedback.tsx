@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from "react";
+import { useEffect, useRef, type ButtonHTMLAttributes, type ComponentProps, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, LoaderCircle, X } from "lucide-react";
 import { Button } from "./ui/controls";
 
@@ -248,14 +248,32 @@ export function ToastHost({
   onDismiss?: (id: string) => void;
   label?: string;
 }) {
+  const host = useRef<HTMLElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    function rememberFocus() {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active !== document.body && !host.current?.contains(active)) previousFocus.current = active;
+    }
+    rememberFocus();
+    document.addEventListener("focusin", rememberFocus);
+    return () => document.removeEventListener("focusin", rememberFocus);
+  }, []);
   if (!items.length) return null;
   return (
-    <aside className="toast-host" aria-label={label}>
+    <aside ref={host} className="toast-host" aria-label={label}>
       {items.map((item) => (
         <div className={`toast-item ${item.state}`} key={item.id}>
           <AsyncStatus state={item.state} message={item.message} />
           {onDismiss && item.state !== "pending" ? (
-            <button type="button" aria-label="关闭操作反馈" onClick={() => onDismiss(item.id)}>
+            <button type="button" aria-label="关闭操作反馈" onClick={(event) => {
+              if (document.activeElement === event.currentTarget) {
+                const next = Array.from(host.current?.querySelectorAll<HTMLButtonElement>("button") ?? []).find(button => button !== event.currentTarget);
+                const target = next ?? previousFocus.current;
+                if (target?.isConnected) target.focus({ preventScroll: true });
+              }
+              onDismiss(item.id);
+            }}>
               <X aria-hidden="true" size={15} />
             </button>
           ) : null}
