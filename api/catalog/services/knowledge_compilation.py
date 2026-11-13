@@ -90,6 +90,9 @@ def request_page_refresh(page_ids):
 
 
 def reconcile_pending():
+    from catalog.services.knowledge_automation import recover_new_sources, resume_configured_sources
+    recover_new_sources()
+    resume_configured_sources()
     ids = list(m.KnowledgeCompilation.objects.filter(enabled=True, pending_refresh=True).order_by("updated_at").values_list("pk", flat=True)[:30])
     for key in ids:
         try:
@@ -103,7 +106,7 @@ def reconcile_pending():
                         and published.document_revision.created_at > revision.created_at):
                     revision = published.document_revision
                 revision = m.DocumentRevision.objects.filter(asset=revision.asset, is_active=True).first() or revision
-                reconcile(revision)
+                reconcile(revision, retry=True)
                 m.KnowledgeCompilation.objects.filter(pk=key).update(pending_refresh=False, last_error={})
         except Exception as exc:
             m.KnowledgeCompilation.objects.filter(pk=key).update(last_error={

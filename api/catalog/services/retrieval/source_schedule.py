@@ -60,6 +60,14 @@ def scan_window(generation):
 def publication_changed(edition_id):
     """Target the existing producer after commit; never parse/OCR on the API."""
     def dispatch():
+        from catalog.services.knowledge_automation import enroll
+        try:
+            if enroll(edition_id):
+                from catalog.intelligence_tasks import refresh_compilations
+                refresh_compilations.apply_async(queue="intelligence")
+        except Exception:
+            # The pending subscription and bounded recovery retain this event.
+            logger.exception("Publication compilation notification failed for edition %s", edition_id)
         from catalog.services.discovery_indexing import enabled, schedule_sources
         from catalog.services.discovery_projection import active_generation
         if not enabled():

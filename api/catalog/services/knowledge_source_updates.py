@@ -50,6 +50,8 @@ def execute_source_update(job_id,task_id):
         index_job=None
         if active_generation() and header and header.get("document_revision_id")==str(revision.pk):
             index_job=request_source_reindex(revision,keyword_only=True)
+        from catalog.services.knowledge_automation import enroll
+        enroll(revision.asset.edition_id)
         from catalog.services.knowledge_compilation import reconcile
         compilation = reconcile(revision)
         ProcessingJob.objects.filter(pk=job.pk,task_id=task_id,status="running").update(status="succeeded",progress=100,

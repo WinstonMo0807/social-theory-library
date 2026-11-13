@@ -18,6 +18,21 @@ class CompilationInput(serializers.Serializer):
     target_page_ids = serializers.ListField(child=serializers.UUIDField(), max_length=30, default=list)
 
 
+class AutomationPolicy(APIView):
+    permission_classes = [CanEditMetadata]
+
+    def get(self, request):
+        from catalog.services.knowledge_automation import policy_data
+        return Response(policy_data(request.user))
+
+    def post(self, request):
+        from catalog.services.knowledge_automation import save_policy
+        return Response(save_policy(request.user,
+            version=serializers.IntegerField(min_value=0).run_validation(request.data.get("version")),
+            mode=serializers.ChoiceField(choices=["retrieval", "draft"]).run_validation(request.data.get("mode")),
+            profile_key=serializers.CharField(max_length=80, allow_blank=True).run_validation(request.data.get("profile_key", ""))))
+
+
 class Compilations(APIView):
     permission_classes = [CanEditMetadata]
 
@@ -118,7 +133,7 @@ class Reviews(APIView):
             for row in rows[:100]]})
 
 
-urlpatterns = [path("compilations/", Compilations.as_view()),
+urlpatterns = [path("automation/", AutomationPolicy.as_view()), path("compilations/", Compilations.as_view()),
     path("compilations/<uuid:compilation_id>/", CompilationDetail.as_view()),
     path("compilation-products/<uuid:artifact_id>/", CompilationProduct.as_view()),
     path("compilation-artifacts/<uuid:artifact_id>/", AgentArtifact.as_view()), path("reviews/", Reviews.as_view())]

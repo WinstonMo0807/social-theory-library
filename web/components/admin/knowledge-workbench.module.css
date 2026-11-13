@@ -166,3 +166,21 @@
 .compilationTarget input[type=checkbox] { flex: 0 0 18px; width: 18px; min-height: 18px; margin-top: 4px; accent-color: #8a704b; }
 .compilationTarget small { display: block; max-width: 72ch; color: var(--muted, #686257); font-weight: 400; margin-top: .4rem; }
 .compilationTargets > p button { min-height: 28px; padding: 2px 6px; background: transparent; border: 0; font-size: .8rem; }
+.automation { margin-bottom: 32px; border-block: 1px solid var(--line, #d9d2c6); }
+.automation > summary { padding: 18px 0; cursor: pointer; font-family: var(--font-serif), serif; font-size: 1.125rem; }
+.automation > summary small { display: inline-block; margin-left: 24px; color: var(--muted, #686257); font-family: var(--font-sans), sans-serif; font-size: .8125rem; }
+.automation > form { padding: 12px 0 24px; }
+.automationLayout { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(0, 1.2fr); gap: 40px; }
+.automationLayout fieldset { border: 0; padding: 0; margin: 0; }
+.automationLayout legend { font-size: .875rem; margin-bottom: 16px; }
+.automationLayout label { display: flex; align-items: center; gap: 12px; margin: 0 0 18px; }
+.automationLayout input[type=radio] { width: 18px; min-height: 18px; margin: 0; accent-color: #8a704b; }
+.automationLayout .automationModel { display: grid; margin-top: 24px; font-size: .875rem; }
+.automationPreview { padding: 20px 24px; background: var(--surface, #fff); border-left: 2px solid var(--accent, #b18d4b); }
+.automationPreview h3 { margin: 0 0 18px; font-family: var(--font-serif), serif; font-size: 1.1rem; font-weight: 500; }
+.automationPreview ol { padding-left: 22px; margin: 0; }
+.automationPreview li { padding: 0 0 16px 6px; }
+.automationPreview li:last-child { padding-bottom: 0; }
+.automationPreview strong { display: block; font-weight: 500; }
+.automationPreview span, .automation > form > p { color: var(--muted, #686257); font-size: .875rem; line-height: 1.8; }
+@media (max-width: 720px) { .automationLayout { grid-template-columns: minmax(0, 1fr); gap: 20px; } .automation > summary small { display: block; margin: 8px 0 0; } }

@@ -1,3 +1,7 @@
+## 2026-11-13 新馆藏编纂策略
+
+knowledge_automation复用SiteSetting的私有配置和AuditEvent，新增/api/knowledge/automation/。发布回调enroll只在同一KnowledgeCompilation建立待接续身份，执行、原文核验、缓存和ChangeSet仍为原服务。限定启用后first_published_at及正式可检索版本，已有逐书配置优先，恢复扫描每轮5本。配置启用后接续waiting_configuration，缺失配置保留错误，无隐式外部模型或代理回退。无新数据库或schema；本检查点未部署。
+
 ## 2026-11-13 分析来源选取版本
 
 编纂prepare与检索原文均按有类型的叶节点取正文，references/unresolved容器只组织层级，不再重复其子段落。leaf-ranges-v1进入阶段一来源输入和持续订阅指纹。已有分析窗口的旧选取计划拒绝原地重写，通过原持续编纂reconcile建立新任务，保留旧任务与产物；未变化的窗口仍使用既有内容缓存。无新队列、正式知识写入入口或schema。
