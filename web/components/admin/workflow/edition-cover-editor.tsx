@@ -105,7 +105,7 @@ function EditionCoverEditorState({ editionId, workId, documentType, token, canEd
       <div className={styles.actions}><button type="button" disabled={locked || !file} onClick={() => void command("upload")}>{busy === "upload" ? "正在保存封面…" : "上传并保存封面"}</button><button type="button" disabled={locked} onClick={() => void command("default")}>使用默认样式，不选封面</button><Link href={`/admin/media?edition=${encodeURIComponent(editionId)}&slot=cover`}>从媒体库选封面</Link></div>
     </div></div>
     <h4>系统推荐的PDF页面</h4>
-    {data?.poll ? <LoadingState role="status">正在准备封面候选，页面会自动更新。你可以先填写其他资料。</LoadingState> : null}
+    {data?.poll ? <LoadingState variant="compact" role="status">正在准备封面候选，页面会自动更新。你可以先填写其他资料。</LoadingState> : null}
     {data?.state === "failed" ? <p role="alert">这次封面分析未完成。可重新准备候选、指定PDF页或上传图片，不影响上架。</p> : null}
     {options.length ? <div className={styles.choices}>{(expanded ? options : options.slice(0, 3)).map((option) => renderOption(option))}</div> : <p>{data?.asset_id ? "暂时没有候选，可点击准备候选或指定PDF页。" : "PDF尚未准备好。可先上传封面图片，或保持默认样式。"}</p>}
     <div className={styles.actions}>{options.length > 3 ? <button type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "收起候选" : `查看全部${options.length}张候选`}</button> : null}<button type="button" disabled={locked || !data?.asset_id} onClick={() => void command("regenerate")}>{busy === "regenerate" ? "正在分析PDF页面…" : options.length ? "重新准备封面候选" : "准备封面候选"}</button></div>

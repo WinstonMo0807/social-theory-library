@@ -29,7 +29,7 @@ function IntakePdf({owner,itemId,path}:{owner:string;itemId:string;path:string})
     return()=>{controller.abort();unsubscribe();};},[owner,itemId,path,attempt]);
   return error?<p role="alert">{error}<button onClick={()=>setAttempt(value=>value+1)}>重新读取</button></p>:url?<WorkFilePdf key={url} url={url} privateFile atlasIntake/>:<p role="status">{path?"正在读取受权限保护的原件…":"原件尚未进入正式存储，请等待上传完成。"}</p>;
 }
-export function IntakeConfirmation({itemId}:{itemId:string}){const user=useAdminSession(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<IntakeBody key={`${user.id}:${itemId}:${epoch}`} owner={String(user.id)} itemId={itemId}/>:<LoadingState>正在核对编目账户…</LoadingState>;}
+export function IntakeConfirmation({itemId}:{itemId:string}){const user=useAdminSession(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<IntakeBody key={`${user.id}:${itemId}:${epoch}`} owner={String(user.id)} itemId={itemId}/>:<LoadingState variant="screen">正在核对编目账户…</LoadingState>;}
 function IntakeBody({owner,itemId}:{owner:string;itemId:string}){
   const router=useRouter(),[query,setQuery]=useState(""),[search,setSearch]=useState(""),[page,setPage]=useState(1),[work,setWork]=useState(""),[tab,setTab]=useState("all"),[mobile,setMobile]=useState("file"),[draft,setDraft]=useState<IntakeChoice|null>(null),[picked,setPicked]=useState<Candidate|null>(null),[message,setMessage]=useState(""),[confirming,setConfirming]=useState(false);
   const [savedChoice,setSavedChoice]=useState<IntakeChoice|null>(null);

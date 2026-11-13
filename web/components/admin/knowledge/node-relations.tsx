@@ -29,7 +29,7 @@ const clearGuard: NodeRelationGuard = { dirty: false, pending: false, composing:
 export function NodeRelations(props: Props) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <RelationList key={`${user.id}:${epoch}:${props.nodeId}:${props.centerKind || "node"}`} {...props} owner={String(user.id)} /> : <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user ? <RelationList key={`${user.id}:${epoch}:${props.nodeId}:${props.centerKind || "node"}`} {...props} owner={String(user.id)} /> : <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function RelationList({ nodeId, nodeName, blocked, onChanged, onGuardChange, owner, centerKind = "node", initialRelationId, initialRelationKind }: Props & { owner: string }) {

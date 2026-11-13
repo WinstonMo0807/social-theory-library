@@ -19,7 +19,7 @@ export function PlacementDirectory() {
   const selection=usePlacementSelection();
   useUnsavedForm(selection.value.selected.length>0,false);
   const user = useAdminSession();
-  return user ? <DirectoryBody key={user.id} owner={String(user.id)} metadata={hasAdminCapability(user,"can_edit_metadata")} authority={hasAdminCapability(user,"can_edit_draft_authority")}/> : <LoadingState>正在核对编辑账户…</LoadingState>;
+  return user ? <DirectoryBody key={user.id} owner={String(user.id)} metadata={hasAdminCapability(user,"can_edit_metadata")} authority={hasAdminCapability(user,"can_edit_draft_authority")}/> : <LoadingState variant="screen">正在核对编辑账户…</LoadingState>;
 }
 export function PlacementTargetDirectory({onSelect}:{onSelect:(row:PlacementDestination)=>void}) {
   const user=useAdminSession();

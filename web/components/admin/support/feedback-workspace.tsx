@@ -29,7 +29,7 @@ function Pager({ page, count, size, label, change }: { page: number; count: numb
 export function FeedbackWorkspace() {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <LoadingState role="status">正在核对管理会话…</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对管理会话…</LoadingState>;
   if (!hasAdminCapability(user, "can_manage_users")) return <p role="alert">反馈中可能包含联系方式，仅管理员可查看和处理。</p>;
   return <Workspace key={`${user.id}:${epoch}`} ownerId={String(user.id)} />;
 }

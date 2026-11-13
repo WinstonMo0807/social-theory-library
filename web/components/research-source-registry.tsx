@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
 import { hasAdminCapability, useAdminSession } from "@/lib/admin-session";
@@ -24,7 +26,7 @@ const date=(value:string|null)=>value?new Date(value).toLocaleString("zh-CN"):"�
 export function ResearchSourceRegistryPanel(props:Props){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  if(!user)return <p>正在读取当前管理账户…</p>;
+  if(!user)return <LoadingState variant="screen">正在读取当前管理账户…</LoadingState>;
   if(!hasAdminCapability(user,"can_view_system_status"))return <p>当前账户不能查看来源配置。</p>;
   return <RegistryEditor key={`${user.id}:${epoch}:${props.sourceKey||"all"}`} owner={String(user.id)} {...props}/>;
 }

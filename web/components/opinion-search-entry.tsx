@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { submitSearchOnEnter } from "@/lib/search-submit-key";
 
 import Link from "next/link";
@@ -97,7 +99,7 @@ function ScopePicker({ kind, selected, onChange }: { kind: Exclude<OpinionScope,
   }, [kind, query, page, key]);
   return <section className={styles.picker} aria-label="选择公开条目"><form onSubmit={event => { event.preventDefault(); setQuery(input.trim()); setPage(1); setAttempt(value => value + 1); }}><label className="sr-only" htmlFor="scope-search">查找公开条目</label><input id="scope-search" value={input} onChange={event => setInput(event.target.value)} maxLength={160} placeholder={`查找${scopes.find(row => row.key === kind)!.title.replace("特定", "")}`} /><button type="submit"><Search size={16} />查找</button></form>
     <p className={styles.quiet}>已选 {selected.length} 项，最多30项。仅显示当前公开资料。</p>
-    {!current ? <p role="status">正在读取公开选项…</p> : current.error ? <p role="alert">{current.error}<button onClick={() => setAttempt(value => value + 1)}>重新读取</button></p> : !current.data?.results.length ? <p>当前没有符合条件的公开条目。可以调整关键词，或返回全部文献。</p> : <div className={styles.options}>{current.data.results.map(row => <label key={row.id}><input type="checkbox" checked={selected.some(item => item.id === row.id)} disabled={selected.length >= 30 && !selected.some(item => item.id === row.id)} onChange={event => onChange(event.target.checked ? [...selected, row] : selected.filter(item => item.id !== row.id))} /><span><strong>{row.title}</strong>{row.subtitle ? <small>{row.subtitle}</small> : null}</span></label>)}</div>}
+    {!current ? <LoadingState role="status">正在读取公开选项…</LoadingState> : current.error ? <p role="alert">{current.error}<button onClick={() => setAttempt(value => value + 1)}>重新读取</button></p> : !current.data?.results.length ? <p>当前没有符合条件的公开条目。可以调整关键词，或返回全部文献。</p> : <div className={styles.options}>{current.data.results.map(row => <label key={row.id}><input type="checkbox" checked={selected.some(item => item.id === row.id)} disabled={selected.length >= 30 && !selected.some(item => item.id === row.id)} onChange={event => onChange(event.target.checked ? [...selected, row] : selected.filter(item => item.id !== row.id))} /><span><strong>{row.title}</strong>{row.subtitle ? <small>{row.subtitle}</small> : null}</span></label>)}</div>}
     {current?.data && current.data.total_pages > 1 ? <nav className={styles.pagination} aria-label="范围选项分页"><button type="button" disabled={page === 1} onClick={() => setPage(value => value - 1)}>上一页</button><span>{page} / {current.data.total_pages}</span><button type="button" disabled={page === current.data.total_pages} onClick={() => setPage(value => value + 1)}>下一页</button></nav> : null}
   </section>;
 }
@@ -109,7 +111,7 @@ function RecentResearch() {
   const [expanded, setExpanded] = useState(false);
   return <section className={styles.history} aria-labelledby="recent-research-title"><header><h2 id="recent-research-title"><Clock3 size={22} />我最近的研究</h2><p>仅在主动开启保存后，记录到本人账户。</p>{history.data?.count ? <button type="button" onClick={() => setExpanded(true)}>查看全部<ArrowRight size={15} /></button> : null}</header>
     {session.status === "unauthenticated" ? <div className={styles.guest}><Info size={19} /><div><strong>登录后可保存检索记录</strong><p>你正在以访客身份使用。检索记录仅保留在本设备，登录时可选择转存到个人账户。</p><Link href="/login?next=%2Faccount%2Fsettings%2Fprivacy">登录并管理保存设置</Link></div></div> : !owner ? <p role="status">{session.message || "正在核对登录状态…"}{session.status !== "loading" ? <button type="button" onClick={retry}>重新验证</button> : null}</p> : <>
-      {history.loading ? <p role="status">正在读取本人记录…</p> : null}{history.error ? <p role="alert">{history.error}<button type="button" onClick={history.reload}>重新读取</button></p> : null}
+      {history.loading ? <LoadingState role="status">正在读取本人记录…</LoadingState> : null}{history.error ? <p role="alert">{history.error}<button type="button" onClick={history.reload}>重新读取</button></p> : null}
       {history.data ? <>{!history.data.recording_enabled ? <p className={styles.privacyNotice}>搜索记录保存当前关闭。<Link href="/account/settings/privacy">管理隐私设置</Link></p> : null}<HistoryRows rows={history.data.results} />{!history.data.results.length ? <p className={styles.empty}>暂无已保存的研究检索。</p> : null}</> : null}
     </>}
     {expanded && owner && history.data ? <SearchHistory key={owner} ownerId={owner} onClose={() => setExpanded(false)} /> : null}
@@ -125,7 +127,7 @@ function SearchHistory({ ownerId, onClose }: { ownerId: string; onClose: () => v
   const history = usePersistentWorkspace<SearchRecordsPage>(`/reading/search-records/?page_size=20&page=${page}&owner_id=${encodeURIComponent(ownerId)}`, ownerId, undefined, loadSearchRecords);
   return <Dialog open onRequestClose={onClose} className={styles.historyDialog} aria-labelledby="search-history-title"><header><h2 id="search-history-title">我的研究检索记录</h2><button aria-label="关闭检索历史" onClick={onClose}><X size={20} /></button></header>
     <p className={styles.quiet}>点击记录会按当前公开内容重新检索，不恢复过期结果。</p>
-    {history.error ? <p role="alert">{history.error}<button onClick={history.reload}>重新读取</button></p> : null}{history.loading ? <p role="status">正在读取…</p> : null}
+    {history.error ? <p role="alert">{history.error}<button onClick={history.reload}>重新读取</button></p> : null}{history.loading ? <LoadingState role="status">正在读取…</LoadingState> : null}
     {history.data ? <><HistoryRows rows={history.data.results} /><nav className={styles.pagination} aria-label="研究检索记录分页"><button disabled={page === 1} onClick={() => setPage(value => value - 1)}><ChevronLeft size={14} />上一页</button><span>第 {page} 页</span><button disabled={page * history.data.page_size >= history.data.count} onClick={() => setPage(value => value + 1)}>下一页<ChevronRight size={14} /></button></nav></> : null}
     <footer><Link href="/account/settings/privacy">管理保存与删除</Link><button onClick={onClose}>关闭</button></footer>
   </Dialog>;

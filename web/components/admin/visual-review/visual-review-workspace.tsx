@@ -35,7 +35,7 @@ function newDraft(atlasId:string,path:string,viewport:Viewport):Draft{return{rev
 export function VisualReviewWorkspace(){
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<Workspace key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<LoadingState role="status">正在核对预览账户…</LoadingState>;
+  return user?<Workspace key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<LoadingState variant="screen" role="status">正在核对预览账户…</LoadingState>;
 }
 
 function Workspace({owner}:{owner:string}){

@@ -37,7 +37,7 @@ const dateLabel = (value: string) => new Date(value).toLocaleString("zh-CN");
 export function MediaLibraryCatalog({ initialMediaId }: { initialMediaId: string }) {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  return user ? <Catalog key={`${user.id}:${epoch}:${initialMediaId}`} owner={String(user.id)} initialMediaId={initialMediaId} canEdit={hasAdminCapability(user, "can_edit_metadata")} /> : <LoadingState role="status">正在核对当前管理账户…</LoadingState>;
+  return user ? <Catalog key={`${user.id}:${epoch}:${initialMediaId}`} owner={String(user.id)} initialMediaId={initialMediaId} canEdit={hasAdminCapability(user, "can_edit_metadata")} /> : <LoadingState variant="screen" role="status">正在核对当前管理账户…</LoadingState>;
 }
 
 function Catalog({ owner, initialMediaId, canEdit }: { owner: string; initialMediaId: string; canEdit: boolean }) {

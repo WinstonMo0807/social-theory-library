@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, ChevronDown, LoaderCircle } from "lucide-react";
 import { ApiRequestError, apiRequest, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -136,7 +138,7 @@ function AvatarEditor({ owner, name }: { owner: string; name: string }) {
         </div></details> : null}
       </div>
     </div>
-    {!snapshot && !message ? <p role="status">正在读取头像…</p> : null}
+    {!snapshot && !message ? <LoadingState variant="compact" role="status">正在读取头像…</LoadingState> : null}
     {recovery && !busy ? <div className={styles.feedback}><p>尚未确认头像是否保存，请先查看结果。</p><div className={styles.actions}><button type="button" onClick={() => recover()}>查看结果</button><button type="button" onClick={() => setConfirmation("stop")}>取消未完成操作</button>{canRetry ? <button type="button" onClick={() => void submit(pending.current!.body.get("action") === "set" ? "set" : "remove")}>重试保存</button> : null}</div></div> : null}
     {message ? <p className={styles.feedback} role="status">{message}</p> : null}
     <Dialog open={confirmation !== null} onRequestClose={() => { if (!busy) setConfirmation(null); }} className={styles.dialog} aria-label="确认头像操作"><h3>{confirmation === "stop" ? "取消未完成的操作？" : "恢复默认头像？"}</h3><p>{confirmation === "stop" ? "尚未完成的操作将被取消。如果已经保存，会保留保存结果。" : "当前图片将被移除，改用姓名首字作为头像。"}</p><div className={styles.actions}><button type="button" disabled={busy} onClick={() => setConfirmation(null)}>取消</button><button type="button" className={styles.primary} disabled={busy} onClick={() => { if (confirmation === "stop") recover(true); else if (confirmation) void submit(confirmation); }}>{busy ? "正在处理…" : confirmation === "stop" ? "确认取消" : "恢复默认"}</button></div>{message ? <p role="status">{message}</p> : null}</Dialog>

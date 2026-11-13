@@ -3,7 +3,7 @@
 
 import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ChevronDown, CircleAlert, Download, LoaderCircle, Pencil, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronDown, CircleAlert, Download, Pencil, Plus, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { MediaPlacement } from "@/components/media-placement";
 import { normalizePublicResourceUrl } from "@/lib/api";
@@ -25,7 +25,7 @@ const evidenceLabels = { selected: "原文证据", partial: "部分来源待核�
 export function ResearchSessionCompare({ id }: { id: string }) {
   const workspace = useResearchProject(id, true);
   if (workspace.error || ["forbidden", "temporary_error"].includes(workspace.session.status)) return <Frame><div className="stl4-research-state stl4-research-state-error" role="alert"><CircleAlert size={24} /><h2>证据比较暂时不可用</h2><p>{workspace.error || workspace.session.message}</p><button onClick={workspace.refresh}><RefreshCw size={15} />重新读取</button></div></Frame>;
-  if (!workspace.record) return <Frame><div className="stl4-research-state" role="status"><LoaderCircle className="stl4-spin" size={22} /><LoadingState>正在读取证据比较……</LoadingState></div></Frame>;
+  if (!workspace.record) return <Frame><div className="stl4-research-state" role="status"><LoadingState>正在读取证据比较……</LoadingState></div></Frame>;
   return <Comparison key={`${workspace.session.user?.id}:${id}`} workspace={workspace} />;
 }
 

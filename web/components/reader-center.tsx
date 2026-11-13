@@ -467,7 +467,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   if (["unknown", "loading", "unauthenticated"].includes(session.status)) {
     return (
       <div className="account-loading">
-        <LoadingState>{session.status === "unauthenticated" ? "登录已过期，正在转到登录页…" : "正在核对登录状态…"}</LoadingState>
+        <LoadingState variant="screen">{session.status === "unauthenticated" ? "登录已过期，正在转到登录页…" : "正在核对登录状态…"}</LoadingState>
       </div>
     );
   }
@@ -493,7 +493,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   }
 
   if (!profile || (active !== "概览" && dataOwnerId !== session.user?.id)) {
-    return <div className="account-loading"><LoadingState>正在读取账户资料…</LoadingState></div>;
+    return <div className="account-loading"><LoadingState variant="screen">正在读取账户资料…</LoadingState></div>;
   }
 
   const user = profile;

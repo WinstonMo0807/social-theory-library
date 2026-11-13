@@ -28,7 +28,7 @@ type Edit = { operation: AccountInput["operation"]; original: ManagedUser | null
 export function AccountWorkspace() {
   const user = useAdminSession(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <LoadingState role="status">正在核对管理账户…</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对管理账户…</LoadingState>;
   if (!hasAdminCapability(user, "can_manage_users")) return <main className={styles.page}><h1>账户、角色与权限</h1><div className={styles.denied}><LockKeyhole size={30}/><h2>没有权限访问此功能</h2><p>此处仅向具有账户管理能力的账户开放。</p><Link href="/admin">返回今日工作</Link></div></main>;
   return <Workspace key={`${user.id}:${epoch}`} actor={String(user.id)} />;
 }

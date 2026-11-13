@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ExternalLink, X } from "lucide-react";
@@ -35,7 +37,7 @@ export function EditorialSourceContent({ source }: { source: IssueResolvedSource
   }, [fingerprint, attempt]);
   if (!input) return <section className={styles.sourceDescription}><h2>{source.title}</h2>{source.summary ? <p>{source.summary}</p> : <p>这条注释关联到已公开的知识资料。</p>}{source.href ? <Link href={source.href}>查看相关条目 <ExternalLink size={14} /></Link> : null}</section>;
   return <section className={styles.sourceContent}><h2>{result?.source.title || source.title}</h2>{source.edition_label ? <p>{source.edition_label}</p> : null}
-    {error ? <div role="alert"><h3>该版本原文暂不可用</h3><p>{error}</p><button onClick={() => setAttempt(value => value + 1)}>重新核对原文</button></div> : !result ? <p role="status">正在核对当前版本与原文权限…</p> : result.reference ? <CitationSourcePreview reference={result.reference} /> : <p>这条材料当前只有书目信息，尚未提供可核验的原文页。</p>}
+    {error ? <div role="alert"><h3>该版本原文暂不可用</h3><p>{error}</p><button onClick={() => setAttempt(value => value + 1)}>重新核对原文</button></div> : !result ? <LoadingState role="status">正在核对当前版本与原文权限…</LoadingState> : result.reference ? <CitationSourcePreview reference={result.reference} /> : <p>这条材料当前只有书目信息，尚未提供可核验的原文页。</p>}
     <footer>{result ? <SharedCitationButton {...input}>引用 · 加入研究</SharedCitationButton> : null}{source.work_url ? <Link href={source.work_url}>查看书目信息</Link> : null}{result?.source.reader_url ? <a href={result.reference?.reader_url || result.source.reader_url} target="_blank" rel="noopener noreferrer">完整阅读、笔记与下载 <ExternalLink size={14} /></a> : null}</footer>
   </section>;
 }

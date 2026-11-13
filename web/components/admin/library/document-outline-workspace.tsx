@@ -28,7 +28,7 @@ const date = (value: string) => new Date(value).toLocaleString("zh-CN", { timeZo
 
 export function DocumentOutlineWorkspace({ assetId }: { assetId: string }) {
   const user = useAdminSession();
-  if (!user) return <LoadingState role="status">正在核对管理会话……</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对管理会话……</LoadingState>;
   return <OutlineWorkspace key={`${user.id}:${assetId}`} assetId={assetId} ownerId={String(user.id)} canEdit={hasAdminCapability(user, "can_edit_metadata")} canRebuild={hasAdminCapability(user, "can_retry_jobs")} canDownload={hasAdminCapability(user, "can_view_evidence")} />;
 }
 

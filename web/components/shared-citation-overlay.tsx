@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { DefaultCover } from "@/components/default-cover";
 import { useEvidenceLanguage } from "./evidence-language";
 import { MediaPlacement } from "@/components/media-placement";
@@ -6,7 +8,7 @@ import { MediaPlacement } from "@/components/media-placement";
 import { createRequestKey } from "../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, Copy, Info, LoaderCircle, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Check, Copy, Info, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ApiRequestError, getServerSessionCredential, subscribeToSessionChanges } from "@/lib/api";
@@ -346,7 +348,7 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
   return <div className={styles.workspace}>
     <header className={styles.heading}><h2>{t("引用与选材")}</h2><button aria-label={t("关闭引用浮层")} disabled={busy || unknown} onClick={onClose}><X size={18} /></button></header>
     <div className={styles.body}>
-      {sourceLoading ? <div className={styles.state} role="status"><LoaderCircle size={24} /><strong>{t("正在生成引用…")}</strong><p>{t("请稍候，暂时禁用复制，以免复制上一页内容。")}</p></div> : sourceError ? <div className={styles.error} role="alert"><strong>{t("来源暂不可用")}</strong><p>{t(sourceError)}</p><button onClick={() => setAttempt(value => value + 1)}><RefreshCw size={14} />{t("重新核对来源")}</button><Link href="/explore/original">{t("查找其他版本")}</Link></div> : null}
+      {sourceLoading ? <LoadingState>{t("正在生成引用…")}</LoadingState> : sourceError ? <div className={styles.error} role="alert"><strong>{t("来源暂不可用")}</strong><p>{t(sourceError)}</p><button onClick={() => setAttempt(value => value + 1)}><RefreshCw size={14} />{t("重新核对来源")}</button><Link href="/explore/original">{t("查找其他版本")}</Link></div> : null}
       {preview?.reference?.quote ? <section><h3><span>1</span>{t("所选原文")}<button className={styles.editQuote} disabled={busy || unknown || Boolean(preview.reference.anchors)} onClick={() => { setEditingQuote(true); setEditedQuote(preview.reference!.quote || ""); }}>{t("编辑")}</button></h3>
         {editingQuote ? <div className={styles.quoteEditor}><label>{t("调整选文范围")}<textarea maxLength={20000} value={editedQuote} disabled={busy || unknown} onChange={event => setEditedQuote(event.target.value)} /></label><p className={styles.hint}>{t("请保留原文文字。系统将核对来源中的唯一位置。")}</p><div className={styles.actions}><button disabled={busy || unknown} onClick={() => setEditingQuote(false)}>{t("取消")}</button><button disabled={busy || unknown || !editedQuote.trim()} onClick={() => void run(editQuote)}>{t("核对并应用")}</button></div></div> : <blockquote><SourceText text={preview.reference.quote} /></blockquote>}
         {preview.reference.anchors ? <p className={styles.hint}>{t("跨页引文按完整来源保存；调整文字时请回到原文逐页选择。")}</p> : null}

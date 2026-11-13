@@ -38,7 +38,7 @@ const sameSource = (a:Item,b:Item)=>a.source?.work_id&&b.source?.work_id?a.sourc
 export function PlacementWorkspace({pageType,pageId}:{pageType:PlacementPage;pageId:string}) {
   const user = useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  if(!user)return <LoadingState>正在核对编辑账户…</LoadingState>;
+  if(!user)return <LoadingState variant="screen">正在核对编辑账户…</LoadingState>;
   const allowed=hasAdminCapability(user,pageType==="issue"?"can_edit_metadata":"can_edit_draft_authority");
   if(!allowed)return <p>当前账户没有此页面的编辑权限。</p>;
   return <WorkspaceBody key={`${user.id}:${epoch}:${pageType}:${pageId}`} owner={String(user.id)} pageType={pageType} pageId={pageId}/>;

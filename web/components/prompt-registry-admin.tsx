@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { Plus, RefreshCw } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
@@ -284,7 +286,7 @@ export function PromptRegistryAdmin() {
             {!payload.results.length ? <p className="empty-state">尚无 Prompt 修订。可先运行 3.0 registry seed，再在这里建立新版本。</p> : null}
           </div>
         </>
-      ) : loading ? <p className="admin-help">正在读取 Prompt Registry。</p> : null}
+      ) : loading ? <LoadingState className="admin-help">正在读取 Prompt Registry。</LoadingState> : null}
       <ConfirmDialog
         open={Boolean(activationTarget)}
         title={`启用 ${activationTarget?.key || "Prompt"} v${activationTarget?.version || ""}`}

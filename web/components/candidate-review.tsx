@@ -1,6 +1,8 @@
 "use client";
 
-import { Filter, LoaderCircle } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
+
+import { Filter } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import {
@@ -200,7 +202,7 @@ export function CandidateReview() {
       </div>
       <p className="admin-help candidate-review-explanation">审核结果保存到对应条目。检索词典会根据已确认条目更新。</p>
       {message ? <p className="form-message" role="status">{message}</p> : null}
-      {loading ? <p className="admin-list-state"><LoaderCircle className="spin" size={18} />正在读取候选……</p> : null}
+      {loading ? <LoadingState className="admin-list-state">正在读取候选……</LoadingState> : null}
       {!loading && !data?.results.length ? <p className="admin-list-state">当前筛选没有候选。0 也是有效状态。</p> : null}
       <div className="candidate-review-list">
         {data?.results.map((candidate) => (

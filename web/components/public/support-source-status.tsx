@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingState } from "@/components/ui/loading-state";
 import { MediaPlacement } from "@/components/media-placement";
 
 import Link from "next/link";
@@ -27,7 +29,7 @@ export function SupportSourceStatus({ source }: { source: string }) {
     }}><label>站内原文、书目、学者或主题页面地址<input name="source" key={path} defaultValue={path} maxLength={2048} placeholder="粘贴页面地址，或 /reader/文件标识?page=88" /></label><button type="submit">读取来源信息</button></form>
     {inputError ? <p role="alert">{inputError}</p> : null}
     {source && !path ? <p role="alert">请输入站内公开页面路径。不会读取账户资料或外部链接。</p> : null}
-    {current.loading ? <p role="status">正在核对公开来源…</p> : null}
+    {current.loading ? <LoadingState role="status">正在核对公开来源…</LoadingState> : null}
     {current.error ? <div role="alert"><p>当前无法读取来源状态。未据此判断来源已经失效。</p><p>{current.error}</p><button onClick={current.reload}><RefreshCw size={15} />重新读取</button></div> : null}
     {current.source ? <><SourceStatusSummary source={current.source} />
       <div className={styles.notice}><CircleAlert size={22} aria-hidden="true" /><p>{current.source.notice}{current.source.status === "unavailable" ? " 来源尚未恢复时，请勿使用旧片段生成新的正式引用。" : ""}</p></div>
@@ -64,7 +66,7 @@ function SourceSubscription({ source }: { source: PublicSourceStatus }) {
   if (session.status === "unauthenticated") return <div className={styles.subscription}><Link href={`/login?next=${encodeURIComponent(`/help/source?source=${encodeURIComponent(source.path)}`)}`}><Bell size={16} />登录后订阅更新</Link><p>订阅保存在本人账户中，仅提供站内更新。</p></div>;
   if (!owner) return <div className={styles.subscription}><p>{session.message || "正在核对登录状态…"}</p>{session.status !== "loading" ? <button onClick={retry}>重新验证</button> : null}</div>;
   return <div className={styles.subscription}>{records.error ? <p role="alert">{records.error}<button onClick={records.reload}>重新读取订阅</button></p> : null}
-    {records.loading ? <p role="status">正在读取本人订阅…</p> : null}
+    {records.loading ? <LoadingState role="status">正在读取本人订阅…</LoadingState> : null}
     {records.data ? <><SourceFollowControl key={`${owner}:${source.scholar_profile_id || source.topic_id || source.canonical_path}`} ownerId={owner} path={source.canonical_path} scholarProfileId={source.scholar_profile_id} topicId={source.topic_id} commands={commands} row={row} canSubscribe={source.can_subscribe} onSaved={records.reload} onReload={records.reload} />
       {row?.updates_paused ? <p>来源更新记录已在隐私设置中暂停。已有记录仍保留。</p> : null}
       {!row && !source.can_subscribe ? <p>当前不能核对公开来源身份，暂不能新增订阅。</p> : null}

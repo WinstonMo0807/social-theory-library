@@ -37,7 +37,7 @@ export function ReaderBooklists({ id }: { id?: string }) {
   }, [id]);
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(next)}`); }, [state.status, next]);
   if (state.status === "temporary_error" || state.status === "forbidden") return <Frame><div className={styles.empty} role="alert"><h1>书单暂时无法读取</h1><p>{state.message}</p><button onClick={retry}>重新核对登录</button></div></Frame>;
-  if (state.status !== "authenticated" || !state.user) return <Frame><LoadingState role="status">正在核对登录状态…</LoadingState></Frame>;
+  if (state.status !== "authenticated" || !state.user) return <Frame><LoadingState variant="screen" role="status">正在核对登录状态…</LoadingState></Frame>;
   return <BooklistsWorkspace key={`${state.user.id}:${id || "index"}`} owner={String(state.user.id)} name={state.user.display_name || "读者"} id={id} />;
 }
 

@@ -28,7 +28,7 @@ const newRelation = (scholarId:string):ScholarRelation => ({id:"",source_scholar
 export function ScholarRelationsEditor(props:Props) {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<RelationWorkspace key={`${user.id}:${epoch}:${props.scholarId}`} {...props} owner={String(user.id)}/>:<LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  return user?<RelationWorkspace key={`${user.id}:${epoch}:${props.scholarId}`} {...props} owner={String(user.id)}/>:<LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 
 function RelationWorkspace({scholarId,initialRelationId,embedded=false,detailOnly=false,onGuardChange,onSaved,owner,sourceRequest,onSourceOpened}:Props&{owner:string}) {

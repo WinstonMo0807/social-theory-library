@@ -34,7 +34,7 @@
 .route-state-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: var(--stl-space-7); }
 .route-state-actions .button { min-width: 132px; }
 
-.route-loading { display: grid; align-content: center; gap: var(--stl-space-admin); }
+.route-loading { display: grid; align-content: center; gap: var(--stl-space-admin); padding:0; width:100%; }
 .route-loading-line,
 .route-loading-grid > span {
   display: block;

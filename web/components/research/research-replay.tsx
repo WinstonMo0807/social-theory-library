@@ -34,7 +34,7 @@ export function ResearchReplay({ id, initialTurn = "" }: { id: string; initialTu
   const { state, retry } = useSessionBootstrap();
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(`/account/research/${id}/history${initialTurn ? `?turn=${initialTurn}` : ""}`)}`); }, [id, initialTurn, state.status]);
   if (state.status === "temporary_error" || state.status === "forbidden") return <main className={styles.page}><h1>研究回放暂时无法读取</h1><p>{state.message}</p><button onClick={retry}>重新核对登录</button></main>;
-  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState role="status">正在核对登录状态…</LoadingState></main>;
+  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState variant="screen" role="status">正在核对登录状态…</LoadingState></main>;
   return <Replay key={`${state.user.id}:${id}:${initialTurn}`} id={id} owner={String(state.user.id)} initialTurn={initialTurn} />;
 }
 

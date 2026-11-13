@@ -1,4 +1,5 @@
 "use client";
+import { LoadingState } from "@/components/ui/loading-state";
 import { useEvidenceLanguage } from "./evidence-language";
 import { SourceText } from "./source-text";
 import { MediaPlacement } from "./media-placement";
@@ -354,7 +355,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       </section>
     </div>
     {Object.entries(filters).filter(([name, value]) => !["document_type", "author", "theories", "topics", "concept", "language", "year_min", "year_max", "availability"].includes(name) && first(value)).map(([name, value]) => <span className={styles.filterChip} key={name}>{t(filterLabels[name] || "已有范围")}{(Array.isArray(value) ? value : [value]).map(entry => <input type="hidden" key={entry} name={name} value={entry} />)}<button type="button" aria-label={t("取消{label}筛选", { label: t(filterLabels[name] || "已有范围") })} onClick={() => setFilters(current => { const next = { ...current }; delete next[name]; return next; })}><X size={12} /></button></span>)}
-    {facetBusy ? <p role="status">{t("正在读取馆内筛选项……")}</p> : null}
+    {facetBusy ? <LoadingState variant="compact">{t("正在读取馆内筛选项……")}</LoadingState> : null}
     {facetError ? <p role="alert">{t(facetError)}<button type="button" className="text-link" onClick={() => void loadFacets()}>{t("重试读取筛选项")}</button></p> : null}
     <div className={styles.actions}><button className="button secondary" type="submit">{t("应用范围并检索")}</button>{selectedCount ? <Link href={initialQuery ? `/explore/evidence?q=${encodeURIComponent(initialQuery)}` : "/explore/opinions"}>{t("清除全部筛选")}</Link> : null}</div>
   </>;
@@ -396,7 +397,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
         <DiscoveryCoverageDetails result={result} />
     </div>
     <Dialog open={summaryOpen && Boolean(selected)} onRequestClose={() => setSummaryOpen(false)} className={styles.summaryDialog} aria-labelledby="mobile-evidence-summary"><header className={styles.dialogHeader}><h2 id="mobile-evidence-summary">{t("证据摘要")}</h2><button type="button" onClick={() => setSummaryOpen(false)} aria-label={t("关闭证据摘要")}><X size={20} /></button></header>{selected ? <EvidenceSummary key={`${selected.id}:${selected.excerpt}`} item={selected} returnTo={returnTo(selected)} onContext={() => { setSummaryOpen(false); void openContext(selected); }} /> : null}</Dialog>
-    <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><h2 id="discovery-context-title">{t("原文上下文")}</h2><button type="button" aria-label={t("关闭上下文")} onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <p role="status">{t("正在读取原文上下文……")}</p> : contextError ? <div role="alert"><p>{t(contextError)}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>{t("重试读取上下文")}</button></div> : context && contextItem ? <EvidenceContextBody key={context.result_id} item={contextItem} context={context} returnTo={returnTo(contextItem)} onOpenCandidate={item => void openContext(item)} /> : null}</div></Dialog>
+    <Dialog open={Boolean(contextItem)} onRequestClose={closeContext} className={styles.contextDialog} aria-labelledby="discovery-context-title"><header className={styles.dialogHeader}><h2 id="discovery-context-title">{t("原文上下文")}</h2><button type="button" aria-label={t("关闭上下文")} onClick={closeContext}><X size={21} /></button></header><div className={styles.contextBody}>{contextBusy ? <LoadingState variant="compact">{t("正在读取原文上下文……")}</LoadingState> : contextError ? <div role="alert"><p>{t(contextError)}</p><button type="button" className="button secondary" onClick={() => contextItem && void openContext(contextItem)}>{t("重试读取上下文")}</button></div> : context && contextItem ? <EvidenceContextBody key={context.result_id} item={contextItem} context={context} returnTo={returnTo(contextItem)} onOpenCandidate={item => void openContext(item)} /> : null}</div></Dialog>
   </div></SavedWorkStatusProvider>;
 
 }

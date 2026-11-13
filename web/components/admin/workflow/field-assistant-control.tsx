@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { Check, ChevronDown, ChevronUp, LoaderCircle, Plus, Search, X } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createRequestKey } from "@/lib/request-key";
@@ -318,7 +320,7 @@ export function FieldAssistantControl({
       <p>{onFill ? "按本页填写核对建议。只有你选择填入的字段会改变；填写后仍需保存书目。" : "按本页填写核对建议。采用关联建议前请核对对象，现有公开内容保持不变。"}</p>
       <small>这里仅查看馆内记录与已有候选。外部书目查询请使用整条书目中的免费来源按钮。</small>
       {data?.field.locked ? <p role="status">此字段有人工锁：{data.field.lock_reason || "须由管理员核对后手工修改"}。建议可查看，不能直接填入。</p> : null}
-      {loading ? <p><LoaderCircle className="spin" size={14} />正在查找馆内记录和已有依据</p> : null}
+      {loading ? <LoadingState variant="compact">正在查找馆内记录和已有依据</LoadingState> : null}
       {!loading && visibleResults.map((suggestion) => <MaterialCandidate key={suggestion.id} id={suggestion.id} label={suggestion.label}>
         <div><strong>{suggestion.label}</strong><span>{suggestion.status_label}</span><p>{suggestion.summary}</p></div>
         {suggestion.conflicts.length ? <p className="field-assistant-conflict">{suggestion.conflicts.join("；")}</p> : null}

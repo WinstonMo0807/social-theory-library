@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
@@ -8,7 +10,7 @@ import type { IssueResolvedSource } from "@/lib/api/recommendation-issues.types"
 import { adaptApiWork } from "@/lib/public-data-adapters";
 import { usePublicSession } from "../public-session-provider";
 
-const ReaderShell=dynamic(()=>import("../reader-shell").then(module=>module.ReaderShell),{ssr:false,loading:()=> <p role="status">正在准备原文阅读器…</p>});
+const ReaderShell=dynamic(()=>import("../reader-shell").then(module=>module.ReaderShell),{ssr:false,loading:()=> <LoadingState role="status">正在准备原文阅读器…</LoadingState>});
 export function EditorialReader({source,returnTo}:{source:IssueResolvedSource;returnTo:string}){
   const {state}=usePublicSession(),owner=state.status==="authenticated"?String(state.user?.id):"visitor";
   return <ReaderSource key={`${owner}:${source.id}:${source.document_revision_id}`} source={source} returnTo={returnTo}/>;
@@ -24,7 +26,7 @@ function ReaderSource({source,returnTo}:{source:IssueResolvedSource;returnTo:str
     return()=>controller.abort();
   },[source.asset_id,source.edition_id,source.document_revision_id,attempt]);
   if(error)return <section role="alert"><h2>这份原文暂不可用</h2><p>{error}</p><button onClick={()=>{setError("");setManifest(null);setAttempt(value=>value+1);}}>重新核对</button></section>;
-  if(!manifest)return <p role="status">正在读取展项的准确版本、页码与目录…</p>;
+  if(!manifest)return <LoadingState role="status">正在读取展项的准确版本、页码与目录…</LoadingState>;
   const requestedPage=Number(new URLSearchParams(window.location.search).get("page"));
   return <ReaderShell embedded work={{...adaptApiWork(manifest.work),pages:manifest.page_count}} documentRevisionId={manifest.document_revision_id || ""} requestedRevisionId={source.document_revision_id || ""}
     initialPage={Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : source.page_start || 1} initialQuery="" initialFocus="" initialPassage="" initialEvidence={source.type==="span"?source.id:""} returnTo={returnTo}

@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { useCallback, useState, type ReactNode } from "react";
 import { apiRequest, getServerSessionCredential } from "@/lib/api";
 import { usePersistentWorkspace } from "@/lib/api/use-persistent-workspace";
@@ -31,7 +33,7 @@ export function SitePublicationReview({owner,editor,preview,onBack,onHistory,ini
     {editor.dirty?<aside className={styles.warning}><p>当前仍有未保存输入，下方显示已保存版本。</p><button disabled={editor.busy||Boolean(editor.operation)||editor.conflict} onClick={()=>void editor.persist()}>保存输入后重新检查</button></aside>:null}
     {editor.conflict?<p className={styles.warning}>服务器版本已变化，请返回编辑器比较并处理冲突。</p>:null}
     <nav className={styles.tabs} aria-label="固定页面发布检查">{[["preview","页面预览"],["changes","版本差异"],["checks","发布检查"],["settings","发布设置"]].map(([id,label])=><button key={id} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
-    {resource.loading?<p role="status">正在读取已保存页面与来源状态…</p>:null}{resource.error?<p role="alert" className={styles.warning}>{resource.error}<button onClick={resource.reload}>重新读取</button></p>:null}
+    {resource.loading?<LoadingState role="status">正在读取已保存页面与来源状态…</LoadingState>:null}{resource.error?<p role="alert" className={styles.warning}>{resource.error}<button onClick={resource.reload}>重新读取</button></p>:null}
     {review&&!resource.loading?<div className={styles.reviewColumns} data-tab={tab}>{tab==="preview"?<><section className={styles.reviewPanel}><h2>完整已保存页面</h2><nav className={styles.tabs} aria-label="网站预览页面">{[["welcome","欢迎页"],["home","首页"],["about","关于书库"],["content","公共说明"],["updates","公告"]].map(([key,label])=><button key={key} aria-pressed={page===key} onClick={()=>setPage(key)}>{label}</button>)}</nav><PreviewViewport locateFields={false}>{preview(review.snapshot,page)}</PreviewViewport></section><aside>{changes}{checks}{settings}</aside></>:tab==="changes"?changes:tab==="checks"?checks:settings}</div>:null}
     <Dialog open={Boolean(confirm)} onRequestClose={()=>{if(!editor.busy)setConfirm(null);}} className={styles.reviewDialog} aria-label="确认发布网站已检查版本"><h2>确认发布已检查的网站版本</h2><p>欢迎页、首页、关于、公共说明与公告会一起更新。请确认已核对提醒及公开范围。</p>{confirm&&confirm!==review?<p role="alert">检查内容已变化，请关闭窗口并重新核对本次发布范围。</p>:null}{editor.message?<p role="status">{editor.message}</p>:null}<div className={styles.reviewActions}><button disabled={editor.busy} onClick={()=>setConfirm(null)}>返回核对</button><button disabled={!publishable||!confirm||confirm!==review} onClick={()=>{if(confirm&&confirm===review)void editor.persist(true,confirm.fingerprint).then(applied=>{if(applied)setConfirm(null);resource.reload();});}}>确认发布</button></div></Dialog>
   </main>;

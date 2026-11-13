@@ -17,7 +17,7 @@ export function CatalogingWorkbench({ sessionId, initialAssistant=false }: { ses
     `/catalog/admin/cataloging-sessions/${encodeURIComponent(sessionId)}/?workspace=0`, getServerSessionCredential(),
   );
   if (error) return <section className="admin-panel" role="alert"><p>{error}</p><button type="button" onClick={retry}>重新读取</button><Link href={returnHref}>返回原页面</Link></section>;
-  if (loading || !data) return <LoadingState className="admin-list-state" role="status">正在读取编目会话…</LoadingState>;
+  if (loading || !data) return <LoadingState variant="screen" className="admin-list-state" role="status">正在读取编目会话…</LoadingState>;
   const session = data.session;
   if (["published", "abandoned"].includes(session.status)) return <section className="admin-panel"><p>本次编目已结束，草稿、馆藏和原始文件均保留。</p>{session.work_id && session.edition_id ? <Link href={withAdminReturn(`/admin/library/works/${session.work_id}?edition=${session.edition_id}`, returnHref, "publication")}>核对当前出版版本及公开结果</Link> : null}<Link href={returnHref}>返回原页面</Link></section>;
   if (!session.work_id || !session.edition_id) return <section className="admin-panel"><p role="status">上传尚未建立作品版本，文件处理完成后可继续编目。</p><button type="button" onClick={retry}>刷新处理结果</button><Link href={withAdminReturn(session.upload_item_id ? `/admin/uploads?item=${encodeURIComponent(session.upload_item_id)}` : "/admin/uploads", returnHref)}>查看原上传来源</Link></section>;

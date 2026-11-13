@@ -1,9 +1,11 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { ArrowRight, ChevronDown, ChevronRight, CircleAlert, Grid2X2, List, LoaderCircle, RefreshCw, Search, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight, CircleAlert, Grid2X2, List, RefreshCw, Search, SlidersHorizontal, Undo2, X } from "lucide-react";
 import { ApiRequestError } from "@/lib/api";
 import { catalogFilters, catalogHref, catalogParams, clearCatalogFilters, defaultCatalogMatches, readCatalogSearch, type CatalogSearchPayload } from "@/lib/api/catalog-search.client";
 import type { SearchFacetOption } from "@/lib/api/search.types";
@@ -105,7 +107,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
             <div className="stl4-catalog-view"><Link href={catalogHref(key, { view: "list" })} aria-current={view === "list" ? "true" : undefined} aria-label="列表视图"><List size={16} /></Link><Link href={catalogHref(key, { view: "grid" })} aria-current={view === "grid" ? "true" : undefined} aria-label="网格视图"><Grid2X2 size={16} /></Link></div>
           </div>
           {activeFilters.length ? <div className="stl4-catalog-mobile-chips"><CatalogFilterChips params={params} facets={facets} /></div> : null}
-          {loading ? <div className="stl4-catalog-state" role="status"><LoaderCircle className="is-spinning" size={26} /><h3>正在检索文献…</h3><p>筛选条件已保留，请稍候。</p></div> : current?.error ? <div className="stl4-catalog-state" role="alert"><CircleAlert size={28} /><h3>{current.status === 400 ? "请调整检索条件" : current.status === 429 ? "检索请求较多，请稍后重试" : "连接服务时遇到问题"}</h3><p>{current.status === 400 ? current.error : "暂时无法完成检索。你的关键词和筛选条件已保留。"}</p><div><button type="button" onClick={retry}><RefreshCw size={14} />重试</button><Link href="/explore">返回书库检索</Link></div></div> : data && !data.works.length ? <div className="stl4-catalog-state" role="status"><Search size={32} /><h3>{query ? `未找到与“${query}”相关的文献` : activeFilters.length ? "未找到符合筛选条件的文献" : "当前暂无已公开的馆藏"}</h3><p>{query || activeFilters.length ? "可以缩短关键词、调整匹配范围，或减少筛选条件。" : "文献完成发布后会显示在这里。"}</p>{activeFilters.length ? <Link className="stl4-catalog-reset" href={clear}>清除全部筛选</Link> : <Link href="/explore">进入书库检索</Link>}</div> : <SavedWorkStatusProvider workIds={data?.works.map(work => work.id) ?? []}><div className="stl4-catalog-cards">{data?.works.map(work => <SearchReadingCard key={work.id} work={adaptApiWork(work)} />)}</div></SavedWorkStatusProvider>}
+          {loading ? <LoadingState variant="rows">正在检索文献…</LoadingState> : current?.error ? <div className="stl4-catalog-state" role="alert"><CircleAlert size={28} /><h3>{current.status === 400 ? "请调整检索条件" : current.status === 429 ? "检索请求较多，请稍后重试" : "连接服务时遇到问题"}</h3><p>{current.status === 400 ? current.error : "暂时无法完成检索。你的关键词和筛选条件已保留。"}</p><div><button type="button" onClick={retry}><RefreshCw size={14} />重试</button><Link href="/explore">返回书库检索</Link></div></div> : data && !data.works.length ? <div className="stl4-catalog-state" role="status"><Search size={32} /><h3>{query ? `未找到与“${query}”相关的文献` : activeFilters.length ? "未找到符合筛选条件的文献" : "当前暂无已公开的馆藏"}</h3><p>{query || activeFilters.length ? "可以缩短关键词、调整匹配范围，或减少筛选条件。" : "文献完成发布后会显示在这里。"}</p>{activeFilters.length ? <Link className="stl4-catalog-reset" href={clear}>清除全部筛选</Link> : <Link href="/explore">进入书库检索</Link>}</div> : <SavedWorkStatusProvider workIds={data?.works.map(work => work.id) ?? []}><div className="stl4-catalog-cards">{data?.works.map(work => <SearchReadingCard key={work.id} work={adaptApiWork(work)} />)}</div></SavedWorkStatusProvider>}
           {data && data.pagination.total_pages > 1 ? <nav className="stl4-catalog-pagination" aria-label="检索结果分页">
             {data.pagination.page > 1 ? <Link href={catalogHref(key, { page: String(data.pagination.page - 1) })}>上一页</Link> : <span>上一页</span>}
             <span>第 {data.pagination.page} / {data.pagination.total_pages} 页</span>

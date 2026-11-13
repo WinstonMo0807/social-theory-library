@@ -270,6 +270,7 @@ function ContinuousPdfPage({
                 <i
                   className={highlight.kind ?? "search"}
                   data-source={highlight.source}
+                  data-reader-annotation-id={highlight.annotationId}
                   key={`${x0}-${y0}-${index}`}
                   style={{
                     left: x0,

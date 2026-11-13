@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import styles from "./brand-loading-mark.module.css";
 
 /** A brand cue, never a percentage or an estimate of backend progress. */
-export function BrandLoadingMark({ size = "small" }: { size?: "small" | "large" }) {
+export function BrandLoadingMark({ size = "small" }: { size?: "small" | "large" | "hero" }) {
   const [variant, setVariant] = useState<string>();
   useEffect(() => { setVariant(["l5", "l6", "l7"][Math.floor(Math.random() * 3)]); }, []);
   return <span className={styles.mark} data-variant={variant} data-size={size} aria-hidden="true">

@@ -50,7 +50,7 @@ function PersonField({owner,row,onChange,disabled}:{owner:string;row:PersonRow;o
   </div>;
 }
 
-export function ManualCatalogForm(){const user=useAdminSession(),params=useSearchParams(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<ManualBody key={`${user.id}:${epoch}:${params.get("session")||"new"}`} owner={String(user.id)}/>:<LoadingState role="status">正在核对编目账户…</LoadingState>;}
+export function ManualCatalogForm(){const user=useAdminSession(),params=useSearchParams(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<ManualBody key={`${user.id}:${epoch}:${params.get("session")||"new"}`} owner={String(user.id)}/>:<LoadingState variant="screen" role="status">正在核对编目账户…</LoadingState>;}
 
 function ManualBody({owner}:{owner:string}){
   const router=useRouter(),params=useSearchParams(),returnHref=safeAdminHref(params.get("return_to")),sessionParam=params.get("session")||"";

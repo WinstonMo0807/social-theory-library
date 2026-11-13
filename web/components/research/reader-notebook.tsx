@@ -40,7 +40,7 @@ export function ReaderNotebook({ assetId, initialKind = "all" }: { assetId?: str
   const next = `/account/notes${assetId ? `/${assetId}` : ""}${context.size ? `?${context}` : ""}`;
   useEffect(() => { if (state.status === "unauthenticated") window.location.replace(`/login?next=${encodeURIComponent(next)}`); }, [state.status, next]);
   if (state.status === "forbidden" || state.status === "temporary_error") return <main className={styles.page}><h1>阅读记录暂时无法读取</h1><p role="alert">{state.message}</p><button onClick={retry}>重新核对登录</button></main>;
-  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState role="status">正在核对登录状态…</LoadingState></main>;
+  if (state.status !== "authenticated" || !state.user) return <main className={styles.page}><LoadingState variant="screen" role="status">正在核对登录状态…</LoadingState></main>;
   return <Notebook key={`${state.user.id}:${assetId || "all"}:${context.get("booklist") || ""}:${context.get("work") || ""}:${context.get("project") || ""}`} owner={String(state.user.id)} assetId={assetId} initialKind={initialKind} />;
 }
 

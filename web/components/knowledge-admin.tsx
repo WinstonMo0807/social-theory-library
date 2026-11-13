@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { confirmAction } from "@/lib/ui-dialog";
 
 import { editorialHeaders, isEditorialConflict } from "@/lib/editorial-version";
@@ -272,7 +274,7 @@ export function DisciplinesAdmin() {
       <div className="knowledge-admin-layout knowledge-admin-workspace">
         <section className="admin-panel knowledge-admin-list">
           <header><h2>学科列表</h2><button type="button" onClick={() => start()}><Plus size={15} />新增学科</button></header>
-          {resource.loading ? <p>正在读取……</p> : null}<Notice>{resource.error}</Notice>
+          {resource.loading ? <LoadingState>正在读取……</LoadingState> : null}<Notice>{resource.error}</Notice>
           {resource.data?.results.map((row) => (
             <article key={row.id}>
               <div className="knowledge-admin-thumb" style={row.hero_image ? { backgroundImage: `url("${row.hero_image}")` } : undefined}>{!row.hero_image ? row.name.slice(0, 1) : null}</div>
@@ -611,7 +613,7 @@ const targetByPlacement: Record<string, "work" | "theory_school" | "topic" | "sc
 export function RecommendationsAdmin({ initialPlacement = "", embedded=false }: { initialPlacement?: string; embedded?: boolean } = {}) {
   const user=useAdminSession(),[epoch,setEpoch]=useState(0);
   useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);
-  return user?<RecommendationPlacementEditor key={`${user.id}:${epoch}`} owner={String(user.id)} canEdit={hasAdminCapability(user,"can_edit_metadata")} canPublish={hasAdminCapability(user,"can_publish_authority")} initialPlacement={initialPlacement} embedded={embedded}/>:<p role="status">正在核对编辑账户…</p>;
+  return user?<RecommendationPlacementEditor key={`${user.id}:${epoch}`} owner={String(user.id)} canEdit={hasAdminCapability(user,"can_edit_metadata")} canPublish={hasAdminCapability(user,"can_publish_authority")} initialPlacement={initialPlacement} embedded={embedded}/>:<LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
 }
 function RecommendationPlacementEditor({owner,initialPlacement,embedded,canEdit,canPublish}:{owner:string;initialPlacement:string;embedded:boolean;canEdit:boolean;canPublish:boolean}) {
   const lifetime=useRef<AbortController|null>(null);
@@ -754,7 +756,7 @@ function RecommendationPlacementEditor({owner,initialPlacement,embedded,canEdit,
               <button type="submit">搜索</button>
             </form>
           {!canEdit ? <p className="admin-help">当前账户可查看编排，修改需编辑权限，公开发布需发布权限。</p> : !canPublish ? <p className="admin-help">可以调整本次选择与预览，当前账户没有发布权限。</p> : null}
-          {candidateResource.loading ? <p role="status">正在读取可推荐内容…</p> : null}
+          {candidateResource.loading ? <LoadingState role="status">正在读取可推荐内容…</LoadingState> : null}
           <div className="recommendation-candidates" aria-busy={candidateResource.loading}>{visibleCandidates?.map((item) => {
             const checked = selectedSet.has(item.id);
             const label = item.title || item.name || item.preferred_name || item.id;

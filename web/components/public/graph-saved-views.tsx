@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import { Bookmark, FolderOpen, X } from "lucide-react";
@@ -142,7 +144,7 @@ function SavedViews({ view, title: defaultTitle, onRestore, disabled, owner, rea
       {unknown ? <button type="button" className={styles.outlineButton} disabled={busy} onClick={() => void mutate(unknown, true)}>{busy ? "正在核对…" : "核对原操作"}</button> : null}
       {initialSavedView && error && !unknown ? <button type="button" className={styles.outlineButton} disabled={busy} onClick={() => void restore(initialSavedView)}>重新读取此视图</button> : null}
       <div className={styles.savedHeading}><h3><FolderOpen size={17} />已保存 {list?.count ?? ""}</h3><button type="button" disabled={busy || loading} onClick={() => void readPage(page)}>刷新列表</button></div>
-      {loading ? <p role="status">正在读取我的视图…</p> : list ? <>
+      {loading ? <LoadingState role="status">正在读取我的视图…</LoadingState> : list ? <>
         {list.results.length ? <ul className={styles.savedList}>{list.results.map(row => <li key={row.id}><strong>{row.data.title}</strong><small>{new Date(row.updated_at).toLocaleString("zh-CN")}</small><div>
           <button type="button" disabled={busy || !!unknown} onClick={() => void restore(row.id)}>打开视图</button>
           <button type="button" disabled={busy || disabled || !!unknown || !view} onClick={() => { if (view) void mutate({ method: "PATCH", id: row.id, request_id: createRequestKey(), expected_revision: row.revision, data: { title: row.data.title, view } }); }}>更新为当前视图</button>

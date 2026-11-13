@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { BarChart3, Pause, Play, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -609,7 +611,7 @@ export function SemanticIndexAdmin() {
                 </article>
               ))}
               {!evaluationsLoaded ? (
-                <p className="evaluation-empty">正在读取馆内评估集……</p>
+                <LoadingState className="evaluation-empty">正在读取馆内评估集……</LoadingState>
               ) : evaluationError ? (
                 <p className="evaluation-empty">评估集暂时无法读取，请先排查上方错误。</p>
               ) : !evaluationSets.length ? (

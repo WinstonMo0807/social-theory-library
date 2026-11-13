@@ -36,7 +36,7 @@ const storageKey = (actor: string) => `stl-person-authority-request:${actor}`;
 export function PersonAuthorityWorkspace() {
   const user = useAdminSession(), params = useSearchParams(), [epoch, setEpoch] = useState(0);
   useEffect(() => subscribeToSessionChanges(() => setEpoch(value => value + 1)), []);
-  if (!user) return <LoadingState role="status">正在核对编辑账户…</LoadingState>;
+  if (!user) return <LoadingState variant="screen" role="status">正在核对编辑账户…</LoadingState>;
   const source = params.get("source") || "", target = params.get("target") || "", record = params.get("record") || "", create = params.get("new") === "1";
   if (![source, target, record].every(value => !value || isPersonId(value))) return <p role="alert">人物编号无效。<Link href={personPage()}>返回人物资料库</Link></p>;
   return <main className={styles.page} key={`${user.id}:${epoch}`}><nav className={styles.crumb} aria-label="面包屑"><Link href="/admin/knowledge">学者与知识</Link><span>›</span><Link href={personPage()}>人物资料库与身份核对</Link></nav>

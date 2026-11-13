@@ -1,3 +1,9 @@
+## 2026-11-13 brand-annotations-r1 当前公网Web
+
+NAS回执 2026-11-13T03:57:17Z 完成Web-only更新，镜像 sha256:015d463fd71bfe4e681d66d217c88777178effa3082020968eaf330ed79b2626。API继续使用reader-unified-r3，未迁移数据库或重启任务服务。1866运行文件哈希一致，runtime-config原样保留；ready/home/admin/explore/original/account均200，106其他容器身份、配置和启动时间不变。
+
+发布目录/volume2/library/stl-releases/20261113-brand-annotations-r1；活动compose-command追加web.compose.json。恢复脚本recovery/rollback-web.py只切回先前Web，带活动版本保护，不回灌数据库。沿用reader-unified-r1已完整读验的252637363字节数据库备份并重新核对SHA256。详stl4/BRAND_LOADING_ANNOTATIONS_20261113.md。
+
 ## 2026-11-09 menu-cover-r3 当前公网Web
 
 02:02:36+0800按用户明确授权上线。当前公网与LAN共用Web `social-theory-library-web:4.0.0-20261109-menu-cover-r3`，容器b6990f93ee58、镜像a0570b700e3e。合并阅读器/引文/品牌弹窗、菜单/帮助排版及六组默认封面；1,847运行文件含runtime-config哈希一致，16个其他服务身份/启动时间保持，API/两Host检查200。所有本轮候选已停止。

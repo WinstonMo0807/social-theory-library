@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
+
 import { createRequestKey } from "../../../lib/request-key";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useSearchParams} from "next/navigation";
@@ -100,7 +102,7 @@ function HistoryWorkspace({objectType,objectId}:{objectType:string;objectId:stri
     {pending?<section className={styles.warning}><h2>原操作结果待核对</h2><p>本标签页保留了原请求。重试将核对同一操作结果，不会自动公开或生成第二份草稿。</p><button disabled={busy} type="button" onClick={()=>void send(pending,true)}>核对原请求</button></section>:null}
     {recordProblem?<p role="alert" className={styles.warning}>本标签页记录不可用。请在历史中核对最新草稿和操作人。</p>:null}
     {pending||recordProblem?<button type="button" disabled={busy||loading||!data} onClick={()=>{setClearAgreed(false);setClearOpen(true);}}>已核对历史，清除本标签页记录</button>:null}
-    {loading?<p role="status">正在读取保存版本与历史记录…</p>:null}
+    {loading?<LoadingState role="status">正在读取保存版本与历史记录…</LoadingState>:null}
     {data?<>
       <section className={styles.object}><div><h2>当前对象</h2><div className={styles.book}><div className={styles.noCover}><FileClock size={30}/><span>{labels[objectType]}</span></div><div><h3>{data.title}</h3><p>{labels[objectType]} · 共享知识对象</p><a href={returnHref}>返回编辑 →</a></div></div></div>
         <dl><dt>当前公开</dt><dd>{data.is_public?"读者可见":"未公开或已撤回"}</dd><dt>保存状态</dt><dd>{data.has_draft?"有未发布修改":"暂无独立编辑草稿"}</dd><dt>历史记录</dt><dd>{data.history.count} 份修订</dd></dl>

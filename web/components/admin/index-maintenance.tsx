@@ -38,7 +38,7 @@ const running=(data:Payload)=>data.jobs.some(row=>["pending","running"].includes
 function Status({value,label}:{value:string;label?:string}){return <span className={styles.status} data-state={value}>{label?`${label} · `:""}{states[value]||"待核实"}</span>;}
 function useOwned<T>(owner:string,path:string,poll?: (data:T)=>number|null){const load=useCallback((url:string,signal:AbortSignal)=>apiRequest<T>(url,{signal,cache:"no-store",headers:{"X-Editor-Owner":owner}},getServerSessionCredential(),false),[owner]);return usePersistentWorkspace<T>(path,owner,poll,load);}
 
-export function IndexMaintenance(){const user=useAdminSession(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<Maintenance key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<LoadingState role="status">正在核对索引维护账户…</LoadingState>;}
+export function IndexMaintenance(){const user=useAdminSession(),[epoch,setEpoch]=useState(0);useEffect(()=>subscribeToSessionChanges(()=>setEpoch(value=>value+1)),[]);return user?<Maintenance key={`${user.id}:${epoch}`} owner={String(user.id)}/>:<LoadingState variant="screen" role="status">正在核对索引维护账户…</LoadingState>;}
 
 function Maintenance({owner}:{owner:string}){
   const params=useSearchParams(),router=useRouter(),pathname=usePathname();
@@ -89,7 +89,7 @@ function RetrievalServiceRecords({owner}:{owner:string}){
   if(!allowed)return <p className={styles.note}>索引完成状态来自已保存的处理记录。当前账户没有查看服务运行记录的权限，可请运行维护人员核对服务。</p>;
   const services=resource.data?.groups.flatMap(group=>group.services).filter(service=>["discovery-embedding","discovery-reranker"].includes(service.id))||[];
   return <details data-disclosure="collection" className={styles.serviceRecords}><summary>检索服务的最近检查记录</summary><p className={styles.note}>索引记录与服务状态分别核对。这里只读取已有记录，刷新不会运行检索、推理或质量评测。</p>
-    {resource.error?<p role="alert">{resource.error}</p>:null}{resource.loading?<p role="status">正在读取检查记录…</p>:null}
+    {resource.error?<p role="alert">{resource.error}</p>:null}{resource.loading?<LoadingState role="status">正在读取检查记录…</LoadingState>:null}
     <div className={styles.actions}><button type="button" disabled={resource.loading} onClick={resource.reload}>刷新记录</button><Link href="/admin/settings">查看全部服务</Link></div>
     {services.map(service=><article key={service.id}><header><strong>{service.group==="embedding"?"文本嵌入":"结果重排"}</strong><span>{service.status_label}</span></header><p>{service.observation?.detail||"尚无已保存检查结果，不能据此判断当前可用性。"}</p><p className={styles.note}>检查时间：{date(service.observation?.checked_at)}{["stale","changed"].includes(service.status)?" · 记录已过期或配置已变化，请重新核对服务。":""}</p><Link href={`/admin/settings?service=${encodeURIComponent(service.id)}`}>查看这项服务与检查入口</Link></article>)}
     {resource.data&&!services.length?<p>当前配置没有相应服务记录，请打开服务页核对。</p>:null}
