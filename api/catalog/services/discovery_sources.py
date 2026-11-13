@@ -325,7 +325,7 @@ def logical_source_units(revision, structure_id, header, *, projection_version=2
     nodes = {n.pk:n for n in structure.nodes.all()}
     segments = DocumentNodeSegment.objects.filter(node__structure=structure,
         node__kind__in=["paragraph","footnote","table","references","unresolved"], node__children__isnull=True
-        ).select_related("page").order_by("node__order","order")
+        ).prefetch_related("page").order_by("node__order","order")
     def emit(group):
         segment, last = group[0], group[-1]
         page, node = segment.page, nodes[segment.node_id]
@@ -351,6 +351,8 @@ def logical_source_units(revision, structure_id, header, *, projection_version=2
             "reader_url":f"/reader/{revision.asset_id}?revision={revision.pk}&page={page.page_number}",
             "quality_flags":["structure_pending"] if node.kind == "unresolved" else []}}
     pending = []
+    # Share each immutable page within a bounded batch. Joining its full text
+    # and geometry repeated the same page payload for every OCR line.
     for segment in segments.iterator(chunk_size=100):
         page, node = segment.page, nodes[segment.node_id]
         text = page.text[segment.start:segment.end]
