@@ -1,3 +1,9 @@
+## 2026-11-13 结构补丁运行与定向数据保存
+
+68b4e231仅更新候选knowledge_sources.py、document_structure.py，两份哈希一致；API于09:52:30 UTC重启完成。源码备份位于候选根目录backup-structure-68b4e231-20261113174949/source-before.tar.gz。定向结构/编纂数据备份backup-structure-data-68b4e231-20261113/source-and-compilation-before.dump为50,276,492字节，SHA256 b94bf8e7403c0de02c68253c056a024c9cd278e2d540d5f8e2af57967d6b4e3a，pg_restore清单202行；尚未做恢复演练。
+
+新结构及接续run通过原服务保存，原结构/历史锚点不删除。源码回退不删除新增数据；当前结构回退须精确选定保留结构并重新协调接续任务，不能直接恢复整库覆盖此后审核。无schema变更，未运行全馆索引。来源定向更新成功，关键词任务仍queued，worker/beat保持停止。最后正式ready200/0.171秒、候选200/2.856秒、5174入口200/0.252秒；宿主mem/io full PSI avg60为13.82%/18.77%，不宣称无风险。
+
 ## 2026-11-13 长书恢复补丁部署
 
 83f7b332仅更新候选intelligence.py，逐文件哈希一致。备份backup-resume-83f7b332-20261113172532/source-before.tar.gz；候选API于09:26:16.990096243 UTC启动。正式ready200/0.161秒、候选200/0.616秒、5174入口200/0.319秒；此前一次请求超时不解释为零命中。worker/beat保持停止，mem/io full PSI avg60为9.70%/12.58%，仍有等待。无新增迁移或全馆索引重建。
