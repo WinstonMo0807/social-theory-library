@@ -1,3 +1,9 @@
+## 2026-11-13 部章目录修复部署
+
+4cc5a57e的document_outline、outline_automatic、knowledge_sources三份运行文件已部署并核对哈希，仅候选API于14:00:49 UTC重启。源码回退包backup-outline-fragments-4cc5a57e-20261113220005/source-before.tar.gz；数据包backup-foucault-outline-v11-20261113/source-and-compilation-before.dump为58,670,914字节，SHA256 8fdda903a57de83cabc350b8cf47b161a4f23ccb7815f7666784df0efb2263e5，pg_restore清单224行，未实际恢复。
+
+指定规训文献通过原服务生成16条自动目录及新结构，383快照与两份旧结构保持。无schema变化，不运行全馆重建，不复写治理当前分析采用的v4结构。重启后有一次候选/前端30秒超时，随后均200；宿主内存/IO等待仍高。worker/beat保持停止，公网、正式库、MCP不变。
+
 ## 2026-11-13 新馆藏自动维护候选更新
 
 f6728245已更新5份API源码并核对哈希，源码回退包位于候选根目录backup-knowledge-automation-f6728245-20261113212303/source-before.tar.gz。仅候选API于13:23:55.921 UTC重启，无迁移；worker/beat保持停止。前端来自当前工作区，实际登录界面成功读取策略并显示模型未启用的等待路径，未保存策略或启动全馆任务。正式/候选/前端分别HTTP200，宿主内存和IO等待仍存在。公网、正式数据库和MCP没有变更。

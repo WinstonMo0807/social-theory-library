@@ -1,3 +1,7 @@
+## 2026-11-13 自动纳入的 PostgreSQL 可空关联锁
+
+- A真实来源更新失败：knowledge_automation.enroll对SiteSetting的FOR UPDATE同时作用于可空updated_by外连接，PostgreSQL拒绝。SQLite测试未覆盖该数据库语义；原任务failed，已保存正文结构未丢失。修复为select_for_update(of=("self",))，保留配置串行化与权限核验，待真实原任务重试。无schema变化，不放宽授权。
+
 ## 2026-11-13 规训部章目录真实缺陷
 
 - A源码已修复：目录标题损坏使页内章标题误作正文；单点页码引线和无页码部标题被丢弃；OCR横向拆框原始次序与视觉不同；第二级章被归为section。outline-v11及结构v5从原始几何与文本片段验证，不修写历史OCR；未定位的部不能改变其余章层级。

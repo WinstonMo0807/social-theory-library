@@ -71,7 +71,9 @@ def enroll(edition_id):
     """Cheap publication callback: identity and authorization only, no parsing."""
     from catalog.services.knowledge_core import require_editor
     from ingestion.models import AuditEvent
-    policy = m.SiteSetting.objects.select_for_update().filter(key=SETTING_KEY, public=False).select_related("updated_by").first()
+    # updated_by is nullable; PostgreSQL cannot lock that outer-joined side.
+    # The policy row serializes admission, while the actor is read for access.
+    policy = m.SiteSetting.objects.select_for_update(of=("self",)).filter(key=SETTING_KEY, public=False).select_related("updated_by").first()
     if not policy or policy.value.get("mode") != "draft":
         return None
     try:
