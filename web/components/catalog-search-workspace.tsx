@@ -8,7 +8,8 @@ import { ApiRequestError } from "@/lib/api";
 import { catalogFilters, catalogHref, catalogParams, clearCatalogFilters, defaultCatalogMatches, readCatalogSearch, type CatalogSearchPayload } from "@/lib/api/catalog-search.client";
 import type { SearchFacetOption } from "@/lib/api/search.types";
 import { Dialog } from "./ui/dialog";
-import { CatalogResultCard } from "./catalog-result-card";
+import { SearchReadingWorkbench, SearchReadingCard, SearchReadingPreview, SearchableFacet } from "./search-reading-workbench";
+import { adaptApiWork } from "@/lib/public-data-adapters";
 import { SavedWorkStatusProvider } from "./save-work-button";
 import { UsageTracker, SearchClickTracker } from "./usage-tracker";
 
@@ -68,7 +69,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
 
   return <>
     {data ? <><UsageTracker eventType="search_submit" query={query} resultCount={data.pagination.total} source="exact_search" scope="catalog" /><SearchClickTracker query={query} source="exact_search" /></> : null}
-    <main className="stl4-catalog-page">
+    <SearchReadingWorkbench works={(data?.works || []).map(adaptApiWork)}><main className="stl4-catalog-page">
       <section className="stl4-catalog-hero" aria-labelledby="catalog-title">
         <div className="stl4-catalog-hero-copy">
           <nav aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/explore">书库检索</Link><ChevronRight size={12} /><span>馆藏检索</span></nav>
@@ -104,7 +105,7 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
             <div className="stl4-catalog-view"><Link href={catalogHref(key, { view: "list" })} aria-current={view === "list" ? "true" : undefined} aria-label="列表视图"><List size={16} /></Link><Link href={catalogHref(key, { view: "grid" })} aria-current={view === "grid" ? "true" : undefined} aria-label="网格视图"><Grid2X2 size={16} /></Link></div>
           </div>
           {activeFilters.length ? <div className="stl4-catalog-mobile-chips"><CatalogFilterChips params={params} facets={facets} /></div> : null}
-          {loading ? <div className="stl4-catalog-state" role="status"><LoaderCircle className="is-spinning" size={26} /><h3>正在检索文献…</h3><p>筛选条件已保留，请稍候。</p></div> : current?.error ? <div className="stl4-catalog-state" role="alert"><CircleAlert size={28} /><h3>{current.status === 400 ? "请调整检索条件" : current.status === 429 ? "检索请求较多，请稍后重试" : "连接服务时遇到问题"}</h3><p>{current.status === 400 ? current.error : "暂时无法完成检索。你的关键词和筛选条件已保留。"}</p><div><button type="button" onClick={retry}><RefreshCw size={14} />重试</button><Link href="/explore">返回书库检索</Link></div></div> : data && !data.works.length ? <div className="stl4-catalog-state" role="status"><Search size={32} /><h3>{query ? `未找到与“${query}”相关的文献` : activeFilters.length ? "未找到符合筛选条件的文献" : "当前暂无已公开的馆藏"}</h3><p>{query || activeFilters.length ? "可以缩短关键词、调整匹配范围，或减少筛选条件。" : "文献完成发布后会显示在这里。"}</p>{activeFilters.length ? <Link className="stl4-catalog-reset" href={clear}>清除全部筛选</Link> : <Link href="/explore">进入书库检索</Link>}</div> : <SavedWorkStatusProvider workIds={data?.works.map(work => work.id) ?? []}><div className="stl4-catalog-cards">{data?.works.map(work => <CatalogResultCard key={work.id} row={work} />)}</div></SavedWorkStatusProvider>}
+          {loading ? <div className="stl4-catalog-state" role="status"><LoaderCircle className="is-spinning" size={26} /><h3>正在检索文献…</h3><p>筛选条件已保留，请稍候。</p></div> : current?.error ? <div className="stl4-catalog-state" role="alert"><CircleAlert size={28} /><h3>{current.status === 400 ? "请调整检索条件" : current.status === 429 ? "检索请求较多，请稍后重试" : "连接服务时遇到问题"}</h3><p>{current.status === 400 ? current.error : "暂时无法完成检索。你的关键词和筛选条件已保留。"}</p><div><button type="button" onClick={retry}><RefreshCw size={14} />重试</button><Link href="/explore">返回书库检索</Link></div></div> : data && !data.works.length ? <div className="stl4-catalog-state" role="status"><Search size={32} /><h3>{query ? `未找到与“${query}”相关的文献` : activeFilters.length ? "未找到符合筛选条件的文献" : "当前暂无已公开的馆藏"}</h3><p>{query || activeFilters.length ? "可以缩短关键词、调整匹配范围，或减少筛选条件。" : "文献完成发布后会显示在这里。"}</p>{activeFilters.length ? <Link className="stl4-catalog-reset" href={clear}>清除全部筛选</Link> : <Link href="/explore">进入书库检索</Link>}</div> : <SavedWorkStatusProvider workIds={data?.works.map(work => work.id) ?? []}><div className="stl4-catalog-cards">{data?.works.map(work => <SearchReadingCard key={work.id} work={adaptApiWork(work)} />)}</div></SavedWorkStatusProvider>}
           {data && data.pagination.total_pages > 1 ? <nav className="stl4-catalog-pagination" aria-label="检索结果分页">
             {data.pagination.page > 1 ? <Link href={catalogHref(key, { page: String(data.pagination.page - 1) })}>上一页</Link> : <span>上一页</span>}
             <span>第 {data.pagination.page} / {data.pagination.total_pages} 页</span>
@@ -112,8 +113,9 @@ export function CatalogSearchWorkspace({ queryString }: { queryString: string })
           </nav> : null}
           <p className="stl4-catalog-crosslink"><Link href={`/explore?context=global&q=${encodeURIComponent(query)}`}>同时查找学者、主题与原文片段 <ArrowRight size={13} /></Link></p>
         </section>
+        <SearchReadingPreview/>
       </div>
-    </main>
+    </main></SearchReadingWorkbench>
     <Dialog open={mobileFilters} onRequestClose={() => setMobileFilters(false)} initialFocusRef={mobileClose} className="stl4-catalog-filter-dialog" aria-labelledby="catalog-filters-title">
       <header><button ref={mobileClose} type="button" onClick={() => setMobileFilters(false)}>取消</button><h2 id="catalog-filters-title">筛选条件</h2><Link href={clear} onClick={() => setMobileFilters(false)}>清除全部</Link></header>
       <form onSubmit={submitFilters} action="/explore/original" key={`mobile:${key}:${mobileFilters}`}>
@@ -161,8 +163,5 @@ function CatalogFilterChips({ params, facets }: { params: URLSearchParams; facet
 }
 
 function CatalogFacet({ name, options, params, collapsed = false }: { name: keyof typeof facetKeys; options: SearchFacetOption[]; params: URLSearchParams; collapsed?: boolean }) {
-  const selected = params.getAll(name);
-  const rows = [...options, ...selected.filter(value => !options.some(option => option.value === value)).map(value => ({ value, label: value, count: null }))];
-  const contents = rows.length ? rows.map(option => <label key={option.value}><input type="checkbox" name={name} value={option.value} defaultChecked={selected.includes(option.value)} /><span>{option.label}</span><small>{option.count}</small></label>) : <p>暂无可用选项</p>;
-  return collapsed ? <section data-content-section className="stl4-catalog-filter-group"><header data-section-heading>{filterNames[name]}<ChevronDown size={14} /></header><div>{contents}</div></section> : <fieldset className="stl4-catalog-filter-group"><legend>{filterNames[name]}</legend>{contents}</fieldset>;
+  return <SearchableFacet title={filterNames[name]} name={name} options={options} selected={params.getAll(name)} />;
 }

@@ -1,0 +1,20 @@
+{
+  "scope": "allowlisted boolean environment flags only; no provider credentials",
+  "flags": {
+    "PUBLIC_DEPLOYMENT_MODE": true,
+    "STL_VISUAL_REVIEW_ENABLED": false,
+    "DISCOVERY_ENABLED": true,
+    "THEORY_SYSTEM_ENABLED": true,
+    "SEMANTIC_SEARCH_ENABLED": true,
+    "SEMANTIC_SEARCH_V2_ENABLED": true,
+    "STL_DEEP_RETRIEVAL_ENABLED": true,
+    "STL_DEEP_RETRIEVAL_BGE_ENABLED": true,
+    "STL_DEEP_RETRIEVAL_CONVMEMORY_ENABLED": true,
+    "R2_UPLOAD_STAGING_ENABLED": true,
+    "DOCX_PREVIEW_ENABLED": true,
+    "CAPABILITY_REMOTE_WORKER_ENABLED": false,
+    "NAS_ON_DEMAND_ENABLED": true,
+    "PROCESS_INGESTION_INLINE": false,
+    "CELERY_TASK_ALWAYS_EAGER": "unset; use source default"
+  }
+}

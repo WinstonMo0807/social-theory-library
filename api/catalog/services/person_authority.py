@@ -26,7 +26,7 @@ class AuthorityConflict(APIException):
     default_detail = "人物资料或引用已变化，请重新读取并核对。"
 
 
-FIELDS = ("preferred_name", "original_name", "birth_year", "death_year", "biography", "preferred_language",
+FIELDS = ("preferred_name", "original_name", "citation_name", "birth_year", "death_year", "biography", "preferred_language",
           "original_language", "country_region", "authority_note", "external_ids", "identifier_sources", "authority_status")
 VARIANT_FIELDS = ("name", "language", "variant_type", "source_note", "is_verified", "displayable")
 ACTION = "person_authority_command"
@@ -324,9 +324,11 @@ def command(actor, data):
                 provenance={"source": "person_authority", "request_id": str(data["request_id"])})
             events.append(str(event.pk))
             for edition in Edition.objects.filter(pk__in=editions, state="published").order_by("pk"):
+                citation_only = set(preview["fields"]) == {"citation_name"}
                 event = create_catalog_publication_event(edition, event_type="catalog_updated", changed_fields=["contributors"],
                     actor=actor, idempotency_key=f"person-authority:{data['request_id']}:{edition.pk}",
-                    provenance={"source": "person_authority", "request_id": str(data["request_id"])})
+                    provenance={"source": "person_citation_name" if citation_only else "person_authority",
+                                "person_id": str(proposed.pk), "request_id": str(data["request_id"])})
                 events.append(str(event.pk))
         current = proposed
     AuditEvent.objects.create(pk=data["request_id"], actor=actor, action=ACTION, object_type="catalog.Person", object_id=str(current.pk),

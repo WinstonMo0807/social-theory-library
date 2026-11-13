@@ -25,6 +25,7 @@ import { SemanticResultActions } from "@/components/semantic-result-actions";
 import { SearchClickTracker, UsageTracker } from "@/components/usage-tracker";
 import { semanticResponseLabel } from "@/lib/semantic-search-ui";
 import { SearchModeSwitch } from "@/components/search-mode-switch";
+import { SearchReadingWorkbench, SearchReadingCard, SearchReadingPreview, SearchableFacet } from "@/components/search-reading-workbench";
 import { loadHotSearches, loadSearch, loadSemanticSearch } from "@/lib/api/search.server";
 import type { SearchFacetOption, SearchFilters, SemanticSearchPayload, SemanticSearchResult } from "@/lib/api/search.types";
 
@@ -157,6 +158,7 @@ export default async function ExplorePage({
     <>
       <UsageTracker eventType="search_submit" query={query} resultCount={resultCount(results.counts)} source="exact_search" scope={scope} />
       <SearchClickTracker query={query} source="exact_search" />
+      <SearchReadingWorkbench works={results.works}>
       <div className="page-shell explore-page stl4-explore-original-page">
         <section className="explore-workbench-head exact-workbench-head">
           <div className="explore-workbench-title">
@@ -299,6 +301,10 @@ export default async function ExplorePage({
               <strong>
                 {scopeLabels[scope]} · {scopeResultCount(scope, results.counts, results.pagination.total).toLocaleString("zh-CN")} 条
               </strong>
+              <form className="sort-form" action="/explore/original">
+                {preservedForSort.map(([name, value]) => <input type="hidden" name={name} value={value} key={`${name}-${value}`} />)}
+                <select name="sort" aria-label="结果排序" defaultValue={sort}><option value="relevance">相关性降序</option><option value="newest">最新入库</option><option value="year">出版年份</option></select><button type="submit">应用</button>
+              </form>
               <div>
                 <Link
                   className={view === "list" ? "active" : ""}
@@ -411,47 +417,10 @@ export default async function ExplorePage({
             />
           </section>
 
-          <aside className="search-aside exact-search-aside">
-            <section>
-              <h2>结果概览</h2>
-              {[
-                [results.counts.books.toLocaleString("zh-CN"), "图书"],
-                [results.counts.articles.toLocaleString("zh-CN"), "论文"],
-                [results.counts.scholars.toLocaleString("zh-CN"), "学者"],
-                [results.counts.topics.toLocaleString("zh-CN"), "主题"],
-                [results.counts.passages.toLocaleString("zh-CN"), "全文内容"],
-              ].map(([count, label]) => (
-                <p key={label}><strong>{count}</strong><span>{label}</span></p>
-              ))}
-            </section>
-            <section>
-              <h2>排序</h2>
-              <form className="sort-form exact-aside-sort" action="/explore/original">
-                <input type="hidden" name="context" value="global" />
-                {preservedForSort.map(([name, value]) => (
-                  <input type="hidden" name={name} value={value} key={`${name}-${value}`} />
-                ))}
-                <label>
-                  <span className="sr-only">结果排序</span>
-                  <select data-stl-select name="sort" defaultValue={sort}>
-                    <option value="relevance">相关性降序</option>
-                    <option value="newest">最新入库</option>
-                    <option value="year">出版年份</option>
-                  </select>
-                </label>
-                <button type="submit">应用</button>
-              </form>
-            </section>
-            <section>
-              <h2>推荐搜索</h2>
-              {hotSearches.map((item) => (
-                <Link href={`/explore/original?context=global&q=${encodeURIComponent(item)}`} key={item}><Search size={13} />{item}</Link>
-              ))}
-              {!hotSearches.length ? <p className="empty-state">匿名搜索数据积累后将在这里显示。</p> : null}
-            </section>
-          </aside>
+          <SearchReadingPreview />
         </div>
       </div>
+      </SearchReadingWorkbench>
       <SiteFooter />
     </>
   );
@@ -852,33 +821,7 @@ function FilterGroup({
   selected: string[];
   collapsible?: boolean;
 }) {
-  const content = options.length ? options.map((option) => (
-    <label key={option.value}>
-      <input
-        type="checkbox"
-        name={name}
-        value={option.value}
-        defaultChecked={selected.includes(option.value)}
-      />
-      <span>{option.label}</span>
-      <small>{option.count}</small>
-    </label>
-  )) : <p className="filter-empty">当前结果没有可用选项。</p>;
-
-  if (collapsible) {
-    return (
-      <section data-content-section className="filter-group collapsible-filter">
-        <header data-section-heading>{title}<span>{selected.length ? selected.length : "＋"}</span></header>
-        <div>{content}</div>
-      </section>
-    );
-  }
-  return (
-    <fieldset className="filter-group">
-      <legend>{title}</legend>
-      {content}
-    </fieldset>
-  );
+  return <SearchableFacet title={title} name={name} options={options} selected={selected} />;
 }
 
 function ExactMobileFilters({
@@ -1004,7 +947,7 @@ function WorkResultGroup({
     <div className="result-group">
       <SectionHeading title={title} href={href} action={action} />
       <div className="result-books">
-        {works.map((work) => <BookCard work={work} exploreActions key={work.id} />)}
+        {works.map((work) => <SearchReadingCard work={work} key={work.id} />)}
         {!works.length ? <p className="empty-state">{empty}</p> : null}
       </div>
     </div>

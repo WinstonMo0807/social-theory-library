@@ -50,3 +50,7 @@
   .dialog { padding: 18px 14px; }
   .dialog li > div { display: grid; gap: 6px; }
 }
+
+
+/* Center layout candidate boundary. */
+:global([data-stl-page-layout="account"]) .page { width: 100%; min-width: 0; max-width: 1440px; }

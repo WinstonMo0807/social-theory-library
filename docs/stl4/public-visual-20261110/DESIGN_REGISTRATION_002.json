@@ -1,0 +1,98 @@
+[
+  {
+    "id": "P01",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-291bc84a-8db7-4a1c-b064-f4b825444eeb.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "生成偏差，已逐项纠正为v2，不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_002.json"
+  },
+  {
+    "id": "P02",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-950e29e6-0c95-434b-a103-6d4010122495.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "生成偏差，已逐项纠正为v2，不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_002.json"
+  },
+  {
+    "id": "P03",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-79780642-a9ed-48eb-acb4-dd6d3c17a2cd.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "生成偏差，已逐项纠正为v2，不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_002.json"
+  },
+  {
+    "id": "R23",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-256b7655-609d-4b26-932b-5a32169b3983.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "生成偏差，已逐项纠正为v2，不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_002.json"
+  },
+  {
+    "id": "A04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-bc618333-e6e1-4ae0-a6d0-1fc24d6b6c1e.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "生成偏差，已逐项纠正为v2，不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_002.json"
+  },
+  {
+    "id": "A09",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6fd6faeb-04b5-4dae-9697-641e11229b09.png",
+    "version": "v1",
+    "status": "superseded",
+    "notes": "生成偏差，已逐项纠正为v2，不作实现依据。",
+    "prompt_file": "DESIGN_PROMPTS_002.json"
+  },
+  {
+    "id": "P01",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-1f2ce14d-0c16-48b9-82ce-62253a34e313.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "prompt_file": "DESIGN_CORRECTIONS_002.json"
+  },
+  {
+    "id": "P02",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "prompt_file": "DESIGN_CORRECTIONS_002.json"
+  },
+  {
+    "id": "P03",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-aba0913a-2366-4bd4-97d1-307b191a9661.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "prompt_file": "DESIGN_CORRECTIONS_002.json"
+  },
+  {
+    "id": "R23",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-c0070f0f-8ac8-4b8f-8e6e-9b1c64243236.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "prompt_file": "DESIGN_CORRECTIONS_002.json"
+  },
+  {
+    "id": "A04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2c9410eb-37e7-49e5-a97b-d125ff0822f3.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "prompt_file": "DESIGN_CORRECTIONS_002.json"
+  },
+  {
+    "id": "A09",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-824827d0-de26-478c-bb53-fea986116f99.png",
+    "version": "v2",
+    "status": "generated_inspected",
+    "notes": "已查看完整生成图。已纠正非业务导航、普通欢迎选择器、列表PDF片段、多余阅读侧栏及校准假进度。实际字体/精确SVG、数据/校验和活动导航仍按真实组件，示例文字与图中API说明不写入产品；纯色控件覆盖生成纹理。",
+    "prompt_file": "DESIGN_CORRECTIONS_002.json"
+  }
+]

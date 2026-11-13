@@ -1,0 +1,66 @@
+[
+  {
+    "id": "P08",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-7fa80684-2f1a-4c72-950b-8e321d880c98.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  },
+  {
+    "id": "P10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6e1f68e0-fc8f-4624-aae3-ff87f256c73e.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  },
+  {
+    "id": "P14",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3ec19033-aac0-4ec1-86e9-86802fe063a2.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  },
+  {
+    "id": "P16",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-f20735d1-8a50-4705-a10c-c6bb6b79d088.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  },
+  {
+    "id": "P18",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2e3fb5e7-1311-42df-a911-b584c9d37fdc.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "发现重复筛选、日期/页标语义或访客文案偏差，待指定修订，不作为完成设计。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  },
+  {
+    "id": "P19",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b679ae99-36a4-438e-928a-3b21273d409f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "发现重复筛选、日期/页标语义或访客文案偏差，待指定修订，不作为完成设计。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  },
+  {
+    "id": "P20",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-0ee183d3-b548-415d-8619-65343132507c.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已查看图，目录/正文/关联/图形操作符合计划映射；所有生成数据与图片仅示例，实际页面使用已核实内容与品牌。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  },
+  {
+    "id": "P21",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b3ee2b92-8b17-4dde-b8e7-28afbf0bf0a3.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "发现重复筛选、日期/页标语义或访客文案偏差，待指定修订，不作为完成设计。",
+    "prompt_file": "DESIGN_PROMPTS_005.json"
+  }
+]

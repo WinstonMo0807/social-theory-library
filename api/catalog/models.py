@@ -1737,6 +1737,7 @@ class Person(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
     country_region = models.CharField(max_length=120, blank=True)
     authority_note = models.TextField(blank=True)
     identifier_sources = models.JSONField(default=dict, blank=True)
+    citation_name = models.CharField(max_length=240, blank=True)
     portrait = models.ImageField(upload_to="public/people/%Y/%m/", blank=True)
     portrait_rendition = models.ForeignKey(
         "MediaRendition", null=True, blank=True, on_delete=models.PROTECT, related_name="person_portraits",
@@ -1952,7 +1953,7 @@ class PersonNameVariant(QueryLexiconAuthorityMixin, UUIDTimeStampedModel):
 
 class ScholarProfile(UUIDTimeStampedModel):
     person = models.OneToOneField(Person, on_delete=models.CASCADE, related_name="scholar_profile")
-    slug = models.SlugField(max_length=180, unique=True)
+    slug = models.SlugField(max_length=180, unique=True, allow_unicode=True)
     short_description = models.CharField(max_length=400, blank=True)
     affiliations = models.JSONField(default=list, blank=True)
     key_concerns = models.JSONField(default=list, blank=True)

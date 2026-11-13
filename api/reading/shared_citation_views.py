@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import Edition
-from catalog.services.citations import citation_bundle
+from catalog.services.citations import citation_bundle, citation_metadata_notes
 from catalog.services.media import snapshot_cover
 from catalog.services.publication_eligibility import active_catalog_snapshot, public_edition_q
 from . import research
@@ -98,6 +98,8 @@ class PublicCitationPreviewView(APIView):
             **snapshot_cover(edition), "work_url": f"/works/{edition_values.get('public_slug') or edition.id}",
             "reader_url": reference.get("reader_url") if reference else None,
             "pdf_page": page, "printed_label": printed, "source_status": "available"}
+        source['citation_notes'] = citation_metadata_notes(edition, snapshot)
+        source['container_title'] = edition_values.get('journal_title') or edition_values.get('container_title') or ''
         response = Response({"source": source, "reference": reference, "citations": citations})
         response["Cache-Control"] = "no-store"
         return response

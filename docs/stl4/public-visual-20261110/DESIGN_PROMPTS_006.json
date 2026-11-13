@@ -1,0 +1,83 @@
+[
+  {
+    "id": "P18",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2e3fb5e7-1311-42df-a911-b584c9d37fdc.png",
+    "version": "v2",
+    "prompt": "Edit the supplied existing STL design. Keep its visual style, page structure and all unrelated elements. Apply only this precise correction: Keep the time-window rail on the left, but remove the duplicate event-type checkboxes and grouping radios from that left rail. Those filters already exist in the top toolbar and should appear once. Keep chronological events, unknown dates and pagination. No extra control or new feature. Flat paper-white/charcoal/sand-gold UI, no gradients. This is a design sample, not production data."
+  },
+  {
+    "id": "P19",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b679ae99-36a4-438e-928a-3b21273d409f.png",
+    "version": "v2",
+    "prompt": "Edit the supplied existing STL design. Keep its visual style, page structure and all unrelated elements. Apply only this precise correction: Correct metadata semantics: top label 日期精度：年, separate 示例年代：1955年. In the right 来源证据 combine the source version and location into a concise source block: 示例著作 / 示例版本 / PDF物理页：12 / 印刷页标：8. The printed page label is NOT a bibliography. Remove the fake 印本标注 bibliographic card. Keep 打开原文 and related source link, original narrative/participant/works layout. All dates and source text explicitly sample. Flat paper-white/charcoal/sand-gold UI, no gradients. This is a design sample, not production data."
+  },
+  {
+    "id": "P21",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-b3ee2b92-8b17-4dde-b8e7-28afbf0bf0a3.png",
+    "version": "v2",
+    "prompt": "Edit the supplied existing STL design. Keep its visual style, page structure and all unrelated elements. Apply only this precise correction: Fix the actual guest permissions with exact visible sentence: 访客可浏览公开网页。探索、PDF阅读与下载须登录。 Replace the existing paragraph that implies visitors can read/download and only notes require login. The steps must first say 登录书库账号，再进入作品详情。 Then 选择可用的阅读或下载入口。 Remove abbreviation 简称STL from body. Preserve calm help-document layout and section anchors, no extra functionality. Body must clearly be 示例说明. Flat paper-white/charcoal/sand-gold UI, no gradients. This is a design sample, not production data."
+  },
+  {
+    "id": "P22",
+    "title": "反馈",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 反馈. Main form: feedback type radio 内容错误/功能问题/使用咨询/改进建议/其他; 问题描述 required4–500 characters with counter; 相关页面（可选） with 关联公开页面 action; 联系方式（可选） email; required consent checkbox 我同意以上内容用于本次反馈处理，个人信息不会公开。Bottom 取消 and 提交反馈. Narrow right privacy/help links. Do not add uploads, chat or success banner."
+  },
+  {
+    "id": "P23",
+    "title": "登录",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into 登录. Retain the compact bilingual brand and nav ONLY where appropriate; for identity pages use a quieter compact header without full navigation. Replace the entire body. Produce one polished desktop1536×1024 interface. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, small sand gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only existing controls explicitly stated here; never infer fields or buttons. All non-interface data is 示例数据; no real academic or private content.\nReplace the whole body with a refined two-column identity layout: left bilingual brand and one short description, right white form width420px with 登录 title, 邮箱或用户名 input, 密码 input with show/hide, 保持登录状态（30天） checkbox, 登录 button, 忘记密码 and 注册 links. Absolutely no Apple/Google/social login. No new security questions. An inline error placeholder area below input, not success. Display no entered real credentials.\nNo browser chrome, no multiple-screen collage. Do not print API or implementation guidance."
+  },
+  {
+    "id": "P24",
+    "title": "重设密码",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. Account email-link password reset, ready state. Quiet identity header. Single white form width480px: 恢复你的账户, note 新密码生效后，原登录凭据失效，私人资料保留。Sample expiry marked示例. 新密码 and 确认密码 masked fields show/hide, min10 max128. Required consent checkbox 这是我本人发起的密码恢复。Primary 确认重置密码. Secondary 重新核对链接与处理结果 and 登录. No email-request form on this ready-state image, no automatic success."
+  },
+  {
+    "id": "P25",
+    "title": "理论总览",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 理论流派 overview. Compact editorial banner with title 理论流派 and search field 搜索流派名称、核心概念、代表学者… + 搜索. Next 主要学科领域 links for 示例社会学/示例人类学/示例民族学 with tasteful small editorial images. Then 馆藏理论流派 result entries and pagination. Further links exact 理论传统 / 子学科 / 关键争论. No new concept/debate dashboards, no statistics."
+  },
+  {
+    "id": "P26",
+    "title": "公开分享摘要",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. Read-only public share summary. Header 社会理论书库 and 读者分享的内容摘要. Title 示例研究分享. Sample valid-until line marked示例; note 原内容修改、删除或撤回后，旧链接不会自动公开新内容。Sections 问题 / 材料 / 笔记 / 附言 with short sample texts. Material has 查看公开书目 and 查看公开原文 only if available, no private excerpts. Footer 不包含：私人文件与未选内容。No edit/share/delete/invite controls or credential input."
+  },
+  {
+    "id": "P27",
+    "title": "注册账户",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 注册账户. Quiet two-column identity layout: white form on left, reading illustration and short existing benefits on right. Fields 邮箱地址 required, 用户名 required4–20 Chinese/letters/digits/underscore, 密码 required10–128 with show/hide and restrained strength indicator, 确认密码 required. Text 注册后即可登录，无需邮件验证。Primary 创建账户. Plain policy links 服务条款/隐私政策, not an extra consent checkbox. 已有账户？登录. No OAuth."
+  },
+  {
+    "id": "P28",
+    "title": "找回账户 when email is not configured",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 找回账户 when email is not configured. Quiet identity layout. Top message 邮件重置暂未开放，可提交找回申请由管理员核对处理。 Below standalone section 无法访问邮箱？提交找回申请. Fields 用户名（可选）, 可联系的邮箱 required, 情况说明 required4–300 characters. Required checkbox 我同意管理员使用上述信息处理这次申请。Primary 提交找回申请, 登录 link. Short note 请勿填写密码、验证码、证件或私人研究正文。 No successful send banner, no new security-question fields."
+  },
+  {
+    "id": "P29",
+    "title": "邮箱验证 ready state",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 邮箱验证 ready state. Quiet identity page with one white form: 确认你的邮箱. Note 验证不会自动登录、调整角色或合并资料。 Sample expiry labeled示例. One 账户密码 masked input with visibility button; required checkbox 这是我本人发起的邮箱验证。 Primary 确认邮箱归属. Secondary 重新核对链接与处理结果, 找回密码 and 登录 links. No newpassword fields, no real email/token."
+  },
+  {
+    "id": "P30",
+    "title": "邀请激活账户 ready state",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4c0df8c1-b598-40fc-86de-c5791680c9e1.png",
+    "version": "v1",
+    "prompt": "Edit this STL public-page mockup into the specified single polished full desktop1536×1024 interface. Keep compact bilingual brand. Replace entire body. Flat paper-white #F7F4EE, white, charcoal #25241F, warm gray rules, restrained sand-gold accents. Noto Serif SC headings and readable Noto Sans SC body. No gradients, shadows, metallic texture, giant rounded cards, decorative metrics. Only listed controls exist; do not infer any. All non-interface data marked 示例数据, no real credentials or academic contents. No browser chrome or collage. Do not print APIs or implementation instructions. 邀请激活账户 ready state. Quiet identity page with white form. Read-only 账户：示例账户 and 邮箱：sample@example.test, text 激活后角色：读者, sample expiry allmarked示例. 设置密码 and 确认密码 masked, show/hide;10–128. Required checkbox 这是本人账户，我已阅读账户与隐私说明。Primary 设置密码并激活. Secondary 重新核对邀请与激活结果 and 登录. No role selector or token field."
+  }
+]

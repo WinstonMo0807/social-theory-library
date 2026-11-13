@@ -1,0 +1,66 @@
+[
+  {
+    "id": "A46",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-46e4bf7e-b23c-4199-98aa-400eedb8613a.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "需纠正：图中撤回被描述为自动回到上一公开版，这不符合已核实规则；移除该文案。历史页没有保存/放弃未保存草稿的独立表单，改为返回编辑；不得在此直接发布未保存版本。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  },
+  {
+    "id": "A47",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-4cb827a6-2d73-4b11-b194-a23548e73cc6.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  },
+  {
+    "id": "A48",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-60fabe7c-e56f-4515-9fb3-5a78c85dc52c.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  },
+  {
+    "id": "A49",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-1a4adff2-d458-4ba7-8528-4c39261e7697.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  },
+  {
+    "id": "A50",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e36ceed6-ea9a-4d02-9377-2cb2badace0f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "需纠正：不得新增用途，不得新增多个备用配置或排序链，不得出现HTTP请求方式POST编辑器。备用配置为选择一个已有同用途配置；凭据动作保留/更新/删除并停用为选择项，保存时生效；HTTP仅安全上下文说明，不是新功能面板。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  },
+  {
+    "id": "A51",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-ed1a89e5-3679-421f-b7cd-080af1aa6750.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  },
+  {
+    "id": "A52",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d9ab45b7-e6f4-47b3-b9fe-63d934db43b1.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  },
+  {
+    "id": "A53",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-067143c1-9609-4a03-bc98-e6e44b67af1d.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "实际查看，布局可采用；字段上限、状态、值及对象名称继续来自真实组件/API，图中示例不进入产品。 品牌、侧栏、字体与字体颜色按SHELL_CONSTRAINTS。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_014.json"
+  }
+]

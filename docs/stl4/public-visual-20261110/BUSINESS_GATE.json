@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-10",
+  "stage": "business_inventory_ready_for_design",
+  "meaning": "部署基线、有效路由/消费者、字段、操作、接口、权限、关键状态和动态路径已形成可追溯设计输入；不是运行验收或设计覆盖完成。",
+  "pages": 157,
+  "classification": {
+    "business_candidate": 124,
+    "active_shared_template": 6,
+    "compatibility_redirect": 19,
+    "disabled_in_public": 1,
+    "historical_design_reference": 3,
+    "excluded_paused_demo": 1,
+    "shared_state": 3
+  },
+  "api_method_paths": 1067,
+  "dynamic_request_sites_reviewed": 177,
+  "ui_controls": 3312,
+  "page_api_candidate_links": 4517,
+  "evidence": [
+    "BASELINE.md",
+    "COVERAGE.csv",
+    "PAGE_BEHAVIOR.json",
+    "UI_CONTROLS.csv",
+    "API_CONTRACTS.csv",
+    "API_FIELD_CONTRACTS.csv",
+    "PAGE_API_LINKS.csv",
+    "DYNAMIC_REQUESTS.csv",
+    "ROLE_CAPABILITIES.csv",
+    "FEATURE_FLAGS.json",
+    "BUSINESS_FINDINGS.md",
+    "ANONYMOUS_HTTP.json",
+    "FIXTURE_ROLE_HTTP.json",
+    "VERIFICATION.md"
+  ],
+  "runtime_limits": [
+    "生产核查只读；未提交生产内容或启动任务。",
+    "隔离GET、合成登录、PDF与草稿预览证据；未宣称全部写入通过。",
+    "OCR、模型、邮件、远程存储等真实外部服务未在离线夹具中执行，设计保留未配置/等待/失败状态。",
+    "Worker与API四项部署差异已登记，不引入内网Demo。"
+  ],
+  "open_existing_defects": [
+    "PV-PREVIEW-01：作品草稿的期刊目录未投影到实际预览。",
+    "PV-FILTER-01：理论目录API使用node_type而后端读取type。",
+    "PV-PREVIEW-02：主题预览association_notes在服务支持，但serializer拒绝；最新范围仅排版，本轮排除。"
+  ],
+  "design_gate": "closed for latest center-body scope; see DESIGN_GATE.json and SCOPE.json"
+}

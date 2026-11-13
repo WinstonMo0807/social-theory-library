@@ -1,0 +1,122 @@
+[
+  {
+    "id": "M01",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2e9f3be6-889c-4062-b8cb-1e82c5f4c85f.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "手机首屏信息过多，示例演示仍为桌面双栏，下面三列介绍不适合390px。需改为单列和适当截取首屏。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M02",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-37d63429-2d46-4b72-bbda-f00b86bac8dc.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M03",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-be7771fb-2e67-4ef0-8012-d19ada79e327.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M04",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-6c91c52a-ca00-4400-81a8-bed526651328.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M05",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-123bcbe3-4859-42f3-bd43-f1b1964d222e.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M06",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d93edff6-44a4-43aa-b59a-d60138133382.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M07",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-3e64ece2-ae35-45e8-aae4-208a7a3719cc.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M08",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-7a7ad549-9407-47f5-a82f-b978fce1ac1d.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M09",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d747b3f6-1e71-4621-b9c5-a903b962ad9a.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "生成器借真实人物配造示例书目，必须全部匿名；行列密度仍接近桌面，需仅展示三条可读的纵向记录。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M10",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-875b62ec-2d49-412c-af04-db8037834029.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M11",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-455c0ab1-e30d-4eb7-bd7f-6aa6a794ce3b.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "生成器未执行手机面板切换，目录与PDF仍左右并列；须改为单列目录编辑，原文由面板切换访问。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M12",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-e4c885b6-c9b6-4860-8104-b9be0960709c.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "标签与说明仍按桌面双列呈现，须改为每项标题在上、解释在下的手机纵排；六项实际保留类别不变。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M13",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-2e032764-e7d8-436d-8939-1024135e80fd.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M14",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-d06bca00-2c0b-423b-8a12-bcf8aea962d6.png",
+    "version": "v1",
+    "status": "generated_inspected",
+    "notes": "已实际查看单屏，采用面板/抽屉/顺序布局。图像像素不等于CSS像素，代码仍须在390/320/768及大字号验证实际换行与可达性，不能整体缩放图。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  },
+  {
+    "id": "M15",
+    "source": "C:\\Users\\12297\\.codex\\generated_images\\01a1c15f-3995-7da2-a9d1-59105dd3d083\\exec-5ce3f2cc-e257-489b-afa5-daba1378aaed.png",
+    "version": "v1",
+    "status": "needs_revision",
+    "notes": "已填写示例邮箱却显示不能为空，需纠正为与空密码对应的错误位置/提示。 字体、字色、品牌和管理导航服从SHELL_CONSTRAINTS；图中示例数据不进入产品。",
+    "prompt_file": "docs/stl4/public-visual-20261110/DESIGN_PROMPTS_017.json"
+  }
+]

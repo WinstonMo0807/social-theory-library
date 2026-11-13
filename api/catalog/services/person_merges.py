@@ -314,7 +314,7 @@ def merge_people(source_id, target_id, *, actor, expected_fingerprint, idempoten
 def _rollback_digest(record, state):
     # 0075 adds empty context fields. Preserve earlier merge receipts without
     # treating populated new fields as unchanged historical data.
-    defaults = {"preferred_language": "", "original_language": "", "country_region": "", "authority_note": "", "identifier_sources": {}}
+    defaults = {"preferred_language": "", "original_language": "", "country_region": "", "authority_note": "", "identifier_sources": {}, "citation_name": ""}
     old_fields = {key for key in defaults if key not in record.source_snapshot and key not in record.target_snapshot}
     if old_fields:
         state = _json(state)

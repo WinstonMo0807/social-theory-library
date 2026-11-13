@@ -1,0 +1,13 @@
+.grip { display:flex; justify-content:center; align-items:center; min-width:28px!important; min-height:28px!important; padding:3px!important; border:0!important; background:transparent!important; color:var(--muted,#777168); cursor:grab; touch-action:none; user-select:none; }
+.grip:active { cursor:grabbing; }
+.grip:focus-visible { outline:2px solid #b08b49; outline-offset:-2px; }
+.context { position:fixed; z-index:650; width:258px; max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); overflow:auto; padding:7px; border:1px solid var(--line,#ded8ce); border-radius:14px; background:var(--surface,#fffefa); color:var(--ink,#242424); box-shadow:0 16px 44px #29241b26,0 2px 8px #29241b0a; font:14px/1.5 var(--sans,sans-serif); }
+.menuHeading { display:flex; align-items:center; gap:11px; padding:9px 10px 12px; }
+.menuHeading img { width:32px; height:27px; }
+.menuHeading small { display:block; color:var(--muted,#777168); font-size:12px; margin-top:2px; }
+.context > button { display:flex; align-items:center; gap:11px; width:100%; padding:10px 12px; min-height:41px; border:0; background:transparent; color:inherit; text-align:left; font:inherit; border-radius:6px; }
+.context > button:hover,.context > button:focus-visible { background:#b08b4919; outline:0; }
+.context > button:disabled { opacity:.4; }
+.context > button.group { border-top:1px solid var(--line,#ded8ce); border-top-left-radius:0; border-top-right-radius:0; margin-top:5px; padding-top:13px; }
+.hint { display:block; padding:10px; color:var(--muted,#777168); font-size:11px; }
+@media(max-width:760px) { .grip { display:none!important; } }

@@ -1,0 +1,25 @@
+{
+  "scope": "worker image tag verified in running inventory; local archive source comparison, not live worker filesystem hash audit",
+  "differences": [
+    {
+      "file": "api/catalog/catalog_search_serializers.py",
+      "worker_archive_sha256": "8b58c0a4e769447c54615dcd527b39a6fd01e619dac2a38217325dfdb9e733fe",
+      "live_api_sha256": "6425d7e62cba3dd313e87b5b1f4fcd823c05d81a5b09dfab2cf0f629bf15cf8c"
+    },
+    {
+      "file": "api/catalog/public_work_detail.py",
+      "worker_archive_sha256": "ccd25e5faf2c77106005c8ba50e6d1da5f8d7ae34b02b781562847fb5c568815",
+      "live_api_sha256": "fdd469ef08de77d0ba910e26449768c5d0562e09998adaae092bc95a1d771982"
+    },
+    {
+      "file": "api/catalog/services/public_scholars.py",
+      "worker_archive_sha256": "900e274e213f2f33d7728792e50ad422ef66c5ee5ab4912656672c7671ea803d",
+      "live_api_sha256": "dc40fffb2951fe9ff50deda48db8af8fa0cbdac5e9610a4e646c46814e3f9956"
+    },
+    {
+      "file": "api/catalog/services/shared_curation.py",
+      "worker_archive_sha256": "3092f24cb1c56602b024f4ca9725292a20db6aaf96a1803c8faee50e8dbe116d",
+      "live_api_sha256": "d152c88789d1ff2c1abd132201c6a979998f3ea0dbcd93b44645aa6fdc0ce4fc"
+    }
+  ]
+}

@@ -100,3 +100,8 @@
 .page .filters .filterOption select { width: 100%; }
 @media(max-width:1500px) { .page .filters { grid-template-columns: repeat(2,minmax(0,1fr)); }.page .filters .search { grid-column: 1/-1; } }
 @media(max-width:620px) { .page .filters { grid-template-columns: minmax(0,1fr); }.page .filters .filterOption, .page .filters[data-open=true] .filterOption { display: flex; grid-column: auto; }.page .filters .filterToggle { display: none; }.heading>.primary { position: static; margin-top: 14px; height: auto; min-height: 42px; }.page>.tabs { flex-wrap: wrap; gap: 4px 16px; justify-content: flex-start; } }
+
+/* Layout-only public candidate; existing typography and interactions remain. */
+:global(.admin-content) .page:not(:global(dialog *), :global([role="dialog"] *)) { padding-inline:0; }
+:global(.admin-content) .heading:not(:global(dialog *), :global([role="dialog"] *)) { margin-bottom:24px; flex-wrap:wrap; }
+:global(.admin-content) .grid:not(:global(dialog *), :global([role="dialog"] *)) { gap:24px; }

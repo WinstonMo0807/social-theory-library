@@ -52,7 +52,8 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
   const [attempt, setAttempt] = useState(0);
   const [validationTick, setValidationTick] = useState(0);
   const [projects, setProjects] = useState<ResearchRecord<ProjectData>[]>([]);
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(input.initialProjectId || "");
+  const [projectQuery, setProjectQuery] = useState("");
   const [projectError, setProjectError] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
@@ -354,13 +355,14 @@ function Workspace({ input, onClose, onLocked }: { input: SharedCitationInput; o
       {preview ? <section className={styles.citationDisplay} aria-label={t("引用格式")}>
         <h3>{t("引用格式")}</h3>
         <div className={styles.formats}>{citationFormats.filter(([format]) => format !== "csl" && (format !== "quote" || hasReference)).map(([value, label]) => <button type="button" key={value} aria-pressed={format === value} disabled={busy || unknown} onClick={() => setFormat(value)}>{t(label)}</button>)}</div>
-        <CitationText className={styles.citationText} text={citationText(preview, format)} italicTitle={source?.document_type === "book" && !["gbt7714-2025", "quote"].includes(format) ? source.title : ""} />
+        <CitationText className={styles.citationText} text={citationText(preview, format)} italicTitle={!["gbt7714-2025", "quote"].includes(format) ? ["journal_article", "chapter"].includes(source?.document_type || "") ? source?.container_title || "" : source?.document_type === "thesis" && format === "chicago" ? "" : source?.title || "" : ""} />
+        {source?.citation_notes?.map(note => <p key={note} className={styles.hint}>{note}</p>)}
       </section> : null}
       <section><h3>{t("加入与保存")}</h3>
         {ownerId ? <>
           <div className={styles.targetTabs} aria-label={t("保存目标")}>{(["research", "booklist"] as const).map(kind => <button key={kind} aria-pressed={target === kind} disabled={busy || unknown || Boolean(bookRecovery)} onClick={() => { setTarget(kind); setCreating(false); setUndo(null); }}>{kind === "research" ? t("加入研究") : t("加入书单")}</button>)}</div>
           {target === "research" ? <>
-            <div className={styles.target}><span>{t("我的研究（私人）")}</span><select data-stl-select aria-label={t("选择目标研究")} value={projectId} disabled={busy || unknown} onChange={event => { setProjectId(event.target.value); setUndo(null); }}><option value="">{t("请选择研究")}</option>{projects.map(row => <option key={row.id} value={row.id}>{row.data.title}</option>)}</select><button disabled={busy || unknown} onClick={() => setCreating(value => !value)}>{t("新建")}</button></div>
+            <label className={styles.listSearch}>{t("搜索我的研究")}<input type="search" value={projectQuery} disabled={busy || unknown} onChange={event => setProjectQuery(event.target.value)} /></label><div className={styles.target}><span>{t("我的研究（私人）")}</span><select data-stl-select aria-label={t("选择目标研究")} value={projectId} disabled={busy || unknown} onChange={event => { setProjectId(event.target.value); setUndo(null); }}><option value="">{t("请选择研究")}</option>{projects.filter(row => row.id === projectId || row.data.title.toLocaleLowerCase().includes(projectQuery.trim().toLocaleLowerCase())).map(row => <option key={row.id} value={row.id}>{row.data.title}</option>)}</select><button disabled={busy || unknown} onClick={() => setCreating(value => !value)}>{t("新建")}</button></div>
             {projectError ? <p className={styles.error} role="alert">{t(projectError)}<button onClick={() => setAttempt(value => value + 1)}>{t("重试研究列表")}</button></p> : null}
             {activeProject ? <p className={styles.hint}>{t("共 {count} 条选材", { count: activeProject.data.selections.length })}<Link href={`/account/research/${activeProject.id}`}>{t("查看已有选材")}</Link></p> : null}
           </> : <>

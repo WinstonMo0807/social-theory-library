@@ -105,9 +105,9 @@ def _base():
         catalog_asset_identity=Replace(KeyTextTransform("asset_id", KeyTransform("document", F(SNAPSHOT))), Value("-"), Value("")),
         catalog_readable=Exists(readable),
         catalog_year=Cast(KeyTextTransform("publication_year", KeyTransform("edition", F(SNAPSHOT))), IntegerField()),
-        catalog_title=KeyTextTransform("title", KeyTransform("work", F(SNAPSHOT))),
-        catalog_language=KeyTextTransform("language", KeyTransform("work", F(SNAPSHOT))),
-        catalog_type=KeyTextTransform("document_type", KeyTransform("work", F(SNAPSHOT))),
+        catalog_title=Cast(KeyTextTransform("title", KeyTransform("work", F(SNAPSHOT))), CharField()),
+        catalog_language=Cast(KeyTextTransform("language", KeyTransform("work", F(SNAPSHOT))), CharField()),
+        catalog_type=Cast(KeyTextTransform("document_type", KeyTransform("work", F(SNAPSHOT))), CharField()),
     ).order_by()
 
 

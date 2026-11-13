@@ -195,3 +195,19 @@
   .mobileExportOverview dd { margin: 0; white-space: nowrap; }
   .mobileExportOverview > p { margin: 10px 0 0; font-size: max(13px, var(--stl-readable-body)); }
 }
+
+
+/* Preserve both category rails; give the editable text a stable reading width. */
+/* Center layout candidate boundary. */
+:global([data-stl-page-layout="account"]) .main { min-width: 0; }
+:global([data-stl-page-layout="account"]) .section { padding: 24px 20px; margin-bottom: 0; }
+:global([data-stl-page-layout="account"]) .retention { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+:global([data-stl-page-layout="account"]) .retention label { padding: 16px; gap: 10px; }
+:global([data-stl-page-layout="account"]) .exportOptions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+:global([data-stl-page-layout="account"]) .exportOptions label { padding: 16px; min-height: 0; }
+@media (max-width: 700px) {
+  :global([data-stl-page-layout="account"]) .section { padding: 20px 16px; }
+  :global([data-stl-page-layout="account"]) .retention,
+  :global([data-stl-page-layout="account"]) .exportOptions { grid-template-columns: minmax(0, 1fr); }
+  :global([data-stl-page-layout="account"]) .retention label { padding: 16px 12px; }
+}

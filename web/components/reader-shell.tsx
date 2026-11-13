@@ -2,6 +2,10 @@
 
 import { confirmAction, confirmLinkNavigation } from "@/lib/ui-dialog";
 import { BrandImage } from "./brand-image";
+import readerStyles from "./reader-workspace.module.css";
+import { ReaderGrip, ReaderContextMenu, useReaderFloatingLayout } from "./reader/reader-floating-controls";
+import { LoadingState } from "./ui/loading-state";
+import { BrandLoadingMark } from "./ui/brand-loading-mark";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -134,16 +138,20 @@ function ReaderWorkspace({
 }) {
   const router = useRouter();
   const shellRef = useRef<HTMLDivElement>(null);
+  const [contextMenu, setContextMenu] = useState<{x:number;y:number;snapshot:SelectionSnapshot|null} | null>(null);
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
   const [fullscreen, setFullscreen] = useState(false);
   const [rotation, setRotation] = useState<ReaderRotation>(0);
-  const [rightTab, setRightTab] = useState<"source" | "notes" | "citation" | "related">("source");
+  const [rightTab, setRightTab] = useState<"source" | "notes" | "citation" | "research" | "related">("source");
+  const [citationSelection, setCitationSelection] = useState<SelectionSnapshot | null>(null);
   const [retainedSelection, setRetainedSelection] = useState<SelectionSnapshot | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [searchOrder, setSearchOrder] = useState("page");
   const { state: readerSession } = usePublicSession();
+  const resetFloating = useReaderFloatingLayout(shellRef, String(readerSession.user?.id ?? "guest"));
   const readerAuthenticated = readerSession.status === "authenticated";
   const { dark, update: updateAppearance } = useAppearance();
-  const [leftOpen, setLeftOpen] = useState<boolean | null>(null);
+  const [leftOpen, setLeftOpen] = useState<boolean | null>(true);
   const [rightOpen, setRightOpen] = useState(!embedded);
   const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
   const [compactRightOpen, setCompactRightOpen] = useState(false);
@@ -185,7 +193,7 @@ function ReaderWorkspace({
 
   const {
     readerDocumentRef, selectionTools, setSelectionTools, captureSelection,
-    showSelectionTools, showSelectionContextMenu, handleDocumentCopy, cleanCopy,
+    showSelectionTools, handleDocumentCopy, cleanCopy,
   } = useReaderSelection({
     page, pagePayloads, requestPagePayload, setCopyStatus, setCopyStatusState,
   });
@@ -198,7 +206,7 @@ function ReaderWorkspace({
   } = useReaderRecords({
     assetId: work.id, initialFocus, readerAuthenticated, readerId: readerSession.user?.id, page, pagePayloads, captureSelection,
     setSelectionTools, setPage, jumpToPage, setLeftPanel, setSidebarTab, setGate,
-    setCopyStatus, setCopyStatusState,
+    setCopyStatus, setCopyStatusState, openNotes: () => openRight("notes"),
   });
 
   useReaderPageRequest({ page, ocrStatus: access?.ocr_status, requestPagePayload });
@@ -225,8 +233,8 @@ function ReaderWorkspace({
     assetId: work.id, documentRevisionId, initialQuery, initialPassage, initialEvidence, requestPagePayload, jumpToPage,
   });
 
-  const selectedText = access ? annotationDraft ? { ...annotationDraft, x: 0, y: 0 } : selectionTools || retainedSelection : null;
-  const citationPage = selectedText?.pageIndex ?? page;
+  const selectedText = access ? selectionTools || retainedSelection || (annotationDraft ? { ...annotationDraft, x: 0, y: 0 } : null) : null;
+  const citationPage = citationSelection?.pageIndex ?? page;
   const { citations, citationError, copyCitation, retryCitation } = useReaderCitation({
     editionId: work.editionId ?? access?.edition_id, page: citationPage, setCopyStatus, setCopyStatusState,
   });
@@ -266,7 +274,7 @@ function ReaderWorkspace({
     if (isCompact) setRightPanel(false);
   }
   function openRight(tab: typeof rightTab) {
-    setRightTab(tab); setRightPanel(true);
+    setRightTab(tab === "citation" ? "source" : tab); setRightPanel(true);
     if (isMobile) setLeftPanel(false);
   }
   async function annotate(snapshot: SelectionSnapshot | null = selectedText || captureSelection()) {
@@ -278,15 +286,25 @@ function ReaderWorkspace({
     if ((await beginAnnotation("note", snapshot)) && snapshot) {
       if (changingSource) setTagInput("");
       setRetainedSelection(snapshot);
-      openRight("source");
+      openRight("notes");
     }
   }
+  function openCitation(snapshot: SelectionSnapshot | null = captureSelection()) {
+    setCitationSelection(snapshot);
+    if (snapshot) setRetainedSelection(snapshot);
+    setSelectionTools(null);
+    openRight("citation");
+  }
   function sharedSource(snapshot: SelectionSnapshot | null = selectedText) {
-    setSharedCitation({ editionId: work.editionId ?? access?.edition_id,
+    setSharedCitation({ initialProjectId: researchProjectId || undefined, editionId: work.editionId ?? access?.edition_id,
       reference: documentRevisionId ? { asset_id: work.id, document_revision_id: documentRevisionId, pdf_page: snapshot?.pageIndex ?? page } : undefined,
       selectedText: snapshot?.quote });
     if (snapshot) setRetainedSelection(snapshot);
     setSelectionTools(null);
+  }
+  function restoreReaderLayout() {
+    resetFloating(); setSidebarTab("outline"); setLeftPanel(true); setRightTab("source");
+    setRightPanel(!isCompact); setToolbarOpen(false); setContextMenu(null);
   }
   function visitPage(target: number, position?: [number, number]) {
     jumpToPage(target, "smooth", position);
@@ -355,7 +373,7 @@ function ReaderWorkspace({
   },[embedded]);
 
   const recordStatus = !readerAuthenticated ? <p className="reader-empty-list">登录后查看本人笔记与书签。<button type="button" onClick={() => setGate("个人阅读记录")}>登录</button></p>
-    : recordsLoading ? <div className="reader-panel-status" role="status"><p>正在读取个人批注与书签…</p><button type="button" onClick={stopRecords}>停止加载</button></div>
+    : recordsLoading ? <div className="reader-panel-status" role="status"><LoadingState variant="rows">正在读取个人批注与书签…</LoadingState><button type="button" onClick={stopRecords}>停止加载</button></div>
     : recordsError || recordsStopped ? <div className="reader-panel-status" role={recordsError ? "alert" : "status"}><p>{recordsError || "已停止加载，当前记录尚未完整读取。"}</p><button type="button" onClick={retryRecords}>重新加载</button></div> : null;
   const noteList = <div className="reader-library-list">
     {recordStatus}
@@ -371,29 +389,25 @@ function ReaderWorkspace({
   </div>;
   const sourcePage = pagePayloads[citationPage];
   const citationPanel = <section className="reader-citation-panel">
-    <h2>引用信息</h2>
-    <div className="reader-source-card"><strong>{work.title}</strong><p>{work.author || "作者信息未提供"}</p><small>{[work.version?.publisher, work.version?.publication_year, work.version?.edition_statement].filter(Boolean).join(" · ") || "版本信息未提供"}</small></div>
+    <h2>{citationSelection ? "选段引用" : "本页引用"}</h2>
     <p className="citation-page-map">PDF 第 {citationPage} 页{sourcePage?.printed_label && sourcePage.printed_label !== String(citationPage) ? ` · 书页 ${sourcePage.printed_label}` : ""}</p>
     {sourcePage?.chapter_title ? <p>{sourcePage.chapter_title}</p> : null}
     <p className="reader-format-label">GB/T 7714—2025</p>
     <p className="reader-citation-text" style={{ userSelect: "text", whiteSpace: "pre-wrap" }} role={citationError ? "alert" : "status"}>{citations?.["gbt7714-2025"] || citationError || "正在读取本页引用…"}</p>
     {citationError ? <button type="button" onClick={retryCitation}>重试读取引用</button> : null}
-    <div className="reader-inline-actions"><button className="button secondary" type="button" disabled={!citations?.["gbt7714-2025"]} onClick={copyCitation}><Copy size={14} />复制引用</button><button className="button secondary" type="button" onClick={() => sharedSource()}><Quote size={14} />其他引用格式</button></div>
+    <div className="reader-inline-actions"><button className="button secondary" type="button" disabled={!citations?.["gbt7714-2025"]} onClick={copyCitation}><Copy size={14} />复制引用</button><button className="button secondary" type="button" onClick={() => sharedSource(citationSelection)}><Quote size={14} />其他引用格式</button></div>
   </section>;
   function recoveryControls(inPanel = false) {
     return annotationSaveUnknown ? <div className={`reader-save-recovery ${inPanel ? "in-panel" : ""}`} role="alert"><strong>保存结果尚待确认</strong><p>{copyStatus || "输入已保留。请先核对这次保存，避免重复创建。"}</p><ActionButton type="button" state={pendingAction === "save-annotation" ? "pending" : "idle"} disabled={Boolean(pendingAction)} onClick={() => { void retryAnnotationSave().then(saved => { if (saved) setTagInput(""); }); }}>核对保存结果</ActionButton></div> : null;
   }
+  const noteEditor = annotationDraft ? <section className="reader-note-editor"><form onSubmit={event => { event.preventDefault(); void commitNote(); }}><fieldset disabled={Boolean(pendingAction) || annotationSaveUnknown}><h2>添加笔记</h2><p>锚定 PDF 第 {annotationDraft.pageIndex} 页</p><label><span className="sr-only">笔记内容</span><textarea autoFocus rows={5} value={annotationDraft.body} onChange={event => setAnnotationDraft(draft => draft ? { ...draft, body: event.target.value } : null)} placeholder="记录你的理解、问题或联想" /></label><div className="reader-note-tags">{(annotationDraft.tags || []).map(tag => <button type="button" key={tag} aria-label={`移除标签${tag}`} onClick={() => setAnnotationDraft(draft => draft ? { ...draft, tags: draft.tags?.filter(value => value !== tag) } : null)}># {tag}<X size={12} /></button>)}</div><div className="reader-tag-entry"><input aria-label="笔记标签" placeholder="添加标签" maxLength={40} value={tagInput} onChange={event => setTagInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addTag(); } }} /><button type="button" onClick={addTag} disabled={!tagInput.trim() || (annotationDraft.tags?.length ?? 0) >= 12}><Plus size={14} /><span className="sr-only">添加标签</span></button></div><div className="reader-note-save"><small><LockKeyhole size={12} />仅自己可见</small><button className="button secondary" type="button" disabled={Boolean(pendingAction)} onClick={async () => { if (!hasDraft || (await confirmAction("放弃这条尚未保存的笔记？"))) { setAnnotationDraft(null); setTagInput(""); } }}>取消</button><ActionButton className="button" type="submit" state={pendingAction === "save-annotation" ? "pending" : "idle"} disabled={!recordsReady || Boolean(pendingAction)} pendingLabel="正在保存">保存笔记</ActionButton></div></fieldset></form>{recordStatus}</section> : null;
   // Each reference is a state of this same reader; records and PDF identity stay shared.
   const readerView = annotationDraft ? "notes"
     : effectiveLeftOpen && sidebarTab === "search" ? "search"
     : effectiveRightOpen && rightTab === "notes" ? "notes"
     : effectiveLeftOpen && sidebarTab === "outline" && (outlineQuery || isMobile) ? "outline" : "reading";
   const readerReference = readerView === "reading" ? "reader" : `reader-${readerView}` as const;
-  const rightTabs: [typeof rightTab, string][] = embedded ? [["source", "原文选取"], ["notes", "我的笔记"], ["citation", "引用信息"], ["related", "相关研究"]] : readerView === "reading"
-    ? [["source", "来源"], ["notes", "笔记"], ["related", "相关研究"]]
-    : readerView === "search" ? [["source", "来源与引用"], ["notes", `我的笔记${recordsReady ? ` (${notes.length})` : ""}`]]
-    : [["source", "原文选取"], ["notes", "我的笔记"], ["citation", "引用信息"]];
-  if (!rightTabs.some(([tab]) => tab === rightTab)) rightTabs.push([rightTab, rightTab === "citation" ? "引用信息" : "相关研究"]);
+  const rightTabs: [typeof rightTab, string][] = [["source", "来源"], ["notes", "笔记"], ["research", "我的研究"], ["related", "相关"]];
   const outlineMatchCount = allOutline.filter(item => `${item.title} ${item.printed_label} ${item.index}`.toLocaleLowerCase().includes(outlineQuery.trim().toLocaleLowerCase())).length;
   const sourceBook = <section className="reader-source-book"><h2>{readerView === "search" ? "来源信息" : "作品详情"}</h2><Link href={detailHref} className="reader-source-book-summary"><BookCover work={work} size="small" /><span><strong>{work.title}</strong>{work.originalTitle ? <em>{work.originalTitle}</em> : null}<span>{work.author}</span><small>{[work.year, work.version?.publisher].filter(Boolean).join(" · ")}</small><b>查看详情 <ArrowRight size={14} /></b></span></Link></section>;
   const versions = work.versions?.map(row => row.id === work.editionId && work.version ? work.version : row) || (work.version ? [work.version] : []);
@@ -412,7 +426,7 @@ function ReaderWorkspace({
         </div>;
 
   return (
-    <div ref={shellRef} data-reader-fullscreen={fullscreen || undefined} data-reader-view={embedded ? undefined : readerView} data-reader-sidebar={sidebarTab} data-reader-motion={preferences.motion} data-reader-highlight={preferences.highlight} className={`reader stl4-reader ${embedded ? "reader-embedded" : ""} ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}
+    <div ref={shellRef} data-reader-fullscreen={fullscreen || undefined} data-reader-view={embedded ? undefined : "workspace"} data-reader-sidebar={sidebarTab} data-reader-motion={preferences.motion} data-reader-highlight={preferences.highlight} className={`reader stl4-reader ${embedded ? "" : readerStyles.workspace} ${embedded ? "reader-embedded" : ""} ${dark ? "dark" : ""} ${effectiveLeftOpen ? "" : "left-closed"} ${effectiveRightOpen ? "" : "right-closed"}`}
       onClickCapture={event => {
         const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
         if (!event.defaultPrevented && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && link && link.target !== "_blank" && !link.hasAttribute("download") && (hasDraft || pendingAction || annotationSaveUnknown || ocrRecoveryLocked)) void confirmLinkNavigation(event, link, canLeave, href => router.push(href));
@@ -422,31 +436,33 @@ function ReaderWorkspace({
       {embedded ? <div className="reader-heading reader-embedded-heading"><div><strong>{work.title}</strong><small>{work.author}</small></div><div className="reader-embedded-progress"><span>阅读进度 {page} / {totalPages} 页</span><progress value={page} max={totalPages} aria-label="展项阅读位置" /><span>{progress}%</span></div><div className="reader-embedded-actions"><SaveWorkButton workId={work.workId}/>{access ? <a className="button" href={access.download_url || access.url} download={access.download_filename} onClick={trackDownload}><Download size={15}/>下载 PDF</a> : <span>下载暂不可用</span>}<ReaderSettings value={preferences} onSave={applyPreferences}/></div></div> : <div className="reader-heading">
         <nav className="reader-breadcrumb" aria-label="当前位置"><Link href="/home">首页</Link><ChevronRight size={12} /><Link href="/explore">书库检索</Link><ChevronRight size={12} /><Link href="/explore/original">{work.kind}</Link><ChevronRight size={12} /><Link href={detailHref}>{work.title}</Link><ChevronRight size={12} /><span>PDF 原文阅读器</span></nav>
         <div className="reader-page-intro"><h1>PDF 原文阅读器</h1><p>准确回到原页、读懂上下文，同时保留研究线索。</p></div>
-        {readerView !== "search" || !effectiveLeftOpen ? bookHeading : null}
+        <Link href="/home" className={readerStyles.brand} aria-label="社会理论书库首页"><BrandImage config={siteConfig ?? undefined} /></Link>{bookHeading}
       </div>}
 
       <header className="reader-toolbar" aria-label="阅读工具栏">
         <button type="button" className="reader-mobile-back" aria-label="返回文献" onClick={async () => { if ((await canLeave())) router.push(detailHref); }}><ChevronLeft size={18} /></button>
         <button type="button" className="reader-outline-toggle" aria-label={effectiveLeftOpen ? "收起目录" : "打开目录"} onClick={() => effectiveLeftOpen ? setLeftPanel(false) : openLeft("outline")}><List size={17} /></button>
-        <div className="reader-page-controls"><button type="button" disabled={page <= 1} aria-label="上一页" onClick={() => visitPage(page - 1)}><ChevronLeft size={17} /></button><label><span className="sr-only">PDF 页码</span><input aria-label="PDF 页码" inputMode="numeric" autoComplete="off" value={pageInput ?? String(page)} onChange={event => setPageInput(event.target.value)} onBlur={() => { if (pageInput !== null) { jumpToPage(Number(pageInput), "auto"); setPageInput(null); } }} onKeyDown={event => { if (event.key === "Enter") { jumpToPage(Number(pageInput ?? page), "auto"); setPageInput(null); } }} /></label><span>/ {totalPages}</span><button type="button" disabled={page >= totalPages} aria-label="下一页" onClick={() => visitPage(page + 1)}><ChevronRight size={17} /></button></div>
-        <span className="reader-page-label">{currentPagePayload?.printed_label ? `印刷页 ${currentPagePayload.printed_label}` : "PDF 页码"}</span>
-        <div className="reader-zoom-controls"><button type="button" aria-label="缩小" disabled={zoom <= 60} onClick={() => changeZoom(-10)}><Minus size={15} /></button><button type="button" title="恢复适应宽度" onClick={() => changeZoom(100 - zoom)}>{zoom}%</button><button type="button" aria-label="放大" disabled={zoom >= 180} onClick={() => changeZoom(10)}><Plus size={15} /></button></div>
+        <div className="reader-page-controls" data-reader-float="page"><ReaderGrip label="页码控件" /><span className={readerStyles.pageCaption}>PDF</span><button type="button" disabled={page <= 1} aria-label="上一页" onClick={() => visitPage(page - 1)}><ChevronLeft size={17} /></button><label><span className="sr-only">PDF 页码</span><input aria-label="PDF 页码" inputMode="numeric" autoComplete="off" value={pageInput ?? String(page)} onChange={event => setPageInput(event.target.value)} onBlur={() => { if (pageInput !== null) { jumpToPage(Number(pageInput), "auto"); setPageInput(null); } }} onKeyDown={event => { if (event.key === "Enter") { jumpToPage(Number(pageInput ?? page), "auto"); setPageInput(null); } }} /></label><span>/ {totalPages}</span><button type="button" disabled={page >= totalPages} aria-label="下一页" onClick={() => visitPage(page + 1)}><ChevronRight size={17} /></button><span className={readerStyles.printedPage}><small>书页</small><strong>{currentPagePayload?.printed_label || "未标注"}</strong></span></div>
+        <div className="reader-zoom-controls" data-reader-float="zoom"><ReaderGrip label="缩放控件" /><button type="button" aria-label="缩小" disabled={zoom <= 60} onClick={() => changeZoom(-10)}><Minus size={15} /></button><button type="button" title="恢复适应宽度" onClick={() => changeZoom(100 - zoom)}>{zoom}%</button><button type="button" aria-label="放大" disabled={zoom >= 180} onClick={() => changeZoom(10)}><Plus size={15} /></button></div>
         <button className="reader-fullscreen" type="button" aria-label={fullscreen ? "退出全屏" : "全屏阅读"} onClick={() => void toggleFullscreen()}>{fullscreen ? <Minimize size={17} /> : <Maximize size={17} />}</button>
         <button className="reader-search-toggle" type="button" aria-label="书内搜索" onClick={() => openLeft("search")}><Search size={17} /></button>
         <button className="reader-bookmark-toggle" type="button" aria-label={bookmarkedPage ? "移除本页书签" : "保存本页书签"} aria-pressed={bookmarkedPage} disabled={Boolean(pendingAction)} onClick={() => protectedAction("书签")}><Bookmark size={17} fill={bookmarkedPage ? "currentColor" : "none"} /></button>
+        <button type="button" className={readerStyles.resetLayout} aria-label="恢复默认布局" title="恢复默认布局" onClick={restoreReaderLayout}><RotateCw size={16} /></button>
         <button type="button" ref={toolbarSummary} aria-expanded={toolbarOpen} aria-controls="reader-more" aria-label="更多阅读工具" onClick={() => setToolbarOpen(value => !value)}><MoreHorizontal size={18} /></button>
       </header>
 
       <ReaderPanel side="left" modal={isMobile && sidebarTab !== "search"} open={effectiveLeftOpen} close={() => setLeftPanel(false)}>
         {isMobile ? recoveryControls(true) : null}
-        {readerView === "search" ? <div className="reader-search-book">{bookHeading}</div> : null}
+        
+        <div className={readerStyles.panelGrip}><ReaderGrip label="目录侧栏" /><span>阅读导航</span><button type="button" aria-label="收起目录" onClick={() => setLeftPanel(false)}><X size={16}/></button></div>
         <div className="reader-outline-heading"><strong>目录</strong><button type="button" aria-label="收起目录" onClick={() => setLeftPanel(false)}><ChevronLeft size={16} /></button></div>
         <div className="reader-panel-heading"><strong>{sidebarTab === "outline" ? "目录" : "目录与书内查找"}</strong><button type="button" aria-label="关闭目录侧栏" onClick={() => setLeftPanel(false)}><X size={18} /></button></div>
-        <nav className="reader-panel-tabs" aria-label="阅读导航">{([ ["outline", "目录"], ["search", "搜索"], ["bookmarks", "书签"], ["notes", "笔记"] ] as const).map(([tab, title]) => <button type="button" key={tab} className={sidebarTab === tab ? "active" : ""} aria-pressed={sidebarTab === tab} onClick={() => openLeft(tab)}>{title}</button>)}</nav>
+        <nav className="reader-panel-tabs" aria-label="阅读导航">{([ ["outline", "目录"], ["search", "搜索"], ["bookmarks", "书签"] ] as const).map(([tab, title]) => <button type="button" key={tab} className={sidebarTab === tab ? "active" : ""} aria-pressed={sidebarTab === tab} onClick={() => openLeft(tab)}>{title}</button>)}</nav>
         {sidebarTab === "outline" ? <>
           <label className="reader-panel-search"><Search size={14} /><input aria-label="搜索目录" placeholder="搜索目录…" value={outlineQuery} onChange={event => setOutlineQuery(event.target.value)} />{outlineQuery ? <button type="button" aria-label="清空目录搜索" onClick={() => setOutlineQuery("")}><X size={14} /></button> : null}</label>
           {outlineQuery.trim() ? <div className="reader-outline-matches"><span>找到 {outlineMatchCount} 个匹配结果</span><button type="button" onClick={() => setOutlineQuery("")}>清除</button></div> : null}
-          <div className="reader-outline-list">{readerOutline.map(item => <div key={item.id} className={`reader-outline-row ${item.id === currentOutline?.id ? "active" : ""}`} style={{ paddingInlineStart: `${10 + Math.min(item.level - 1, 7) * 13}px` }}>
+          <div className={readerStyles.outlineOptions}><span>{allOutline.length} 个章节</span><button type="button" onClick={() => setCollapsedOutline(new Set(outlineParents as Set<string>))}>折叠全部</button><button type="button" onClick={() => setCollapsedOutline(new Set())}>展开全部</button></div>
+          <div className="reader-outline-list">{readerOutline.map(item => <div key={item.id} className={`reader-outline-row ${item.id === currentOutline?.id ? "active" : ""}`} style={{ paddingInlineStart: `${6 + Math.min(item.level - 1, 4) * 12}px` }}>
             {outlineParents.has(item.id) ? <button type="button" className="reader-outline-disclosure" aria-label={`${collapsedOutline.has(item.id) ? "展开" : "折叠"}${item.title}`} aria-expanded={!collapsedOutline.has(item.id) || Boolean(outlineQuery)} onClick={() => collapseOutline(item.id, !collapsedOutline.has(item.id))}><ChevronRight size={13} style={{ transform: collapsedOutline.has(item.id) && !outlineQuery ? undefined : "rotate(90deg)" }} /></button> : <span className="reader-outline-disclosure" />}
             <button type="button" aria-current={item.id === currentOutline?.id ? "location" : undefined} onClick={() => { setSelectedOutlineId(item.id); visitPage(item.index, outlinePosition(item)); }}><span><MatchText text={item.title} query={outlineQuery} /></span><small>{item.printed_label || item.index}</small></button>
           </div>)}</div>
@@ -465,46 +481,71 @@ function ReaderWorkspace({
         {sidebarTab === "bookmarks" ? <div className="reader-library-list">{recordStatus}{bookmarks.map(bookmark => <article className="reader-library-entry" key={bookmark.id}><button className="reader-library-open" type="button" onClick={() => visitPage(bookmark.page_index || 1)}><small>第 {bookmark.page_index || 1} 页</small><span>{bookmark.label}</span></button><ActionButton className="reader-library-delete" type="button" disabled={Boolean(pendingAction)} aria-label={`删除第 ${bookmark.page_index || 1} 页书签`} onClick={() => void deleteBookmark(bookmark.id)}><Trash2 size={14} /></ActionButton></article>)}{recordsReady && !bookmarks.length ? <p className="reader-empty-list">还没有保存书签。</p> : null}</div> : null}
       </ReaderPanel>
 
-      <section className="reader-document continuous-scroll-mode" data-view-mode="continuous" ref={readerDocumentRef} onMouseUp={showSelectionTools} onContextMenu={showSelectionContextMenu} onCopy={handleDocumentCopy}>
+      <section className="reader-document continuous-scroll-mode" data-view-mode="continuous" ref={readerDocumentRef} tabIndex={0} aria-label="PDF 原文阅读区域" onMouseUp={event => { if (event.button === 0) showSelectionTools(event); }} onContextMenu={event => {
+        if (event.shiftKey || (event.target as Element).closest("input,textarea,select,a,button,[contenteditable='true']")) return;
+        event.preventDefault();
+        const rect = readerDocumentRef.current?.getBoundingClientRect();
+        setContextMenu({ x:event.clientX || (rect?.left ?? 0) + 32, y:event.clientY || (rect?.top ?? 0) + 32, snapshot:captureSelection() });
+        setSelectionTools(null);
+      }} onKeyDown={event => {
+        if ((event.key === "F10" && event.shiftKey) || event.key === "ContextMenu") {
+          if ((event.target as Element).closest("input,textarea,select,button,a,[contenteditable='true']")) return;
+          event.preventDefault(); const rect=event.currentTarget.getBoundingClientRect();
+          setContextMenu({x:rect.left+32,y:rect.top+32,snapshot:captureSelection()}); setSelectionTools(null);
+        }
+      }} onCopy={handleDocumentCopy}>
         {access && access.ocr_status !== "not_required" && (access.ocr_status !== "succeeded" || !documentRevisionId) ? <div className={`reader-processing-status status-${access.ocr_status}`} role="status"><strong>{access.ocr_status === "failed" ? "文字识别暂不可用" : access.ocr_status === "disabled" ? "文字识别已停用" : access.ocr_status === "running" ? "正在识别文字" : access.ocr_status === "succeeded" ? "文字等待发布" : "等待可用文字"}</strong><span>仍可阅读扫描原页。复制、查找与原文引用以当前已获准的文字为准。</span><button type="button" onClick={() => setOcrOpen(true)}>查看文字处理进度</button></div> : null}
         {access?.reader_fallback_reason ? <div className="reader-processing-status status-failed" role="status"><strong>已切换可用阅读副本</strong><span>{access.reader_fallback_reason}</span></div> : null}
         {access && pageErrors[page] ? <div className="reader-processing-status status-failed" role="alert"><strong>当前页文字暂未读出</strong><span>{pageErrors[page]}</span><button type="button" onClick={() => retryPagePayload(page)}>重试页内容</button></div> : null}
         {sourceError || researchError ? <div className="reader-processing-status status-failed" role="alert"><span>{sourceError || researchError}</span><button type="button" onClick={sourceError ? retrySearch : retryResearch}>重新核对原文定位</button></div> : null}
         {(passageFocus && !passageFocus.bbox.length) || researchAnchors.some(anchor => !anchor.bbox.length) ? <p className="reader-processing-status">来源按页定位，请在扫描原页核对具体文字。</p> : null}
         {statusPollPaused ? <div className="reader-processing-status" role="status">阅读状态已停止自动刷新，这不会暂停文字处理任务。<button type="button" onClick={retryAccess}>重新读取</button></div> : null}
-        {access ? <PdfContinuousViewer key={`${access.served_asset_id}:${access.sha256}`} url={access.url} pageCount={totalPages} currentPage={page} zoom={zoom} rotation={rotation} overlays={pageOverlays} preferOcrTextLayer={access.ocr_text_available} scrollRequest={scrollRequest} onDocumentLoad={onDocumentLoad} onPageChange={onVisiblePageChange} onRequestPage={requestPagePayload} onNoteSelect={annotationId => { setFocusedAnnotationId(annotationId); openRight("notes"); }} onNoteDelete={annotationId => void deleteAnnotation(annotationId)} onRetry={retryAccess} /> : <div className="reader-unavailable" role="status"><BookOpen size={30} /><strong>{accessError ? "暂时未能加载阅读文件" : "正在连接阅读文件"}</strong><p>{accessError || "正在取得当前版本的阅读文件…"}</p>{accessError ? <><button type="button" className="button" onClick={retryAccess}>重试</button><Link className="button secondary" href={detailHref}>查看其他可用版本</Link><button className="button secondary" type="button" onClick={() => openRight("notes")}>查看我的笔记</button><p>已有个人笔记会保留。</p></> : null}</div>}
+        {access ? <PdfContinuousViewer key={`${access.served_asset_id}:${access.sha256}`} url={access.url} pageCount={totalPages} currentPage={page} zoom={zoom} rotation={rotation} overlays={pageOverlays} preferOcrTextLayer={access.ocr_text_available} scrollRequest={scrollRequest} onDocumentLoad={onDocumentLoad} onPageChange={onVisiblePageChange} onRequestPage={requestPagePayload} onNoteSelect={annotationId => { setFocusedAnnotationId(annotationId); openRight("notes"); }} onNoteDelete={annotationId => void deleteAnnotation(annotationId)} onRetry={retryAccess} /> : <div className="reader-unavailable" role="status"><span>{accessError ? <BookOpen size={30} /> : <BrandLoadingMark size="large" />}</span><strong>{accessError ? "暂时未能加载阅读文件" : "正在连接阅读文件"}</strong><p>{accessError || "正在取得当前版本的阅读文件…"}</p>{accessError ? <><button type="button" className="button" onClick={retryAccess}>重试</button><Link className="button secondary" href={detailHref}>查看其他可用版本</Link><button className="button secondary" type="button" onClick={() => openRight("notes")}>查看我的笔记</button><p>已有个人笔记会保留。</p></> : null}</div>}
       </section>
       {!((isMobile && effectiveLeftOpen) || (isCompact && effectiveRightOpen) || toolbarOpen) ? recoveryControls() : null}
       <span hidden={annotationSaveUnknown} className={`reader-copy-status ${copyStatusState}`} role={copyStatusState === "error" ? "alert" : "status"} aria-live={copyStatusState === "error" ? "assertive" : "polite"}>{copyStatus}</span>
 
-      {selectionTools && access ? <div ref={selectionMenu} className="reader-selection-menu" role="toolbar" aria-label="所选文字操作" style={selectionPosition ?? { left: selectionTools.x, top: selectionTools.y }} onMouseDown={event => event.preventDefault()}>
-        <button type="button" onClick={() => { setRetainedSelection(selectionTools); void cleanCopy(selectionTools.quote); }}><Copy size={15} />复制</button><button type="button" onClick={() => sharedSource(selectionTools)}><Quote size={15} />引用</button><button type="button" onClick={() => beginAnnotation("highlight", selectionTools)}><Highlighter size={15} />高亮</button><button type="button" onClick={() => beginAnnotation("underline", selectionTools)}><Underline size={15} />划线</button><button type="button" onClick={() => annotate(selectionTools)}><StickyNote size={15} />记笔记</button><button type="button" onClick={() => { setRetainedSelection(selectionTools); setSelectionTools(null); openRight("source"); }}><FolderPlus size={15} />原文选取</button><button type="button" aria-label="关闭选文菜单" onClick={() => setSelectionTools(null)}><X size={14} /></button>
+      {contextMenu ? <ReaderContextMenu {...contextMenu} close={closeContextMenu} pageLabel={`PDF ${contextMenu.snapshot?.pageIndex ?? page}${pagePayloads[contextMenu.snapshot?.pageIndex ?? page]?.printed_label ? ` · 书页 ${pagePayloads[contextMenu.snapshot?.pageIndex ?? page].printed_label}` : ""}`} actions={[
+        {label:"复制原文",icon:<Copy size={16}/>,disabled:!contextMenu.snapshot,run:()=>void cleanCopy(contextMenu.snapshot?.quote)},
+        {label:contextMenu.snapshot ? "引用选段" : "引用当前页",icon:<Quote size={16}/>,run:()=>openCitation(contextMenu.snapshot)},
+        {label:"高亮",icon:<Highlighter size={16}/>,disabled:!contextMenu.snapshot,run:()=>void beginAnnotation("highlight",contextMenu.snapshot)},
+        {label:"划线",icon:<Underline size={16}/>,disabled:!contextMenu.snapshot,run:()=>void beginAnnotation("underline",contextMenu.snapshot)},
+        {label:"记笔记",icon:<StickyNote size={16}/>,disabled:!contextMenu.snapshot,run:()=>void annotate(contextMenu.snapshot)},
+        {label:"加入我的研究",icon:<FolderPlus size={16}/>,disabled:!contextMenu.snapshot,run:()=>{setRetainedSelection(contextMenu.snapshot);openRight("research");}},
+        {label:"打开目录",icon:<List size={16}/>,group:true,run:()=>openLeft("outline")},
+        {label:"我的笔记",icon:<StickyNote size={16}/>,run:()=>openRight("notes")},
+        {label:"恢复默认布局",icon:<RotateCw size={16}/>,run:restoreReaderLayout},
+      ]}/> : null}
+      {!contextMenu && selectionTools && access ? <div ref={selectionMenu} data-reader-float="selection" className="reader-selection-menu" role="toolbar" aria-label="所选文字操作" style={selectionPosition ?? { left: selectionTools.x, top: selectionTools.y }} onMouseDown={event => event.preventDefault()}>
+        <ReaderGrip label="选文工具" /><button type="button" onClick={() => { setRetainedSelection(selectionTools); void cleanCopy(selectionTools.quote); }}><Copy size={15} />复制</button><button type="button" onClick={() => openCitation(selectionTools)}><Quote size={15} />引用</button><button type="button" onClick={() => beginAnnotation("highlight", selectionTools)}><Highlighter size={15} />高亮</button><button type="button" onClick={() => beginAnnotation("underline", selectionTools)}><Underline size={15} />划线</button><button type="button" onClick={() => annotate(selectionTools)}><StickyNote size={15} />记笔记</button><button type="button" onClick={() => { setRetainedSelection(selectionTools); setSelectionTools(null); openRight("source"); }}><FolderPlus size={15} />原文选取</button><button type="button" aria-label="关闭选文菜单" onClick={() => setSelectionTools(null)}><X size={14} /></button>
       </div> : null}
       <ReaderPanel side="right" modal={isCompact} open={effectiveRightOpen} close={() => setRightPanel(false)}>
         {isCompact ? recoveryControls(true) : null}
         <div className="reader-panel-heading"><strong>原文与我的研究</strong><button type="button" aria-label="关闭信息侧栏" onClick={() => setRightPanel(false)}><X size={18} /></button></div>
+        <div className={readerStyles.panelGrip}><ReaderGrip label="研究侧栏" /><span>原文与我的研究</span></div>
         <nav className="reader-panel-tabs" aria-label="原文与笔记">{rightTabs.map(([tab, title]) => <button key={tab} type="button" className={rightTab === tab ? "active" : ""} aria-pressed={rightTab === tab} onClick={() => setRightTab(tab)}>{title}</button>)}<button type="button" className="reader-tab-close" aria-label="关闭信息侧栏" onClick={() => setRightPanel(false)}><X size={15} /></button></nav>
-        {rightTab === "source" ? <><section className="reader-source-selection">{selectedText ? <><h2>{readerView === "reading" ? "当前引用" : "原文选取"}</h2><blockquote>{selectedText.quote}</blockquote>{readerView === "reading" ? <dl className="reader-source-location"><dt>来源</dt><dd>{work.title}</dd><dt>位置</dt><dd>PDF 第 {selectedText.pageIndex} / {totalPages} 页{sourcePage?.printed_label ? `，印刷页 ${sourcePage.printed_label}` : ""}</dd>{sourcePage?.chapter_title ? <><dt>章节</dt><dd>{sourcePage.chapter_title}</dd></> : null}<dt>版本</dt><dd>{[work.year, work.version?.publisher].filter(Boolean).join(" · ") || "版本信息未提供"}</dd></dl> : null}<p>PDF 第 {selectedText.pageIndex} 页{sourcePage?.chapter_title ? ` · ${sourcePage.chapter_title}` : ""}</p><div className="reader-inline-actions"><button type="button" onClick={() => void cleanCopy(selectedText.quote)}><Copy size={14} />复制原文</button><button className="reader-cite-selection" type="button" onClick={() => sharedSource()}><Quote size={14} />{readerView === "reading" ? "引用此段落" : "引用"}</button><button type="button" onClick={() => annotate()}><StickyNote size={14} />记笔记</button><button type="button" onClick={() => sharedSource()}><FolderPlus size={14} />加入研究</button></div><button className="reader-panel-link" type="button" disabled={Boolean(annotationDraft)} onClick={() => { setRetainedSelection(null); setSelectionTools(null); }}>清除当前选文</button></> : <><h2>当前阅读</h2><strong>{currentPagePayload?.chapter_title || currentOutline?.chapter_title || work.title}</strong><p>PDF 第 {page} 页{currentPagePayload?.printed_label ? ` · 书页 ${currentPagePayload.printed_label}` : ""}</p><p className="reader-empty-list">在原文中选择文字，即可复制、引用、记笔记或加入研究。</p></>}</section>
-          {annotationDraft ? <section className="reader-note-editor"><form onSubmit={event => { event.preventDefault(); void commitNote(); }}><fieldset disabled={Boolean(pendingAction) || annotationSaveUnknown}><h2>添加笔记</h2><p>锚定 PDF 第 {annotationDraft.pageIndex} 页</p><label><span className="sr-only">笔记内容</span><textarea autoFocus rows={5} value={annotationDraft.body} onChange={event => setAnnotationDraft(draft => draft ? { ...draft, body: event.target.value } : null)} placeholder="记录你的理解、问题或联想" /></label><div className="reader-note-tags">{(annotationDraft.tags || []).map(tag => <button type="button" key={tag} aria-label={`移除标签${tag}`} onClick={() => setAnnotationDraft(draft => draft ? { ...draft, tags: draft.tags?.filter(value => value !== tag) } : null)}># {tag}<X size={12} /></button>)}</div><div className="reader-tag-entry"><input aria-label="笔记标签" placeholder="添加标签" maxLength={40} value={tagInput} onChange={event => setTagInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addTag(); } }} /><button type="button" onClick={addTag} disabled={!tagInput.trim() || (annotationDraft.tags?.length ?? 0) >= 12}><Plus size={14} /><span className="sr-only">添加标签</span></button></div><div className="reader-note-save"><small><LockKeyhole size={12} />仅自己可见</small><button className="button secondary" type="button" disabled={Boolean(pendingAction)} onClick={async () => { if (!hasDraft || (await confirmAction("放弃这条尚未保存的笔记？"))) { setAnnotationDraft(null); setTagInput(""); } }}>取消</button><ActionButton className="button" type="submit" state={pendingAction === "save-annotation" ? "pending" : "idle"} disabled={!recordsReady || Boolean(pendingAction)} pendingLabel="正在保存">保存笔记</ActionButton></div></fieldset></form>{recordStatus}</section> : null}
-          {!annotationDraft ? sourceBook : null}
-          {readerView === "search" ? citationPanel : null}
-          {annotationDraft || readerView === "notes" ? <section className="reader-related-notes"><h2>我的相关笔记{recordsReady ? `（${notes.length}）` : ""}</h2>{noteList}</section> : null}</> : null}
-        {rightTab === "notes" ? <section><h2>我的笔记{recordsReady ? `（${notes.length}）` : ""}</h2>{noteList}<button className="reader-panel-link" type="button" onClick={() => { openLeft("highlights"); if (!isMobile) setRightPanel(false); }}>查看高亮与划线<ArrowRight size={14} /></button></section> : null}
+        {rightTab === "source" ? <>
+          {selectedText ? <section className="reader-source-selection"><h2>所选原文</h2><blockquote>{selectedText.quote}</blockquote><div className="reader-inline-actions"><button type="button" onClick={() => void cleanCopy(selectedText.quote)}><Copy size={14} />复制原文</button><button type="button" onClick={() => annotate()}><StickyNote size={14} />记笔记</button><button type="button" onClick={() => openRight("research")}><FolderPlus size={14} />加入研究</button></div><button className="reader-panel-link" type="button" disabled={Boolean(annotationDraft)} onClick={() => { setRetainedSelection(null); setSelectionTools(null); setCitationSelection(null); }}>清除选文</button></section> : null}
+          {citationPanel}
+          <details className={readerStyles.bookDetails}><summary>书目与版本</summary>{sourceBook}</details>
+        </> : null}
+        {rightTab === "notes" ? <>{annotationDraft ? <><section className="reader-source-selection"><h2>笔记原文</h2><blockquote>{annotationDraft.quote}</blockquote></section>{noteEditor}</> : null}<section><div className={readerStyles.panelTitle}><h2>我的笔记{recordsReady ? `（${notes.length}）` : ""}</h2>{selectedText && !annotationDraft ? <button className="button secondary" type="button" onClick={() => annotate()}><Plus size={14} />添加笔记</button> : null}</div>{noteList}<button className="reader-panel-link" type="button" onClick={() => { openLeft("highlights"); if (!isMobile) setRightPanel(false); }}>查看高亮与划线<ArrowRight size={14} /></button></section></> : null}
+        {rightTab === "research" ? <section className="reader-source-selection"><h2>我的研究</h2>{researchReturn ? <Link className={readerStyles.researchReturn} href={researchReturn}><ChevronLeft size={14} />返回当前研究</Link> : null}{selectedText ? <><blockquote>{selectedText.quote}</blockquote><p>PDF 第 {selectedText.pageIndex} 页{pagePayloads[selectedText.pageIndex]?.printed_label ? ` · 书页 ${pagePayloads[selectedText.pageIndex].printed_label}` : ""}</p><button className="button" type="button" onClick={() => sharedSource()}><FolderPlus size={15} />选择研究并加入</button><p className="reader-empty-list">原文、页码和你的备注一起保存到本人研究。</p></> : <p className="reader-empty-list">在原文中选择一段文字，即可加入研究。</p>}<Link className="reader-panel-link" href="/account/research">打开我的研究<ArrowRight size={14} /></Link></section> : null}
         {rightTab === "citation" ? citationPanel : null}
         {rightTab === "related" ? <><section><h2>相关理论流派</h2><div className="tag-list">{relatedTheories.map(item => <Link href={`/theories/nodes/${encodeURIComponent(item.slug)}`} key={item.slug}>{item.name}</Link>)}{!relatedTheories.length ? <p className="reader-empty-list">尚无已确认的公开关系。</p> : null}</div></section><section><h2>相关学者</h2>{relatedScholars.map(scholar => <Link href={`/scholars/${encodeURIComponent(scholar.slug)}`} key={scholar.slug}>{scholar.portrait ? <img src={scholar.portrait} width={32} height={40} alt={scholar.name} loading="lazy" /> : null}<span><strong>{scholar.name}</strong><small>{scholar.years}</small></span></Link>)}{!relatedScholars.length ? <p className="reader-empty-list">尚无已确认的公开学者。</p> : null}</section><section><h2>相关主题</h2>{relatedTopics.map(topic => <Link href={`/topics/${encodeURIComponent(topic.slug)}`} key={topic.slug}>{topic.name}</Link>)}{!relatedTopics.length ? <p className="reader-empty-list">尚无已确认的公开主题。</p> : null}</section><section><AskLibraryLink context="works" ids={[work.workId]} assetId={work.id} label="围绕本文献开始研究" className="button secondary" /></section></> : null}
       </ReaderPanel>
-      <footer className="reader-bottom">{!embedded ? <div className="reader-footer-brand"><BrandImage config={siteConfig ?? undefined} /><span>连接思想 · 开放知识 · 服务研究与大众</span></div> : null}<span className="reader-bottom-work">{work.title}</span><div className="reader-bottom-progress"><span>{page} / {totalPages}</span><progress value={page} max={totalPages} aria-label="阅读位置" /><span>{progress}%</span></div><div className="reader-bottom-actions"><button type="button" onClick={() => effectiveLeftOpen ? setLeftPanel(false) : openLeft("outline")} aria-pressed={effectiveLeftOpen}><List size={17} />目录</button><button type="button" onClick={() => openRight("notes")}><StickyNote size={17} />笔记</button><button type="button" onClick={() => openRight("citation")}><Quote size={17} />引用</button><button type="button" onClick={() => setToolbarOpen(true)}><MoreHorizontal size={17} />更多</button></div></footer>
+      <footer className="reader-bottom">{!embedded ? <div className="reader-footer-brand"><BrandImage config={siteConfig ?? undefined} /><span>连接思想 · 开放知识 · 服务研究与大众</span></div> : null}<span className="reader-bottom-work">{work.title}</span><div className="reader-bottom-progress"><span>{page} / {totalPages}</span><progress value={page} max={totalPages} aria-label="阅读位置" /><span>{progress}%</span></div><div className="reader-bottom-actions" data-reader-float="tools"><ReaderGrip label="阅读工具" /><button type="button" onClick={() => effectiveLeftOpen ? setLeftPanel(false) : openLeft("outline")} aria-pressed={effectiveLeftOpen}><List size={17} />目录</button><button type="button" onClick={() => openRight("notes")}><StickyNote size={17} />笔记</button><button type="button" onClick={() => openCitation()}><Quote size={17} />引用</button><button type="button" onClick={() => setToolbarOpen(true)}><MoreHorizontal size={17} />更多</button></div></footer>
       <Dialog open={ocrOpen} className="reader-more-dialog reader-ocr-dialog" onRequestClose={() => { if (!ocrRecoveryLocked) setOcrOpen(false); }} aria-labelledby="reader-ocr-heading"><header><h2 id="reader-ocr-heading">文字识别与处理状态</h2><button type="button" disabled={ocrRecoveryLocked} aria-label="关闭文字处理状态" onClick={() => setOcrOpen(false)}><X size={20} /></button></header>{ocrOpen ? <ReaderOcrStatus assetId={work.id} documentRevisionId={documentRevisionId} ownerId={readerSession.user?.id} canViewManagement={Boolean(readerAuthenticated && readerSession.user?.capabilities?.includes("access_back_office"))} canManage={Boolean(readerAuthenticated && readerSession.user?.capabilities?.includes("access_back_office") && readerSession.user.capabilities.includes("can_retry_jobs"))} onRecoveryLockChange={setOcrRecoveryLocked} preview={access ? <ReaderPageThumbnail key={`${access.requested_asset_id}:${access.sha256}:${page}`} sourceRef={readerDocumentRef} page={page} identity={`${access.requested_asset_id}:${access.sha256}`} /> : undefined} /> : null}<Link href={detailHref} target="_blank" rel="noopener noreferrer">在文献详情核对当前版本</Link></Dialog>
-      <Dialog open={toolbarOpen} className="reader-more-dialog" id="reader-more" onRequestClose={() => setToolbarOpen(false)} aria-label="阅读工具"><header><h2>阅读工具</h2><button type="button" aria-label="关闭阅读工具" onClick={() => setToolbarOpen(false)}><X size={20} /></button></header>{recoveryControls(true)}<div className="reader-more-actions"><ReaderSettings value={preferences} onSave={applyPreferences}/><button type="button" onClick={() => { setToolbarOpen(false); setOcrOpen(true); }}><BookOpen size={18} />文字识别与处理状态</button><Link href={`/reader/${work.id}?mode=parallel&page=${page}`}><BookOpen size={18} />原文与译本并读</Link><button type="button" onClick={() => { setToolbarOpen(false); openLeft("search"); }}><Search size={18} />书内搜索</button><button type="button" onClick={() => { setToolbarOpen(false); openLeft("bookmarks"); }}><Bookmark size={18} />我的书签</button><button type="button" onClick={() => { setToolbarOpen(false); openRight("citation"); }}><Quote size={18} />引用信息</button><button type="button" onClick={() => { setToolbarOpen(false); openRight("related"); }}><FolderPlus size={18} />相关研究</button><button type="button" onClick={() => { setToolbarOpen(false); protectedAction("书签"); }} aria-pressed={bookmarkedPage}><Bookmark size={18} />{bookmarkedPage ? "移除本页书签" : "保存本页书签"}</button><button type="button" onClick={() => { setToolbarOpen(false); openLeft("highlights"); }}><Highlighter size={18} />我的高亮与划线</button>{access ? <a href={access.download_url || access.url} download={access.download_filename} onClick={trackDownload}><Download size={18} />{access.download_rendition === "ocr_pdf" ? "下载可搜索 PDF" : "下载 PDF"}</a> : <button type="button" disabled><Download size={18} />下载暂不可用</button>}{readerSession.user?.capabilities?.includes("access_back_office") ? <Link href="/admin/processing?tab=ocr"><BookOpen size={18} />查看文字处理任务</Link> : null}<button type="button" onClick={() => { setRotation(value => ((value + 90) % 360) as ReaderRotation); setSelectionTools(null); window.getSelection()?.removeAllRanges(); jumpToPage(page, "auto"); }}><RotateCw size={18} />旋转页面 · {rotation}°</button><button type="button" onClick={() => updateAppearance({ theme: dark ? "light" : "dark" })}>{dark ? <Sun size={18} /> : <Moon size={18} />}{dark ? "浅色阅读界面" : "深色阅读界面"}</button><button type="button" onClick={() => { setToolbarOpen(false); void toggleFullscreen(); }}><Maximize size={18} />{fullscreen ? "退出全屏" : "全屏阅读"}</button></div><div className="reader-more-zoom"><span>页面缩放</span><button type="button" disabled={zoom <= 60} onClick={() => changeZoom(-10)}><Minus size={16} /></button><button type="button" onClick={() => changeZoom(100 - zoom)}>{zoom}%</button><button type="button" disabled={zoom >= 180} onClick={() => changeZoom(10)}><Plus size={16} /></button></div>{access?.original_download_url ? <a href={access.original_download_url} download={access.download_filename}>下载原始扫描版</a> : null}</Dialog>
+      <Dialog open={toolbarOpen} className="reader-more-dialog" id="reader-more" onRequestClose={() => setToolbarOpen(false)} aria-label="阅读工具"><header><h2>阅读工具</h2><button type="button" aria-label="关闭阅读工具" onClick={() => setToolbarOpen(false)}><X size={20} /></button></header>{recoveryControls(true)}<div className="reader-more-actions"><button type="button" onClick={restoreReaderLayout}><RotateCw size={18}/>恢复默认布局</button><ReaderSettings value={preferences} onSave={applyPreferences}/><button type="button" onClick={() => { setToolbarOpen(false); setOcrOpen(true); }}><BookOpen size={18} />文字识别与处理状态</button><Link href={`${loginReturn}${loginReturn.includes("?") ? "&" : "?"}mode=parallel`}><BookOpen size={18} />原文与译本并读</Link><button type="button" onClick={() => { setToolbarOpen(false); openLeft("search"); }}><Search size={18} />书内搜索</button><button type="button" onClick={() => { setToolbarOpen(false); openLeft("bookmarks"); }}><Bookmark size={18} />我的书签</button><button type="button" onClick={() => { setToolbarOpen(false); openCitation(); }}><Quote size={18} />引用信息</button><button type="button" onClick={() => { setToolbarOpen(false); openRight("related"); }}><FolderPlus size={18} />相关研究</button><button type="button" onClick={() => { setToolbarOpen(false); protectedAction("书签"); }} aria-pressed={bookmarkedPage}><Bookmark size={18} />{bookmarkedPage ? "移除本页书签" : "保存本页书签"}</button><button type="button" onClick={() => { setToolbarOpen(false); openLeft("highlights"); }}><Highlighter size={18} />我的高亮与划线</button>{access ? <a href={access.download_url || access.url} download={access.download_filename} onClick={trackDownload}><Download size={18} />{access.download_rendition === "ocr_pdf" ? "下载可搜索 PDF" : "下载 PDF"}</a> : <button type="button" disabled><Download size={18} />下载暂不可用</button>}{readerSession.user?.capabilities?.includes("access_back_office") ? <Link href="/admin/processing?tab=ocr"><BookOpen size={18} />查看文字处理任务</Link> : null}<button type="button" onClick={() => { setRotation(value => ((value + 90) % 360) as ReaderRotation); setSelectionTools(null); window.getSelection()?.removeAllRanges(); jumpToPage(page, "auto"); }}><RotateCw size={18} />旋转页面 · {rotation}°</button><button type="button" onClick={() => updateAppearance({ theme: dark ? "light" : "dark" })}>{dark ? <Sun size={18} /> : <Moon size={18} />}{dark ? "浅色阅读界面" : "深色阅读界面"}</button><button type="button" onClick={() => { setToolbarOpen(false); void toggleFullscreen(); }}><Maximize size={18} />{fullscreen ? "退出全屏" : "全屏阅读"}</button></div><div className="reader-more-zoom"><span>页面缩放</span><button type="button" disabled={zoom <= 60} onClick={() => changeZoom(-10)}><Minus size={16} /></button><button type="button" onClick={() => changeZoom(100 - zoom)}>{zoom}%</button><button type="button" disabled={zoom >= 180} onClick={() => changeZoom(10)}><Plus size={16} /></button></div>{access?.original_download_url ? <a href={access.original_download_url} download={access.download_filename}>下载原始扫描版</a> : null}</Dialog>
       {sharedCitation ? <SharedCitationOverlay {...sharedCitation} open onClose={() => setSharedCitation(null)} /> : null}
-      {gate ? <Dialog open className="login-gate" onRequestClose={() => setGate(null)} aria-labelledby="login-gate-title"><div><button className="panel-close" type="button" aria-label="关闭登录提示" onClick={() => setGate(null)}><X size={18} /></button><p className="eyebrow">保存个人阅读资料</p><h2 id="login-gate-title">登录后使用{gate}</h2><p>在线阅读、下载、全文搜索、复制和引用对访客开放。个人笔记与书签保存到自己的账户。</p><Link className="button" href={authPageHref("login", loginReturn)}>登录<ArrowRight size={16} /></Link><Link className="button secondary" href={authPageHref("register", loginReturn)}>注册读者</Link></div></Dialog> : null}
+      {gate ? <Dialog open className="login-gate" onRequestClose={() => setGate(null)} aria-labelledby="login-gate-title"><div><button className="panel-close" type="button" aria-label="关闭登录提示" onClick={() => setGate(null)}><X size={18} /></button><p className="eyebrow">保存个人阅读资料</p><h2 id="login-gate-title">登录后使用{gate}</h2><p>登录后使用在线阅读与原文工具。个人笔记与书签仅保存到自己的账户。</p><Link className="button" href={authPageHref("login", loginReturn)}>登录<ArrowRight size={16} /></Link><Link className="button secondary" href={authPageHref("register", loginReturn)}>注册读者</Link></div></Dialog> : null}
     </div>
   );
 }
 
 function ReaderPanel({ side, modal, open, close, children }: { side: "left" | "right"; modal: boolean; open: boolean; close: () => void; children: ReactNode }) {
   return modal ? <Dialog open={open} onRequestClose={close} className={`reader-sheet reader-sheet-${side}`} aria-label={side === "left" ? "目录与查找" : "原文、笔记与引用"}>{children}</Dialog>
-    : <aside className={`reader-${side}`} inert={!open} aria-hidden={!open}>{children}</aside>;
+    : <aside data-reader-float={side === "left" ? "outline" : "research"} className={`reader-${side}`} inert={!open} aria-hidden={!open}>{children}</aside>;
 }
 
 function MatchText({ text, query }: { text: string; query: string }) {

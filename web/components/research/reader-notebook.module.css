@@ -155,3 +155,10 @@
 
 /* PDF216–217 desktop heading and first row occupy one compact band. */
 @media(min-width:861px){.page{padding-top:14px}.heading{padding-top:12px;padding-bottom:12px}.heading h1{font-size:42px;line-height:1.25}}
+
+
+/* Center layout candidate boundary. */
+:global([data-stl-page-layout="account"]) .editor { min-width: 0; }
+@media (min-width: 1201px) {
+  :global([data-stl-page-layout="account"]) .workspace { grid-template-columns: 18% minmax(0, 1fr) minmax(0, 1fr); }
+}

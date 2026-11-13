@@ -139,3 +139,23 @@
 .navigation .search { flex: 1 1 20rem; max-width: 36rem; min-width: 0; width: 100%; height: auto; min-height: 46px; }
 .navigation .search input { min-width: 0; height: auto; flex: 1; }
 .navigation .search button { flex-shrink: 0; height: auto; }
+
+
+/* Existing reading and plan sections share the first row; every item stays. */
+/* Center layout candidate boundary. */
+:global([data-stl-page-layout="account"]) .overview:not(.archive) {
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 24px;
+}
+:global([data-stl-page-layout="account"]) .overview > * { grid-column: 1 / -1; min-width: 0; }
+:global([data-stl-page-layout="account"]) .overview:not(.archive) > .section:not(:last-child) { grid-column: auto; }
+:global([data-stl-page-layout="account"]) .section { margin-block: 0 16px; }
+:global([data-stl-page-layout="account"]) .section > header { gap: 16px; margin-block-end: 16px; flex-wrap: wrap; }
+:global([data-stl-page-layout="account"]) .reading { max-width: none; grid-template-columns: minmax(0, 1fr); }
+:global([data-stl-page-layout="account"]) .reading article { border-radius: 3px; padding: 20px; }
+:global([data-stl-page-layout="account"]) .empty { border-radius: 3px; padding: 24px 20px; }
+@media (max-width: 900px) {
+  :global([data-stl-page-layout="account"]) .overview:not(.archive) { display: block; }
+  :global([data-stl-page-layout="account"]) .reading article { padding: 16px; }
+}
+
+:global([data-stl-page-layout="account"]) .localTransfer { margin-block:0; padding-block:12px; }

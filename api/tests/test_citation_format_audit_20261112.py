@@ -32,6 +32,11 @@ def bundle(snapshot, page=""):
     ("新1版", "新1版"), ("修订版", "修订版"), ("影印本", "影印本"),
     ("1st ed., 3rd printing", ""), ("2nd ed., 3rd printing", "2nd ed."),
     ("Rev. ed.", "Rev. ed."), ("第零版", "第零版"),
+    ("中华书局1986年4月第1版", ""), ("2017年三联版", ""),
+    ("广西师范大学出版社2007年版", ""), ("1998年中译本（正文扫描件）", ""),
+    ("2016年1月北京第1版、第1次印刷", ""),
+    ("原著第四版；2012年11月中文第2版第1次印刷，含伊安·哈金导读", "2版"),
+    ("2012年9月第4版修订译本", "修订译本, 4版"),
 ])
 def test_edition_is_not_printing_or_first_edition(raw, expected):
     assert citation_edition(raw) == expected
@@ -90,7 +95,9 @@ def test_translator_scope_and_revised_edition_across_all_styles():
     sample["contributions"].append({"role": "translator", "name": "仅译章节", "scope": {"kind": "chapter", "chapters": []}})
     outputs = bundle(sample)
     for style in ["gbt7714-2025", "apa", "mla", "chicago", "harvard"]:
-        assert "2版" in outputs[style] and "译者甲" in outputs[style]
+        assert "2版" in outputs[style]
+        # Leeds' current translated-book example includes the translator.
+        assert "译者甲" in outputs[style]
         assert "仅译章节" not in outputs[style]
 
 
@@ -102,4 +109,4 @@ def test_apa_and_mla_official_edited_book_examples():
     sample["contributions"] = [{"role": "editor", "name": "Sánchez Prado, Ignacio M."}]
     assert bundle(sample)["mla"] == "Sánchez Prado, Ignacio M., editor. Mexican Literature in Theory. Bloomsbury, 2018."
     assert bundle(sample)["csl"]["author"] == []
-    assert bundle(sample)["csl"]["editor"] == [{"literal": "Sánchez Prado, Ignacio M."}]
+    assert bundle(sample)["csl"]["editor"] == [{"family": "Sánchez Prado", "given": "Ignacio M."}]

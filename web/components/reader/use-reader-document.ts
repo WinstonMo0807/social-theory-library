@@ -6,6 +6,14 @@ import { isTaskRunning, pollBudgetExpired } from "@/lib/api/task-polling";
 import type { Work } from "@/lib/data";
 import type { AccessPayload, PagePayload } from "./types";
 
+/** A failed status refresh must not discard an authorized document still loading. */
+export function canRetainReaderAccess(current: AccessPayload | null, assetId: string, expiresAt: number, error: unknown, now = Date.now()) {
+  if (!current || current.requested_asset_id !== assetId || now >= expiresAt) return false;
+  if (error instanceof DOMException && ["TimeoutError", "NetworkError"].includes(error.name)) return true;
+  return error instanceof ApiRequestError
+    && (error.status === 0 || error.status === 408 || error.status === 429 || error.status >= 500);
+}
+
 export function validateReaderPage(payload: PagePayload, assetId: string, revisionId: string, page: number) {
   if (payload.page_index !== page || (payload.asset_id && payload.asset_id !== assetId)) {
     throw new ApiRequestError("页内容身份与当前文献或页码不一致，请重新加载文献。", 409);
@@ -31,6 +39,7 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
   const pendingPageRequests = useRef<Set<number>>(new Set());
   const pageGeneration = useRef(0);
   const lastAccess = useRef<AccessPayload | null>(null);
+  const accessExpiresAt = useRef(0);
 
   useEffect(() => {
     pagePayloadsRef.current = pagePayloads;
@@ -70,6 +79,9 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
             setPageErrors({});
         }
         lastAccess.current = nextAccess;
+        accessExpiresAt.current = payload.expires_in === null
+          ? Number.POSITIVE_INFINITY
+          : Date.now() + payload.expires_in * 1000;
         setAccess(nextAccess);
         setAccessError("");
         const paused = isTaskRunning(payload.ocr_status) && pollBudgetExpired(startedAt);
@@ -90,7 +102,15 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
       } catch (error: unknown) {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : "";
-          setAccess(null);
+          const retained = canRetainReaderAccess(lastAccess.current, assetId, accessExpiresAt.current, error);
+          if (!retained) {
+            lastAccess.current = null;
+            setAccess(null);
+          } else if (!pollBudgetExpired(startedAt)) {
+            refreshTimer = window.setTimeout(loadAccess, Math.min(30000, accessExpiresAt.current - Date.now()));
+          } else {
+            setStatusPollPaused(true);
+          }
           if (error instanceof ApiRequestError && [401, 403, 404, 409, 410].includes(error.status)) {
             pageGeneration.current += 1;
             pagePayloadsRef.current = {};
@@ -153,6 +173,7 @@ export function useReaderDocument({ assetId, workId, documentRevisionId = "" }: 
           pagePayloadsRef.current = {};
           pendingPageRequests.current.clear();
           setPagePayloads({});
+          lastAccess.current = null;
           setAccess(null);
           setAccessError(message);
         }

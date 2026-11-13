@@ -26,9 +26,10 @@ import { ParallelColumn } from "./parallel-column";
 import { useParallelResource } from "./use-parallel-resource";
 import { useParallelSave } from "./use-parallel-save";
 import styles from "./parallel-reader.module.css";
+import { safeResearchReturn } from "@/lib/api/research-navigation";
 import { parallelSourceMatches } from "@/lib/api/parallel-navigation";
 
-type Props = { assetId: string; initialPage: number; initialRevision?: string; initialFocus?: string; initialRight?: { assetId: string; revisionId: string }; taskId?: string; work?: Work; siteConfig?: SiteConfig };
+type Props = { researchContext?: { project?: string; turn?: string; reference?: string; returnTo?: string }; assetId: string; initialPage: number; initialRevision?: string; initialFocus?: string; initialRight?: { assetId: string; revisionId: string }; taskId?: string; work?: Work; siteConfig?: SiteConfig };
 type Selection = { reference: ResolvedEvidence; id: string };
 type Calibration = {
   id: string; request_id?: string; status: string; scope: "bibliography" | "passages"; notice?: string;
@@ -44,7 +45,7 @@ export function ParallelReader(props: Props) {
     ownerId={state.status === "authenticated" ? state.user?.id : undefined} />;
 }
 
-function ParallelWorkspace({ assetId, initialPage, initialRevision, initialFocus, initialRight, taskId, work, siteConfig, ownerId }: Props & { ownerId?: number }) {
+function ParallelWorkspace({ assetId, initialPage, initialRevision, initialFocus, initialRight, taskId, work, siteConfig, ownerId, researchContext }: Props & { ownerId?: number }) {
   const versions = useParallelResource<ParallelVersions>(`/catalog/parallel/versions/?asset_id=${encodeURIComponent(assetId)}`);
   const router = useRouter();
   const [leftId, setLeftId] = useState<string | null>(null);
@@ -304,6 +305,13 @@ function ParallelWorkspace({ assetId, initialPage, initialRevision, initialFocus
   const singleReaderRevision = leftId === null ? initialRevision || left?.document_revision_id : left?.document_revision_id;
   if (singleReaderRevision) singleReaderQuery.set("revision", singleReaderRevision);
   if (leftFocus) singleReaderQuery.set("focus", leftFocus);
+  const researchReturn = safeResearchReturn(researchContext?.returnTo || "");
+  if (researchReturn) singleReaderQuery.set("return_to", researchReturn);
+  if (!left?.asset_id || left.asset_id === assetId) {
+    if (researchContext?.project) singleReaderQuery.set("research_project", researchContext.project);
+    if (researchContext?.turn) singleReaderQuery.set("research_turn", researchContext.turn);
+    if (researchContext?.reference) singleReaderQuery.set("reference", researchContext.reference);
+  }
 
   return <div className={styles.root} data-manual={manual} data-tab={mobileTab} data-manual-tab={manualTab} onClickCapture={event => {
     const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");

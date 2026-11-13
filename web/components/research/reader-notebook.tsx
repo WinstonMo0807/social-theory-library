@@ -9,7 +9,7 @@ import { createRequestKey } from "../../lib/request-key";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { BookOpen, Copy, Download, LockKeyhole, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Copy, Download, Quote, LockKeyhole, Search, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ApiRequestError, subscribeToSessionChanges } from "@/lib/api";
 import { withPrivateOwner } from "@/lib/api/private-owner";
@@ -218,7 +218,7 @@ function DetailActions({ owner, row, onPreview }: { owner: string; row: Notebook
       if (!request.signal.aborted) setMessage("已复制当前可核对的摘录与来源。");
     } catch (reason) { if (!request.signal.aborted) setMessage(reason instanceof Error ? reason.message : "引用暂时无法核对。"); }
   }
-  return <><div className={styles.detailActions}><button disabled={!row.saved_quote || row.source.source_status !== "available"} onClick={() => void cite(true)}><Copy size={14} />复制摘录（含出处）</button><button disabled={row.source.source_status !== "available"} onClick={() => void cite(false)}><Download size={14} />导出为引用</button><button disabled={row.source.source_status !== "available"} onClick={onPreview}><BookOpen size={14} />核对原文</button>{message ? <p role="status">{message}</p> : null}</div>{citation ? <SharedCitationOverlay {...citation} open onClose={() => setCitation(null)} /> : null}</>;
+  return <><div className={styles.detailActions}><button disabled={!row.saved_quote || row.source.source_status !== "available"} onClick={() => void cite(true)}><Copy size={14} />复制摘录（含出处）</button><button disabled={row.source.source_status !== "available"} onClick={() => void cite(false)}><Quote size={14} />查看引用</button><button disabled={row.source.source_status !== "available"} onClick={onPreview}><BookOpen size={14} />核对原文</button>{message ? <p role="status">{message}</p> : null}</div>{citation ? <SharedCitationOverlay {...citation} open onClose={() => setCitation(null)} /> : null}</>;
 }
 
 type BulkIntent = { requestId: string; kind: "export" | "erase"; targets: PrivacyTarget[] };
