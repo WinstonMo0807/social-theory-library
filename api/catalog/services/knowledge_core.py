@@ -275,6 +275,26 @@ def normalize_page_blocks(blocks, *, retained=None):
     return result
 
 
+def validate_page_patch_base(payload, page, blocks, *, origin):
+    """Check the destination without creating entities, revisions or references."""
+    if payload.get("operation") == "metadata":
+        if origin != "human":
+            raise ValidationError("标题与范围须由管理员在知识页中编辑。")
+        if digest(page_metadata(page, draft=True)) != payload.get("base_hash"):
+            raise ValidationError({"conflict": "标题或范围已修改，请核对当前页面信息。"})
+        return None
+    operation, key = payload.get("operation"), payload.get("block_id")
+    current = next((b for b in blocks if b["id"] == key), None)
+    if operation not in {"add", "replace", "delete"} or not key:
+        raise ValidationError("知识页补丁须指定稳定区块和操作。")
+    if (operation == "add" and current is not None) or (operation != "add" and (current is None or digest(current) != payload.get("base_hash"))):
+        raise ValidationError({"conflict": "该区块已修改，请对照当前正文重新审核。", "block_id": key})
+    if operation != "add" and origin != "human" and current and (
+            current.get("human_edited") or current.get("origin") in {"human", "manual", "migration"}) and not payload.get("human_edited"):
+        raise ValidationError({"conflict": "此区块包含人工正文，请在可视化编辑器中审阅并明确修改后再保存。", "block_id": key})
+    return current
+
+
 @transaction.atomic
 def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     require_editor(actor)
@@ -291,11 +311,8 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     else:
         raise ValidationError("知识页修改须指定已有页面、作品或实体。")
     blocks, _ = page_content(page)
+    current = validate_page_patch_base(payload, page, blocks, origin=origin)
     if payload.get("operation") == "metadata":
-        if origin != "human":
-            raise ValidationError("标题与范围须由管理员在知识页中编辑。")
-        if digest(page_metadata(page, draft=True)) != payload.get("base_hash"):
-            raise ValidationError({"conflict": "标题或范围已修改，请核对当前页面信息。"})
         title, scope = payload.get("title"), payload.get("scope")
         if not isinstance(title, str) or not title.strip() or len(title) > 600 or not isinstance(scope, str) or len(scope) > 6000:
             raise ValidationError("请填写有效标题和编纂范围。")
@@ -310,16 +327,7 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
         from catalog.services.knowledge_compilation import request_page_refresh
         request_page_refresh([page.pk])
         return revision
-    by_id = {b["id"]: b for b in blocks}
     operation, key = payload.get("operation"), payload.get("block_id")
-    current = by_id.get(key)
-    if operation not in {"add", "replace", "delete"} or not key:
-        raise ValidationError("知识页补丁须指定稳定区块和操作。")
-    if (operation == "add" and current is not None) or (operation != "add" and (current is None or digest(current) != payload.get("base_hash"))):
-        raise ValidationError({"conflict": "该区块已修改，请对照当前正文重新审核。", "block_id": key})
-    if operation != "add" and origin != "human" and current and (
-            current.get("human_edited") or current.get("origin") in {"human","manual","migration"}) and not payload.get("human_edited"):
-        raise ValidationError({"conflict":"此区块包含人工正文，请在可视化编辑器中审阅并明确修改后再保存。","block_id":key})
     if operation != "delete":
         proposed = {**payload.get("block", {}), "id": key, "origin": origin,
                     "human_edited": bool(payload.get("human_edited"))}

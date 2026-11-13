@@ -2,6 +2,7 @@
 from copy import deepcopy
 from uuid import UUID, uuid4
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
@@ -210,6 +211,56 @@ def _groups(items):
         yield [remaining.pop(key) for key in sorted(group)]
 
 
+def _local_page_conflicts(items, all_items, applications, *, origin):
+    """Exclude stale/protected blocks before shared identities join transaction groups.
+
+    No candidate is written here. Lock existing destinations and recheck them in
+    apply_page_patch; invalid evidence still rolls back its entire transaction group.
+    """
+    from catalog.services.knowledge_core import page_content, validate_page_patch_base
+    targets, ids = {}, {"page_id": set(), "entity_id": set(), "work_id": set()}
+    for item in items:
+        if item.kind != "wiki_patch":
+            continue
+        for field in ids:
+            value = item.payload.get(field)
+            if not value:
+                continue
+            if isinstance(value, dict) and set(value) == {"change_item"}:
+                key = str(value["change_item"])
+                dependency = all_items.get(key)
+                value = applications.get(key, {}).get("id") or (
+                    dependency.payload.get("existing_id") if dependency and dependency.kind == "entity" else None)
+            try:
+                value = UUID(str(value))
+            except (ValueError, TypeError):
+                break  # New/invalid identities are handled by the application transaction.
+            targets[str(item.pk)] = (field, value)
+            ids[field].add(value)
+            break
+    pages = m.KnowledgePage.objects.select_for_update().filter(
+        Q(pk__in=ids["page_id"]) | Q(entity_id__in=ids["entity_id"]) | Q(work_id__in=ids["work_id"]))
+    lookup, contents = {}, {}
+    for page in pages:
+        for field, value in (("page_id", page.pk), ("entity_id", page.entity_id), ("work_id", page.work_id)):
+            if value:
+                lookup[(field, value)] = page
+    blocked = {}
+    for item in items:
+        page = lookup.get(targets.get(str(item.pk)))
+        if page is None:
+            continue
+        if page.pk not in contents:
+            contents[page.pk] = page_content(page)[0]
+        try:
+            validate_page_patch_base(item.payload, page, contents[page.pk], origin=origin)
+        except ValidationError as exc:
+            if isinstance(exc.detail, dict) and "conflict" in exc.detail:
+                blocked[str(item.pk)] = {"reason": str(exc.detail["conflict"]), "page_id": str(page.pk),
+                    **({"block_id": str(exc.detail["block_id"])} if "block_id" in exc.detail else {})}
+    return blocked
+
+
 @transaction.atomic
 def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
     require_editor(actor)
@@ -240,6 +291,18 @@ def apply(changeset_id, selected_ids, actor, *, request_id, expected_version):
             blocked[key] = {"reason": "尚未确认" if item.decision != "accepted" else "依赖尚未确认或未选择", "dependencies": missing}
         else:
             eligible.append(item)
+    blocked.update(_local_page_conflicts(eligible, all_items, applications, origin=changeset.origin))
+    # A blocked ancestor prevents its descendants, not its already reviewed
+    # prerequisites or sibling blocks sharing those prerequisites.
+    while True:
+        descendants = {str(item.pk): {"reason": "依赖项存在冲突或尚未保存", "dependencies": sorted(set(item.dependencies) & blocked.keys())}
+            for item in eligible if str(item.pk) not in blocked and set(item.dependencies) & blocked.keys()}
+        if not descendants:
+            break
+        blocked.update(descendants)
+    for key, conflict in blocked.items():
+        m.ChangeItem.objects.filter(pk=key).update(conflict=conflict)
+    eligible = [item for item in eligible if str(item.pk) not in blocked]
     for group in _groups(eligible):
         local = dict(applications)
         try:

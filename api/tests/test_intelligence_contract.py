@@ -78,6 +78,46 @@ def test_old_patch_conflicts_after_human_change(source, admin_user):
     assert page_content(page)[0][0]["text"] == "人工修改"
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize("reason,target", [("human", "page"), ("stale", "work"), ("human", "candidate_entity")])
+def test_local_block_conflict_does_not_roll_back_shared_source_dependencies(source, admin_user, reason, target):
+    snapshot_revision(source)
+    existing = m.Entity.objects.create(kind="concept", label="已有概念")
+    page = m.KnowledgePage.objects.create(slug="shared-review", title="已有正文",
+        **({"entity": existing} if target == "candidate_entity" else {"work": source.asset.edition.work}))
+    block_id = str(uuid4())
+    apply_page_patch({"page_id": str(page.pk), "operation": "add", "block_id": block_id,
+        "block": {"type": "analysis", "text": "人工正文", "references": [{"type": "entity", "id": str(existing.pk)}]}},
+        admin_user, request_key="human-source", origin="human")
+    original = page_content(page)[0][0]
+    entity = proposals()[0]
+    if target == "candidate_entity":
+        entity["payload"] = {"kind": "concept", "label": existing.label, "existing_id": str(existing.pk)}
+    assertion = {"id": str(uuid4()), "kind": "assertion", "payload": {"text": "测试原文陈述",
+        "participants": [{"role": "subject", "entity_id": {"change_item": entity["id"]}}],
+        "evidence": [{"stance": "supports", "segments": [{"page_number": 2, "start": 0, "end": 6, "exact": "跨页引文后半"}]}]}}
+    destination = {"page_id": str(page.pk)} if target == "page" else {"work_id": str(source.asset.edition.work_id)} if target == "work" else {"entity_id": {"change_item": entity["id"]}}
+    proposed = {"type": "analysis", "text": "有来源的新增正文", "references": [{"type": "assertion", "id": {"change_item": assertion["id"]}}]}
+    stale = {"id": str(uuid4()), "kind": "wiki_patch", "payload": {**destination, "operation": "replace",
+        "block_id": block_id, "base_hash": digest(original) if reason == "human" else "old-hash", "block": proposed}}
+    sibling = {"id": str(uuid4()), "kind": "wiki_patch", "payload": {**destination, "operation": "add", "block_id": str(uuid4()), "block": proposed}}
+    dependent = {"id": str(uuid4()), "kind": "wiki_patch", "dependencies": [stale["id"]],
+        "payload": {**destination, "operation": "add", "block_id": str(uuid4()), "block": {**proposed, "text": "依赖冲突区块的下一段"}}}
+    items = [entity, assertion, stale, sibling, dependent]
+    changeset = changes.submit_draft(source, items, admin_user, request_id=uuid4())
+    changeset = changes.review(changeset.pk, [{"id": item["id"], "decision": "accepted"} for item in items], admin_user, expected_version=1)
+    request = uuid4()
+    result = changes.apply(changeset.pk, [i["id"] for i in items], admin_user, request_id=request, expected_version=changeset.version)
+    assert set(result["saved"]) == {entity["id"], assertion["id"], sibling["id"]}
+    assert set(result["blocked"]) == {stale["id"], dependent["id"]}
+    assert result["blocked"][stale["id"]]["block_id"] == block_id
+    assert result["blocked"][dependent["id"]]["dependencies"] == [stale["id"]]
+    assert original in page_content(page)[0] and len(page_content(page)[0]) == 2
+    assert changeset.items.filter(decision="accepted").count() == len(items)
+    assert m.Assertion.objects.get().status == "draft"
+    assert changes.apply(changeset.pk, [i["id"] for i in items], admin_user, request_id=request, expected_version=changeset.version) == result
+
+
 def test_installed_docetl_operator_delegates_once_without_truncation(monkeypatch, settings):
     pytest.importorskip("docetl")
     from ingestion.services.ai_client import AIClient, AIConfiguration, AIResult
