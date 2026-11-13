@@ -15,6 +15,7 @@ import { EvidencePanel, KnowledgeNavigation, knowledgeCall, type LibrarySource, 
 import { KnowledgeAssertionEditor, type EditableAssertion } from "./knowledge-assertion-editor";
 import { AcademicRelations } from "./academic-relations";
 import { KnowledgeSearch } from "./knowledge-search";
+import { KnowledgeCompilationPanel } from "./knowledge-compilation-panel";
 import { EntityProfileEditor } from "./entity-profile-editor";
 import s from "./knowledge-workbench.module.css";
 
@@ -116,6 +117,7 @@ function PageWorkspace() {
   return <div className={s.workbench}>
     <header className={s.heading}><div><h1>{data?.title || "知识编纂"}</h1><p>{data ? `${kinds[data.kind] || data.kind}知识页 · ${data.status === "published" ? "已发布" : "草稿"}` : "让文献中的观点成为有来源、可修订的知识页面。"}</p></div>{data?.public_url && <Link className={s.buttonLink} target="_blank" href={data.public_url}>公开展示位置 <ArrowUpRight size={15} /></Link>}</header>
     <KnowledgeNavigation active="pages" workId={data?.work_id || work} revisionId={revision} /><div className={s.toolbar}><Link href="/admin/knowledge?relations=1">管理学术陈述与关系</Link><Link href="/admin/knowledge?search=1">检索已发布知识</Link></div>
+    {!pageId && <KnowledgeCompilationPanel source={source} workId={work} />}
     {error && <div className={s.error} role="alert">{error} <button onClick={() => setAttempt(v => v + 1)}>重新读取</button></div>}
     {notice && <div className={s.notice} role="status">{notice}{submitted && <p><Link href={`/admin/knowledge/review?changeset=${submitted}&work_id=${source?.work_id || ""}`}>进入审核与发布 →</Link></p>}</div>}
     {!pageId ? <>

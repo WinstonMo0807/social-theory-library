@@ -5,6 +5,12 @@ from catalog.models import CurationRun
 from common.task_runtime import register_executor_heartbeat, claim_specific_demand, complete_demand, release_demand
 
 
+@shared_task(name="catalog.knowledge.refresh_compilations", ignore_result=True, queue="intelligence")
+def refresh_compilations():
+    from catalog.services.knowledge_compilation import reconcile_pending
+    reconcile_pending()
+
+
 @shared_task(name="catalog.intelligence.refresh_source", ignore_result=True, queue="intelligence")
 def refresh_source(job_id, task_id):
     from catalog.services.knowledge_source_updates import execute_source_update
@@ -54,24 +60,28 @@ def execute_structure(job_id):
 @shared_task(name="catalog.intelligence.execute", ignore_result=True, queue="intelligence")
 def execute_curation(run_id, version):
     from catalog.services.intelligence import execute
-    from catalog.services.intelligence_provider import configuration
+    from catalog.services.knowledge_compilation import run_configuration, AgentStagePending
     from ingestion.services.ai_client import AIProviderRateLimited
     from catalog.services.intelligence_remote import RemoteStagePending
     run = CurationRun.objects.filter(pk=run_id, version=version).exclude(status="canceled").first()
     if not run:
         return
-    config = configuration(run.profile_key)
+    config = run_configuration(run)
     executor_id = "stl-intelligence-single"
     register_executor_heartbeat(executor_id=executor_id, capabilities=["llm_large","document_parse"], kind="nas",
         concurrency=1, ttl_seconds=int(config.timeout)+180, metadata={"task_kinds":["curation_run"]})
     lease = claim_specific_demand(demand_id=run.demand_id, executor_id=executor_id, lease_seconds=int(config.timeout)+180)
     if not lease:
+        # A duplicate queue delivery must not change a completed stage's state.
+        from catalog.models import CapabilityDemand
+        if CapabilityDemand.objects.filter(pk=run.demand_id, state__in=["completed", "canceled"]).exists():
+            return
         CurationRun.objects.filter(pk=run_id,version=version).update(status="waiting_resource")
         return
     try:
         execute(run,config,lease)
         complete_demand(lease.demand_id,lease.lease_token,executor_id=executor_id)
-    except RemoteStagePending:
+    except (RemoteStagePending, AgentStagePending):
         complete_demand(lease.demand_id,lease.lease_token,executor_id=executor_id)
     except Exception as exc:
         waiting = isinstance(exc,AIProviderRateLimited)

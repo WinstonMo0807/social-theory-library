@@ -10,6 +10,7 @@ import { createRequestKey } from "@/lib/request-key";
 import { AssertionFields, type AssertionFieldsValue } from "./assertion-fields";
 import { KnowledgeAssertionContent } from "../public/knowledge-page-content";
 import { ParagraphCorrection } from "./paragraph-correction";
+import { KnowledgeCompilationPanel } from "./knowledge-compilation-panel";
 
 type Node = { id: string; title: string; kind: string; parent_id: string | null };
 type Context = { title: string; segments: SourceSegment[]; chapter_path: string[]; offset: number; next_offset: number | null; returned_characters: number; total_characters: number; references: { target_id: string; kind: string; label: string }[] };
@@ -85,6 +86,7 @@ export function SourceWorkspace() {
     <header className={s.heading}><div><h1>{source?.title || "原文与检索"}</h1><p>{source ? `${source.edition_label || "当前版本"} · 正文修订 ${source.revision_number} · ${source.pages} 页` : "从文献版本出发，检查正文、检索与每一处引用。"}</p></div>
       {source && <Link className={s.buttonLink} href={source.catalog_url}>作品编目 <ArrowUpRight size={15} /></Link>}</header>
     <KnowledgeNavigation active="sources" workId={source?.work_id || work} revisionId={revision} />
+    {source && <KnowledgeCompilationPanel source={source} workId={source.work_id} />}
     {parseNotice && <p role="status">{parseNotice}</p>}
     {error && <div className={s.error} role="alert">{error} <button onClick={() => setAttempt(v => v + 1)}>重新读取</button></div>}
     {!revision ? <>

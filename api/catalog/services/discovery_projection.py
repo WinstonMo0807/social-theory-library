@@ -382,7 +382,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     except DiscoveryIndexError as error:
         coverage = {}
         warnings.append({"code": error.code, "message": str(error)})
-    empty = {"sparse": [], "dense": [], "version": str(generation.pk) if generation else "",
+    empty = {"sparse": [], "dense": [], "contextual": [], "version": str(generation.pk) if generation else "",
              "index_uid": str(generation.uid) if generation else "",
              "embedding_artifact": generation.config_snapshot.get("embedding_artifact", "") if generation else "",
              "embedding_dimensions": int(generation.dimensions or generation.config_snapshot.get("dimensions") or 0) if generation else None,
@@ -459,6 +459,17 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
             empty["sparse"] = [refs[key] for key in sorted(scores, key=lambda key: (-scores[key], key))][:limit]
     except DiscoveryIndexError:
         warnings.append({"code": "keyword_unavailable", "message": "关键词索引暂不可用。"})
+    # Separate, lower-weight recall preserves the exact-text baseline. A context
+    # hit may match a chapter title; that title must never replace the quotation.
+    if (channel == "passages" and not scope and not filters.get("_baseline")
+            and not query.lstrip().startswith(('"', '“'))
+            and generation.config_snapshot.get("context_fields_version") == 1):
+        try:
+            contextual = meili("POST", f"/indexes/{generation.uid}/search", {**base,
+                "q": normalized, "attributesToSearchOn": ["normalized_text", "context_text"]})
+            empty["contextual"] = contextual.get("hits", [])
+        except DiscoveryIndexError:
+            warnings.append({"code": "context_unavailable", "message": "章节语境检索暂不可用，保留原文检索结果。"})
     if not scope and not filters.get("_keyword_only"):
         try:
             vector_cache = context.setdefault("vectors", {})
@@ -474,7 +485,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
             empty["dense"] = dense.get("hits", [])
         except (DiscoveryIndexError, DiscoveryInferenceError, KeyError):
             warnings.append({"code": "dense_unavailable", "message": "向量检索暂不可用，当前只显示关键词召回的材料。"})
-    hydrated = {row["id"]: row for row in validate_discovery_results(channel, [*empty["sparse"], *empty["dense"]], access_statuses, filters=filters)}
-    for branch in ("sparse", "dense"):
+    hydrated = {row["id"]: row for row in validate_discovery_results(channel, [*empty["sparse"], *empty["dense"], *empty["contextual"]], access_statuses, filters=filters)}
+    for branch in ("sparse", "dense", "contextual"):
         empty[branch] = [hydrated[row["id"]] for row in empty[branch] if row.get("id") in hydrated]
     return empty

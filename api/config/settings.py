@@ -448,6 +448,11 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
     "retry_on_timeout": True,
 }
 CELERY_BEAT_SCHEDULE = {
+    "refresh-knowledge-compilations": {
+        "task": "catalog.knowledge.refresh_compilations",
+        "schedule": 300.0,
+        "options": {"queue": "intelligence", "expires": 3600},
+    },
     "dispatch-opted-in-backups": {"task": "distribution.storage_tasks.dispatch_due_backups", "schedule": 60,
         "options": {"queue": "celery", "expires": 50}},
     "purge-expired-booklist-items": {"task": "reading.tasks.purge_expired_booklist_items", "schedule": 3600,

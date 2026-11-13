@@ -50,7 +50,7 @@ export function KnowledgeReviewWorkspace() {
   const lifetime = useRef<AbortController | null>(null);
   useEffect(() => { const controller = new AbortController(); lifetime.current = controller; return () => controller.abort(); }, []);
   const refresh = useCallback(async () => {
-    const result = await call<Index>("/intelligence/runs/", undefined, lifetime.current?.signal); setIndex(result);
+    const result = await call<Index>("/knowledge/reviews/", undefined, lifetime.current?.signal); setIndex(result);
     if (selectedChangeset) {
       const changeset = await call<Changes>(`/intelligence/changesets/${selectedChangeset}/`, undefined, lifetime.current?.signal);
       setRun({ title: changeset.title, edition_id: changeset.edition_id, document_revision_id: changeset.document_revision_id,
@@ -127,7 +127,7 @@ export function KnowledgeReviewWorkspace() {
     <KnowledgeNavigation active="review" workId={source?.work_id || workFilter} revisionId={run?.document_revision_id || ""} />
     {error && <div role="alert" className={styles.error}>{error}</div>}{notice && <p role="status" className={styles.notice}>{notice}</p>}
     {!index ? !error && <LoadingState>正在读取审核草稿…</LoadingState> : <>
-      {!run ? <section><h2>提交的草稿</h2>{index.drafts.length ? <ul className={styles.runs}>{index.drafts.map(d => <li key={d.id}><button onClick={() => { setSelectedChangeset(d.id); choose(""); }}><strong>{d.title}</strong><span>{d.origin === "human" ? "人工编纂" : d.origin.startsWith("internal_demo_") ? "流程验证草稿" : "外部代理草稿"}</span></button></li>)}</ul> : <p>暂无待审核草稿。可从知识编纂页面提交修改。</p>}</section> : <>
+      {!run ? <section><h2>提交的草稿</h2>{index.drafts.length ? <ul className={styles.runs}>{index.drafts.map(d => <li key={d.id}><button onClick={() => { setSelectedChangeset(d.id); choose(""); }}><strong>{d.title}</strong><span>{d.origin === "human" ? "人工编纂" : d.origin === "wiki_agent" ? "原文代理编纂" : d.origin === "wiki_compilation" ? "文献持续编纂" : d.origin.startsWith("internal_demo_") ? "流程验证草稿" : "外部代理草稿"}</span></button></li>)}</ul> : <p>暂无待审核草稿。可从知识编纂页面提交修改。</p>}</section> : <>
         <div className={styles.runbar}><button disabled={dirty || busy} onClick={() => { setRun(null); setSelectedChangeset(""); choose(""); }}><ArrowLeft size={15} />全部草稿</button><div><h2>{run.title}</h2><p>{changes?.origin === "human" ? "人工编纂" : "提交的编纂草稿"} · 审核与发布</p></div></div>
         <div className={styles.columns}>
           <nav className={styles.outline} aria-label="审核内容"><h3>审核内容</h3>{[["all", "全部建议"], ...Object.entries(kinds)].map(([key, label]) => <button key={key} aria-current={category === key ? "true" : undefined} disabled={dirty || busy} onClick={() => { setCategory(key); choose(""); }}>{label}<span>{items.filter(i => (key === "all" || i.kind === key) && i.decision === "pending").length}</span></button>)}

@@ -1,4 +1,21 @@
 .workbench { --accent: #8b6b3d; --wash: #f1ece2; color: var(--ink, #292822); min-width: 0; }
+.compilation { margin: 12px 0 32px; padding: 24px 0; border-block: 1px solid var(--line, #d9d2c6); }
+.compilationHeading { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.compilationHeading h2 { font: 500 1.45rem/1.4 var(--font-serif); margin: 0; }
+.compilationHeading p, .compilationList p { color: var(--muted, #686257); font-size: .875rem; line-height: 1.65; margin: 7px 0 0; }
+.compilationList { list-style: none; padding: 0; margin: 20px 0 0; }
+.compilationList > li { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1.15fr) auto; gap: 24px; padding: 22px 0; border-top: 1px solid var(--line, #d9d2c6); }
+.compilationList > li > div:first-child > a { font: 500 1.15rem/1.6 var(--font-serif); color: inherit; }
+.compilationList strong { font-size: .875rem; font-weight: 500; }
+.compilationActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 12px; max-width: 300px; }
+.compilationForm { padding: 22px; margin-top: 20px; background: var(--wash, #f1ece2); display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+.compilationForm > div, .compilationForm > p { flex-basis: 100%; margin: 0; line-height: 1.8; }
+.compilationForm > label { display: grid; gap: 8px; }
+.compilationForm input[type=number] { width: 100px; }
+.compilationForm p { color: var(--muted, #686257); font-size: .875rem; max-width: 76ch; }
+.compilationDetail { padding: 24px; margin-top: 12px; background: var(--surface, #fff); border-left: 3px solid #b49b70; }
+.compilationDetail p, .compilationDetail li { line-height: 1.9; max-width: 76ch; }
+@media (max-width: 850px) { .compilationList > li { grid-template-columns: minmax(0, 1fr); gap: 14px; } .compilationActions { justify-content: start; max-width: none; } }
 .searchLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
 .profileFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .profileFields input, .profileFields select { width: 100%; }
@@ -138,3 +155,8 @@
 .aliasPreview > small { color: var(--muted-foreground, #655f55); font-size: .78rem; }
 .aliasPreview h2 { margin: 18px 0 14px; font-family: var(--font-serif, Georgia, serif); font-size: 1.35rem; line-height: 1.5; }
 @media (max-width: 800px) { .aliasCompose { grid-template-columns: minmax(0, 1fr); gap: 20px; } .aliasPreview { padding: 18px 22px; } }
+
+.compilationProduct { max-width: 76ch; padding-block: 1.5rem; border-top: 1px solid var(--line, #ddd6c9); line-height: 1.85; }
+.compilationProduct h4 { font-family: var(--font-serif), serif; font-size: 1.2rem; }
+.compilationProduct blockquote { margin: 1rem 0; padding: .7rem 1.25rem; border-left: 2px solid #a58b54; background: #f7f4ee; white-space: pre-wrap; }
+.compilationProduct blockquote footer { font-size: .8rem; color: #6d685e; }

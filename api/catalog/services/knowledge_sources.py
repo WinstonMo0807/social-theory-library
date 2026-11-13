@@ -21,7 +21,7 @@ from catalog.services.page_geometry import validated_geometry, locator_geometry
 from catalog.services.publication_eligibility import public_editions
 from common.capabilities import Capability, has_capability
 
-STRUCTURE_VERSION = "stl-raw-structure-v1"
+STRUCTURE_VERSION = "stl-raw-structure-v2"
 LOCATOR_VERSION = "stl-locator-v1"
 
 
@@ -112,6 +112,40 @@ def _heading_kind(title, level):
     return "chapter" if level == 1 else "section"
 
 
+def _running_headers(nodes):
+    """Only repeated generated titles at validated top-margin positions.
+
+    Human corrections and printed TOC entries are never discarded by this rule.
+    Raw page text remains untouched, including the ignored header occurrences.
+    """
+    from collections import defaultdict
+    repeated = defaultdict(list)
+    for row in nodes:
+        location = row.get("source_locator") or {}
+        box = location.get("normalized_bbox") or []
+        if (row.get("source") == "generated_heading" and location.get("geometry_status") == "validated"
+                and len(box) == 4 and all(isinstance(v, (int,float)) for v in box) and 0 <= box[1] < box[3] <= .16):
+            key = re.sub(r"[\s|｜—-]", "", row.get("title", ""))
+            key = re.sub(r"(?<=部分)一(?=第)", "", key)
+            repeated[key].append(row)
+    return {row["id"] for group in repeated.values() if len({r.get("pdf_page") for r in group}) >= 3 for row in group}
+
+
+def _outline_heading(page_text, raw):
+    title = raw.get("title", "")
+    label = str(raw.get("printed_label") or "")
+    # TOC leader dots/page labels are not part of the body title.
+    clean = re.sub(r"[.·…]+\s*" + re.escape(label) + r"\s*$", "", title).strip() if label else title
+    observed = (raw.get("source_locator") or {}).get("observed_title", "") if raw.get("calibration_status") == "matched" else ""
+    # Prefer the longest exact verified spelling, e.g. a full section heading
+    # over a truncated last line from the printed TOC. No fuzzy raw offsets.
+    for candidate in sorted({clean, observed} - {""}, key=len, reverse=True):
+        offset = _locate_title(page_text, candidate)
+        if offset is not None:
+            return candidate, offset
+    return title, None
+
+
 def current_structure(revision, *, prepare=False):
     outline = DocumentOutlineRevision.objects.filter(document_revision=revision, is_active=True).first()
     result = revision.structures.filter(outline_revision=outline).order_by("-created_at").first()
@@ -136,22 +170,27 @@ def build_structure(revision):
     full = "\n".join(full_parts)
     by_page = {p.page_number: p for p in pages}
     headings, gaps = [], []
-    for raw in (outline.nodes if outline else []):
+    outline_nodes = outline.nodes if outline else []
+    running_headers = _running_headers(outline_nodes)
+    for raw in outline_nodes:
+        if raw.get("id") in running_headers:
+            continue
         if raw.get("source") == "generated_heading" and len(raw.get("title", "")) > 35:
             gaps.append({"outline_id": raw.get("id"), "title": raw.get("title"),
                          "page": raw.get("pdf_page"), "reason": "generated_heading_requires_review"})
             continue
         page = by_page.get(raw.get("pdf_page"))
-        offset = _locate_title(page.text, raw.get("title", "")) if page else None
+        title, offset = _outline_heading(page.text, raw) if page else (raw.get("title", ""), None)
         if offset is None:
             gaps.append({"outline_id": raw.get("id"), "title": raw.get("title"),
                          "page": raw.get("pdf_page"), "reason": "heading_text_not_unique"})
             continue
-        headings.append({**raw, "start": starts[page.page_number] + offset, "level": int(raw.get("level") or 1)})
+        headings.append({**raw, "title":title, "start": starts[page.page_number] + offset, "level": int(raw.get("level") or 1)})
     headings.sort(key=lambda h: (h["start"], h["level"]))
     coverage = {"page_count": len(pages), "characters": sum(len(p.text) for p in pages),
                 "missing_text_pages": [p.page_number for p in pages if not p.text.strip()],
                 "unmapped_headings": gaps, "mapped_headings": len(headings),
+                "ignored_running_headers": sorted(running_headers),
                 "structure_status": "mapped" if headings and not gaps else "needs_structure_review",
                 "paragraph_method": "raw_blank_lines_page_bounded",
                 "cross_page_paragraphs_inferred": False}
@@ -160,12 +199,14 @@ def build_structure(revision):
     structure = DocumentStructure.objects.create(document_revision=revision, outline_revision=outline,
         parser="existing_text_and_outline", parser_version=STRUCTURE_VERSION, input_hash=fingerprint, coverage=coverage)
     ordinal = 0
+    pending_nodes, pending_segments = [], []
 
     def node(kind, start, end, *, title="", parent=None, source=None):
         nonlocal ordinal
-        row = DocumentNode.objects.create(structure=structure, document_revision=revision,
+        row = DocumentNode(structure=structure, document_revision=revision,
             parent=parent, kind=kind, order=ordinal, title=title, content_hash=digest(full[start:end]), source=source or {})
         ordinal += 1
+        pending_nodes.append(row)
         segments = []
         for page in pages:
             base = starts[page.page_number]
@@ -173,7 +214,7 @@ def build_structure(revision):
             if left < right:
                 segments.append(DocumentNodeSegment(node=row, page=page, order=len(segments),
                     start=left, end=right, content_hash=digest(page.text[left:right])))
-        DocumentNodeSegment.objects.bulk_create(segments)
+        pending_segments.extend(segments)
         return row
 
     root = node("document", 0, len(full), title=revision.asset.edition.work.title)
@@ -195,6 +236,10 @@ def build_structure(revision):
             start, end = base + match.start(), base + match.end()
             parent = next((r for a, b, r in reversed(chapter_ranges) if a <= start and end <= b), root)
             node("paragraph", start, end, parent=parent, source={"method": "raw_blank_lines", "continuity": "page_bounded"})
+    # UUIDs exist before insertion, so parent/segment references remain exact.
+    # Long OCR books must not issue two database writes for every printed line.
+    DocumentNode.objects.bulk_create(pending_nodes, batch_size=1000)
+    DocumentNodeSegment.objects.bulk_create(pending_segments, batch_size=1000)
     previous = revision.structures.filter(parser__in=["docling", "docling_outline_remap", "human_correction", "human_outline_remap"]).exclude(outline_revision=outline).order_by("-created_at").first()
     if previous:
         return _retain_parsed_leaves(previous, structure, starts)

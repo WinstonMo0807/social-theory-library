@@ -1,3 +1,11 @@
+## 2026-11-13 内网持续 Wiki 候选
+
+仅候选`stl_intelligence_demo_20261109`执行catalog0100；正式18084及公网无变更。API/worker仍挂载`/volume2/library/stl-previews/intelligence-20261109/source/api`。迁移命令为候选容器内`python manage.py migrate --noinput`，不是正式环境命令。
+
+候选API/worker保持现有凭据配置，生成和向量模型仍关闭。worker solo/concurrency=1，队列intelligence,discovery_index，DISCOVERY_INDEX_KEYWORD_ONLY=true。限定beat现在仅启用reconcile-discovery-index,refresh-knowledge-compilations；旧beat停止保留为stl-intelligence-demo-index-beat-before-wiki-20261113。接续每300秒读取持久化标记，不重新全馆编纂。代理结果仍需要本次交互执行，不是无人值守模型服务。
+
+迁移前备份路径`backup-rag-wiki-20261113/candidate.dump`，301131483字节，SHA256 `2aa7718e928a0e560083b91cbb4aea7b7fa67134305a62a00b4be20b908d92f7`。`pg_restore --list`确认2813行且来源为候选库，尚未实际恢复；运行文件、环境、源码前版均在同一受保护目录，不入Git。不能把不完整dumpdata当备份。回退时先停候选执行器并保留本次新产物；源码可回前检查点，破坏性回迁须明确处理新增订阅/执行字段及数据，不能直接在已有新数据上反向migration。公网切换仍须用户授权。
+
 ## 2026-11-11 候选索引恢复
 
 候选API、单worker和限定beat已完成温和重载；正式环境未变。reconcile-discovery-index仍每5分钟派发，有效期从240秒改为3600秒，避免排在最多8个约4分钟切片之后被当作过期丢弃。跨单元关键词批次最多20条，未确认写入不推进断点。不清空Redis或活动索引，不启动额外并行重型worker。Windows5174和Docling节点本轮已恢复；开机自启尚未设置。

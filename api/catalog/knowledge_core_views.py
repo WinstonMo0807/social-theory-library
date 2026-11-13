@@ -1,7 +1,7 @@
 """Transport adapters: source permissions also live in the application service."""
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.urls import path
+from django.urls import include, path
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -380,6 +380,7 @@ class AssertionWithdrawalView(APIView):
 
 
 urlpatterns = [
+    path("", include("catalog.knowledge_compilation_views")),
     path("relations/", AcademicRelationDirectoryView.as_view()),
     path("assertions/<uuid:assertion_id>/withdrawal/", AssertionWithdrawalView.as_view()),
     path("anchors/verify/", VerifyAnchorView.as_view()),

@@ -96,12 +96,15 @@ def ensure_index(generation, *, extra_filterable=()):
             raise
         wait_index_task(meili("POST", "/indexes", {"uid": generation.uid, "primaryKey": "id"}))
     scope_fields = ["body_text", "notes_text", "topics_text"] if generation.config_snapshot.get("scope_fields_version") == 1 else []
-    desired = {"searchableAttributes": ["title", "aliases", "authors", "normalized_text", *scope_fields],
+    desired = {"searchableAttributes": ["title", "aliases", "authors", "normalized_text", "context_text", *scope_fields],
         "displayedAttributes": ["*"],
         "filterableAttributes": ["id", "channel", "source_type", "source_id", "source_revision", "scope_token", "access_status", "input_hash", "language", *extra_filterable],
         "pagination": {"maxTotalHits": 10000},
         "embedders": {"discovery": {"source": "userProvided", "dimensions": int(generation.dimensions or 384)}}}
     wait_index_task(meili("PATCH", f"/indexes/{generation.uid}/settings", desired))
+    if generation.config_snapshot.get("context_fields_version") != 1:
+        generation.config_snapshot = {**generation.config_snapshot, "context_fields_version": 1}
+        generation.save(update_fields=["config_snapshot", "updated_at"])
 
 
 def _dispatch(job_id, task_id, *, countdown=0):
@@ -356,7 +359,12 @@ def _commit_keyword_batch(job, generation, header, batch):
 def _write_chunk(job, generation, header, unit, child, *, contributions=None, keyword_batch=None):
     if not _is_current(job, generation, header):
         raise DiscoveryIndexError("superseded", "资料或任务已更新，旧任务已停止。")
-    identifier = uuid5(generation.pk, f"{header['source_type']}:{header['source_id']}:{header['source_revision']}:{unit['unit_id']}:{child['start']}:{child['end']}")
+    from catalog.services.retrieval.contextual import CONTEXT_VERSION, passage_context, embedding_input
+    context = passage_context(header, unit["metadata"]) if header["channel"] == "passages" else ""
+    layout = f":context-{CONTEXT_VERSION}" if context else ""
+    identifier = uuid5(generation.pk, f"{header['source_type']}:{header['source_id']}:{header['source_revision']}:{unit['unit_id']}:{child['start']}:{child['end']}{layout}")
+    if context:
+        child = {**child, "embedding_text": embedding_input(context, child["text"])}
     existing = DiscoveryDocument.objects.filter(pk=identifier, keyword_ready=True).first()
     if existing and (existing.vector_ready or not generation.config_snapshot.get("embedding_artifact") or job.stats.get("semantic_waiting")) and (
             header["channel"] != "passages" or existing.payload.get("responsibility_projection") == 1):
@@ -370,6 +378,9 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None, ke
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务已停止；新版本会重新排队。")
     payload = {**{key: value for key, value in header.items() if key != "text"}, **unit["metadata"], "unit_id": unit["unit_id"],
                "quality_flags": list(dict.fromkeys([*unit["metadata"].get("quality_flags", []), *child.get("quality_flags", [])]))}
+    if context:
+        payload.update(context_text=context, context_version=CONTEXT_VERSION,
+                       context_hash=fingerprint(context), context_source="bibliography_and_document_structure")
     if contributions is not None:
         payload.update(contributions.for_range(header["asset_id"], header["document_revision_id"], unit["metadata"].get("pdf_page")), responsibility_projection=1)
     defaults = {"generation": generation, "channel": header["channel"], "source_type": header["source_type"],
@@ -386,7 +397,8 @@ def _write_chunk(job, generation, header, unit, child, *, contributions=None, ke
         "source_id": header["source_id"], "source_revision": header["source_revision"], "scope_token": header["scope_token"],
         "access_status": header["access_status"], "input_hash": input_hash, "title": header["title"],
         "aliases": header.get("aliases", []), "authors": payload.get("authors", []),
-        "normalized_text": child["normalized_text"], "language": payload.get("language") or header.get("language", "unknown"),
+        "normalized_text": child["normalized_text"], "context_text": context,
+        "language": payload.get("language") or header.get("language", "unknown"),
         "_vectors": {"discovery": []}}
     if generation.config_snapshot.get("scope_fields_version") == 1:
         from catalog.services.discovery_scope import chunk_fields
@@ -465,7 +477,7 @@ def request_source_reindex(revision, *, keyword_only=False):
     if not generation or not header or header.get("document_revision_id") != str(revision.pk):
         raise DiscoveryIndexError("source_not_published","请先发布此正文修订并准备活动索引，再更新关键词。")
     structure=current_structure(revision,prepare=True)
-    key=fingerprint([str(generation.pk),header["source_revision"],str(structure.pk),"keyword" if keyword_only else "hybrid"])
+    key=fingerprint([str(generation.pk),header["source_revision"],str(structure.pk),"keyword" if keyword_only else "hybrid", "context-v1"])
     with transaction.atomic():
         job,created=ProcessingJob.objects.get_or_create(idempotency_key="logical-index:"+key,defaults={
             "job_type":JOB_TYPE,"edition":source,"asset":revision.asset,"engine":"logical-node-v1",
@@ -488,6 +500,8 @@ def process_source(job, generation):
     source, header = get_source(kind, source_id)
     if not header or header["source_revision"] != job.stats["source_revision"]:
         raise DiscoveryIndexError("superseded", "资料已更新或撤下，旧任务已停止。")
+    if not _is_current(job, generation, header):
+        raise DiscoveryIndexError("superseded", "索引任务归属已更新，旧任务已停止。")
     contributions = contribution_projection(source, access_statuses=[header["access_status"]]) if kind == "edition" else None
     state, _ = DiscoverySourceState.objects.get_or_create(generation=generation, source_type=kind, source_id=source_id)
     deadline = time.monotonic() + 240
@@ -502,6 +516,8 @@ def process_source(job, generation):
                 f"{detail} 请在正文处理核对来源并保存新修订；已有有效索引与历史引用保留。") from exc
         structure_id = str(structure.pk)
         _guard_job(job,stats={**job.stats,"structure_id":structure_id,"completed_units":0})
+    if generation.config_snapshot.get("context_fields_version") != 1:
+        ensure_index(generation)
     completed_units = int(job.stats.get("completed_units", 0))
     finished_units = completed_units
     keyword_batch = [] if not generation.config_snapshot.get("embedding_artifact") or job.stats.get("semantic_waiting") else None
@@ -535,7 +551,7 @@ def process_source(job, generation):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")
     docs = DiscoveryDocument.objects.filter(generation=generation, source_type=kind, source_id=source_id, source_revision=header["source_revision"])
     if structure_id:
-        docs = docs.filter(payload__structure_id=structure_id)
+        docs = docs.filter(payload__structure_id=structure_id, payload__context_version=1)
     expected, completed = docs.count(), docs.filter(keyword_ready=True).count()
     if kind == "edition" and not expected:
         raise DiscoveryIndexError("text_missing", "该文件尚无可用原文文字，请检查文字处理结果后重试。")
@@ -546,7 +562,8 @@ def process_source(job, generation):
         # historical feedback and source mappings instead of deleting references.
         old = DiscoveryDocument.objects.filter(generation=generation,source_type=kind,source_id=source_id,
             source_revision=header["source_revision"],keyword_ready=True).filter(
-                Q(payload__structure_id__isnull=True) | ~Q(payload__structure_id=structure_id))
+                Q(payload__structure_id__isnull=True) | ~Q(payload__structure_id=structure_id)
+                | Q(payload__context_version__isnull=True) | ~Q(payload__context_version=1))
         # A logical resegmentation does not invalidate vectors for the same
         # published text. Keep those searchable until the new slices have vectors.
         # Source withdrawal/revision checks still apply to every returned row.

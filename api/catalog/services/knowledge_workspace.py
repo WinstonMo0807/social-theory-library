@@ -174,7 +174,12 @@ def invalidate_source(kind, key):
             # a changed text checksum or a withdrawn/inactive revision.
             m.KnowledgeBlockDependency.objects.filter(source_type=source_type, source_id=source_id,
                 source_hash__in=revision_evidence_hashes(source_id)).update(source_hash=current, stale=False)
-        m.KnowledgeBlockDependency.objects.filter(source_type=source_type, source_id=source_id).exclude(source_hash=current).update(stale=True)
+        changed = m.KnowledgeBlockDependency.objects.filter(source_type=source_type, source_id=source_id, stale=False).exclude(source_hash=current)
+        page_ids = list(changed.values_list("page_id", flat=True).distinct())
+        changed.update(stale=True)
+        if page_ids:
+            from catalog.services.knowledge_compilation import request_page_refresh
+            request_page_refresh(page_ids)
 
 
 def page_directory(actor, *, query="", kind="", state="", offset=0, limit=30):

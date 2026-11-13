@@ -6616,4 +6616,4 @@ from .knowledge_models import (  # noqa: E402,F401
     EntityIdentifier, Assertion, AssertionParticipant, AssertionSource,
     AssertionEvidence, KnowledgePage, KnowledgeLegacyMapping, KnowledgeBlockDependency, ResearchObjectProfile,
 )
-from .intelligence_models import CurationRun, CurationArtifact, ChangeSet, ChangeItem, ChangeReceipt  # noqa: E402,F401
+from .intelligence_models import CurationRun, CurationArtifact, ChangeSet, ChangeItem, ChangeReceipt, KnowledgeCompilation  # noqa: E402,F401

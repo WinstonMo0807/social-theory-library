@@ -14,6 +14,7 @@ class CurationRun(UUIDTimeStampedModel):
     stage = models.PositiveSmallIntegerField(default=1)
     coverage = models.JSONField(default=dict)
     profile_key = models.CharField(max_length=80, blank=True)
+    execution_mode = models.CharField(max_length=16, default="provider", choices=[("provider", "Provider"), ("agent", "Interactive agent")])
     model_identity = models.JSONField(default=dict)
     input_hash = models.CharField(max_length=64)
     request_id = models.UUIDField(unique=True)
@@ -91,3 +92,18 @@ class ChangeReceipt(UUIDTimeStampedModel):
     input_hash = models.CharField(max_length=64)
     result = models.JSONField(default=dict)
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+
+
+class KnowledgeCompilation(UUIDTimeStampedModel):
+    """Opt-in source subscription; execution and products stay in CurationRun."""
+    edition = models.OneToOneField("catalog.Edition", on_delete=models.PROTECT, related_name="knowledge_compilation")
+    enabled = models.BooleanField(default=True, db_index=True)
+    pending_refresh = models.BooleanField(default=False, db_index=True)
+    last_error = models.JSONField(default=dict)
+    scope = models.JSONField(default=dict)
+    profile_key = models.CharField(max_length=80, blank=True)
+    execution_mode = models.CharField(max_length=16, default="provider", choices=[("provider", "Provider"), ("agent", "Interactive agent")])
+    target_pages = models.ManyToManyField("catalog.KnowledgePage", blank=True, related_name="compilation_sources")
+    latest_run = models.ForeignKey(CurationRun, null=True, on_delete=models.PROTECT, related_name="compilation_subscriptions")
+    requested_hash = models.CharField(max_length=64, blank=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)

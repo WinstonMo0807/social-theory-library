@@ -121,7 +121,8 @@ def inspect_retrieval(actor, query, *, revision_id=None, mode="hybrid"):
     status = "waiting_index" if codes & {"index_pending", "scope_index_pending", "coverage_pending"} else "ready"
     return {"status": status, "results": [_public_row(r) for r in result["rows"]], "warnings": result["warnings"],
         "elapsed_ms": round((monotonic() - started) * 1000), "mode": mode, "index_id": result["version"],
-        "coverage": "returned_results_only", "index_coverage": result.get("coverage", {})}
+        "coverage": "returned_results_only", "index_coverage": result.get("coverage", {}),
+        "retrieval": result.get("retrieval", {})}
 
 
 def verify_selection(actor, revision_id, segments):

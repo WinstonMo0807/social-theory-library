@@ -28,6 +28,8 @@ ASSERTION_SCHEMA = {"type":"object", "required":["text","predicate","expression"
     "evidence":{"type":"array","items":EVIDENCE_SCHEMA}}}
 ANALYSIS_SCHEMA = {"type":"object", "required":["summary","questions","entities","assertions"], "properties": {
     "summary": STRING, "questions":{"type":"array","items":STRING},
+    "methods":{"type":"array","items":STRING}, "limitations":{"type":"array","items":STRING},
+    "argument_role":STRING,
     "entities":{"type":"array","items":ENTITY_SCHEMA}, "assertions":{"type":"array","items":ASSERTION_SCHEMA}}}
 SUMMARY_SCHEMA = {"type":"object", "required":["summary","development","limitations"],
     "properties": {"summary":STRING,"development":{"type":"array","items":STRING},"limitations":{"type":"array","items":STRING}}}
@@ -53,16 +55,32 @@ def validate_wiki_patch(output, data):
             raise ValidationError("区块修改须说明理由并填写替换正文。")
 
 
-@transaction.atomic
-def create_run(revision, actor, *, request_id, scope=None, profile_key=""):
-    require_editor(actor)
-    require_revision_access(revision, actor, editorial=True)
+def validate_scope(revision, scope=None):
     scope = scope or {"mode": "whole"}
     if not isinstance(scope, dict) or scope.get("mode") not in {"whole", "pages"}:
         raise ValidationError("请明确选择整部文献或PDF页范围。")
     if scope["mode"] == "pages" and (type(scope.get("start")) is not int or type(scope.get("end")) is not int or not 1 <= scope["start"] <= scope["end"] <= revision.asset.page_count):
         raise ValidationError("分析页范围不在此版本内。")
+    targets = scope.get("target_page_ids", [])
+    if not isinstance(targets, list) or len(targets) > 30:
+        raise ValidationError("编纂目标知识页最多30项。")
+    for key in targets:
+        uuid_value(key)
+    if scope.get("compilation_id"):
+        uuid_value(scope["compilation_id"])
+    return scope
+
+
+@transaction.atomic
+def create_run(revision, actor, *, request_id, scope=None, profile_key="", execution_mode="provider"):
+    require_editor(actor)
+    require_revision_access(revision, actor, editorial=True)
+    scope = validate_scope(revision, scope)
+    if execution_mode not in {"provider", "agent"}:
+        raise ValidationError("编纂执行方式无效。")
     fingerprint = digest([str(revision.pk), scope, profile_key])
+    if execution_mode == "agent":
+        fingerprint = digest([fingerprint, "interactive-agent"])
     old = m.CurationRun.objects.filter(request_id=uuid_value(request_id)).first()
     if old:
         if old.input_hash != fingerprint or old.created_by_id != actor.pk:
@@ -71,7 +89,12 @@ def create_run(revision, actor, *, request_id, scope=None, profile_key=""):
     config = configuration(profile_key)
     run = m.CurationRun.objects.create(work=revision.asset.edition.work, edition=revision.asset.edition,
         document_revision=revision, scope=scope, created_by=actor, request_id=request_id, input_hash=fingerprint,
-        profile_key=config.profile_key, model_identity=identity(config), status="waiting" if config.enabled else "waiting_configuration")
+        profile_key=config.profile_key, execution_mode=execution_mode, model_identity=identity(config),
+        status="waiting" if config.enabled or execution_mode == "agent" else "waiting_configuration")
+    if execution_mode == "agent":
+        from catalog.services.knowledge_compilation import run_configuration
+        run.model_identity = identity(run_configuration(run))
+        run.save(update_fields=["model_identity", "updated_at"])
     schedule(run)
     return run
 
@@ -138,6 +161,11 @@ def _guard(run, lease=None):
     current = m.CurationRun.objects.get(pk=run.pk)
     if current.version != run.version or current.status == "canceled":
         raise ValidationError("任务已取消或恢复，旧执行结果不再写回。")
+    require_editor(current.created_by)
+    require_revision_access(current.document_revision, current.created_by, editorial=True)
+    if current.scope.get("compilation_id") and not m.KnowledgeCompilation.objects.filter(
+            pk=current.scope["compilation_id"], enabled=True, latest_run=current).exists():
+        raise ValidationError("持续编纂已暂停或来源已更新，旧结果不再写回。")
     if lease:
         demand = m.CapabilityDemand.objects.get(pk=lease.demand_id)
         if demand.state != "claimed" or demand.lease_token != lease.lease_token or demand.lease_expires_at <= timezone.now():
@@ -162,7 +190,10 @@ def _save_artifact(run, stage, unit, data, output, *, config=None, result=None, 
 
 
 def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, validate=None):
-    key = digest([PROMPT_VERSION, stage, data, prompt, schema, identity(config)])
+    # A new revision may retain an identical window. Its exact ranges and book
+    # identity must match before reusing interpretation; revalidate every quote.
+    cache_data = {k:v for k,v in data.items() if k != "revision"} if stage == 2 else data
+    key = digest([PROMPT_VERSION, stage, cache_data, prompt, schema, identity(config)])
     cached = m.CurationArtifact.objects.filter(cache_key=key, status__in=["succeeded","empty"]).first()
     if cached:
         if validate:
@@ -171,6 +202,9 @@ def _model_artifact(run, stage, unit, data, prompt, schema, config, lease, valid
             return cached
         return _save_artifact(run, stage, unit, data, cached.output, config=config, lease=lease, cache_key=key)
     _guard(run, lease)
+    if run.execution_mode == "agent":
+        from catalog.services.knowledge_compilation import queue_agent_stage
+        queue_agent_stage(run, stage, unit, data, prompt, schema, config, key, lease)
     from django.conf import settings
     if settings.INTELLIGENCE_EXECUTION == "remote":
         from catalog.services.intelligence_remote import queue_stage
@@ -214,41 +248,64 @@ def prepare(run):
     return nodes
 
 
+def source_rows(rows):
+    """Compact adjacent OCR lines without normalizing their raw page offsets.
+
+    Node identities remain in the coverage ledger. The model needs one source
+    range per contiguous page/type, not a repeated locator around every line.
+    """
+    packed = []
+    for row in rows:
+        item = {k:row[k] for k in ("kind", "page_number", "start", "end", "text")}
+        gap = row.get("gap_before")
+        if (packed and gap is not None and packed[-1]["page_number"] == item["page_number"]
+                and packed[-1]["kind"] == item["kind"]
+                and packed[-1]["end"] + len(gap) == item["start"]):
+            packed[-1]["text"] += gap + item["text"]
+            packed[-1]["end"] = item["end"]
+        else:
+            packed.append(item)
+    return packed
+
+
 def windows(nodes, config, scope=None):
     from django.conf import settings
     # Reserve prompt/schema and output, using the strict transport's byte ceiling.
     budget = min(config.max_input_chars-6500, (int(getattr(settings,"INTELLIGENCE_CONTEXT_TOKENS",32768))-config.max_output_tokens-6500)//4)
     if budget < 300:
         raise ValidationError("当前模型输入预算过小，请在模型管理中调整。")
-    pending, size, chapter = [], 0, None
+    pending, chapter, previous = [], None, None
     scope = scope or {}
     for node in nodes:
-        parts = [s for s in node.segments.select_related("page").all() if scope.get("start",1) <= s.page.page_number <= scope.get("end",10**9)]
+        parts = [s for s in node.segments.all() if scope.get("start",1) <= s.page.page_number <= scope.get("end",10**9)]
         for part_index,segment in enumerate(parts):
             cursor = segment.start
             while cursor < segment.end:
                 raw = {"node_id":str(node.pk),"kind":node.kind,"page_number":segment.page.page_number,"start":cursor,
                     "end":segment.end,"text":segment.page.text[cursor:segment.end],"node_complete":part_index == len(parts)-1}
-                if len(json.dumps(raw,ensure_ascii=False))+2 > budget:
+                gap = segment.page.text[previous[1]:cursor] if previous and previous[0] == raw["page_number"] and previous[1] <= cursor else None
+                raw["gap_before"] = gap if gap is not None and (not gap or gap.isspace()) else None
+                if len(json.dumps(source_rows([raw]),ensure_ascii=False)) > budget:
                     # Oversized paragraphs are explicit contiguous windows, never truncation.
                     low,high = cursor+1,segment.end
                     while low < high:
                         mid = (low+high+1)//2
-                        if len(json.dumps({**raw,"end":mid,"text":segment.page.text[cursor:mid]},ensure_ascii=False))+2 <= budget:
+                        if len(json.dumps(source_rows([{**raw,"end":mid,"text":segment.page.text[cursor:mid]}]),ensure_ascii=False)) <= budget:
                             low = mid
                         else: high = mid-1
                     boundary = low
                     for index in range(low-1, cursor+(low-cursor)//2, -1):
                         if segment.page.text[index] in "。！？.!?\n": boundary = index+1; break
                     raw.update(end=boundary,text=segment.page.text[cursor:boundary],node_complete=False)
-                length = len(json.dumps(raw,ensure_ascii=False))+2
+                length = len(json.dumps(source_rows([raw]),ensure_ascii=False))
                 if length > budget:
                     raise ValidationError("单个原文字符和必要来源字段超出输入预算，未调用模型。")
-                if pending and (size+length > budget or chapter != str(node.parent_id)):
+                if pending and (len(json.dumps(source_rows([*pending,raw]),ensure_ascii=False)) > budget or chapter != str(node.parent_id)):
                     yield chapter,pending
-                    pending,size = [],0
+                    pending = []
                 chapter = str(node.parent_id)
-                pending.append(raw);size += length;cursor = raw["end"]
+                pending.append(raw);cursor = raw["end"]
+                previous = (raw["page_number"], raw["end"])
     if pending:
         yield chapter,pending
 
@@ -288,6 +345,10 @@ def compile_wiki(run, proposals, config, lease):
             ids = [c["id"] for c in entity["payload"].get("candidates",[])]
             targets.append({"key":entity["id"],"title":entity["payload"]["label"],"entity_id":{"change_item":entity["id"]},
                 "pages":list(m.KnowledgePage.objects.filter(entity_id__in=ids)),"assertions":related})
+    occupied = {page.pk for target in targets for page in target["pages"]}
+    for page in m.KnowledgePage.objects.filter(pk__in=run.scope.get("target_page_ids", [])).exclude(pk__in=occupied):
+        targets.append({"key":f"page:{page.pk}", "page_id":str(page.pk), "title":page.title,
+            "scope":page.scope, "pages":[page], "assertions":assertions})
     results = []
     budget = min(config.max_input_chars-6500, 6500)
     for target in targets:
@@ -308,7 +369,8 @@ def compile_wiki(run, proposals, config, lease):
             batch.append(source)
         if batch: batches.append(batch)
         for position, batch in enumerate(batches):
-            data = {"destination":{"title":target["title"],"identity_pending":target["key"] != "work"},
+            data = {"destination":{"title":target["title"],"scope":target.get("scope", ""),
+                    "identity_pending":target["key"] != "work" and "page_id" not in target},
                 "source_revision":str(run.document_revision_id),"assertions":batch,"existing_blocks":[],"omitted_context_blocks":[]}
             for context in contexts:
                 if len(json.dumps({**data,"existing_blocks":[*data["existing_blocks"],context]},ensure_ascii=False)) <= budget:
@@ -337,7 +399,11 @@ def compile_wiki(run, proposals, config, lease):
                 if operation=="replace":
                     payload["block"]["references"]=[*current["block"].get("references",[]),*payload["block"]["references"]]
             dependencies = list(refs)
-            if target["key"] == "work":
+            if "page_id" in target:
+                page = target["pages"][0]
+                _, revision = page_content(page)
+                payload.update(page_id=str(page.pk), base_revision=str(revision.pk) if revision else None)
+            elif target["key"] == "work":
                 payload["work_id"] = target["work_id"]
                 if target["pages"]:
                     page=target["pages"][0];_,revision=page_content(page)
@@ -359,21 +425,30 @@ def execute(run, config, lease):
     m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(status="running",started_at=timezone.now(),model_identity=identity(config))
     analyses = []
     read_nodes = set()
-    for index, (chapter, rows) in enumerate(windows(nodes, config, run.scope)):
+    planned = list(windows(nodes, config, run.scope))
+    total_characters = sum(row["end"]-row["start"] for _, rows in planned for row in source_rows(rows))
+    read_characters = 0
+    run.coverage.update(total_windows=len(planned), completed_windows=0,
+        total_characters=total_characters, read_characters=0, coverage_unit="unicode_code_point")
+    m.CurationRun.objects.filter(pk=run.pk, version=run.version).update(coverage=run.coverage)
+    for index, (chapter, rows) in enumerate(planned):
         chapter_node = m.DocumentNode.objects.get(pk=chapter)
         chapter_path, parent = [], chapter_node
         while parent:
             if parent.title: chapter_path.insert(0,parent.title)
             parent = parent.parent
-        source_rows = [{k:v for k,v in row.items() if k not in {"node_id","node_complete"}} for row in rows]
-        artifact = _model_artifact(run,2,f"window:{index}",{"revision":str(run.document_revision_id),
-            "parser_version":run.structure.parser_version,"chapter_path":chapter_path,"ranges":source_rows},
+        model_rows = source_rows(rows)
+        artifact = _model_artifact(run,2,f"window:{index}",{"revision":str(run.document_revision_id), "work_id":str(run.work_id),
+            "work_title":run.work.title,
+            "parser_version":run.structure.parser_version,"chapter_path":chapter_path,"ranges":model_rows},
             "按文献顺序分析全部输入段落。引文偏移采用各段给定的原始页面起点，Unicode code point，结束不含。列出研究问题、概念、方法及有直接证据的陈述。"
             "主张者不等于书籍作者；额外参与者在participants标明quoted/criticized等角色，并在entities逐一列出。conditions只填写原文支持的时间、地区、人群、研究对象和概念用法，未知留空。", ANALYSIS_SCHEMA,config,lease,
-            validate=lambda output: validate_analysis(output, rows))
+            validate=lambda output: validate_analysis(output, model_rows))
         analyses.append(artifact)
         read_nodes.update(row["node_id"] for row in rows if row["node_complete"])
-        m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(coverage={**run.coverage,"read_nodes":len(read_nodes)})
+        read_characters += sum(row["end"]-row["start"] for row in model_rows)
+        run.coverage.update(read_nodes=len(read_nodes), completed_windows=len(analyses), read_characters=read_characters)
+        m.CurationRun.objects.filter(pk=run.pk,version=run.version).update(coverage=run.coverage)
     synthesis = {"summary":"","development":[],"limitations":[]}
     for i, artifact in enumerate(analyses):
         data = {"previous":synthesis,"next_chapter_in_order":artifact.output,"source_artifact_hash":artifact.output_hash,"position":i}
@@ -405,20 +480,27 @@ def execute(run, config, lease):
     _save_artifact(run,4,"matches",{"entities":[p["payload"] for p in entity_proposals]}, {"proposals":entity_proposals},lease=lease)
     proposals = list(entity_proposals)
     for artifact in analyses:
+        # Resolve mentions in the window that actually supplied the assertion.
+        # A homonymous concept elsewhere in the book must not change attribution.
+        local_names = {}
+        for raw_entity in artifact.output.get("entities", []):
+            local_names.setdefault(raw_entity["label"], []).append(entity_items[digest(raw_entity)])
+        def mention_candidates(label):
+            return list(dict.fromkeys(local_names.get(label) or names.get(label, [])))
         for raw in artifact.output.get("assertions",[]):
             participants, dependencies = [], []
             roles=list(dict.fromkeys([(role,raw.get(role)) for role in ("subject","object","claimant")]+[
                 (p["role"],p["label"]) for p in raw.get("participants",[])]))
             for role, label in roles:
-                candidates = names.get(label,[])
+                candidates = mention_candidates(label)
                 if label and len(candidates)==1:
                     dependencies.append(candidates[0]);participants.append({"role":role,"entity_id":{"change_item":candidates[0]}})
             payload = {"text":raw["text"],"predicate":raw["predicate"],"expression":raw["expression"],"participants":participants,
                 "category":raw.get("category","proposition"),"direction":raw.get("direction","directed"),"conditions":raw.get("conditions",{}),
-                "unresolved_names":list(dict.fromkeys(label for _,label in roles if label and len(names.get(label,[])) != 1)),
-                "unresolved_participants":[{"role":role,"label":label} for role,label in roles if label and len(names.get(label,[]))!=1],
+                "unresolved_names":list(dict.fromkeys(label for _,label in roles if label and len(mention_candidates(label)) != 1)),
+                "unresolved_participants":[{"role":role,"label":label} for role,label in roles if label and len(mention_candidates(label))!=1],
                 "evidence":[{"stance":e["stance"],"segments":[{k:v for k,v in e.items() if k != "stance"}]} for e in raw["evidence"]]}
-            claimant = names.get(raw.get("claimant"),[])
+            claimant = mention_candidates(raw.get("claimant"))
             if len(claimant)==1: payload["attribution_id"]={"change_item":claimant[0]}
             proposals.append({"id":str(uuid5(run.pk,"assertion:"+digest(payload))),"kind":"assertion","payload":payload,
                 "source_artifact_id":str(artifact.pk),"dependencies":sorted(set(dependencies))})
@@ -427,7 +509,8 @@ def execute(run, config, lease):
     # Repeated mentions may yield identical proposals; their evidence identity
     # remains in the fingerprint rather than a subject/predicate unique key.
     proposals = list({p["id"]:p for p in proposals}.values())
-    changeset = submit_draft(run.document_revision,proposals,run.created_by,request_id=uuid5(run.pk,"changeset"),origin="intelligence",run=run)
+    origin = "wiki_agent" if run.execution_mode == "agent" else "wiki_compilation" if run.scope.get("compilation_id") else "intelligence"
+    changeset = submit_draft(run.document_revision,proposals,run.created_by,request_id=uuid5(run.pk,"changeset"),origin=origin,run=run)
     _save_artifact(run,7,"changeset",{"proposal_ids":[p["id"] for p in proposals]}, {"changeset_id":str(changeset.pk)},lease=lease)
     _guard(run,lease)
     missing = [page for page in run.coverage.get("missing_text_pages",[]) if page not in run.coverage["excluded_pages"]]

@@ -1,3 +1,16 @@
+## 2026-11-13 来源语境检索与持续 Wiki 实施
+
+以下更新覆盖同日早先“建议、未实施”的对应部分，未实施的图检索和向量质量验证仍保留为后续条件。
+
+- `retrieval/contextual.py`从真实书名、章节路径与节点类型构造确定性语境，单独存入context_text。不是LLM生成上下文，也不推断主张者；原文与原始偏移不变。统一检索增加同权限的contextual候选分支，与稀疏/向量按RRF融合（60，权重1/1/0.6），再复用重排、去重、文献多样性和定位校验。精确引文与限定文本域查询不启用此分支。仅语义能力已启用时调用原embedding/reranker。
+- 新投影ID/来源幂等键包含context-v1。索引设置更新在来源完整性和任务归属校验后执行；旧有效索引/向量仍保留至替代回执完整。内部`_baseline`仅用于同来源对照，管理台接口返回实际分支数量。没有部署另一套向量库或RAG正式写入。
+- `KnowledgeCompilation`为每个版本保存自愿启用、范围、执行方式、目标知识页和最后run，不复制调度系统。来源或页面依赖更新标记pending_refresh，经既有Celery/beat接续。同一来源、范围、页面基准和模型身份复用run；章节缓存独立于页面编辑。实际原文范围、解析/schema/prompt/Provider身份进入缓存。
+- `execution_mode=agent`明确表示交互代理读原文并提交结果。`knowledge_compilation.submit_agent_result`检查操作者、范围指纹、任务版本、当前结构、schema和原文；重复回执幂等。配置模型调用数为0，代理响应另记，token/费用未知而非0。Provider执行仍经既有DocETL适配和严格不截断入口。
+- OCR短行仅在模型输入中按同页、同类型、连续原始空白合并来源字段，覆盖账本保留原节点；不改变历史文本/offset。stl-raw-structure-v2对经验证的重复生成页眉和目录页码尾缀做保守映射，人工目录不忽略，历史结构不覆盖。
+- `/api/knowledge/compilations/`、产物、代理提交与`/reviews/`接入原文/知识两工作区，共用原ChangeSet审核、应用、预览与发布。主题/专题页通过有界target_page_ids参与编纂；不从私人研究导入材料。没有恢复独立Intelligence工作台，MCP未改。
+
+当前三部文献的指定章节代理实测在继续，尚不代表整书覆盖或大馆藏质量验证；无向量模型的环境只比较关键词和来源语境分支。
+
 ## 2026-11-13 RAG / Wiki 算法研究与当前边界
 
 用户已将独立 STL Intelligence 从本轮排除并要求撤下内网入口，后续重新开发。前端任务创建、阶段列表、恢复入口已移除，共用审核成为 `/admin/knowledge/review`；旧 URL 兼容跳转。`CurationRun`、`ChangeSet`、`/api/intelligence/` 共用接口及历史继续存在，没有把界面撤下描述为后台全部删除。审核列表目前仍复用旧 runs GET 返回的 drafts；没有建立第二个审核写入服务。MCP按用户已在其他工作中完成的状态排除，未独立验证其公网发布，也未修改。

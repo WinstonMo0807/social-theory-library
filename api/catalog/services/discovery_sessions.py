@@ -462,7 +462,7 @@ def _rerank(query: str, rows: list[dict], limit: int, expected_artifact: str) ->
     try:
         if not expected_artifact:
             raise DiscoveryInferenceError("artifact_missing", "当前索引未固定重排模型版本。")
-        ranked = rerank(query, [str(row.get("excerpt") or row.get("text") or "") for row in candidates],
+        ranked = rerank(query, ["\n".join(filter(None, [row.get("context_text"), str(row.get("excerpt") or row.get("text") or "")])) for row in candidates],
                         top_n=len(candidates), expected_artifact=expected_artifact)
         order = [int(item["index"]) for item in ranked.get("results", [])]
         if sorted(order) != list(range(len(candidates))):

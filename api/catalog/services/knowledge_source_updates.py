@@ -50,9 +50,12 @@ def execute_source_update(job_id,task_id):
         index_job=None
         if active_generation() and header and header.get("document_revision_id")==str(revision.pk):
             index_job=request_source_reindex(revision,keyword_only=True)
+        from catalog.services.knowledge_compilation import reconcile
+        compilation = reconcile(revision)
         ProcessingJob.objects.filter(pk=job.pk,task_id=task_id,status="running").update(status="succeeded",progress=100,
             finished_at=timezone.now(),stats={**job.stats,"structure_id":str(structure.pk),"model_calls":0,
-                "index_job_id":str(index_job.pk) if index_job else None,"index_state":"queued" if index_job else "unpublished_or_no_active_index"})
+                "index_job_id":str(index_job.pk) if index_job else None,"index_state":"queued" if index_job else "unpublished_or_no_active_index",
+                "compilation_run_id":str(compilation.pk) if compilation else None})
     except Exception as exc:
         ProcessingJob.objects.filter(pk=job.pk,task_id=task_id,status__in=["pending","running"]).update(status="failed",
             finished_at=timezone.now(),error_code=getattr(exc,"code",type(exc).__name__),error_message=str(exc)[:1200])

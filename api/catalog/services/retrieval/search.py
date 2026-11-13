@@ -11,7 +11,8 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
     request_context = request_context if request_context is not None else {}
     result = discovery_candidates(query, channel, filters, access_statuses, limit=limit,
                                   expanded=expanded, request_context=request_context)
-    branches = [(result.get("sparse", []), 1.0), (result.get("dense", []), 1.0)]
+    branches = [(result.get("sparse", []), 1.0), (result.get("dense", []), 1.0),
+                (result.get("contextual", []), 0.6)]
     warnings = list(result.get("warnings", []))
     if channel == "passages" and filters.get("search_scope") == "terms":
         from catalog.models import QueryLexiconState
@@ -61,6 +62,9 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
         warnings.append(_warning("coverage_pending", "所选来源仍有原文或关键词索引待完成。当前结果仅覆盖已就绪的片段，零条结果不代表原文中不存在。", channel))
     return {"rows": rows, "warnings": warnings, "version": str(result.get("version") or ""),
             "coverage": coverage,
+            "retrieval": {"algorithm": "hybrid_context_rrf_v1", "rrf_k": 60,
+                "candidates": {name:len(result.get(name, [])) for name in ("sparse", "dense", "contextual")},
+                "context_source": "bibliography_and_document_structure", "baseline": bool(filters.get("_baseline"))},
             "index_uid": str(result.get("index_uid") or getattr(request_context.get("generation"), "uid", "")),
             "embedding_artifact": str(result.get("embedding_artifact") or ""),
             "embedding_dimensions": result.get("embedding_dimensions"),
