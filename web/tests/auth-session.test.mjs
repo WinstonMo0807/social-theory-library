@@ -232,7 +232,7 @@ test("concurrent 401 responses use one refresh request", async (t) => {
 test("Web Locks and refresh revision prevent duplicate refresh across tabs", async (t) => {
   let tail = Promise.resolve();
   const locks = {
-    request(_name, callback) {
+    request(_name, _options, callback) {
       const result = tail.then(callback);
       tail = result.then(() => undefined, () => undefined);
       return result;

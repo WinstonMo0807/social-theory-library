@@ -14,9 +14,7 @@ export async function requireReaderSession(path: string, params: Record<string, 
     const next = path + (query.size ? `?${query}` : "");
     // An expired access cookie can still have a valid remembered session.
     // Refresh in the browser so rotated HttpOnly cookies reach the reader.
-    const { cookies } = await import("next/headers");
-    const refreshName = process.env.JWT_REFRESH_COOKIE_NAME || "stl_refresh";
-    const resume = (await cookies()).has(refreshName) ? "&resume=1" : "";
-    redirect(`/login?next=${encodeURIComponent(next)}${resume}`);
+    // The refresh cookie is scoped to /api/auth/ and cannot be read here.
+    redirect(`/login?next=${encodeURIComponent(next)}&resume=1`);
   }
 }
