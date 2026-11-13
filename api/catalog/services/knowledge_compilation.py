@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from catalog import models as m
-from catalog.services.knowledge_core import require_editor, page_content
+from catalog.services.knowledge_core import require_editor, page_content, page_metadata
 from catalog.services.knowledge_sources import current_structure, digest, require_revision_access
 
 
@@ -71,8 +71,9 @@ def configure(revision, actor, *, enabled=True, scope=None, profile_key="", exec
 
 def request_page_refresh(page_ids):
     works = m.KnowledgeBlockDependency.objects.filter(page_id__in=page_ids, source_type="work").values("source_id")
+    own_works = m.KnowledgePage.objects.filter(pk__in=page_ids, work__isnull=False).values("work_id")
     rows = m.KnowledgeCompilation.objects.filter(enabled=True).filter(
-        Q(target_pages__in=page_ids) | Q(edition__work_id__in=works)).distinct()
+        Q(target_pages__in=page_ids) | Q(edition__work_id__in=works) | Q(edition__work_id__in=own_works)).distinct()
     ids = list(rows.values_list("pk", flat=True))
     if not ids:
         return
@@ -97,6 +98,10 @@ def reconcile_pending():
                 if not subscription.enabled or not subscription.pending_refresh:
                     continue
                 revision = subscription.latest_run.document_revision if subscription.latest_run_id else subscription.edition.active_catalog_revision.document_revision
+                published = subscription.edition.active_catalog_revision
+                if (published and published.document_revision_id and published.document_revision.asset_id != revision.asset_id
+                        and published.document_revision.created_at > revision.created_at):
+                    revision = published.document_revision
                 revision = m.DocumentRevision.objects.filter(asset=revision.asset, is_active=True).first() or revision
                 reconcile(revision)
                 m.KnowledgeCompilation.objects.filter(pk=key).update(pending_refresh=False, last_error={})
@@ -119,7 +124,8 @@ def reconcile(revision, *, subscription=None, retry=False):
     targets = list(affected_pages(revision, subscription))
     # Page edits affect compilation, not chapter analysis. Input hashes for each
     # chapter and Wiki block remain independent within the shared run cache.
-    page_versions = [(str(p.pk), digest(page_content(p)[0])) for p in targets]
+    page_versions = [(str(p.pk), digest({"blocks":page_content(p)[0],
+        "metadata":page_metadata(p, draft=True)})) for p in targets]
     config = configuration(subscription.profile_key) if subscription.execution_mode == "provider" else None
     key = digest([str(revision.pk), structure.input_hash, subscription.scope, page_versions,
         subscription.execution_mode, identity(config) if config else "interactive-agent-v1"])

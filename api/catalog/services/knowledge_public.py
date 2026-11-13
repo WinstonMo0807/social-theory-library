@@ -32,30 +32,49 @@ def public_entities():
     return m.Entity.objects.filter(scope | standalone, merged_into__isnull=True).exclude(status__in=["withdrawn", "archived"])
 
 
-def assertion_public(statement):
-    sources = list(statement.sources.select_related("document_revision__asset").all())
+def assertion_public(statement, *, visibility=None):
+    # A caller may reuse checks within one bounded read, never across requests
+    # or across a model call/publication change.
+    visibility = visibility if visibility is not None else {}
+    def visible(kind, identity, check):
+        key = (kind, identity)
+        if key not in visibility:
+            visibility[key] = check()
+        return visibility[key]
+    sources = getattr(statement, "retrieval_sources", None)
+    if sources is None:
+        sources = list(statement.sources.select_related("document_revision__asset").all())
     if statement.status not in {"published", "superseded"}:
         return False
     if not sources and not statement.origin.get("human_confirmation_preserved"):
         return False
     for source in sources:
-        if source.attribution_id and not public_entities().filter(pk=canonical_entity(source.attribution).pk).exists():
+        if source.attribution_id and not visible("entity", source.attribution_id,
+                lambda: public_entities().filter(pk=canonical_entity(source.attribution).pk).exists()):
             return False
-        if source.document_revision_id and not (public_editions(require_fulltext=True).filter(pk=source.edition_id).exists()
-            and m.CatalogPublicationRevision.objects.filter(document_revision=source.document_revision,
-                reader_asset_id=source.document_revision.asset_id, status__in=["active", "superseded"], fulltext_ready=True).exists()):
+        if source.document_revision_id and not visible("source", (source.edition_id, source.document_revision_id),
+                lambda: public_editions(require_fulltext=True).filter(pk=source.edition_id).exists()
+                and m.CatalogPublicationRevision.objects.filter(document_revision=source.document_revision,
+                    reader_asset_id=source.document_revision.asset_id, status__in=["active", "superseded"], fulltext_ready=True).exists()):
             return False
-        if not source.document_revision_id and source.work_id and not public_editions().filter(work_id=source.work_id).exists():
+        if not source.document_revision_id and source.work_id and not visible("work", source.work_id,
+                lambda: public_editions().filter(work_id=source.work_id).exists()):
             return False
         if not source.document_revision_id and not source.work_id and not source.citation.strip() and not statement.origin.get("human_confirmation_preserved"):
             return False
-    for participant in statement.participants.select_related("entity"):
-        if participant.work_id and not public_editions().filter(work_id=participant.work_id).exists():
+    participants = getattr(statement, "retrieval_participants", None)
+    if participants is None:
+        participants = statement.participants.select_related("entity")
+    for participant in participants:
+        if participant.work_id and not visible("work", participant.work_id,
+                lambda: public_editions().filter(work_id=participant.work_id).exists()):
             return False
-        if participant.edition_id and not public_editions().filter(pk=participant.edition_id).exists():
+        if participant.edition_id and not visible("edition", participant.edition_id,
+                lambda: public_editions().filter(pk=participant.edition_id).exists()):
             return False
         if participant.entity_id:
-            if not public_entities().filter(pk=canonical_entity(participant.entity).pk).exists():
+            if not visible("entity", participant.entity_id,
+                    lambda: public_entities().filter(pk=canonical_entity(participant.entity).pk).exists()):
                 return False
     return True
 

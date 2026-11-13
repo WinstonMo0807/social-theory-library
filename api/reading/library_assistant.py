@@ -249,6 +249,8 @@ def validated_source_rows(rows: list[dict], *, viewer=None) -> list[dict]:
     from types import SimpleNamespace
     from catalog.services.discovery_sessions import request_access
     allowed_access = request_access(SimpleNamespace(user=viewer))
+    from catalog.services.retrieval.locators import current_source_locators
+    locators = current_source_locators(rows, allowed_access)
     asset_ids.discard("")
     assets = {
         str(asset.id): asset
@@ -268,6 +270,14 @@ def validated_source_rows(rows: list[dict], *, viewer=None) -> list[dict]:
     }
     valid = []
     for row in rows:
+        if row.get("anchor_id"):
+            value = locators.get(str(row["anchor_id"]))
+            if not value or any(str(row.get(key) or "") != value[key] for key in
+                    ("asset_id", "edition_id", "work_id", "document_revision_id")):
+                continue
+            if not row.get("snippet") or row["snippet"] not in value["exact"]:
+                continue
+            row = {**row, "locator":value, "reader_url":value["reader_url"]}
         asset = assets.get(_valid_uuid(row.get("asset_id")))
         if asset is None:
             continue

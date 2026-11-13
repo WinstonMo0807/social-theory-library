@@ -87,3 +87,32 @@ def entity_query(rows=None, *, query="", public=False, exact=False, definitions=
             condition |= Q(identity_definition__icontains=query)
         rows = rows.filter(condition)
     return rows.distinct().order_by("identity_label", "pk")
+
+
+def mentioned_entities(query, rows, *, limit=8):
+    """Bounded published identity seeds, including confirmed profile aliases.
+
+    A matching name is a retrieval hint, not an identity merge. Homonyms retain
+    distinct IDs. Single-character aliases cannot expand arbitrary questions.
+    """
+    from django.db.models import Value
+    from django.db.models.functions import Length, Lower, StrIndex
+    from .query_lexicon.registry import FORMAL_PERSON_VARIANT_SOURCES, FORMAL_KNOWLEDGE_ALIAS_SOURCES
+    query = str(query).strip()
+    if not query or len(query) > 2000:
+        return []
+    def contains_label(source, field):
+        return source.annotate(mention_length=Length(field),
+            mention_position=StrIndex(Lower(Value(query)), Lower(F(field)))).filter(
+                mention_length__gte=2, mention_position__gt=0)
+    aliases = contains_label(independent_aliases(m.EntityAlias.objects.filter(
+        entity_id=OuterRef("pk"), review_status="confirmed")), "text")
+    people = contains_label(m.PersonNameVariant.objects.filter(person_id=OuterRef("person_id"),
+        is_verified=True, displayable=True, source_kind__in=FORMAL_PERSON_VARIANT_SOURCES), "name")
+    nodes = contains_label(m.KnowledgeNodeAlias.objects.filter(node_id=OuterRef("node_id"),
+        is_verified=True, source_kind__in=FORMAL_KNOWLEDGE_ALIAS_SOURCES), "alias")
+    return list(entity_query(rows, public=True).annotate(
+        mention_length=Length("identity_label"), mention_position=StrIndex(Lower(Value(query)), Lower("identity_label")),
+        alias_mentioned=Exists(aliases), person_mentioned=Exists(people), node_mentioned=Exists(nodes)
+    ).filter(Q(mention_length__gte=2, mention_position__gt=0) | Q(alias_mentioned=True)
+        | Q(person_mentioned=True) | Q(node_mentioned=True)).order_by("-mention_length", "pk")[:limit])

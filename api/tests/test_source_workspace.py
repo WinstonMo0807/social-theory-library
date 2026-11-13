@@ -30,6 +30,28 @@ def test_context_windows_cover_raw_text_once_and_preserve_codepoints(source, adm
 
 
 @pytest.mark.django_db
+def test_context_focus_includes_hit_on_later_page(source, admin_user):
+    from catalog.services.knowledge_sources import digest
+    structure = build_structure(source)
+    chapter = structure.nodes.get(kind="chapter")
+    value = context(chapter, admin_user, editorial=True, budget=6,
+        focus_range={"page":2,"start":0})
+    assert value["offset"] > 0 and not value["complete"]
+    assert any(p["page_number"] == 2 and "跨页" in p["exact"] for p in value["segments"])
+    assert value["returned_characters"] <= 6
+    page = source.page_snapshots.get(page_number=2)
+    start = page.text.index("原始")
+    note = m.DocumentNode.objects.create(structure=structure,document_revision=source,kind="footnote",
+        parent=chapter,order=1000,content_hash=digest(page.text[start:]))
+    m.DocumentNodeSegment.objects.create(node=note,page=page,order=0,start=start,end=len(page.text),
+        content_hash=digest(page.text[start:]))
+    m.DocumentNodeReference.objects.create(source=chapter,target=note,label="注1")
+    rich = context(chapter, admin_user, editorial=True, budget=200, include_references=True)
+    assert rich["reference_context"][0]["exact"] == page.text[start:]
+    assert rich["returned_reference_characters"] + rich["returned_characters"] <= 200
+
+
+@pytest.mark.django_db
 def test_selection_is_verified_idempotent_and_not_public(source, admin_user, reader_user, api_client):
     build_structure(source)
     page = source.page_snapshots.get(page_number=1)

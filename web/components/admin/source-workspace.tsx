@@ -8,15 +8,17 @@ import { EvidencePanel, KnowledgeNavigation, knowledgeCall, type LibrarySource, 
 import s from "./knowledge-workbench.module.css";
 import { createRequestKey } from "@/lib/request-key";
 import { AssertionFields, type AssertionFieldsValue } from "./assertion-fields";
-import { KnowledgeAssertionContent } from "../public/knowledge-page-content";
+import { KnowledgeAssertionContent, type KnowledgeAssertion } from "../public/knowledge-page-content";
 import { ParagraphCorrection } from "./paragraph-correction";
 import { KnowledgeCompilationPanel } from "./knowledge-compilation-panel";
 
 type Node = { id: string; title: string; kind: string; parent_id: string | null };
 type Context = { title: string; segments: SourceSegment[]; chapter_path: string[]; offset: number; next_offset: number | null; returned_characters: number; total_characters: number; references: { target_id: string; kind: string; label: string }[] };
-type Hit = { id: string; title?: string; work_title?: string; excerpt: string; locator?: SourceLocator; node_id?: string; pdf_page?: number; page_start?: number; coverage?: string };
+type Hit = { id: string; title?: string; work_title?: string; excerpt: string; locator?: SourceLocator; node_id?: string; pdf_page?: number; page_start?: number; coverage?: string;
+  knowledge_paths?: { assertion_id: string; predicate_label: string; evidence: { anchor_id: string; stance: string }[] }[] };
 type Results = { status: string; results: Hit[]; warnings: { code: string; message: string }[]; elapsed_ms: number;
-  retrieval?: { candidates?: { sparse: number; dense: number; contextual: number } } };
+  retrieval?: { candidates?: { sparse: number; dense: number; contextual: number };
+    knowledge_graph?: { status: string; assertions?: number; candidates?: number; truncated?: boolean } } };
 const ready: Record<string, string> = { ready: "可检索", partial: "部分就绪", pending: "待索引", unavailable: "服务待恢复", blocked: "需处理" };
 
 export function SourceWorkspace() {
@@ -25,6 +27,16 @@ export function SourceWorkspace() {
   const [nodes, setNodes] = useState<Node[]>([]), [nodeId, setNodeId] = useState(""), [context, setContext] = useState<Context | null>(null), [offset, setOffset] = useState(0);
   const [view, setView] = useState<"text" | "search">("text"), [scope, setScope] = useState("node"), [q, setQ] = useState(""), [mode, setMode] = useState("keyword");
   const [results, setResults] = useState<Results | null>(null), [locator, setLocator] = useState<SourceLocator | null>(null), [page, setPage] = useState(1);
+  const [relatedAssertion, setRelatedAssertion] = useState<KnowledgeAssertion | null>(null), [relatedId, setRelatedId] = useState("");
+  const [relatedError, setRelatedError] = useState("");
+  useEffect(() => {
+    setRelatedAssertion(null); setRelatedError("");
+    if (!relatedId) return;
+    const controller = new AbortController();
+    void knowledgeCall<KnowledgeAssertion>(`/knowledge/assertions/${relatedId}/`, undefined, controller.signal)
+      .then(setRelatedAssertion).catch(e => { if (!controller.signal.aborted) setRelatedError(e.message); });
+    return () => controller.abort();
+  }, [relatedId]);
   const [selection, setSelection] = useState<SourceSegment[]>([]), [verified, setVerified] = useState<SourceLocator | null>(null), [evidenceOpen, setEvidenceOpen] = useState(false);
   const [error, setError] = useState(""), [contextError, setContextError] = useState(""), [busy, setBusy] = useState(false), [loaded, setLoaded] = useState(false), [attempt, setAttempt] = useState(0);
   const [parseStart,setParseStart] = useState(1), [parseEnd,setParseEnd] = useState(2), [parseNotice,setParseNotice] = useState("");
@@ -111,11 +123,16 @@ export function SourceWorkspace() {
           <label>检索问题<input value={q} onChange={e => setQ(e.target.value)} minLength={2} maxLength={1200} required placeholder="输入一个问题、术语或原文短语" /></label>
           <div className={s.toolbar}><select aria-label="检索方式" value={mode} onChange={e => setMode(e.target.value)}><option value="keyword">仅关键词</option><option value="hybrid">混合检索</option></select><button className={s.primary} disabled={busy}><Search size={16} />检索</button></div></form>
           {busy && <p role="status">正在检索指定范围…</p>}{results && <><p className={s.muted}>{results.results.length} 条返回结果 · {results.elapsed_ms} ms</p>
-            {results.retrieval?.candidates && <details className={s.searchNote}><summary>本次检索来源</summary><p>关键词候选 {results.retrieval.candidates.sparse} 条，语义候选 {results.retrieval.candidates.dense} 条，书名与章节语境候选 {results.retrieval.candidates.contextual} 条。候选可能重叠，经融合、去重和来源校验后显示结果。</p></details>}
+            {results.retrieval?.candidates && <details className={s.searchNote}><summary>本次检索来源</summary><p>关键词候选 {results.retrieval.candidates.sparse} 条，语义候选 {results.retrieval.candidates.dense} 条，书名与章节语境候选 {results.retrieval.candidates.contextual} 条。候选可能重叠，经融合、去重和来源校验后显示结果。</p>
+              {results.retrieval.knowledge_graph?.status !== "disabled" && results.retrieval.knowledge_graph && <p>已发布陈述 {results.retrieval.knowledge_graph.assertions || 0} 条，关联原文候选 {results.retrieval.knowledge_graph.candidates || 0} 条。{results.retrieval.knowledge_graph.truncated ? "本次关联已达到查询预算，尚未遍历全部关系。" : "关联用于寻找材料，具体主张与证据作用可逐条核对。"}</p>}</details>}
             {results.warnings.map((v, i) => <p className={s.notice} key={`${v.code}-${i}`}>{v.message || v.code}</p>)}
             {results.status === "ready" && !results.results.length && <p className={s.empty}>此检索范围内没有匹配结果。可保留问题，切换检索方式后再试。</p>}
-            {results.results.map((hit, i) => <button className={s.result} key={hit.id || i} onClick={() => { setLocator(hit.locator || null); setPage(hit.locator?.segments[0]?.page_number || hit.pdf_page || hit.page_start || 1); setEvidenceOpen(true); }}>
-              <span>{hit.work_title || hit.title || source?.title} · {hit.locator ? hit.locator.segments.map(v => `PDF ${v.page_number}`).join("、") : "精确锚点待补齐"}</span><strong>{hit.excerpt}</strong><span>核对来源 →</span></button>)}</>}
+            {results.results.map((hit, i) => <article key={hit.id || i}><button className={s.result} onClick={() => { setLocator(hit.locator || null); setPage(hit.locator?.segments[0]?.page_number || hit.pdf_page || hit.page_start || 1); setEvidenceOpen(true); }}>
+              <span>{hit.work_title || hit.title || source?.title} · {hit.locator ? hit.locator.segments.map(v => `PDF ${v.page_number}`).join("、") : "精确锚点待补齐"}</span><strong>{hit.excerpt}</strong><span>核对来源 →</span></button>
+              {!!hit.knowledge_paths?.length && <div className={s.toolbar}><span className={s.muted}>关联陈述</span>{hit.knowledge_paths.map(path => <button key={path.assertion_id} onClick={() => setRelatedId(path.assertion_id)}>{path.predicate_label || "查看陈述"} · {Array.from(new Set(path.evidence.map(e => ({ supports:"支持",opposes:"反对",qualifies:"限定",context:"语境" })[e.stance] || e.stance))).join("、")}</button>)}</div>}
+            </article>)}
+            {relatedId && <section className={s.compilationDetail} aria-label="关联陈述的来源"><div className={s.sectionBar}><h3>陈述与原文证据</h3><button onClick={() => setRelatedId("")}>收起</button></div>{relatedError ? <p role="alert">{relatedError}</p> : relatedAssertion ? <KnowledgeAssertionContent assertion={relatedAssertion} /> : <p role="status">正在核对已发布陈述…</p>}</section>}
+          </>}
         </> : <><h2>{context?.title || nodes.find(v => v.id === nodeId)?.title || "正文结构"}</h2>
           {source?.structure_coverage.structure_status === "needs_structure_review" && <details className={s.notice}><summary>部分目录尚未对应到正文</summary><p>以下标题尚未找到唯一原文位置，可进入目录校准核对。“全部正文”仍可读取完整修订。</p><ul>{(source.structure_coverage.unmapped_headings || []).map((gap, i) => <li key={i}>{gap.title || "未命名标题"} · PDF {gap.page || "未确定"}</li>)}</ul><Link href={source.outline_url}>打开目录校准</Link></details>}
           {!nodes.length && source && <><p>此修订尚未准备可引用的正文结构。已有正文和目录将用于建立映射。</p><button disabled={busy || ["pending","running"].includes(source?.sync_job?.status || "")} onClick={() => void action(async () => { await knowledgeCall(`/knowledge/revisions/${revision}/structure/`, {}); setAttempt(v => v + 1); })}>准备正文结构</button></>}

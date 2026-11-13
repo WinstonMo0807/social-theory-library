@@ -477,12 +477,12 @@ def request_source_reindex(revision, *, keyword_only=False):
     if not generation or not header or header.get("document_revision_id") != str(revision.pk):
         raise DiscoveryIndexError("source_not_published","请先发布此正文修订并准备活动索引，再更新关键词。")
     structure=current_structure(revision,prepare=True)
-    key=fingerprint([str(generation.pk),header["source_revision"],str(structure.pk),"keyword" if keyword_only else "hybrid", "context-v1"])
+    key=fingerprint([str(generation.pk),header["source_revision"],str(structure.pk),"keyword" if keyword_only else "hybrid", "context-v1", "logical-node-v2"])
     with transaction.atomic():
         job,created=ProcessingJob.objects.get_or_create(idempotency_key="logical-index:"+key,defaults={
-            "job_type":JOB_TYPE,"edition":source,"asset":revision.asset,"engine":"logical-node-v1",
+            "job_type":JOB_TYPE,"edition":source,"asset":revision.asset,"engine":"logical-node-v2",
             "stats":{"action":"source","generation_id":str(generation.pk),"source_type":"edition",
-                "source_id":str(source.pk),"source_revision":header["source_revision"],"structure_id":str(structure.pk)}})
+                "source_id":str(source.pk),"source_revision":header["source_revision"],"structure_id":str(structure.pk),"projection_version":2}})
         job=ProcessingJob.objects.select_for_update().get(pk=job.pk)
         if created or job.status in {"failed","canceled"}:
             if keyword_only: job.stats={**job.stats,"semantic_waiting":{"code":"keyword_only","message":"本次仅更新关键词，语义状态独立保留。"}}
@@ -506,6 +506,11 @@ def process_source(job, generation):
     state, _ = DiscoverySourceState.objects.get_or_create(generation=generation, source_type=kind, source_id=source_id)
     deadline = time.monotonic() + 240
     structure_id = job.stats.get("structure_id")
+    if "projection_version" not in job.stats:
+        # A running v1 job resumes its original unit ledger. New jobs use v2;
+        # deploying code alone never restarts an entire collection index.
+        _guard_job(job, stats={**job.stats, "projection_version":1 if structure_id and job.stats.get("completed_units") else 2})
+    projection_version = job.stats["projection_version"]
     if kind == "edition" and not structure_id:
         from catalog.services.knowledge_sources import current_structure
         try:
@@ -521,7 +526,7 @@ def process_source(job, generation):
     completed_units = int(job.stats.get("completed_units", 0))
     finished_units = completed_units
     keyword_batch = [] if not generation.config_snapshot.get("embedding_artifact") or job.stats.get("semantic_waiting") else None
-    for unit_index, unit in enumerate(source_units(kind, source, header,structure_id=structure_id)):
+    for unit_index, unit in enumerate(source_units(kind, source, header,structure_id=structure_id, projection_version=projection_version)):
         if unit_index < completed_units:
             continue
         location = {"unit_id": unit["unit_id"], "pdf_page": unit["metadata"].get("pdf_page"), "start_offset": None, "end_offset": None}
@@ -551,7 +556,8 @@ def process_source(job, generation):
         raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")
     docs = DiscoveryDocument.objects.filter(generation=generation, source_type=kind, source_id=source_id, source_revision=header["source_revision"])
     if structure_id:
-        docs = docs.filter(payload__structure_id=structure_id, payload__context_version=1)
+        docs = docs.filter(payload__structure_id=structure_id, payload__context_version=1,
+            payload__projection_layout=f"logical-node-v{projection_version}")
     expected, completed = docs.count(), docs.filter(keyword_ready=True).count()
     if kind == "edition" and not expected:
         raise DiscoveryIndexError("text_missing", "该文件尚无可用原文文字，请检查文字处理结果后重试。")
@@ -563,7 +569,8 @@ def process_source(job, generation):
         old = DiscoveryDocument.objects.filter(generation=generation,source_type=kind,source_id=source_id,
             source_revision=header["source_revision"],keyword_ready=True).filter(
                 Q(payload__structure_id__isnull=True) | ~Q(payload__structure_id=structure_id)
-                | Q(payload__context_version__isnull=True) | ~Q(payload__context_version=1))
+                | Q(payload__context_version__isnull=True) | ~Q(payload__context_version=1)
+                | ~Q(payload__projection_layout=f"logical-node-v{projection_version}"))
         # A logical resegmentation does not invalidate vectors for the same
         # published text. Keep those searchable until the new slices have vectors.
         # Source withdrawal/revision checks still apply to every returned row.

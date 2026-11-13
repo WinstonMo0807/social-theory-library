@@ -14,6 +14,13 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
     branches = [(result.get("sparse", []), 1.0), (result.get("dense", []), 1.0),
                 (result.get("contextual", []), 0.6)]
     warnings = list(result.get("warnings", []))
+    graph_rows, graph = [], {"status": "disabled"}
+    if (channel == "passages" and not filters.get("search_scope") and not filters.get("_baseline")
+            and not filters.get("_keyword_only") and not query.lstrip().startswith(('"', '“'))):
+        from .knowledge_graph import recall
+        graph_rows, graph = recall(query, _rrf(branches), access_statuses,
+            generation=request_context.get("generation"), scopes=request_context.get("passage_scopes", []), filters=filters)
+        branches.append((graph_rows, 0.35))
     if channel == "passages" and filters.get("search_scope") == "terms":
         from catalog.models import QueryLexiconState
         from catalog.services.query_lexicon.search import resolve_search_query
@@ -40,7 +47,12 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
             branches.extend([(branch.get("sparse", []), 0.2 / len(aliases[:4])),
                              (branch.get("dense", []), 0.2 / len(aliases[:4]))])
             warnings.extend(branch.get("warnings", []))
-    rows = validate_discovery_results(channel, _rrf(branches)[:MAX_MATERIALIZED], access_statuses, filters=filters)
+    fused = _rrf(branches)[:MAX_MATERIALIZED]
+    graph_refs = {row["id"]: row["knowledge_assertion_ids"] for row in graph_rows}
+    for row in fused:
+        if row["id"] in graph_refs:
+            row["knowledge_assertion_ids"] = graph_refs[row["id"]]
+    rows = validate_discovery_results(channel, fused, access_statuses, filters=filters)
     if channel == "passages":
         rows = _deduplicate(rows)
         if is_current and not is_current():
@@ -62,8 +74,9 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
         warnings.append(_warning("coverage_pending", "所选来源仍有原文或关键词索引待完成。当前结果仅覆盖已就绪的片段，零条结果不代表原文中不存在。", channel))
     return {"rows": rows, "warnings": warnings, "version": str(result.get("version") or ""),
             "coverage": coverage,
-            "retrieval": {"algorithm": "hybrid_context_rrf_v1", "rrf_k": 60,
+            "retrieval": {"algorithm": "hybrid_context_graph_rrf_v2", "rrf_k": 60,
                 "candidates": {name:len(result.get(name, [])) for name in ("sparse", "dense", "contextual")},
+                "knowledge_graph": graph,
                 "context_source": "bibliography_and_document_structure", "baseline": bool(filters.get("_baseline"))},
             "index_uid": str(result.get("index_uid") or getattr(request_context.get("generation"), "uid", "")),
             "embedding_artifact": str(result.get("embedding_artifact") or ""),

@@ -276,7 +276,7 @@ def get_source(kind, key, access_statuses=None):
     return row, source_header(kind, row)
 
 
-def source_units(kind, row, header, *, structure_id=None):
+def source_units(kind, row, header, *, structure_id=None, projection_version=2):
     from catalog.services.discovery_scope import unit_exclusions
     if kind != "edition":
         if header.get("text", "").strip():
@@ -284,7 +284,7 @@ def source_units(kind, row, header, *, structure_id=None):
         return
     revision = row.active_catalog_revision
     if structure_id:
-        yield from logical_source_units(revision.document_revision, structure_id, header)
+        yield from logical_source_units(revision.document_revision, structure_id, header, projection_version=projection_version)
         return
     spans = EvidenceSpan.objects.filter(document_revision_id=revision.document_revision_id,
         page__asset_id=revision.reader_asset_id, page_number=F("page__index"),
@@ -315,7 +315,7 @@ def source_units(kind, row, header, *, structure_id=None):
                 "reader_url": f"/reader/{revision.reader_asset_id}?page={page.index}", "quality_flags": ["page_locator_only"]}}
 
 
-def logical_source_units(revision, structure_id, header):
+def logical_source_units(revision, structure_id, header, *, projection_version=2):
     """New writes use immutable raw node segments; the old adapter is read-only recovery."""
     from types import SimpleNamespace
     from catalog.models import DocumentNodeSegment, DocumentStructure
@@ -326,13 +326,10 @@ def logical_source_units(revision, structure_id, header):
     segments = DocumentNodeSegment.objects.filter(node__structure=structure,
         node__kind__in=["paragraph","footnote","table","references","unresolved"], node__children__isnull=True
         ).select_related("page").order_by("node__order","order")
-    for segment in segments.iterator(chunk_size=100):
+    def emit(group):
+        segment, last = group[0], group[-1]
         page, node = segment.page, nodes[segment.node_id]
-        text = page.text[segment.start:segment.end]
-        if digest(page.text) != page.content_hash or digest(text) != segment.content_hash:
-            raise ValueError("修订原文或节点摘要不一致，停止索引并保留上一版本。")
-        if not text.strip():
-            continue
+        text = page.text[segment.start:last.end]
         path, parent = [], nodes.get(node.parent_id)
         while parent:
             if parent.kind != "document" and parent.title:
@@ -340,15 +337,81 @@ def logical_source_units(revision, structure_id, header):
             parent = nodes.get(parent.parent_id)
         blocks = [SimpleNamespace(text=b.get("text",""),block_type=b.get("kind","")) for b in page.blocks]
         snapshot = SimpleNamespace(text=page.text,blocks=SimpleNamespace(all=lambda:blocks))
-        exclusions = [(0,len(text),True)] if node.kind == "footnote" else unit_exclusions(snapshot,text,segment.start,segment.end)
-        yield {"unit_id":str(segment.pk),"text":text,"scope_exclusions":exclusions,"metadata":{
-            "projection_layout":"logical-node-v1","structure_id":str(structure.pk),
-            "node_id":str(node.pk),"node_kind":node.kind,"node_segment_id":str(segment.pk),"snapshot_id":str(page.pk),
+        exclusions = [(0,len(text),True)] if node.kind == "footnote" else unit_exclusions(snapshot,text,segment.start,last.end)
+        ids = [str(part.pk) for part in group]
+        return {"unit_id":str(segment.pk) if projection_version == 1 else "window-v2:" + fingerprint(ids),
+            "text":text,"scope_exclusions":exclusions,"metadata":{
+            "projection_layout":f"logical-node-v{projection_version}","structure_id":str(structure.pk),
+            "node_id":str(node.parent_id if len(group) > 1 else node.pk),"node_kind":node.kind,
+            "node_segment_id":str(segment.pk),"snapshot_id":str(page.pk),
+            **({"node_segment_ids":ids, "source_end_offset":last.end} if projection_version == 2 else {}),
             "source_start_offset":segment.start,"unit_hash":fingerprint(text),"pdf_page":page.page_number,"page_index":page.page_number,
             "printed_page":page.printed_label,"chapter_path":path,"section_title":path[-1] if path else "",
             "source_kind":page.text_source,"language":header.get("language","unknown"),"bbox":[],"locator_precision":"text_range",
             "reader_url":f"/reader/{revision.asset_id}?revision={revision.pk}&page={page.page_number}",
             "quality_flags":["structure_pending"] if node.kind == "unresolved" else []}}
+    pending = []
+    for segment in segments.iterator(chunk_size=100):
+        page, node = segment.page, nodes[segment.node_id]
+        text = page.text[segment.start:segment.end]
+        if digest(page.text) != page.content_hash or digest(text) != segment.content_hash:
+            raise ValueError("修订原文或节点摘要不一致，停止索引并保留上一版本。")
+        if not text.strip():
+            continue
+        join = False
+        if pending and projection_version == 2 and node.kind == "paragraph" and node.parent_id:
+            previous = pending[-1]
+            gap = page.text[previous.end:segment.start] if previous.page_id == segment.page_id else "!"
+            # Existing OCR extraction separates each visual line with two LFs.
+            # This is a retrieval window, not a canonical paragraph merge.
+            newline_limit = 2 if "ocr" in page.text_source.lower() or page.text_source == "hybrid" else 1
+            join = (previous.page_id == segment.page_id and nodes[previous.node_id].parent_id == node.parent_id
+                and nodes[previous.node_id].kind == node.kind and previous.end <= segment.start
+                and segment.end - segment.start <= 120 and previous.end - previous.start <= 120
+                and len(pending) < 32 and segment.end - pending[0].start <= 1200
+                and (not gap or gap.isspace()) and len(gap) <= 8 and gap.count("\n") <= newline_limit)
+        if pending and not join:
+            yield emit(pending)
+            pending = []
+        pending.append(segment)
+    if pending:
+        yield emit(pending)
+
+
+def logical_unit_text(payload, segments, revision_id):
+    """Reconstruct a packed unit from immutable leaves, never normalized text."""
+    ids = payload.get("node_segment_ids") or [payload.get("node_segment_id")]
+    if not isinstance(ids, list) or not 1 <= len(ids) <= 32 or len(set(ids)) != len(ids):
+        return None
+    parts = [segments.get(key) for key in ids]
+    if any(part is None for part in parts):
+        return None
+    first, last = parts[0], parts[-1]
+    from catalog.services.knowledge_sources import digest
+    page = first.page
+    if (page.document_revision_id != revision_id or str(page.pk) != payload.get("snapshot_id")
+            or digest(page.text) != page.content_hash or first.start != payload.get("source_start_offset")):
+        return None
+    expected_node = first.node.parent_id if len(parts) > 1 else first.node_id
+    if str(expected_node) != payload.get("node_id"):
+        return None
+    previous = None
+    for part in parts:
+        if (part.page_id != page.pk or part.node.document_revision_id != revision_id
+                or str(part.node.structure_id) != payload.get("structure_id")
+                or digest(page.text[part.start:part.end]) != part.content_hash):
+            return None
+        if previous:
+            gap = page.text[previous.end:part.start]
+            newline_limit = 2 if "ocr" in page.text_source.lower() or page.text_source == "hybrid" else 1
+            if (previous.end > part.start or part.node.parent_id != first.node.parent_id
+                    or part.node.kind != "paragraph" or first.node.kind != "paragraph"
+                    or (gap and not gap.isspace()) or len(gap) > 8 or gap.count("\n") > newline_limit):
+                return None
+        previous = part
+    if payload.get("node_segment_ids") and payload.get("source_end_offset") != last.end:
+        return None
+    return page.text[first.start:last.end]
 
 
 def visible_scope_tokens(channel, access_statuses):

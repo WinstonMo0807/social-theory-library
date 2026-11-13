@@ -181,11 +181,20 @@ def session_context(session, result_id, access_statuses):
         enriched = attach_locators(rows)[0]
         node = DocumentNode.objects.filter(pk=enriched.get("node_id"), document_revision=revision).first()
         if node:
-            logical = context(node, session.owner, scope="section", budget=12000)
-            blocks = [{"text": segment["exact"], "pdf_page": segment["page_number"],
-                "start": segment["start"], "end": segment["end"], "role": "hit" if segment["page_number"] == page_number
-                else "before" if segment["page_number"] < page_number else "after",
-                "truncated": segment["partial_segment"]} for segment in logical["segments"]]
+            logical = context(node, session.owner, scope="section", budget=12000,
+                focus_range={"page":page_number,"start":rows[0]["start_offset"]}, include_references=True)
+            blocks = []
+            hit_start, hit_end = rows[0]["start_offset"], rows[0]["end_offset"]
+            for segment in logical["segments"]:
+                boundaries = sorted({segment["start"], segment["end"], *(
+                    point for point in (hit_start,hit_end) if segment["page_number"] == page_number
+                    and segment["start"] < point < segment["end"])})
+                for begin,end in zip(boundaries,boundaries[1:]):
+                    role = ("before" if (segment["page_number"],end) <= (page_number,hit_start)
+                        else "after" if (segment["page_number"],begin) >= (page_number,hit_end) else "hit")
+                    blocks.append({"text":segment["exact"][begin-segment["start"]:end-segment["start"]],
+                        "pdf_page":segment["page_number"], "start":begin,"end":end,"role":role,
+                        "truncated":segment["partial_segment"]})
     # Only identities from this bounded session are candidates. Hydration again
     # checks the active publication and exact text; withdrawn neighbours vanish.
     references = {str(ref.get("id")): ref for key in (DEEP_RESULTS_KEY, "passages")
@@ -201,6 +210,9 @@ def session_context(session, result_id, access_statuses):
     fresh = allowed_rows(session, validate_discovery_results("passages", refs, access_statuses, filters=effective_filters(session)))
     if not fresh:
         raise NotFound("原文来源已更新、撤回或不再可访问，请重新检索。")
+    if session.owner_id:
+        from catalog.services.retrieval.locators import attach_locators
+        fresh = attach_locators(fresh)
     row = _public_row(fresh[0])
     # Quotes are never rewritten; bounding context does not modify stored text.
     return {"result_id": str(result_id), "document_revision_id": str(revision.id),

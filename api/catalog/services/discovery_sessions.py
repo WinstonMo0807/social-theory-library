@@ -349,6 +349,7 @@ def _mark_additions(session, channel: str, rows: list[dict]) -> list[dict]:
 
 def _reference(row: dict) -> dict:
     return {"id": _identity(row), "source_revision": str(row.get("source_revision") or ""),
+            "knowledge_assertion_ids": [str(value) for value in row.get("knowledge_assertion_ids", [])[:4]],
             "match_basis": [str(item)[:160] for item in row.get("match_basis", [])[:5]]}
 
 
@@ -942,7 +943,7 @@ def _public_row(row: dict) -> dict:
                "edition_id", "work_id", "document_revision_id", "evidence_span_id", "passage_id",
                "work", "authors", "locator_precision", "context_reference", "deep_rank", "deep_score",
                "deep_context", "bibliography", "section_title", "attribution", "is_new",
-               "locator", "anchor_id", "node_id", "coverage", "source_type"}
+               "locator", "anchor_id", "node_id", "coverage", "source_type", "knowledge_paths"}
     output = {key: value for key, value in row.items() if key in allowed}
     metadata = row.get("metadata") or {}
     if "pdf_page" not in output:

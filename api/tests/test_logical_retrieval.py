@@ -11,6 +11,47 @@ from tests.test_discovery_sessions_v308 import fixture_source
 pytestmark = pytest.mark.django_db
 
 
+def test_ocr_line_packing_preserves_raw_offsets_and_note_boundaries(monkeypatch):
+    from catalog.services.knowledge_sources import snapshot_revision, digest
+    from catalog.services.discovery_sources import logical_source_units, logical_unit_text
+    _,asset,revision,generation,job,old = indexing_source()
+    text = "第一行😀原文\n\n第二行原文\n\n脚注一\n\n第三行原文"
+    m.Page.objects.filter(asset=asset,index=1).update(text=text, text_source="ocr")
+    revision.text_checksum = document_text_checksum(asset);revision.save()
+    snapshot_revision(revision)
+    page = revision.page_snapshots.get(page_number=1)
+    structure = m.DocumentStructure.objects.create(document_revision=revision,parser="explicit-fixture",
+        parser_version="1",input_hash=digest(text))
+    parent = m.DocumentNode.objects.create(document_revision=revision,structure=structure,kind="section",order=0,content_hash=digest(text))
+    m.DocumentNodeSegment.objects.create(node=parent,page=page,order=0,start=0,end=len(text),content_hash=digest(text))
+    start=0
+    for order,line in enumerate(text.split("\n\n"),1):
+        node=m.DocumentNode.objects.create(document_revision=revision,structure=structure,parent=parent,
+            kind="footnote" if order==3 else "paragraph",order=order,content_hash=digest(line))
+        m.DocumentNodeSegment.objects.create(node=node,page=page,order=0,start=start,end=start+len(line),content_hash=digest(line))
+        start+=len(line)+2
+    header=get_source("edition",asset.edition_id)[1]
+    v1=list(logical_source_units(revision,structure.pk,header,projection_version=1))
+    v2=list(logical_source_units(revision,structure.pk,header))
+    assert len(v1)==4 and len(v2)==3
+    assert v2[0]["text"]=="第一行😀原文\n\n第二行原文"
+    assert v2[1]["metadata"]["node_kind"]=="footnote"
+    segments={str(s.pk):s for s in m.DocumentNodeSegment.objects.filter(node__structure=structure).select_related("page","node")}
+    assert logical_unit_text(v2[0]["metadata"],segments,revision.pk)==v2[0]["text"]
+    corrupted={**v2[0]["metadata"],"node_segment_ids":[*v2[0]["metadata"]["node_segment_ids"],v2[2]["metadata"]["node_segment_id"]]}
+    assert logical_unit_text(corrupted,segments,revision.pk) is None
+    job.stats={**job.stats,"structure_id":str(structure.pk),"source_revision":header["source_revision"]};job.save()
+    monkeypatch.setattr(indexing,"meili",lambda method,path,data=None,**kw: {"hits":[]} if path.endswith("/search") else {"taskUid":1})
+    monkeypatch.setattr(indexing,"wait_index_task",lambda *a,**kw:None)
+    assert indexing.process_source(job,generation)
+    docs=list(m.DiscoveryDocument.objects.filter(generation=generation,payload__projection_layout="logical-node-v2"))
+    rows=projection.validate_discovery_results("passages",[{"id":str(d.pk)} for d in docs],["public"])
+    assert len(rows)==3
+    from catalog.services.retrieval.locators import attach_locators
+    first=next(r for r in attach_locators(rows) if r["text"]==v2[0]["text"])
+    assert first["locator"]["exact"]==v2[0]["text"] and first["locator"]["segments"][0]["end"]==len(v2[0]["text"])
+
+
 def indexing_source():
     edition,asset,_,old = fixture_source(2)
     revision = edition.active_catalog_revision.document_revision
@@ -39,7 +80,7 @@ def test_logical_replacement_retains_history_and_verifies_snapshot(monkeypatch):
     monkeypatch.setattr(indexing,"wait_index_task",lambda *a,**kw:None)
     assert indexing.process_source(job,generation)
     new = list(m.DiscoveryDocument.objects.filter(generation=generation,keyword_ready=True))
-    assert new and all(d.payload["projection_layout"] == "logical-node-v1" for d in new)
+    assert new and all(d.payload["projection_layout"] == "logical-node-v2" for d in new)
     assert set(map(str,[d.pk for d in old])).issubset(deleted)
     assert m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in old],keyword_ready=False).count() == 2
     m.Page.objects.filter(asset=asset).update(text="后续未发布修改不能替换已引用原文")

@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from catalog import models as m
 from catalog.services.knowledge_sources import current_structure, digest, require_revision_access
-from catalog.services.knowledge_core import require_editor, match_entities, page_content
+from catalog.services.knowledge_core import require_editor, match_entities, page_content, page_metadata
 from catalog.services.intelligence_provider import configuration, identity, map_analysis, PROMPT_VERSION
 from catalog.services.intelligence_changes import submit_draft, uuid_value, proposal_fingerprint
 from common.task_runtime import queue_or_wait, renew_demand_lease
@@ -393,6 +393,8 @@ def compile_wiki(run, proposals, config, lease):
     budget = min(config.max_input_chars-6500, 6500)
     for target in targets:
         if not target["assertions"]: continue
+        if len(target["pages"]) == 1 and (target["key"] == "work" or "page_id" in target):
+            target.update(page_metadata(target["pages"][0], draft=True))
         contexts = []
         for page in target["pages"]:
             blocks, revision = page_content(page)

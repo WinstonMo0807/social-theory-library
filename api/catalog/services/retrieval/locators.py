@@ -4,6 +4,28 @@ from catalog.models import DocumentNode, EvidenceAnchor, EvidenceSegment, Knowle
 from catalog.services.knowledge_sources import locator_payload
 
 
+def current_source_locators(rows, access_statuses):
+    """Re-read anchors for RAG consumers; never trust a stored/client locator.
+
+    Historical reading uses knowledge_sources.locator. New answer evidence must
+    still belong to the current published source, including every segment.
+    """
+    from uuid import UUID
+    from catalog.services.publication_eligibility import active_document_revision_q, current_retrieval_source_q
+    ids = set()
+    for row in rows:
+        try:
+            ids.add(UUID(str(row.get("anchor_id"))))
+        except (ValueError, TypeError):
+            continue
+    anchors = EvidenceAnchor.objects.filter(pk__in=ids).filter(
+        active_document_revision_q(revision_prefix="document_revision"),
+        current_retrieval_source_q(asset_prefix="document_revision__asset", access_statuses=access_statuses),
+    ).select_related("document_revision__asset__edition__work").prefetch_related(
+        Prefetch("segments", queryset=EvidenceSegment.objects.select_related("page", "node"), to_attr="locator_segments"))
+    return {str(anchor.pk): locator_payload(anchor) for anchor in anchors}
+
+
 def index_anchor(document):
     """Index-time source mapping; search itself never writes canonical knowledge."""
     if document.channel != "passages" or not document.document_revision_id:

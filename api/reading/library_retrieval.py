@@ -36,7 +36,7 @@ from .library_query import (
 )
 
 
-LIBRARY_RETRIEVAL_VERSION = "library-discovery-adapter-v1"
+LIBRARY_RETRIEVAL_VERSION = "library-source-anchor-v2"
 UNIFIED_RETRIEVAL_PROFILE = "reader_qa"
 _CLAIM_FILTER_KEYS = frozenset(
     {
@@ -70,6 +70,7 @@ class LibraryEvidence:
     section_title: str = ""
     reader_url: str = ""
     retrieval_provenance: dict[str, Any] = field(default_factory=dict)
+    locator: dict[str, Any] = field(default_factory=dict)
 
     def source_row(self) -> dict:
         return {
@@ -89,6 +90,9 @@ class LibraryEvidence:
             "language": self.language,
             "reader_url": self.reader_url,
             "retrieval_provenance": self.retrieval_provenance,
+            **({"anchor_id": self.locator["anchor_id"], "document_revision_id": self.locator["document_revision_id"],
+                "node_id": self.locator["node_id"], "locator": self.locator,
+                "source_type": "original_text"} if self.locator else {}),
         }
 
     def debug_dict(self) -> dict:
@@ -151,6 +155,7 @@ def _semantic_call(
         "index_uid": result.get("index_uid", ""), "discovery_generation": result["version"], "fallback_used": bool(result["warnings"]),
         "fallback_reason": ",".join(str(row.get("code", "")) for row in result["warnings"]),
         "warnings": result["warnings"]}
+    response["retrieval"] = result.get("retrieval", {})
     return {
         **response,
         "library_requested_profile": retrieval_profile,
@@ -418,6 +423,8 @@ def _evidence_spans_by_page(rows: list[dict], *, access_statuses=None) -> dict[t
 
 def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str, access_statuses=None) -> list[LibraryEvidence]:
     allowed_access = viewer_access_statuses() if access_statuses is None else access_statuses
+    from catalog.services.retrieval.locators import current_source_locators
+    locators = current_source_locators(rows, allowed_access)
     chunk_ids = []
     for row in rows:
         value = str(row.get("id") or "")
@@ -449,6 +456,32 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str, access_status
     output = []
     contribution_cache = {}
     for index, row in enumerate(rows, start=1):
+        if row.get("anchor_id"):
+            value = locators.get(str(row["anchor_id"]))
+            if not value or any(str(row.get(key) or "") != value[key] for key in
+                    ("asset_id", "edition_id", "work_id", "document_revision_id")):
+                continue
+            excerpt = str(row.get("snippet") or row.get("text") or "")
+            if not excerpt or excerpt not in value["exact"]:
+                continue
+            # Keep all cross-page ranges. Do not remap this source to a nearby
+            # legacy span or read mutable Page.text after retrieval.
+            first = value["segments"][0]
+            output.append(LibraryEvidence(evidence_id=value["anchor_id"], work_id=value["work_id"],
+                work_title=str((row.get("work") or {}).get("title") or row.get("title") or "未题名")[:500],
+                edition_id=value["edition_id"], asset_id=value["asset_id"], page_id="",
+                page_index=first["page_number"], printed_label=first["printed_label"],
+                semantic_chunk_id="", document_id=str(row.get("id") or ""), original_passage=value["exact"],
+                language=str(row.get("language") or detect_passage_language(value["exact"])),
+                authors=tuple(row.get("authors") or []), section_title=" / ".join(value["chapter_path"]),
+                reader_url=value["reader_url"], locator=value,
+                retrieval_provenance={"retrieval_profile":retrieval_profile,
+                    "branch":row.get("_retrieval_branch", "primary"),
+                    "coverage_entity_id":row.get("_coverage_entity_id", ""),
+                    "coverage_entity_label":row.get("_coverage_entity_label", ""),
+                    "source_kind":"original_text", "locator_validation":"evidence_anchor",
+                    "document_revision_id":value["document_revision_id"], "anchor_id":value["anchor_id"]}))
+            continue
         asset_id = str(row.get("asset_id") or "")
         page_index = _row_page_number(row)
         chunk = chunks.get(str(row.get("id") or ""))
@@ -754,6 +787,9 @@ def _deduplicate_and_budget(
                 **{
                     **row.debug_dict(),
                     "original_passage": row.original_passage[:remaining],
+                    "retrieval_provenance": {**row.retrieval_provenance,
+                        "input_coverage": {"start":0, "end":remaining,
+                            "total_characters":len(row.original_passage), "offset_unit":"unicode_code_point"}},
                 }
             )
         selected.append(row)
@@ -876,9 +912,11 @@ class LibraryRetrievalService:
                 for row in hydrated
                 if row.retrieval_provenance.get("locator_validation") == "evidence_span"
             ),
+            "evidence_anchor_validated_count": sum(
+                row.retrieval_provenance.get("locator_validation") == "evidence_anchor" for row in hydrated),
             "derived_claim_recall": claim_diagnostics,
             "knowledge_anchor_count": len(library_query.entity_anchors),
-            "knowledge_use": "query_normalization_and_scope_only",
+            "knowledge_use": "published_source_assertion_recall",
             "answer_evidence_kind": "collection_original_text",
             "evidence_count": len(selected),
             "latency_ms": round((time.monotonic() - started) * 1000, 3),
@@ -887,6 +925,7 @@ class LibraryRetrievalService:
                     "branch": item.get("branch"),
                     "anchor": item.get("anchor"),
                     "result_count": len(item["response"].get("results", [])),
+                    "retrieval": item["response"].get("retrieval", {}),
                 }
                 for item in diagnostics
             ],

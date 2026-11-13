@@ -307,6 +307,8 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
             change_note=payload.get("reason", "审核知识页标题与范围"))
         from catalog.services.knowledge_workspace import invalidate_source
         invalidate_source("knowledge_page", page.pk)
+        from catalog.services.knowledge_compilation import request_page_refresh
+        request_page_refresh([page.pk])
         return revision
     by_id = {b["id"]: b for b in blocks}
     operation, key = payload.get("operation"), payload.get("block_id")
@@ -335,6 +337,11 @@ def apply_page_patch(payload, actor, *, request_key, origin="intelligence"):
     from catalog.services.knowledge_workspace import sync_dependencies, invalidate_source
     sync_dependencies(page, blocks, changed_blocks={str(key)})
     invalidate_source("knowledge_page", page.pk)
+    if origin == "human":
+        # Editing a destination changes the compilation context even when no
+        # other Wiki page links to it. Machine application must not loop itself.
+        from catalog.services.knowledge_compilation import request_page_refresh
+        request_page_refresh([page.pk])
     return revision
 
 

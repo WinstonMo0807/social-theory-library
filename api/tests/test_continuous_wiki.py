@@ -103,6 +103,38 @@ def test_changed_wiki_context_reuses_source_analysis(source, admin_user, monkeyp
     assert copied.usage["model_calls"] == 0
 
 
+def test_human_destination_edit_queues_only_related_subscription(source, admin_user, monkeypatch):
+    from catalog.services.knowledge_core import apply_page_patch, page_metadata
+    from catalog.services.knowledge_sources import digest
+    policy = setup(source, admin_user, monkeypatch)
+    page = m.KnowledgePage.objects.create(work=source.asset.edition.work,title="作品页",slug="destination-refresh")
+    identity = m.Entity.objects.create(kind="topic", label="人工讨论主题")
+    refs = [{"type":"entity", "id":str(identity.pk)}]
+    assert not policy.target_pages.exists() and not page.dependencies.exists()
+    apply_page_patch({"page_id":str(page.pk),"operation":"add","block_id":str(uuid4()),
+        "block":{"type":"analysis","text":"管理员补写内容","references":refs}}, admin_user,
+        request_key=str(uuid4()),origin="human")
+    policy.refresh_from_db()
+    assert policy.pending_refresh
+    before = policy.latest_run_id
+    compilation.reconcile_pending()
+    policy.refresh_from_db()
+    assert not policy.pending_refresh and policy.latest_run_id != before
+    before = policy.latest_run_id
+    apply_page_patch({"page_id":str(page.pk),"operation":"metadata","title":"修订讨论范围",
+        "scope":"限定讨论对象", "base_hash":digest(page_metadata(page,draft=True))}, admin_user,
+        request_key=str(uuid4()),origin="human")
+    compilation.reconcile_pending()
+    policy.refresh_from_db()
+    assert not policy.pending_refresh and policy.latest_run_id != before
+    # Applying a generated addition does not recursively schedule its own run.
+    apply_page_patch({"page_id":str(page.pk),"operation":"add","block_id":str(uuid4()),
+        "block":{"type":"analysis","text":"待审产物已接受","references":refs}}, admin_user,
+        request_key=str(uuid4()),origin="wiki_compilation")
+    policy.refresh_from_db()
+    assert not policy.pending_refresh
+
+
 def test_reader_cannot_enable_or_read_agent_inputs(source, admin_user, reader_user, monkeypatch):
     from rest_framework.test import APIClient
     policy = setup(source, admin_user, monkeypatch)

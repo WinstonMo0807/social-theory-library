@@ -330,7 +330,7 @@ def test_empty_theory_scope_never_falls_back_to_global_search(monkeypatch):
         normalize_library_scope({"context": "theories", "ids": [str(node.id)]})
     )
     monkeypatch.setattr(
-        "reading.library_retrieval.semantic_search",
+        "reading.library_retrieval.retrieve_discovery_channel",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("空 scope 不应执行全馆检索")),
     )
 

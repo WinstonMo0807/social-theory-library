@@ -187,7 +187,8 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
     pages = {str(row["id"]): row for row in Page.objects.filter(pk__in=page_ids).values("id", "asset_id", "index", "text")}
     from catalog.models import DocumentNodeSegment
     from catalog.services.knowledge_sources import digest
-    logical_ids = [d.payload.get("node_segment_id") for d in documents if d.payload.get("node_segment_id")]
+    logical_ids = [key for d in documents for key in
+        (d.payload.get("node_segment_ids") or [d.payload.get("node_segment_id")]) if key]
     logical = {str(s.pk):s for s in DocumentNodeSegment.objects.filter(pk__in=logical_ids).select_related("page","node")}
     contribution_cache = {}
     for doc in documents:
@@ -198,7 +199,7 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
         header = headers.get(key)
         if not header or header["source_revision"] != doc.source_revision or header["scope_token"] != doc.scope_token:
             continue
-        if (filters or {}).get("availability") and not _matches(header, {"availability": filters["availability"]},
+        if filters and not _matches(header, filters, edition=editions.get(str(doc.source_id)),
                 contribution_cache=contribution_cache, access_statuses=access_statuses):
             continue
         payload = dict(doc.payload)
@@ -207,14 +208,9 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
             segment_id = payload.get("node_segment_id")
             if segment_id:
                 segment = logical.get(segment_id)
-                if not segment or segment.page.document_revision_id != doc.document_revision_id or segment.node.document_revision_id != doc.document_revision_id:
-                    continue
-                if (str(segment.node.structure_id) != payload.get("structure_id") or str(segment.node_id) != payload.get("node_id")
-                        or str(segment.page_id) != payload.get("snapshot_id") or segment.start != payload.get("source_start_offset")
-                        or digest(segment.page.text) != segment.page.content_hash):
-                    continue
-                original = segment.page.text[segment.start:segment.end]
-                if digest(original) != segment.content_hash:
+                from catalog.services.discovery_sources import logical_unit_text
+                original = logical_unit_text(payload, logical, doc.document_revision_id)
+                if original is None:
                     continue
                 unit = {"index":segment.page.page_number}
             elif span_id:
@@ -259,7 +255,11 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
                        token_count=doc.token_count)
         # Display metadata is fresh; no vectors or internal source text leak.
         output[str(doc.pk)] = payload
-    return [output[key] for key in refs if key in output]
+    values = [output[key] for key in refs if key in output]
+    if channel == "passages" and any(ref.get("knowledge_assertion_ids") for ref in refs.values()):
+        from catalog.services.retrieval.knowledge_graph import enrich_paths
+        values = enrich_paths(values, refs)
+    return values
 
 
 def _published_coverage(access_statuses, filters, eligible_ids, *, contribution_cache=None):
@@ -406,6 +406,10 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     # existing scope; no extra retrieval branch or model request is introduced.
     if channel == "passages" and (observe := context.pop("on_passage_scope", None)):
         observe(scopes, generation)
+    # Internal only: other bounded recall branches share this exact source
+    # scope. It is neither serialized nor reused after the query task finishes.
+    if channel == "passages":
+        context["passage_scopes"] = scopes
     if not generation:
         warnings.append({"code": "index_pending", "message": "检索索引尚未建立，管理员可在处理中心查看进度。"})
         return empty

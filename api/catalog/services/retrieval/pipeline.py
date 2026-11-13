@@ -93,6 +93,7 @@ def _shared_search(query, *, filters, limit, max_per_work, sort="relevance", **o
     if sort in {"newest", "year"}:
         rows.sort(key=lambda row: str(row.get("work", {}).get("year") or ""), reverse=True)
     return {"results": rows, "engine": "discovery", "search_version": "unified-source-v1",
+        "retrieval": result.get("retrieval", {}),
         "index_uid": result.get("index_uid", ""), "warnings": result["warnings"],
         "fallback_used": bool(result["warnings"]), "fallback_reason": ",".join(w.get("code", "") for w in result["warnings"])}
 

@@ -401,7 +401,7 @@ def locator_payload(anchor, *, editorial=False):
             "revision": revision.pk, **({"preview": "1"} if editorial else {})})}
 
 
-def context(node, actor, *, budget=12000, editorial=False, offset=0, scope="node"):
+def context(node, actor, *, budget=12000, editorial=False, offset=0, scope="node", focus_range=None, include_references=False):
     require_revision_access(node.document_revision, actor, editorial=editorial)
     if not 1 <= budget <= 60000:
         raise ValidationError("上下文预算须为1至60000字符。")
@@ -415,15 +415,27 @@ def context(node, actor, *, budget=12000, editorial=False, offset=0, scope="node
                 node = parent
                 break
             parent = parent.parent
+    source_segments = list(node.segments.select_related("page").all())
+    text_budget = budget - min(2000, budget // 6) if include_references else budget
+    if focus_range:
+        position, found = 0, False
+        for segment in source_segments:
+            if (segment.page.page_number == focus_range["page"] and segment.start <= focus_range["start"] < segment.end):
+                offset = max(0, position + focus_range["start"] - segment.start - text_budget // 3)
+                found = True
+                break
+            position += segment.end - segment.start
+        if not found:
+            raise ValidationError("命中范围不属于所选正文上下文。")
     texts, read, total = [], 0, 0
-    for segment in node.segments.select_related("page").all():
+    for segment in source_segments:
         length = segment.end - segment.start
         begin = max(0, offset - total)
         total += length
-        if begin >= length or read >= budget:
+        if begin >= length or read >= text_budget:
             continue
         start = segment.start + begin
-        end = min(segment.end, start + budget - read)
+        end = min(segment.end, start + text_budget - read)
         text = segment.page.text[start:end]
         if digest(segment.page.text) != segment.page.content_hash:
             raise ValidationError("正文快照完整性校验失败。")
@@ -443,13 +455,31 @@ def context(node, actor, *, budget=12000, editorial=False, offset=0, scope="node
     included = Q(pk__in=[])
     for part in texts:
         included |= Q(source__segments__page__page_number=part["page_number"],source__segments__start__lt=part["end"],source__segments__end__gt=part["start"])
-    references = list(DocumentNodeReference.objects.filter(included,source__structure=node.structure).distinct().values("target_id","kind","label")[:100])
+    references = list(DocumentNodeReference.objects.filter(included,source__structure=node.structure,
+        target__structure=node.structure).distinct().values("target_id","kind","label")[:100])
+    reference_context, reference_read, references_truncated = [], 0, False
+    if include_references:
+        targets = {row["target_id"] for row in references if row["kind"] == "footnote"}
+        for segment in DocumentNodeSegment.objects.filter(node_id__in=targets, node__kind="footnote").select_related("page").order_by("node__order", "order"):
+            if digest(segment.page.text) != segment.page.content_hash:
+                raise ValidationError("脚注快照完整性校验失败。")
+            available = max(0, budget - read - reference_read)
+            end = min(segment.end, segment.start + available)
+            references_truncated |= end < segment.end
+            if end <= segment.start:
+                continue
+            exact = segment.page.text[segment.start:end]
+            reference_context.append({"node_id":str(segment.node_id), "page_number":segment.page.page_number,
+                "printed_label":segment.page.printed_label, "start":segment.start,"end":end,
+                "exact":exact,"content_hash":digest(exact),"partial_segment":end < segment.end})
+            reference_read += len(exact)
     return {"node_id": str(node.pk), "document_revision_id": str(node.document_revision_id), "segments": texts,
             "requested_node_id": str(requested.pk), "chapter_path": path, "scope": node.kind,
             "asset_id": str(node.document_revision.asset_id), "offset_unit": "unicode_code_point",
             "returned_characters": read, "total_characters": total, "complete": offset == 0 and read == total,
             "offset": offset, "next_offset": offset + read if offset + read < total else None,
-            "budget": budget, "references": references}
+            "budget": budget, "references": references, "reference_context":reference_context,
+            "returned_reference_characters":reference_read, "references_truncated":references_truncated}
 
 
 @transaction.atomic
