@@ -1,3 +1,9 @@
+## 2026-11-13 自动维护补丁运行更新
+
+隔离候选现为f766829f相关API运行源码。仅更新source_schedule.py、discovery_indexing.py、knowledge_publication.py，哈希逐项一致；备份位于候选根目录backup-maintenance-f766829f-20261113164348/source-before.tar.gz，无新增数据库迁移。只重启候选API，08:45:23 UTC正常启动，退出码0、无OOM。候选worker/beat保持停止，未恢复后台负载或启动全馆重建。
+
+在候选PostgreSQL上只读核验来源并集与游标窗口，以进程内小预算读取3身份，1.875秒、0写入，数据库配置/检查点保持。随后真实检索4次、34条原文固定修订核验通过，范围与局限见联动记录。正式库、公网、MCP无变更。当前开发不等待Mac，后续硬件迁移另行处理。
+
 ## 2026-11-13 大馆藏状态候选已迁移
 
 本轮仅隔离候选更新到b054f9c2；36份API运行文件核对一致，未复制MCP文件。备份目录为候选根目录下backup-collection-b054f9c2-20261113162358，candidate-tables.dump包含DiscoverySourceState、Person、django_migrations，29812字节，SHA256 102c6cebcc787b21eb0b6a130c05945586f2a6aea7fdcd2714bd2855db998686；pg_restore --list为39行，未实际恢复。source-before.tar.gz保留被替换源码。
