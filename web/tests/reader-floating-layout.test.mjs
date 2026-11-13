@@ -37,3 +37,15 @@ controller = createReaderFloatingLayout(current.root, 'reader:owner-a');
 controller.reset();assert.deepEqual(JSON.parse(saved.get('reader:owner-a')), {});
 assert.equal(current.element.style.translate, '');controller.destroy();
 console.log('Reader cross-book persistence, owner isolation and reset: passed');
+
+// The search composer has a reserved dock: movement cannot spill over source text or citations,
+// including when the dock has scrolled partly above the viewport.
+current=book();
+const dock={getBoundingClientRect:()=>({left:70,top:-100,width:360,height:300})};
+controller=createReaderFloatingLayout(current.root,'search:bounded-dock',{bounds:dock});
+const key=key=>listeners.get('keydown')({target:{closest:()=>current.grip},key,shiftKey:true,preventDefault(){},stopPropagation(){}});
+key('ArrowRight');assert.equal(current.element.style.translate,'22px 0px');
+key('ArrowDown');key('ArrowDown');assert.equal(current.element.style.translate,'22px 52px');
+key('Home');assert.equal(current.element.style.translate,'');
+controller.destroy();
+console.log('Search dock containment after scrolling and reset: passed');
