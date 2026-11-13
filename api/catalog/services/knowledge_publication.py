@@ -1452,6 +1452,8 @@ def _activate_completed_revision(event: KnowledgePublicationEvent, *, metadata_o
     # database transaction, after moving the pointer, so readers never get a
     # new title from the lexicon with the old public catalog revision.
     _sync_published_work_terms(edition)
+    from catalog.services.retrieval.source_schedule import publication_changed
+    publication_changed(edition.pk)
     if event.payload.get("cataloging_session_id"):
         from catalog.models import CatalogingSession
 

@@ -110,3 +110,73 @@ def test_backfill_cursor_resumes_without_reindex_or_duplicate_state():
     assert first["after"] != second["after"]
     assert coverage.backfill_receipts(after=second["after"], apply=True)["visited"] == 0
     assert m.DiscoverySourceState.objects.filter(coverage_verified_at__isnull=False).count() == 2
+
+
+def test_active_source_scan_is_bounded_and_only_cleans_selected_withdrawals(monkeypatch):
+    from catalog.services import discovery_indexing as indexing
+    from catalog.services.retrieval import source_schedule
+    fixtures = [completed_source() for _ in range(3)]
+    generation = fixtures[0][2][0].generation
+    for _, _, documents, state in fixtures[1:]:
+        m.DiscoverySourceState.objects.filter(pk=state.pk).update(generation=generation)
+        m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in documents]).update(generation=generation)
+    withdrawn = fixtures[-1][0]
+    m.Edition.objects.filter(pk=withdrawn.pk).update(state="withdrawn")
+    monkeypatch.setattr(source_schedule,"SOURCE_TYPES",("edition",))
+    monkeypatch.setattr(source_schedule,"SCAN_THRESHOLD",1)
+    monkeypatch.setattr(source_schedule,"SCAN_BATCH",1)
+    cleaned = []
+    monkeypatch.setattr(indexing,"remove_source",lambda generation,kind,key:cleaned.append(key))
+    visited = []
+    for _ in range(3):
+        selected, _ = source_schedule.scan_window(generation)
+        assert sum(map(len,selected.values())) == 1
+        visited.extend(selected["edition"])
+        before = set(m.DiscoverySourceState.objects.filter(generation=generation).values_list("pk",flat=True))
+        indexing.schedule_sources(generation)
+        generation.refresh_from_db()
+        if withdrawn.pk not in selected["edition"]:
+            assert set(m.DiscoverySourceState.objects.filter(generation=generation).values_list("pk",flat=True)) == before
+    assert set(visited) == {e.pk for e,_,_,_ in fixtures}
+    assert cleaned == [withdrawn.pk]
+    assert generation.validation_details["source_scan"]["completed_at"]
+    assert "source_scan" not in generation.config_snapshot
+
+
+def test_publication_notification_uses_same_producer_after_commit(monkeypatch,settings,django_capture_on_commit_callbacks):
+    from catalog.services import discovery_indexing as indexing
+    from catalog.services.retrieval.source_schedule import publication_changed
+    edition, _, documents, _ = completed_source()
+    settings.DISCOVERY_ENABLED=True
+    calls=[]
+    monkeypatch.setattr(indexing,"schedule_sources",lambda generation,**kw:calls.append((generation.pk,kw)))
+    with django_capture_on_commit_callbacks(execute=True):
+        publication_changed(edition.pk)
+        assert not calls
+    assert calls == [(documents[0].generation_id,{"source_keys":{"edition":[edition.pk]},"cleanup":False})]
+
+
+def test_full_queue_retains_new_publication_for_priority_admission(monkeypatch):
+    from catalog.services import discovery_indexing as indexing
+    from catalog.services.retrieval import source_schedule
+    edition, asset, documents, state = completed_source()
+    previous = edition.active_catalog_revision
+    m.CatalogPublicationRevision.objects.filter(pk=previous.pk).update(status="superseded")
+    replacement = m.CatalogPublicationRevision.objects.create(edition=edition,revision=2,status="active",
+        metadata_ready=True,fulltext_ready=True,reader_asset=asset,document_revision=previous.document_revision,
+        snapshot=previous.snapshot,content_fingerprint=uuid4().hex)
+    m.Edition.objects.filter(pk=edition.pk).update(active_catalog_revision=replacement)
+    generation=documents[0].generation
+    assert indexing.schedule_sources(generation,max_queued=0,source_keys={"edition":[edition.pk]},cleanup=False) == 1
+    state.refresh_from_db()
+    assert state.indexed_at is None and state.job_id is None
+    assert m.DiscoveryDocument.objects.filter(pk__in=[d.pk for d in documents],keyword_ready=True).count()==2
+    monkeypatch.setattr(source_schedule,"SOURCE_TYPES",("edition",))
+    monkeypatch.setattr(source_schedule,"SCAN_THRESHOLD",0)
+    monkeypatch.setattr(source_schedule,"SCAN_BATCH",4)
+    selected,checkpoint=source_schedule.scan_window(generation)
+    assert selected["edition"]==[edition.pk] and checkpoint["visited"]==1
+    indexing.schedule_sources(generation)
+    state.refresh_from_db()
+    assert state.job_id and state.job.status=="pending" and state.job.task_id
+    assert state.job.stats["source_revision"]!=documents[0].source_revision

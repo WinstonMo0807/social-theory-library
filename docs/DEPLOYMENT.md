@@ -1,3 +1,11 @@
+## 2026-11-13 大馆藏状态候选已迁移
+
+本轮仅隔离候选更新到b054f9c2；36份API运行文件核对一致，未复制MCP文件。备份目录为候选根目录下backup-collection-b054f9c2-20261113162358，candidate-tables.dump包含DiscoverySourceState、Person、django_migrations，29812字节，SHA256 102c6cebcc787b21eb0b6a130c05945586f2a6aea7fdcd2714bd2855db998686；pg_restore --list为39行，未实际恢复。source-before.tar.gz保留被替换源码。
+
+限定数据库stl_intelligence_demo_20261109，lock_timeout=5s、statement_timeout=50s，执行manage.py migrate，实际0091_person_citation_name、0101、0102共5.678秒。无剩余迁移。回退保留新增列和数据，源码可以退回，不直接反向删除迁移数据；正式数据库没有迁移。
+
+refresh_retrieval_coverage的预览/应用/统计实际共31.778秒，11来源中5有效回执、6缺口；关键词完整5、向量0。仅SQL状态核验，没有Meilisearch写入。候选API重启完成于08:26:40 UTC；worker/beat仍停止，勿自动恢复。内网入口保持192.168.5.3:5174，API18091。最新宿主内存/IO full PSI avg60为14.72%/19.81%，本轮不启动全馆重建或重任务。
+
 ## 2026-11-13 联动版内网运行
 
 e955992d已更新隔离候选API；源码备份位于候选目录`backup-rag-linkage-e955992d-20261113154829/source-before.tar.gz`。重启客户端45秒超时后实际容器已正常恢复，07:49:21 UTC启动；随后候选ready200、前端5174/admin/sources200。30份运行文件逐一哈希匹配。候选worker/beat保持停止，正式、公网、MCP未修改。新0101迁移仍待部署，不能提前运行引用新字段的候选命令。当前开发继续，Mac迁移后置。

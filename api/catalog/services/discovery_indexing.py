@@ -209,19 +209,36 @@ def _prepare_generation(job):
     return generation
 
 
-def schedule_sources(generation, *, max_queued=8):
+def schedule_sources(generation, *, max_queued=8, source_keys=None, cleanup=True):
     """Scan fingerprints only; heavy per-source work stays bounded in its queue."""
     if not SemanticIndexVersion.discovery_objects.filter(pk=generation.pk, status__in=["building", "ready", "active"]).exists():
         return 0
+    checkpoint = None
+    if source_keys is None:
+        from catalog.services.retrieval.source_schedule import scan_window
+        generation.refresh_from_db(fields=["status", "validation_details"])
+        window = scan_window(generation)
+        if window is not None:
+            source_keys, checkpoint = window
+    state_query = DiscoverySourceState.objects.filter(generation=generation)
+    if source_keys is not None:
+        selected = Q(pk__in=[])
+        for kind, ids in source_keys.items():
+            selected |= Q(source_type=kind, source_id__in=ids)
+        state_query = state_query.filter(selected)
     current = set()
     slots = max(0, max_queued - ProcessingJob.objects.filter(job_type=JOB_TYPE, status__in=OPEN,
                     stats__action="source").count())
     pending = 0
     states = {(row.source_type, str(row.source_id)): row for row in
-              DiscoverySourceState.objects.filter(generation=generation).iterator(chunk_size=200)}
+              state_query.iterator(chunk_size=200)}
     # Small published knowledge records become ready without a corpus re-encode.
     for kind in (*SOURCE_TYPES[1:], "edition"):
-        for source, header in iter_source_headers(kind):
+        if source_keys is not None and not source_keys.get(kind):
+            continue
+        headers = (iter_source_headers(kind, queryset=source_queryset(kind).filter(pk__in=source_keys[kind]))
+            if source_keys is not None else iter_source_headers(kind))
+        for source, header in headers:
             current.add((kind, str(source.pk)))
             state = states.get((kind, str(source.pk)))
             if state is None:
@@ -250,6 +267,11 @@ def schedule_sources(generation, *, max_queued=8):
                 continue
             restored = bool(job and job.status == "canceled" and job.error_code == "superseded"
                             and job.stats.get("action") == "source")
+            if not slots and job is None and source_keys is not None and not cleanup:
+                # Keep a durable admission marker for this new publication.
+                # Historical ProcessingJobs retain their own outcome/diagnostic.
+                DiscoverySourceState.objects.filter(pk=state.pk, job_id=state.job_id).update(
+                    job=None, indexed_at=None, updated_at=timezone.now())
             if not slots or (job and not restored and (job.attempt >= job.max_attempts or job.status == "canceled")):
                 continue
             with transaction.atomic():
@@ -291,14 +313,22 @@ def schedule_sources(generation, *, max_queued=8):
     # Withdrawals disappear at the read boundary immediately. Remove only this
     # generation's derived documents after Meilisearch confirms deletion.
     for state in states.values():
+        if not cleanup:
+            break
         if (state.source_type, str(state.source_id)) in current:
             continue
         # Read-time source validation already hides withdrawals. Their physical
         # vector cleanup can wait while an interactive question is running.
         if _reader_query_active():
-            break
+            return pending  # Retry this bounded window after the reader finishes.
         remove_source(generation, state.source_type, state.source_id)
         state.delete()
+    if checkpoint is not None:
+        with transaction.atomic():
+            current_generation = SemanticIndexVersion.discovery_objects.select_for_update().get(pk=generation.pk)
+            if current_generation.status == "active":
+                current_generation.validation_details = {**current_generation.validation_details, "source_scan": checkpoint}
+                current_generation.save(update_fields=["validation_details", "updated_at"])
     return pending
 
 
