@@ -254,7 +254,7 @@ def validated_source_rows(rows: list[dict], *, viewer=None) -> list[dict]:
     asset_ids.discard("")
     assets = {
         str(asset.id): asset
-        for asset in Asset.objects.select_related("edition__work").filter(
+        for asset in Asset.objects.select_related("edition__work", "edition__active_catalog_revision").filter(
             id__in=asset_ids,
             edition__is_primary=True,
             kind=Asset.Kind.NORMALIZED,
@@ -268,7 +268,7 @@ def validated_source_rows(rows: list[dict], *, viewer=None) -> list[dict]:
         str(page.id): page
         for page in Page.objects.filter(id__in=page_ids)
     }
-    valid = []
+    valid, snapshots = [], {}
     for row in rows:
         if row.get("anchor_id"):
             value = locators.get(str(row["anchor_id"]))
@@ -293,7 +293,9 @@ def validated_source_rows(rows: list[dict], *, viewer=None) -> list[dict]:
             page = pages.get(page_id)
             if page is None or page.asset_id != asset.id:
                 continue
-        snapshot = active_catalog_snapshot(asset.edition, require_fulltext=True)
+        if asset.edition_id not in snapshots:
+            snapshots[asset.edition_id] = active_catalog_snapshot(asset.edition, require_fulltext=True)
+        snapshot = snapshots[asset.edition_id]
         valid.append(
             {
                 **row,

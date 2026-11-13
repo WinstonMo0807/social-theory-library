@@ -70,6 +70,8 @@ def retrieve_channel(query, channel, filters, access_statuses, *, limit=100,
         from .locators import attach_locators
         rows = attach_locators(rows)
     coverage = result.get("coverage") or {}
+    if coverage.get("scope_status") == "candidate_filtered":
+        warnings.append(_warning("coverage_unknown", coverage["notice"], channel))
     if channel == "passages" and (coverage.get("index_pending_editions") or coverage.get("text_pending_editions")):
         warnings.append(_warning("coverage_pending", "所选来源仍有原文或关键词索引待完成。当前结果仅覆盖已就绪的片段，零条结果不代表原文中不存在。", channel))
     return {"rows": rows, "warnings": warnings, "version": str(result.get("version") or ""),

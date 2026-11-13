@@ -94,7 +94,7 @@ def recall(query, raw_rows, access_statuses, *, generation, scopes, filters):
     metadata = {"algorithm": VERSION, "status": "no_evidence", "entity_seeds": 0, "raw_seeds": 0,
         "assertions": 0, "anchors": 0, "candidates": 0, "rounds": 0, "iterations": 0,
         "truncated": False, "limits": {"assertions": ASSERTIONS, "anchors": ANCHORS, "passages": PASSAGES, "rounds": ROUNDS}}
-    if not generation or not scopes:
+    if not generation or scopes == []:
         return [], metadata
     entities = mentioned_entities(query, public_entities(), limit=ENTITY_SEEDS + 1)
     metadata["truncated"] = len(entities) > ENTITY_SEEDS
@@ -171,7 +171,9 @@ def recall(query, raw_rows, access_statuses, *, generation, scopes, filters):
         for part in parts:
             scope |= Q(document_revision_id=part.anchor.document_revision_id, payload__pdf_page=part.page.page_number)
     docs = DiscoveryDocument.objects.filter(scope, generation=generation, channel="passages", keyword_ready=True,
-        scope_token__in=scopes, access_status__in=access_statuses)
+        access_status__in=access_statuses)
+    if scopes is not None:
+        docs = docs.filter(scope_token__in=scopes)
     if filters.get("languages"):
         from catalog.services.semantic_search import _language_filter_values
         docs = docs.filter(payload__language__in=_language_filter_values(filters["languages"]))

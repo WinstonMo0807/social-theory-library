@@ -123,16 +123,17 @@ def _query_variants(query: str) -> tuple[list[dict], dict]:
 
 
 def _deep_meili_filter(filters: dict, access_statuses: list[str]) -> dict:
-    scopes = current_scopes("passages", access_statuses, filters)
+    scopes = current_scopes("passages", access_statuses, filters, allow_deferred=True)
     payload = {
         "limit": MAX_DEEP_CANDIDATES,
         "filter": [
             'channel = "passages"',
-            f"scope_token IN {json.dumps(scopes)}",
             f"access_status IN {json.dumps(list(access_statuses))}",
         ],
         "attributesToRetrieve": ["id", "source_revision"],
     }
+    if scopes is not None:
+        payload["filter"].append(f"scope_token IN {json.dumps(scopes)}")
     if filters.get("languages"):
         from catalog.services.semantic_search import _language_filter_values
 
@@ -166,9 +167,10 @@ def _eg2_candidates(
         if baseline_generation is None:
             return [], {"status": "skipped", "reason": "no_active_source_index"}, warnings
         base["filter"].append(f"baseline_generation = {json.dumps(str(baseline_generation.pk))}")
-        sparse_response = meili(
-            "POST", f"/indexes/{index_uid}/search", {**base, "q": query}
-        )
+        from catalog.services.discovery_projection import candidate_search
+        deferred = not any(field.startswith("scope_token IN") for field in base["filter"])
+        sparse_response = candidate_search(index_uid, {**base, "q": query}, "passages", access_statuses,
+            filters, deferred=deferred, warnings=warnings)
         vector = embed_texts(
             [query],
             kind="query",
@@ -176,20 +178,16 @@ def _eg2_candidates(
             expected_dimensions=dimensions,
             deep_generation=generation,
         )["vectors"][0]
-        dense_response = meili(
-            "POST",
-            f"/indexes/{index_uid}/search",
-            {
+        dense_response = candidate_search(index_uid, {
                 **base,
                 "q": "",
                 "vector": vector,
                 "hybrid": {"embedder": "discovery", "semanticRatio": 1.0},
-            },
-        )
+            }, "passages", access_statuses, filters, deferred=deferred, warnings=warnings)
         sparse = sparse_response.get("hits") or []
         dense = dense_response.get("hits") or []
         validated = validate_discovery_results(
-            "passages", _rrf([(sparse, 1.0), (dense, 1.0)])[:MAX_DEEP_CANDIDATES], access_statuses
+            "passages", _rrf([(sparse, 1.0), (dense, 1.0)])[:MAX_DEEP_CANDIDATES], access_statuses, filters=filters
         )
         return validated, {
             "status": "completed",

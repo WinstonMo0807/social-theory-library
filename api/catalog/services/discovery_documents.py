@@ -38,19 +38,25 @@ def begin_document_query(session_id, generation, task_id, scopes, index):
     """
     from catalog.services.discovery_projection import _matches
     from catalog.services.contribution_projection import SnapshotAuthorCandidate
+    from catalog.services.retrieval.coverage import filter_editions, SCOPE_PREFILTER_LIMIT
     session = DiscoverySearchSession.objects.filter(pk=session_id, generation=generation,
         task_id=task_id, status__in=("queued", "running"), expires_at__gt=timezone.now()).first()
     if session is None:
         return
     filters = effective_filters(session)
-    scope_ids = {token.split(":")[1]: token for token in scopes if token.startswith("edition:")}
+    scope_ids = {token.split(":")[1]: token for token in (scopes or []) if token.startswith("edition:")}
     receipts = []
     total = 0
     contribution_cache = {}
-    editions = public_editions().order_by("id")
+    editions = filter_editions(public_editions(), filters).order_by("id")
     if filters.get("authors"):
         editions = editions.filter(SnapshotAuthorCandidate(filters["authors"]))
-    for edition, header in iter_edition_metadata_headers(editions):
+    bounded = list(editions[:SCOPE_PREFILTER_LIMIT + 1])
+    inspected = [row.pk for row in bounded[:SCOPE_PREFILTER_LIMIT]]
+    if scopes is None:
+        scope_ids = {str(row.pk): header["scope_token"] for row, header in iter_source_headers(
+            "edition", session.access_statuses, queryset=source_queryset("edition", session.access_statuses).filter(pk__in=inspected))}
+    for edition, header in iter_edition_metadata_headers(editions.filter(pk__in=inspected)):
         if not _matches(header, filters, edition=edition, access_statuses=session.access_statuses, contribution_cache=contribution_cache):
             continue
         total += 1
@@ -72,7 +78,7 @@ def begin_document_query(session_id, generation, task_id, scopes, index):
         state = states.get(receipt["edition_id"])
         ready = bool(state and state.source_revision == receipt["source_revision"] and state.indexed_at
                      and not state.error and state.completed_count == state.expected_count and state.expected_count > 0
-                     and indexed.get((receipt["edition_id"], receipt["source_revision"])) == state.expected_count)
+                     and indexed.get((receipt["edition_id"], receipt["source_revision"]), 0) >= state.expected_count)
         receipt["status"] = "running" if ready else "waiting_index"
     with transaction.atomic():
         current = DiscoverySearchSession.objects.select_for_update().filter(pk=session_id, generation=generation,
@@ -80,7 +86,8 @@ def begin_document_query(session_id, generation, task_id, scopes, index):
         if current is None:
             return
         current.results = {**current.results, DOCUMENTS_KEY: {"generation": generation, "total": total,
-            "truncated": total > MAX_DOCUMENTS, "rows": receipts}}
+            "truncated": total > MAX_DOCUMENTS or len(bounded) > SCOPE_PREFILTER_LIMIT,
+            "total_is_lower_bound": len(bounded) > SCOPE_PREFILTER_LIMIT, "rows": receipts}}
         current.save(update_fields=["results", "updated_at"])
 
 

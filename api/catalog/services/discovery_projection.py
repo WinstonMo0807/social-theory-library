@@ -55,6 +55,8 @@ def _matches(header, filters, *, edition=None, contribution_cache=None, access_s
     """Metadata facets constrain passages, matching the existing Explore filters."""
     if header["channel"] != "passages":
         return True
+    if filters.get("_primary_only") and (edition is None or not edition.is_primary):
+        return False
     if filters.get("_asset_id") and str(header.get("asset_id")) != str(filters["_asset_id"]):
         return False
     if str(header.get("edition_id")) in filters.get("_excluded_edition_ids", []):
@@ -130,8 +132,16 @@ def _edition_scope_queryset(access_statuses, filters):
     return rows
 
 
-def current_scopes(channel, access_statuses, filters=None, *, author_ranges=None, contribution_cache=None):
+def current_scopes(channel, access_statuses, filters=None, *, author_ranges=None, contribution_cache=None, allow_deferred=False):
     filters = filters or {}
+    if allow_deferred:
+        from catalog.services.retrieval.coverage import SCOPE_PREFILTER_LIMIT
+        kinds = kinds_for(channel)
+        # No materialized all-library IN clause. None means canonical candidate
+        # filtering is required, whereas [] means there are no eligible sources.
+        if any((_edition_scope_queryset(access_statuses, filters) if kind == "edition"
+                else source_queryset(kind, access_statuses)).count() > SCOPE_PREFILTER_LIMIT for kind in kinds):
+            return None
     scopes = []
     contribution_cache = contribution_cache if contribution_cache is not None else {}
     if channel == "passages" and not any(value for key, value in filters.items() if key not in {"languages", "_keyword_only"}):
@@ -203,6 +213,10 @@ def validate_discovery_results(channel, rows, access_statuses, *, filters=None, 
                 contribution_cache=contribution_cache, access_statuses=access_statuses):
             continue
         payload = dict(doc.payload)
+        if channel == "passages" and filters and filters.get("languages"):
+            from catalog.services.semantic_search import _language_filter_values
+            if payload.get("language") not in _language_filter_values(filters["languages"]):
+                continue
         if channel == "passages":
             span_id, page_id = payload.get("evidence_span_id"), payload.get("page_id")
             segment_id = payload.get("node_segment_id")
@@ -297,6 +311,9 @@ def discovery_coverage(access_statuses, filters=None, *, contribution_cache=None
     # not one source-state query and two COUNTs for every book on every poll.
     current = {}
     filters = filters or {}
+    from catalog.services.retrieval.coverage import SCOPE_PREFILTER_LIMIT, filter_editions, sql_coverage
+    if filter_editions(public_editions(), filters).count() > SCOPE_PREFILTER_LIMIT:
+        return sql_coverage(access_statuses, filters, generation)
     if not any(value for key, value in filters.items() if key not in {"languages", "_keyword_only"}):
         records = edition_scope_records(access_statuses)
     else:
@@ -398,7 +415,8 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
         return empty
     author_ranges = {}
     try:
-        scopes = current_scopes(channel, access_statuses, filters, author_ranges=author_ranges, contribution_cache=contribution_cache)
+        scopes = current_scopes(channel, access_statuses, filters, author_ranges=author_ranges,
+            contribution_cache=contribution_cache, allow_deferred=True)
     except DiscoveryIndexError as error:
         warnings.append({"code": error.code, "message": str(error)})
         return empty
@@ -413,7 +431,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     if not generation:
         warnings.append({"code": "index_pending", "message": "检索索引尚未建立，管理员可在处理中心查看进度。"})
         return empty
-    if not scopes:
+    if scopes == []:
         return empty
     if channel != "passages" and filters:
         warnings.append({"code": "passage_facets", "message": "馆藏筛选作用于原文；知识入口与策展按问题检索。"})
@@ -428,8 +446,10 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     except DiscoveryInferenceError:
         warnings.append({"code": "normalization_unavailable", "message": "文字规范化服务暂不可用，当前保留输入文字检索。"})
     base = {"limit": limit, "filter": [f"channel = {json.dumps(channel)}",
-            f"scope_token IN {json.dumps(scopes)}", f"access_status IN {json.dumps(list(access_statuses))}"],
+            f"access_status IN {json.dumps(list(access_statuses))}"],
             "attributesToRetrieve": ["id", "source_revision"], "attributesToSearchOn": ["title", "aliases", "authors", "normalized_text"]}
+    if scopes is not None:
+        base["filter"].append(f"scope_token IN {json.dumps(scopes)}")
     if scope:
         from catalog.services.discovery_scope import SCOPE_FIELDS
         base["attributesToSearchOn"] = [SCOPE_FIELDS[scope]]
@@ -445,13 +465,16 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     if channel == "passages" and filters.get("languages"):
         from catalog.services.semantic_search import _language_filter_values
         base["filter"].append(f"language IN {json.dumps(_language_filter_values(filters['languages']))}")
+    def search(payload):
+        return candidate_search(generation.uid, payload, channel, access_statuses, filters,
+            deferred=scopes is None, warnings=warnings)
     try:
-        sparse = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": normalized})
+        sparse = search({**base, "q": normalized})
         empty["sparse"] = sparse.get("hits", [])
         from .discovery_query import keyword_question
         keywords = keyword_question(normalized)
         if channel == "passages" and keywords != normalized and not scope:
-            extra = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": keywords, "attributesToSearchOn": ["normalized_text"]})
+            extra = search({**base, "q": keywords, "attributesToSearchOn": ["normalized_text"]})
             # Fuse before hydration so each source/text slice is loaded once.
             scores, refs = {}, {}
             for hits, weight in ((empty["sparse"], 1.0), (extra.get("hits", []), 0.85)):
@@ -469,7 +492,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
             and not query.lstrip().startswith(('"', '“'))
             and generation.config_snapshot.get("context_fields_version") == 1):
         try:
-            contextual = meili("POST", f"/indexes/{generation.uid}/search", {**base,
+            contextual = search({**base,
                 "q": normalized, "attributesToSearchOn": ["normalized_text", "context_text"]})
             empty["contextual"] = contextual.get("hits", [])
         except DiscoveryIndexError:
@@ -484,7 +507,7 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
                     [query], kind="query", expected_artifact=vector_key[0], expected_dimensions=dimensions,
                 )["vectors"][0]
             vector = vector_cache[vector_key]
-            dense = meili("POST", f"/indexes/{generation.uid}/search", {**base, "q": "", "vector": vector,
+            dense = search({**base, "q": "", "vector": vector,
                 "hybrid": {"embedder": "discovery", "semanticRatio": 1.0}})
             empty["dense"] = dense.get("hits", [])
         except (DiscoveryIndexError, DiscoveryInferenceError, KeyError):
@@ -493,3 +516,33 @@ def discovery_candidates(query, channel, filters, access_statuses, limit=120, ex
     for branch in ("sparse", "dense", "contextual"):
         empty[branch] = [hydrated[row["id"]] for row in empty[branch] if row.get("id") in hydrated]
     return empty
+
+
+def candidate_search(index_uid, payload, channel, access_statuses, filters, *, deferred, warnings):
+    """Bounded overfetch of identities, never trust indexed text or permissions.
+
+    A dense search uses its top-1000 window once: vector pagination is not
+    assumed to behave like lexical offset pagination. Lexical reads stop as
+    soon as enough canonical candidates survive.
+    """
+    if not deferred:
+        return meili("POST", f"/indexes/{index_uid}/search", payload)
+    target = min(300, max(1, int(payload["limit"])))
+    budget, offset, accepted, seen = 1000, 0, [], set()
+    while offset < budget:
+        batch_size = budget if "vector" in payload else min(max(target * 2, 100), 400, budget-offset)
+        response = meili("POST", f"/indexes/{index_uid}/search",
+            {**payload, "limit": batch_size, **({"offset": offset} if offset else {})})
+        hits = response.get("hits", [])
+        fresh = [row for row in hits if row.get("id") not in seen]
+        seen.update(row.get("id") for row in fresh)
+        accepted.extend(validate_discovery_results(channel, fresh, access_statuses, filters=filters))
+        offset += batch_size
+        if len(accepted) >= target or len(hits) < batch_size:
+            break
+        if offset >= budget or not fresh:
+            warning = {"code": "candidate_budget", "message": "本次候选核验达到预算，结果可能不完整；可按作品、作者或年份缩小范围后重试。"}
+            if warning not in warnings:
+                warnings.append(warning)
+            break
+    return {"hits": accepted[:target]}

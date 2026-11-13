@@ -8,7 +8,7 @@ export function canKeepDiscoveryContext(item: DiscoveryPassage, next: DiscoveryS
 
 export function discoveryCoverageRows(coverage: DiscoveryCoverage | undefined) {
   const labels = { published_editions: "当前范围已发布文献", bibliographic_editions: "纯书目记录", text_pending_editions: "正文尚未就绪", eligible_editions: "全文已具备资格", indexed_editions: "关键词已就绪", vector_editions: "向量已就绪", index_pending_editions: "等待关键词索引", vector_pending_editions: "等待向量索引", ...(coverage?.index_pending_editions === undefined ? { pending_editions: "等待索引更新" } : {}), passage_count: "索引段落" } as const;
-  return Object.entries(labels).flatMap(([key, label]) => {
+  return Object.entries({ ...labels, verification_pending_editions: "等待索引状态核验" }).flatMap(([key, label]) => {
     const value = coverage?.[key as keyof DiscoveryCoverage];
     return typeof value === "number" && Number.isFinite(value) ? [{ key, label, value }] : [];
   });

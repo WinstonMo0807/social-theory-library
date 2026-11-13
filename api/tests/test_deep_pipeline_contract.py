@@ -30,9 +30,9 @@ def test_eg2_uses_deep_encoder_without_replacing_baseline():
     reply = {"model": "google/embeddinggemma-2", "revision": "pinned", "artifact_id": "eg2",
              "generation": "deep-1", "vectors": [vector], "dimensions": 768, "truncated": [False]}
     with override_settings(STL_DEEP_RETRIEVAL_GENERATION="deep-1"), \
-            patch.object(pipeline, "_deep_meili_filter", side_effect=lambda *_: {"filter": []}), \
+            patch.object(pipeline, "_deep_meili_filter", side_effect=lambda *_: {"filter": ['scope_token IN ["fixture"]'], "limit": 120}), \
             patch.object(pipeline, "active_generation", return_value=SimpleNamespace(pk="baseline-1")), \
-            patch.object(pipeline, "meili", return_value={"hits": []}), \
+            patch("catalog.services.discovery_projection.meili", return_value={"hits": []}), \
             patch.object(pipeline, "validate_discovery_results", return_value=[]), \
             patch.object(client, "_call", return_value=reply) as call:
         _, state, warnings = pipeline._eg2_candidates("question", {}, ["public"],

@@ -1109,7 +1109,7 @@ def serialize_session(session, access_statuses, *, cursor="", limit=3, sort="rel
     # No cached corpus totals are returned after permissions change.
     from catalog.services.discovery_projection import discovery_coverage
     coverage = discovery_coverage(access_statuses, filters=effective_filters(session))
-    coverage = {**coverage, "message": (
+    coverage = {**coverage, "message": coverage.get("notice") or (
         f"当前权限与筛选范围内有 {coverage.get('published_editions', 0)} 份已公开书目，"
         f"其中 {coverage.get('eligible_editions', 0)} 份具备全文检索资格，"
         f"{coverage.get('text_pending_editions', 0)} 份文档的正文尚未就绪，"

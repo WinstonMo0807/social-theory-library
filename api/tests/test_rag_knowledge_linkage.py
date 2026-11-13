@@ -71,6 +71,14 @@ def test_anchor_budget_records_actual_model_input_without_corrupting_locator():
     assert selected[0].locator == evidence.locator
 
 
+def test_anchor_hydration_batches_paths_and_skips_legacy_page_reads(django_assert_max_num_queries):
+    _, _, _, _, row = anchored_source()
+    with django_assert_max_num_queries(5):
+        values = retrieval._hydrate_evidence([{**row,"id":str(uuid4())} for _ in range(16)],
+            retrieval_profile="stable",access_statuses=["public"])
+    assert len(values)==16 and all(v.locator==values[0].locator for v in values)
+
+
 def test_published_graph_finds_other_source_without_collapsing_criticism(monkeypatch):
     from catalog.services.retrieval import knowledge_graph as graph
     from catalog.services.retrieval.search import retrieve_channel

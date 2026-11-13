@@ -425,8 +425,9 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str, access_status
     allowed_access = viewer_access_statuses() if access_statuses is None else access_statuses
     from catalog.services.retrieval.locators import current_source_locators
     locators = current_source_locators(rows, allowed_access)
+    legacy_rows = [row for row in rows if not row.get("anchor_id")]
     chunk_ids = []
-    for row in rows:
+    for row in legacy_rows:
         value = str(row.get("id") or "")
         if value and not value.startswith("passage:"):
             chunk_ids.append(value)
@@ -438,7 +439,7 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str, access_status
     }
     page_lookups = {
         (str(row.get("asset_id") or ""), _row_page_number(row))
-        for row in rows
+        for row in legacy_rows
         if row.get("asset_id") and _row_page_number(row)
     }
     page_query = Q()
@@ -452,7 +453,7 @@ def _hydrate_evidence(rows: list[dict], *, retrieval_profile: str, access_status
                 current_retrieval_source_q(asset_prefix="asset", access_statuses=allowed_access)
             )
         }
-    spans_by_page = _evidence_spans_by_page(rows, access_statuses=allowed_access)
+    spans_by_page = _evidence_spans_by_page(legacy_rows, access_statuses=allowed_access)
     output = []
     contribution_cache = {}
     for index, row in enumerate(rows, start=1):

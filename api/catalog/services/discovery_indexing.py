@@ -87,7 +87,7 @@ def wait_index_task(payload, timeout=120):
     raise DiscoveryIndexError("write_timeout", "索引写入尚未完成，请在处理中心重试。")
 
 
-def ensure_index(generation, *, extra_filterable=()):
+def ensure_index(generation, *, extra_filterable=(), persist_configuration=True):
     # Index creation is idempotent. The unique name never addresses an old index.
     try:
         meili("GET", f"/indexes/{generation.uid}")
@@ -102,7 +102,7 @@ def ensure_index(generation, *, extra_filterable=()):
         "pagination": {"maxTotalHits": 10000},
         "embedders": {"discovery": {"source": "userProvided", "dimensions": int(generation.dimensions or 384)}}}
     wait_index_task(meili("PATCH", f"/indexes/{generation.uid}/settings", desired))
-    if generation.config_snapshot.get("context_fields_version") != 1:
+    if persist_configuration and generation.config_snapshot.get("context_fields_version") != 1:
         generation.config_snapshot = {**generation.config_snapshot, "context_fields_version": 1}
         generation.save(update_fields=["config_snapshot", "updated_at"])
 
@@ -587,9 +587,13 @@ def process_source(job, generation):
         if not _is_current(job, generation, header):
             raise DiscoveryIndexError("superseded", "资料已更新，旧任务不再回写完成状态。")
         _guard_job(job, stats={**job.stats, "documents": completed})
+        receipt = {}
+        if kind == "edition":
+            from catalog.services.retrieval.coverage import receipt_values
+            receipt = receipt_values(source, generation, header["source_revision"]) or {}
         DiscoverySourceState.objects.filter(pk=state.pk, job_id=job.pk).update(
             source_revision=header["source_revision"], expected_count=expected, completed_count=completed,
-            indexed_at=timezone.now(), error="", updated_at=timezone.now())
+            indexed_at=timezone.now(), error="", updated_at=timezone.now(), **receipt)
     return True
 
 

@@ -40,6 +40,15 @@ class DiscoverySourceState(UUIDTimeStampedModel):
     completed_count = models.PositiveIntegerField(default=0)
     indexed_at = models.DateTimeField(null=True, blank=True)
     error = models.CharField(max_length=500, blank=True)
+    # Rebuildable readiness receipt. These source identities allow collection
+    # counts in SQL without loading every book or trusting stale index metadata.
+    catalog_revision = models.ForeignKey("catalog.CatalogPublicationRevision", null=True, on_delete=models.PROTECT)
+    document_revision = models.ForeignKey("catalog.DocumentRevision", null=True, on_delete=models.PROTECT)
+    indexed_text_checksum = models.CharField(max_length=64, blank=True)
+    indexed_access_status = models.CharField(max_length=20, blank=True)
+    keyword_count = models.PositiveIntegerField(default=0)
+    vector_count = models.PositiveIntegerField(default=0)
+    coverage_verified_at = models.DateTimeField(null=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["generation", "source_type", "source_id"], name="unique_discovery_source_state")]

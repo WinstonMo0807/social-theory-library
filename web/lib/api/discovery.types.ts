@@ -28,6 +28,7 @@ export type DiscoveryCoverage = {
   message?: string; readable?: number; text_ready?: number; keyword_ready?: number; vector_ready?: number;
   knowledge_ready?: number; waiting?: number; failed?: number;
   eligible_editions?: number; indexed_editions?: number; vector_editions?: number; pending_editions?: number;
+  verification_pending_editions?: number; scope_status?: string; notice?: string;
   published_editions?: number; bibliographic_editions?: number; text_pending_editions?: number;
   index_pending_editions?: number; vector_pending_editions?: number;
   passage_count?: number; partial?: boolean; generation?: string | null;
