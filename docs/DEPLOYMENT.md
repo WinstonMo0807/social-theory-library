@@ -1,3 +1,11 @@
+## 2026-11-14 公网链路与欢迎页预取版本
+
+13:32:21 +0800发布Web bebeb7feca02和首页范围gzip；13:43:05补发Web social-theory-library-web:4.0.0-20261114-welcome-prefetch-web-r1（sha256:774699aaabd4ecd67c2828d8b3c12fdf1eb2674fd22228ee3b2ac966b4576be2）。API仍sha256:17204310147baffc36eb8409314fd0f396d577713380d10d59aeb50842047bea、原CPU1核/shares0。无schema或worker变更；CPU对照曾同镜像重建API以精确恢复shares，详报告。
+
+活动指针仍/volume2/library/stl-releases/20261107-r1/public/compose-command.json。源站gzip仅/api/catalog/home/；持久化模板为20261107-r1/public/deploy/nginx/default.conf.template，容器/etc/nginx/conf.d/default.conf由envsubst生成，两个位置同步且nginx -t/reload通过。配置SHA6b38fbebda02，no-store/鉴权/原有限流保持。
+
+本批目录20261114-network-contention-r1和20261114-welcome-prefetch-r1各保留完整备份验证、源码镜像与版本保护的recovery/rollback.py。先回退welcome-prefetch的Web，再按需回退network-contention的Web+模板/生成配置；都不删除数据。两批3185文件哈希通过，106其他容器保持，最终6入口200。源码ce7bde20/a10d154c，最终Git回执见output/network-contention-20261114/final-receipt.json。
+
 ## 2026-11-14 内容增长与查询性能版本
 
 2026-11-14T04:58:15Z仅替换API/Web。API为social-theory-library-api:4.0.0-20261114-growth-performance-api-r1（sha256:17204310147baffc36eb8409314fd0f396d577713380d10d59aeb50842047bea），Web为social-theory-library-web:4.0.0-20261114-growth-performance-web-r1（sha256:545f7734273217c8c30e7106a15693948e507b12d9e643c8144732c3ae9f5529）。10份API与3184运行文件哈希一致，105其他容器保持，无schema迁移或worker更新。

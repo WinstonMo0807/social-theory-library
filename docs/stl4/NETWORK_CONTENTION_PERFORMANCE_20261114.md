@@ -37,6 +37,42 @@
 
 Edge原有页的调试连接不可用，改用内置浏览器成功核对。候选1280px首页正常，390px无横向溢出，菜单打开/Escape关闭、夜间主题刷新保持，API配置在HTML内联，页面无外部runtime-config脚本。共享主CSS前后SHA完全相同，截图用于呈现检查，不把登录状态不同的页面称作逐像素相同。前后图在`output/network-contention-20261114/`。
 
-生产变更、最终公网样本、回退与Git回执执行后补记。尚未取得本批PageSpeed或真实用户Core Web Vitals，不将HTTP样本等同于全站验收。
+13:32:21 +0800正式发布Web bebeb7feca02，3185份运行文件哈希一致。Nginx宿主机持久化模板与容器生成配置同时更新，候选envsubst结果与实测配置逐字一致，语法检查后平滑重载。5个入口及gzip首页200，106个其他容器的ID、镜像、配置和启动时间保持。代码中两处媒体限流burst=40/status=429只是与发布前已在线配置对齐，不是本次放宽生产限流。完整备份再次核验SHA，发布目录`/volume2/library/stl-releases/20261114-network-contention-r1`保留配置/镜像备份及带版本保护的rollback.py。
+
+前后96次HTTP请求全部200，四类响应解码后的SHA前后一致。采用相同客户端、每组各3次交替内外网，`Accept-Encoding: gzip, br`的中位数如下。当前线路样本并非页面LCP或全站提速比例。
+
+| 项目 | 修改前 | 修改后 | 解释 |
+| --- | ---: | ---: | --- |
+| 内网首页JSON完整响应 | 1976ms | 1941ms | 业务查询仍约2秒 |
+| 公网首页JSON完整响应 | 3306ms | 3306ms | 本轮未测出端到端提速 |
+| 公网首页JSON首字节 | 2617ms | 2914ms | 路由/负载波动仍在 |
+| 公网主CSS完整响应 | 552ms | 537ms | 两组均HIT，体积下降可靠，耗时差异仅样本 |
+| 源站首页JSON传输 | 256292B | 70153B | 减少72.6%，解压内容不变 |
+| 浏览器首页JSON传输 | 约53841B Brotli | 70153B gzip | 多约16KB，不能称两段都变小 |
+
+Cloudflare官方说明：浏览器支持源站压缩格式时，通常保留原编码。因此保留此次gzip是为了减少NAS上行传输，并非宣称浏览器侧体积更小；没有为此启用Rocket Loader、修改私有接口缓存、安装运行依赖或购买服务。原理见[Cloudflare内容压缩](https://developers.cloudflare.com/speed/optimization/content/compression/)。若后续设置专门Compression Rule，应再测源站与浏览器两段，不把Argo或压缩开关当必然提速。
+
+上线后内置浏览器实看公网`/home`，主内容、私人继续阅读、栏目与导航正常，生产HTML内联初始化、没有外部runtime-config脚本，引用r2样式；1280px无横向溢出。内外网匿名PDF三种URL共6次均401、private/no-store/no-transform，公网DYNAMIC。照片、字体、CSS原文、权限及数据没有改写。
+
+13:37生成本批PageSpeed移动报告：[um7bic3ft1](https://pagespeed.web.dev/analysis/https-books-winstonmo-com/um7bic3ft1?form_factor=mobile)。性能66，无障碍96，最佳做法96，SEO66；FCP1.7s、LCP12.7s、TBT0ms、CLS0、Speed Index8.7s。低速4G模拟、单次Lighthouse13.6，不存在真实用户CrUX数据。报告中的LCP元素是欢迎页介绍段落，不是图片；文档响应、公共CSS和首屏内容呈现仍是限制。SEO中的noindex是现有明确配置，不能为分数擅自开放索引。匿名auth/me 401和缺失刷新Cookie的400保留真实鉴权结果，不改200掩盖。
+
+## PageSpeed发现的预取争用补修
+
+该新报告记录欢迎页自动请求`/scholars.rsc`并超时。主导航已禁用预取，但`home-feature-story.tsx`中的14处链接仍采用默认预取，包含可见栏目入口及演示/内容链接。现在统一增加`prefetch={false}`，保留href、全部内容、样式、点击导航和无JavaScript时的原生链接。不改路由/API/数据库/任务架构。
+
+候选初始停留18.9秒，应用代理记录0个`.rsc`请求；点击欢迎页“学者”后才发起该路径并实际显示学者目录。后续同路径刷新也记入原始日志，未称点击只有1次请求。补修类型、构建、1048压缩副本和预算通过，仍524份文本资源，Brotli合计2376788B。源码a10d154c；13:43:05 +0800补修已发布，当前Web774699aaabd4。3185份运行文件SHA一致，6个入口200，106其他容器保持；Nginx配置不变。发布目录`/volume2/library/stl-releases/20261114-welcome-prefetch-r1`保留前一Web镜像和带版本保护的回退，按需可先回退本补修再回退前一网络版本，数据保持。
+
+补修后实际取得两份新报告，完整保留较差样本，不择优报告：
+
+| 移动端同一线上版本 | 性能 | FCP | LCP | TBT | CLS | Speed Index |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| [13:43样本](https://pagespeed.web.dev/analysis/https-books-winstonmo-com/oowe5sbmhw?form_factor=mobile) | 48 | 1.7s | 12.3s | 590ms | 0.102 | 8.3s |
+| [13:45复核](https://pagespeed.web.dev/analysis/https-books-winstonmo-com/8p27qgbwwv?form_factor=mobile) | 66 | 1.7s | 12.3s | 10ms | 0 | 8.1s |
+
+13:43报告的控制台中已没有学者页面预取超时，匿名401/400仍在；资源总量2771→2734KiB只是当次测量。较低分样本把CLS定位在演示grain SVG所在区域并列出字体，长任务涉及原框架与主CSS。不能仅据单次评分断言根因或回归；复测表明TBT/CLS并非稳定复现，LCP仍持续偏慢。欢迎文案按既定规则随机，测试运行阶段和线路负载也有差异，未声称受控的整体分数提升。最终公网首屏正常；曾出现一次外链SVG未绘出的观察，品牌文件公网200且SHA与原件一致，页面重载后恢复，未据此改写品牌资产，作为资源加载偶发项保留。
+
+剩余项明确列为C：跨区域公网路径；按路由拆公共CSS的级联依赖；首屏字体/演示区域的加载波动；繁忙时OCR/索引/备份共同运行的争用测量。当前没有重任务积压，不能从空闲样本推出繁忙时无争用。公共CSS中本页未用的样式服务其他页面，未按单页覆盖报告直接删除；实际精确重复规则仅412B/9条，不值得凭此重排全局级联。如做进一步拆分，需要覆盖跨页导航和对应页面视觉。未进行全站230页图集验收，不将本批核对写成全站无问题。
+
+本批源码ce7bde20/a10d154c与最终部署记录沿隔离Git索引提交；原工作区HEAD和暂存区SHA保持。最终文档提交和远端main/工作分支验证回执位于`output/network-contention-20261114/final-receipt.json`。本报告的截图与原始测量在同目录，仅源码和文档进入Git。
 
 依据：[Cloudflare隧道参数](https://developers.cloudflare.com/tunnel/reference/run-parameters/)、[Cloudflare配置](https://developers.cloudflare.com/tunnel/configuration/)、[Nginx gzip](https://nginx.org/en/docs/http/ngx_http_gzip_module.html)、[Docker资源约束](https://docs.docker.com/engine/containers/resource_constraints/)、[Celery优化](https://docs.celeryq.dev/en/stable/userguide/optimizing.html)。沿现有平台能力实施，无新增运行依赖或付费服务。
