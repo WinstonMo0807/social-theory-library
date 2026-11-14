@@ -1,3 +1,7 @@
+## 2026-11-14 隧道出口与静态交付优化
+
+业务继续为同一Django、Vinext、数据库、队列、搜索和NAS存储。仅cloudflared出站到Cloudflare的两个官方IPv4目标网段经既有mihomo香港出口，内部桥隔离，无新公开监听。主QUIC连接、停止态HTTP2备用和小型systemd守护沿同一隧道/源站工作，没有第二套书库或新身份系统。CSS采用既有admin路由样式，字体定义独立内容哈希文件，欢迎演示React.lazy按视口加载；接口和内容契约不变。见stl4/EDGE_CSS_PERFORMANCE_20261114.md。
+
 ## 2026-11-14 书库浏览与私人工作台
 
 新增/library为现有公开WorkList API的独立前端视图，作品级created_at/title排序、服务端分页；搜索与探索继续使用原服务。/account全部次级路由统一ReaderWorkspace外框，导航/查找/新建只调度已有路由，子模块仍负责本人鉴权、数据、写入与任务。不建立第二套馆藏、私人资料库或身份体系。首页只调整最近入库至荐书区域，根入口/与/home职责保持。

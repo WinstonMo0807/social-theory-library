@@ -1,3 +1,11 @@
+## 2026-11-14 香港隧道与CSS/字体/演示优化
+
+网络20261114-edge-egress-r3于19:34:17生效，Web20261114-edge-css-r1于19:38:38生效。当前Web sha256:ceae47ee09725e800057485ce50c106f80e916c4216c17ca11b27cdcb8d906c3，API仍17204310147b。活动compose-command.json沿原位置，保留前一轮library-reader-r3和新增网络overlay；107其他容器保护、3210文件哈希及备份归档全量校验通过。Nginx配置SHA仍6b38fbebda02，仅reload重解析Web地址。
+
+stl_tunnel_egress为内部桥，172.29.0.0/24；仅cloudflared与原mihomo网关相连。守护部署于/volume2/library/stl-network/tunnel-egress.py，systemd stl-tunnel-egress.timer每15秒检查，/run/stl-tunnel-egress/state.json保存非凭据状态。主连接同原镜像改QUIC，stl-tunnel-direct-fallback是同既有隧道配置的停止态HTTP2备用；禁止将token提交。token轮换时两者需同步更新。
+
+--direct可立即选择原路径，--retry可在修复出口后重新尝试香港。故障回退和恢复已实测，正常4条HKG、healthy、备用停止。未修改代理allowlist、DNS、安全校验、业务库或主机默认路由。常规完整回退先20261114-edge-css-r1/recovery/rollback.py，再20261114-edge-egress-r3/recovery/rollback.py；紧急仅回退网络可保留后来Web版本。私有配置、旧镜像、数据库恢复入口保留，不删除卷。详细证据和限制见stl4/EDGE_CSS_PERFORMANCE_20261114.md。
+
 ## 2026-11-14 E/C/B前端最终发布
 
 19:17:12 +0800最终Web镜像social-theory-library-web:4.0.0-20261114-library-reader-web-r2，sha256:2dfd93c2864b134a0310e8f1cb27d7fcd464b27022b518d0d70ca3ee00b41835。源码926b0aeb34ce/435ca27c3f01。实际成功发布目录/volume2/library/stl-releases/20261114-library-reader-r3，活动compose-command.json增加该目录release.compose.json，回退脚本recovery/rollback.py。复用已验证r2镜像，目录r3表示一次新的运行基线。
