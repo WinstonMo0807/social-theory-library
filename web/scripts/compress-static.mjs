@@ -13,7 +13,8 @@ async function compress(directory){
     // Runtime config is rewritten by the container entrypoint; stale compressed copies would be unsafe.
     if(!extensions.has(path.extname(file))||entry.name==='runtime-config.js')continue;
     const source=await readFile(file);if(source.length<1024)continue;
-    const br=brotliCompressSync(source,{params:{[constants.BROTLI_PARAM_QUALITY]:9}}),gz=gzipSync(source,{level:9});
+    // Spend compression CPU during the build; serving remains a static read.
+    const br=brotliCompressSync(source,{params:{[constants.BROTLI_PARAM_QUALITY]:11}}),gz=gzipSync(source,{level:9});
     if(br.length>=source.length||gz.length>=source.length)continue;
     await writeFile(file+'.br',br);await writeFile(file+'.gz',gz);
     files++;original+=source.length;brotli+=br.length;gzip+=gz.length;

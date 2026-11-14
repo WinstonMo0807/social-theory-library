@@ -2,6 +2,7 @@ import { ActionMenuBehavior } from "@/components/ui/action-menu-behavior";
 import type { Metadata } from "next";
 import Script from "next/script";
 import { preferencesBootstrapCode } from "@/lib/preferences-bootstrap.generated";
+import { runtimeApiBootstrap } from "@/lib/runtime-api-bootstrap";
 import "./globals.css";
 import "./editorial-v2.css";
 import "./editorial-workspaces.css";
@@ -65,10 +66,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const { config, unavailable } = await loadSiteChromeConfig();
+  const runtimeBootstrap = runtimeApiBootstrap(process.env.STL_BROWSER_API_BASE);
   return (
     <html lang="zh-CN" data-typeset="A" data-typeface="balanced" suppressHydrationWarning>
       <head>
-        <Script src="/runtime-config.js" strategy="beforeInteractive" />
+        {runtimeBootstrap === null ? <Script src="/runtime-config.js" strategy="beforeInteractive" /> :
+          <Script id="stl-runtime-config" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: runtimeBootstrap }} />}
         <Script id="stl-display-preferences" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: preferencesBootstrapCode }} />
       </head>
       <body>

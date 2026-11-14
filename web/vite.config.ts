@@ -51,6 +51,8 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    // New URLs let long-lived CDN entries pick up the stronger static encoding.
+    build: { rollupOptions: { output: { assetFileNames: "assets/r2/[name]-[hash][extname]" } } },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,

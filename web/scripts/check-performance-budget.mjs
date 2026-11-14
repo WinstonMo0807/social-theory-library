@@ -9,7 +9,7 @@ const main=[...new Set(Object.values(serverManifest).filter(entry=>entry.isEntry
 assert.equal(main.length,1,'Expected one shared stylesheet; review the budget after a bundler change.');
 const css=await readFile(path.join(client,main[0])),compressed=await readFile(path.join(client,main[0]+'.br'));
 assert.ok(css.length<=1_270_000,`Shared CSS grew to ${css.length} bytes; check route ownership.`);
-assert.ok(compressed.length<=180_000,`Shared Brotli CSS grew to ${compressed.length} bytes.`);
+assert.ok(compressed.length<=160_000,`Shared Brotli CSS grew to ${compressed.length} bytes.`);
 let verified=0;
 async function verify(directory){
  for(const entry of await readdir(directory,{withFileTypes:true})){

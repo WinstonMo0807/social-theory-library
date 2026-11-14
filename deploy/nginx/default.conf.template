@@ -114,7 +114,10 @@ server {
     # to this media surface, not every catalog/admin request.
     location ^~ /api/catalog/admin/media/ {
         client_max_body_size 22m;
-        limit_req zone=general_api burst=12 nodelay;
+        # Match the shared API bucket's burst: metadata, owner checks and
+        # thumbnails are loaded together by the same administrator page.
+        limit_req zone=general_api burst=40 nodelay;
+        limit_req_status 429;
         limit_conn per_ip 8;
         proxy_pass http://api:8000;
         proxy_set_header Host $host;
@@ -130,7 +133,8 @@ server {
     # Keep the default 2 MiB ceiling for unrelated admin and public requests.
     location ~ ^/api/catalog/admin/editions/[0-9a-fA-F-]+/cover/$ {
         client_max_body_size 13m;
-        limit_req zone=general_api burst=12 nodelay;
+        limit_req zone=general_api burst=40 nodelay;
+        limit_req_status 429;
         limit_conn per_ip 8;
         proxy_pass http://api:8000;
         proxy_set_header Host $host;
@@ -200,6 +204,18 @@ server {
     }
 
     location /api/ {
+        # HomeView disables authentication and only returns published data.
+        # Compress before the tunnel; retain its no-store/withdrawal semantics.
+        # Private APIs, login responses and PDF streams retain their policies.
+        location = /api/catalog/home/ {
+            proxy_pass http://api:8000;
+            gzip on;
+            gzip_comp_level 3;
+            gzip_min_length 1024;
+            gzip_types application/json;
+            gzip_vary on;
+            gzip_proxied any;
+        }
         limit_req zone=general_api burst=40 nodelay;
         proxy_pass http://api:8000;
         proxy_set_header Host $host;

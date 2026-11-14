@@ -12,6 +12,10 @@ if [ -n "$api_base" ] && [ "$api_base" != "/api" ]; then
   fi
 fi
 
+# The server can render this validated value before hydration, avoiding a
+# separate no-store network round trip. Keep the file for existing consumers.
+export STL_BROWSER_API_BASE="$api_base"
+
 if [ -d "$(dirname "$runtime_file")" ]; then
   temporary_file="${runtime_file}.tmp"
   printf 'window.__SOCIAL_THEORY_LIBRARY_CONFIG__ = Object.freeze({ apiBase: "%s" });\n' "$api_base" > "$temporary_file"
