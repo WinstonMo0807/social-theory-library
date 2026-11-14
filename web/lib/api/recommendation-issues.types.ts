@@ -2,6 +2,7 @@ import type { SiteConfig } from "../site-config";
 import type { AboutPageBlock } from "./site.types";
 import type { PublicScholarCard } from "./scholars.types";
 import type { MediaDisplayUse } from "../media-usage";
+import type { components } from "./generated/schema";
 
 export type IssueSourceReference = { type: "work" | "edition" | "span" | "node" | "person" | "timeline" | "reading_path"; id: string; edition_id?: string; document_revision_id?: string };
 export type IssueResolvedSource = IssueSourceReference & { title: string; text?: string; reader_url?: string; work_url?: string; printed_label?: string; page_start?: number; source_type?: string; asset_id?: string; work_id?: string; href?: string; summary?: string; edition_label?: string; public_eligible?: boolean; edit_url?: string; image_url?:string;authors?:string[];publication_year?:number|null;publisher?:string;section?:string };
@@ -31,6 +32,7 @@ export type RecommendationIssue = {
   selection_workspace?: IssueSelection;
   id: string; slug: string; title: string; issue_label: string; introduction: string;
   body_blocks: IssueBlock[]; public_byline: string; cover_url: string; display_from: string | null;
+  cover_media?: components["schemas"]["PublicCoverMedia"] | null;
   published_at: string | null; items: IssueItem[]; edit_version: string; draft_revision_id?: string | null;
   has_unpublished_changes?: boolean; status?: string;
   article_metadata?: ArticleMetadata; curator?: EditorialCurator;
@@ -45,7 +47,7 @@ export type ArticleMetadata = {
   curator_role: string; curator_affiliation: string; curator_portrait_id: string | null; curator_account_id?: number | null;
 };
 export type EditorialCurator = { name: string; role: string; affiliation: string; portrait_url: string };
-export type EditorialCard = Pick<RecommendationIssue, "id" | "slug" | "title" | "issue_label" | "introduction" | "public_byline" | "cover_url" | "published_at" | "display_from"> & {
+export type EditorialCard = Pick<RecommendationIssue, "id" | "slug" | "title" | "issue_label" | "introduction" | "public_byline" | "cover_url" | "cover_media" | "published_at" | "display_from"> & {
   curator: EditorialCurator; article_metadata: ArticleMetadata; href: string; reading_minutes: number | null; reading_time_notice: string;
 };
 export type EditorialSearchParams = Record<string, string | string[] | undefined>;

@@ -8142,6 +8142,7 @@ export interface components {
             key_concerns?: string[];
             preferred_name: string;
             original_name: string;
+            citation_name?: string;
             preferred_language: string;
             original_language: string;
             country_region: string;
@@ -9992,6 +9993,8 @@ export interface components {
             selection_end?: number;
             /** @description 跨页引用按顺序传 1—20 个同文件同修订的单页锚点。 */
             anchors?: components["schemas"]["EvidenceAnchorInput"][];
+            /** @description 可选的精确选段；服务器仅忽略排版空白进行唯一匹配，再保存原文范围。 */
+            selected_text?: string;
         };
         EvidenceReferenceInputRequest: {
             /** Format: uuid */
@@ -10006,6 +10009,8 @@ export interface components {
             selection_end?: number;
             /** @description 跨页引用按顺序传 1—20 个同文件同修订的单页锚点。 */
             anchors?: components["schemas"]["EvidenceAnchorInputRequest"][];
+            /** @description 可选的精确选段；服务器仅忽略排版空白进行唯一匹配，再保存原文范围。 */
+            selected_text?: string;
         };
         EvidenceSnippet: {
             /** Format: uuid */
@@ -14791,6 +14796,8 @@ export interface components {
             selection_end?: number;
             /** @description 跨页引用按顺序传 1—20 个同文件同修订的单页锚点。 */
             anchors?: components["schemas"]["EvidenceAnchorInputRequest"][];
+            /** @description 可选的精确选段；服务器仅忽略排版空白进行唯一匹配，再保存原文范围。 */
+            selected_text?: string;
             /** Format: uuid */
             work_id?: string;
             /** Format: uuid */
@@ -17449,6 +17456,20 @@ export interface components {
             display_uses?: components["schemas"]["MediaDisplayUseEnum"][];
             renditions: components["schemas"]["PublicMediaRendition"][];
         };
+        PublicCoverMediaRequest: {
+            /** Format: uuid */
+            media_id: string;
+            /** Format: uuid */
+            primary_rendition_id: string;
+            alt_text: string;
+            source_label: string;
+            source_url: string;
+            rights: string;
+            license: string;
+            credit: string;
+            display_uses?: components["schemas"]["MediaDisplayUseEnum"][];
+            renditions: components["schemas"]["PublicMediaRenditionRequest"][];
+        };
         PublicEditorialCard: {
             /** Format: uuid */
             id: string;
@@ -17460,6 +17481,7 @@ export interface components {
             curator: components["schemas"]["PublicEditorialCurator"];
             article_metadata: components["schemas"]["ArticleMetadata"];
             cover_url: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
             /** Format: date-time */
             published_at: string | null;
             /** Format: date-time */
@@ -17573,6 +17595,13 @@ export interface components {
             article_href: string;
         };
         PublicMediaRendition: {
+            /** Format: uuid */
+            id: string;
+            width: number;
+            height: number;
+            url: string;
+        };
+        PublicMediaRenditionRequest: {
             /** Format: uuid */
             id: string;
             width: number;
@@ -18800,6 +18829,7 @@ export interface components {
             readonly reading_minutes: number | null;
             body_blocks?: components["schemas"]["IssueBodyBlock"][];
             cover_url?: string;
+            readonly cover_media: components["schemas"]["PublicCoverMedia"] | null;
             /** Format: uuid */
             cover_rendition_id?: string | null;
             /** Format: date-time */
@@ -22328,6 +22358,8 @@ export interface components {
             /** Format: uuid */
             parent_id?: string;
             scope?: components["schemas"]["QueryScopeInputRequest"];
+            /** @description 本轮明确选择的参考原文，独立于项目选材及检索范围；空数组表示不使用参考。 */
+            context_refs?: components["schemas"]["EvidenceReferenceInputRequest"][];
             /** @default search */
             mode: components["schemas"]["TurnCreateInputModeEnum"];
             statement?: components["schemas"]["StatementInputRequest"];

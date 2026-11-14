@@ -92,6 +92,7 @@ def published_projection():
 
 def directory_card(issue):
     from catalog.services.editorial_issues import public_issue_revision
+    from catalog.services.media import editorial_image_media
     revision = public_issue_revision(issue)
     payload = deepcopy(revision.materialized_preview)
     metadata, curator = public_metadata(payload, issue=issue)
@@ -101,6 +102,7 @@ def directory_card(issue):
         "issue_label": payload.get("issue_label", ""), "introduction": payload.get("introduction", ""),
         "public_byline": payload.get("public_byline", ""), "curator": curator, "article_metadata": metadata,
         "cover_url": f"/api/catalog/editorial-media/{rendition}/" if rendition else payload.get("cover_url", ""),
+        "cover_media": editorial_image_media(rendition),
         "published_at": revision.published_at.isoformat() if revision.published_at else None,
         "display_from": issue.effective_display_from.isoformat() if issue.effective_display_from else None,
         "reading_minutes": max(1, ceil(text_length / 400)) if text_length else None,

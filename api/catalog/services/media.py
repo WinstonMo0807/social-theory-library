@@ -146,6 +146,11 @@ def normalize_media_transform(value):
     return {"x": x, "y": y, "width": min(width, 1 - x), "height": min(height, 1 - y), "rotation": int(value["rotation"])}
 
 
+def _rendition_group(media, kind, metadata):
+    metadata_key = sha256(json.dumps(metadata, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    return sha256(f"webp-v2:{kind}:{media.focal_x}:{media.focal_y}:{metadata_key}".encode()).hexdigest()
+
+
 @transaction.atomic
 def build_rendition(media_id, *, width=640, kind="cover", transform=None, metadata_override=None, display_uses=None):
     if width not in RENDITION_WIDTHS or kind not in RENDITION_KINDS:
@@ -164,8 +169,7 @@ def build_rendition(media_id, *, width=640, kind="cover", transform=None, metada
     if transform is not None:
         transform = normalize_media_transform(transform)
         metadata["_transform"] = transform
-    metadata_key = sha256(json.dumps(metadata, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-    group = sha256(f"webp-v2:{kind}:{media.focal_x}:{media.focal_y}:{metadata_key}".encode()).hexdigest()
+    group = _rendition_group(media, kind, metadata)
     key = sha256(f"{group}:{width}".encode()).hexdigest()
     existing = media.renditions.filter(variant_key=key).first()
     if existing:
@@ -234,6 +238,38 @@ def media_rendition_variants(primary):
     by_width = {row.width: row for row in variants}
     by_width[primary.width] = primary
     return sorted(by_width.values(), key=lambda row: row.width)
+
+
+@transaction.atomic
+def prepare_rendition_sizes(primary):
+    """Reuse the original only when the frozen crop/metadata can be reproduced.
+
+    Called by an editor's preparation step, never by a public GET. Old focal
+    coordinates were not stored separately; a changed focal point must therefore
+    leave that old group's missing sizes alone.
+    """
+    media = MediaAsset.objects.select_for_update().get(pk=primary.media_id)
+    metadata = primary.metadata_snapshot
+    if (primary.kind == "thumbnail" or not isinstance(metadata, dict)
+        or not set(PUBLIC_METADATA_FIELDS).issubset(metadata)
+        or set(metadata) - {*PUBLIC_METADATA_FIELDS, "_transform", "display_uses"}
+        or _rendition_group(media, primary.kind, metadata) != primary.group_key):
+        return media_rendition_variants(primary)
+    for width in RENDITION_WIDTHS:
+        build_rendition(media.pk, width=width, kind=primary.kind,
+            metadata_override={field: metadata[field] for field in PUBLIC_METADATA_FIELDS},
+            transform=metadata.get("_transform"), display_uses=metadata.get("display_uses"))
+    return media_rendition_variants(primary)
+
+
+def editorial_image_media(rendition_id, *, public=True):
+    """Variants keep the selected primary URL as their publication authority."""
+    primary = MediaRendition.objects.select_related("media").filter(pk=rendition_id).first() if rendition_id else None
+    if primary is None:
+        return None
+    return media_rendition_snapshot(primary, lambda row:
+        f"/api/catalog/editorial-media/{primary.pk}/?rendition={row.pk}" if public
+        else f"/api/catalog/admin/media/renditions/{row.pk}/file/")
 
 
 def media_rendition_snapshot(primary, url_for, *, variants=None):

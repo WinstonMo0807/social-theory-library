@@ -21,11 +21,11 @@ export function editorialHref(params: EditorialSearchParams, patch: Record<strin
   return `/recommendations${query.size ? `?${query}` : ""}`;
 }
 
-export function EditorialImage({ src, className = "", portrait = false, retry = false, displayUses, scholar, loading = "lazy" }: { src: string; className?: string; portrait?: boolean; retry?: boolean; displayUses?:readonly MediaDisplayUse[]; scholar?: {name:string; identity:string}; loading?: "lazy" | "eager" }) {
+export function EditorialImage({ src, sources, className = "", portrait = false, retry = false, displayUses, scholar, loading = "lazy" }: { src: string; sources?: {url:string; width:number; height:number}[]; className?: string; portrait?: boolean; retry?: boolean; displayUses?:readonly MediaDisplayUse[]; scholar?: {name:string; identity:string}; loading?: "lazy" | "eager" }) {
   const [failedSource, setFailedSource] = useState("");
   const failed=!!src&&failedSource===src;
   const fallback=scholar ? <ScholarPortraitFallback name={scholar.name} identity={scholar.identity} className={className}/> : <span className={`${className} ${styles.imageMissing}`}><span role="img" aria-label={failed?"图片暂不可用":src?"本位置不展示配图":portrait?"未提供公开头像":"暂未提供配图"}>{portrait ? <UserRound size={20} strokeWidth={1} /> : <ImageOff size={28} strokeWidth={1} />}</span>{retry && failed ? <button type="button" onClick={() => setFailedSource("")}>重新加载</button> : null}</span>;
-  return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} {...editorialImageSources(src, portrait ? "96px" : "(max-width: 760px) 100vw, 50vw")} alt="" loading={loading} decoding={loading === "eager" ? "auto" : "async"} onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
+  return <MediaPlacement uses={displayUses} fallback={fallback}>{src && !failed ? <img className={className} src={src} {...(sources?.length ? {srcSet:sources.map(row=>`${row.url} ${row.width}w`).join(", "), sizes:portrait ? "96px" : "(max-width: 760px) 100vw, 50vw"} : editorialImageSources(src, portrait ? "96px" : "(max-width: 760px) 100vw, 50vw"))} alt="" loading={loading} decoding={loading === "eager" ? "auto" : "async"} onError={() => setFailedSource(src)} /> : fallback}</MediaPlacement>;
 }
 export function EditorialByline({ curator, date }: { curator: EditorialCurator; date: string | null }) {
   return <div className={styles.byline}>{curator.name ? <EditorialImage key={curator.portrait_url} src={curator.portrait_url} portrait className={styles.avatar} /> : null}
@@ -34,7 +34,7 @@ export function EditorialByline({ curator, date }: { curator: EditorialCurator; 
 }
 function Card({ card, lead = false }: { card: EditorialCard; lead?: boolean }) {
   return <article className={styles.card} data-lead={lead || undefined}><Link prefetch={false} href={card.href} className={styles.cardImageLink} aria-label={`阅读${card.title}`}>
-    <EditorialImage key={card.cover_url} src={card.cover_url} className={styles.cardImage} />{card.issue_label ? <span className={styles.badge}>{card.issue_label}</span> : null}</Link>
+    <EditorialImage key={card.cover_url} src={card.cover_url} sources={card.cover_media?.renditions} className={styles.cardImage} />{card.issue_label ? <span className={styles.badge}>{card.issue_label}</span> : null}</Link>
     <div className={styles.cardCopy}><h2><Link prefetch={false} href={card.href}>{card.title}</Link></h2>{card.introduction ? <p>{card.introduction}</p> : null}
       <EditorialByline curator={card.curator} date={card.published_at} /><Link className={styles.cardArrow} prefetch={false} href={card.href} aria-label={`阅读${card.title}`}><ArrowRight size={17} /></Link></div></article>;
 }

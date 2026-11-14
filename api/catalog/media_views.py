@@ -82,12 +82,14 @@ class MediaCollectionView(MediaEditorView):
         if "rendition_id" in request.query_params:
             rendition_id = serializers.UUIDField().run_validation(request.query_params["rendition_id"])
             rows = rows.filter(renditions__pk=rendition_id)
-        pagination = Paginator(rows, 30)
+        # Each private thumbnail also verifies its owner before and after reading.
+        # Keep one page below the shared API burst budget; all assets remain paginated.
+        pagination = Paginator(rows, 6)
         try:
             page = pagination.page(request.query_params.get("page", 1))
         except (ValueError, InvalidPage):
             return Response({"detail": "媒体页码不存在，请返回第一页。"}, status=404)
-        return Response(MediaCollectionSerializer({"count": pagination.count, "page": page.number, "page_size": 30,
+        return Response(MediaCollectionSerializer({"count": pagination.count, "page": page.number, "page_size": pagination.per_page,
                                                   "pages": pagination.num_pages, "results": page.object_list}).data)
 
 
@@ -160,7 +162,12 @@ class MediaRenditionView(MediaEditorView):
         get_object_or_404(MediaAsset, pk=media_id)
         serializer = MediaRenditionRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return Response(MediaRenditionSerializer(build_rendition(media_id, **serializer.validated_data)).data)
+        from django.db import transaction
+        from catalog.services.media import prepare_rendition_sizes
+        with transaction.atomic():
+            primary = build_rendition(media_id, **serializer.validated_data)
+            prepare_rendition_sizes(primary)
+        return Response(MediaRenditionSerializer(primary).data)
 
 
 class MediaRenditionFileView(AdminPrivateResponseMixin, APIView):

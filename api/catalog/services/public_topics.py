@@ -377,7 +377,7 @@ def public_topic_directory(params=None, *, request=None):
     ordering = {"name": ("public_name", "pk"), "works": ("-public_work_count", "public_name", "pk"), "updated": ("-public_updated", "public_name", "pk"), "relevance": ("public_name", "pk")}[sort]
     result = _page(rows.distinct().order_by(*ordering), params, "/api/catalog/topics/", transform=lambda page: _cards(page, tree, query=query))
     from catalog.services.recommendations import current_recommendations
-    recommendation = current_recommendations(read_only=True).get("home_topics")
+    recommendation = current_recommendations(read_only=True, placements=("home_topics",)).get("home_topics")
     recommended = []
     if recommendation:
         ids = list(recommendation.items.filter(topic__editorial_status="published").order_by("position", "pk").values_list("topic_id", flat=True)[:48])
@@ -417,16 +417,18 @@ def _knowledge_rows(rows, topic):
     return result
 
 
-def _evidence(topic):
+def _evidence(topic, *, request=None):
     from catalog.services.shared_curation import curation_payload, sources, source_payload
+    from catalog.services.semantic_search import viewer_access_statuses
+    authenticated = bool(getattr(getattr(request, "user", None), "is_authenticated", False))
     owner = EvidenceCuration.objects.filter(object_type="topic", object_id=topic.pk, active_revision__status="published",
         active_revision__target_type="evidence_curation", active_revision__target_id=F("pk")).first()
-    items = curation_payload("topic", topic.pk, public=True)["items"] if owner is not None and topic.editorial_status == "published" else []
+    items = curation_payload("topic", topic.pk, public=True, authenticated=authenticated)["items"] if owner is not None and topic.editorial_status == "published" else []
     legacy_id = _uuid((topic.curation or {}).get("featured_passage_id"))
     if legacy_id and not any(row["source_type"] == "passage" and row["source_id"] == legacy_id for row in items):
         items.append({"id": legacy_id, "source_type": "passage", "source_id": legacy_id, "group_title": "既有主题原文", "reason": "旧编排保留的准确段落身份。", "order": len(items)})
-    current = {kind: {str(row.pk): row for row in sources(kind, public=True).filter(pk__in=[item["source_id"] for item in items if item["source_type"] == kind]).filter(
-        current_retrieval_source_q(asset_prefix="page__asset", access_statuses=("public", "inherit")))}
+    current = {kind: {str(row.pk): row for row in sources(kind, public=True, authenticated=authenticated).filter(pk__in=[item["source_id"] for item in items if item["source_type"] == kind]).filter(
+        current_retrieval_source_q(asset_prefix="page__asset", access_statuses=viewer_access_statuses(authenticated=authenticated), require_fulltext=False))}
         for kind in ("span", "passage")}
     output = []
     for item in items:
@@ -437,7 +439,7 @@ def _evidence(topic):
         item = deepcopy(item)
         if "source" not in item:
             try:
-                item["source"] = source_payload(item["source_type"], row, public=True)
+                item["source"] = source_payload(item["source_type"], row, public=True, authenticated=authenticated)
             except ValidationError:
                 continue
         source = item["source"]
@@ -593,7 +595,7 @@ def public_topic_detail(slug, params=None, *, request=None, preview_topic=None):
         work_page["results"].extend(planned[max(0, start - work_total):max(0, end - work_total)])
     page_meta = _page(range(work_total + len(planned)), params, path, section="works")
     work_page.update({key: value for key, value in page_meta.items() if key != "results"})
-    evidence = _evidence(topic)
+    evidence = _evidence(topic, request=request)
     result.update(public_revision=_revision(topic), introduction={key: getattr(topic, key) for key in ("description", "problem_statement", "formation_context", "core_questions", "research_dimensions", "methods")},
         questions=_page(_selected_first(questions, [*_ids(curation.get("question_node_ids")), *_ids(curation.get("debate_node_ids"))], ("sort_order", "canonical_name_zh", "pk")), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="questions"),
         concepts=_page(_selected_first(concepts, curation.get("concept_node_ids", []), ("sort_order", "canonical_name_zh", "pk")), params, path, transform=lambda rows: _knowledge_rows(rows, topic), section="concepts"),

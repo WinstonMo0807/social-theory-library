@@ -255,7 +255,13 @@ class PublicEditorialMediaView(APIView):
             published = public_cover_used(key)
         if not published:
             raise Http404
-        row = get_object_or_404(MediaRendition, pk=rendition_id)
+        row = get_object_or_404(MediaRendition.objects.select_related("media"), pk=rendition_id)
+        if request.query_params.get("rendition"):
+            from catalog.services.media import media_rendition_variants
+            selected = request.query_params["rendition"]
+            row = next((variant for variant in media_rendition_variants(row) if str(variant.pk) == selected), None)
+            if row is None:
+                raise Http404
         try:
             response = FileResponse(row.file.open("rb"), content_type="image/webp")
         except OSError:

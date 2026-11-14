@@ -37678,6 +37678,10 @@
                         "type": "string",
                         "maxLength": 240
                     },
+                    "citation_name": {
+                        "type": "string",
+                        "maxLength": 240
+                    },
                     "preferred_language": {
                         "type": "string",
                         "maxLength": 24
@@ -43616,6 +43620,11 @@
                             "$ref": "#/components/schemas/EvidenceAnchorInput"
                         },
                         "description": "跨页引用按顺序传 1—20 个同文件同修订的单页锚点。"
+                    },
+                    "selected_text": {
+                        "type": "string",
+                        "description": "可选的精确选段；服务器仅忽略排版空白进行唯一匹配，再保存原文范围。",
+                        "maxLength": 20000
                     }
                 }
             },
@@ -43657,6 +43666,12 @@
                             "$ref": "#/components/schemas/EvidenceAnchorInputRequest"
                         },
                         "description": "跨页引用按顺序传 1—20 个同文件同修订的单页锚点。"
+                    },
+                    "selected_text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "可选的精确选段；服务器仅忽略排版空白进行唯一匹配，再保存原文范围。",
+                        "maxLength": 20000
                     }
                 }
             },
@@ -59524,6 +59539,12 @@
                         },
                         "description": "跨页引用按顺序传 1—20 个同文件同修订的单页锚点。"
                     },
+                    "selected_text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "可选的精确选段；服务器仅忽略排版空白进行唯一匹配，再保存原文范围。",
+                        "maxLength": 20000
+                    },
                     "work_id": {
                         "type": "string",
                         "format": "uuid"
@@ -68262,6 +68283,60 @@
                     "source_url"
                 ]
             },
+            "PublicCoverMediaRequest": {
+                "type": "object",
+                "properties": {
+                    "media_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "primary_rendition_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "alt_text": {
+                        "type": "string"
+                    },
+                    "source_label": {
+                        "type": "string"
+                    },
+                    "source_url": {
+                        "type": "string"
+                    },
+                    "rights": {
+                        "type": "string"
+                    },
+                    "license": {
+                        "type": "string"
+                    },
+                    "credit": {
+                        "type": "string"
+                    },
+                    "display_uses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaDisplayUseEnum"
+                        }
+                    },
+                    "renditions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicMediaRenditionRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "alt_text",
+                    "credit",
+                    "license",
+                    "media_id",
+                    "primary_rendition_id",
+                    "renditions",
+                    "rights",
+                    "source_label",
+                    "source_url"
+                ]
+            },
             "PublicEditorialCard": {
                 "type": "object",
                 "properties": {
@@ -68293,6 +68368,15 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "published_at": {
                         "type": "string",
                         "format": "date-time",
@@ -68316,6 +68400,7 @@
                 },
                 "required": [
                     "article_metadata",
+                    "cover_media",
                     "cover_url",
                     "curator",
                     "display_from",
@@ -68636,6 +68721,31 @@
                     },
                     "url": {
                         "type": "string"
+                    }
+                },
+                "required": [
+                    "height",
+                    "id",
+                    "url",
+                    "width"
+                ]
+            },
+            "PublicMediaRenditionRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "width": {
+                        "type": "integer"
+                    },
+                    "height": {
+                        "type": "integer"
+                    },
+                    "url": {
+                        "type": "string",
+                        "minLength": 1
                     }
                 },
                 "required": [
@@ -72855,6 +72965,15 @@
                     "cover_url": {
                         "type": "string"
                     },
+                    "cover_media": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PublicCoverMedia"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "cover_rendition_id": {
                         "type": "string",
                         "format": "uuid",
@@ -72938,6 +73057,7 @@
                 "required": [
                     "applied_revision_id",
                     "body_source_problems",
+                    "cover_media",
                     "curator",
                     "draft_revision_id",
                     "has_unpublished_changes",
@@ -85209,6 +85329,13 @@
                     },
                     "scope": {
                         "$ref": "#/components/schemas/QueryScopeInputRequest"
+                    },
+                    "context_refs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EvidenceReferenceInputRequest"
+                        },
+                        "description": "本轮明确选择的参考原文，独立于项目选材及检索范围；空数组表示不使用参考。"
                     },
                     "mode": {
                         "allOf": [

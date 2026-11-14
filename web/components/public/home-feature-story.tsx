@@ -56,7 +56,7 @@ function DiscoveryView({ kind, discovery, interactive = false }: { kind: "schola
   </div>;
   if (kind === "topics") return <div className={styles.topicIndex} inert={!interactive}>{discovery.topics.length ? discovery.topics.map(topic => <Link href={`/topics/${topic.slug}`} key={topic.slug}><span>{topic.name}</span><ArrowRight size={18} /></Link>) : <div><span>从关心的问题出发</span><ArrowRight size={18} /></div>}</div>;
   return <Link href={discovery.issue?.href || '/recommendations'} className={styles.issueFeature} inert={!interactive}>
-    <img src={discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp"} {...editorialImageSources(discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp", "(max-width: 760px) 100vw, 50vw")} alt="" width={720} height={460} loading="lazy" decoding="async" />
+    <img src={discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp"} {...(discovery.issue?.coverSources?.length ? { srcSet: discovery.issue.coverSources.map(row => `${row.url} ${row.width}w`).join(", "), sizes: "(max-width: 760px) 100vw, 50vw" } : editorialImageSources(discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp", "(max-width: 760px) 100vw, 50vw"))} alt="" width={720} height={460} loading="lazy" decoding="async" />
     <div><strong>{discovery.issue?.title || "跟随策划，展开阅读"}</strong>{discovery.issue?.introduction ? <p>{discovery.issue.introduction}</p> : null}<ArrowRight size={21} /></div>
   </Link>;
 }

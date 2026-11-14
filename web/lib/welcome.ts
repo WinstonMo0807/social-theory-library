@@ -10,7 +10,7 @@ export function welcomeDiscovery(home: Pick<HomeViewData, "scholars" | "topics" 
     scholars: home.scholars.slice(0, 3).map(({ name, originalName, years, portrait, portraitSources, slug }) => ({ name, originalName, years, portrait, portraitSources, slug })),
     theories,
     topics: home.topics.slice(0, 4).map(({ name, slug }) => ({ name, slug })),
-    issue: issue ? { title: issue.title, introduction: issue.introduction, coverImage: issue.cover_url, href: `/recommendations/${issue.slug}` } : null,
+    issue: issue ? { title: issue.title, introduction: issue.introduction, coverImage: issue.cover_url, coverSources: issue.cover_media?.renditions, href: `/recommendations/${issue.slug}` } : null,
   };
 }
 export type WelcomeDiscovery = ReturnType<typeof welcomeDiscovery>;

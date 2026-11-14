@@ -294,7 +294,7 @@ def scholar_directory(params, *, request=None):
 
 def _recommendations():
     from catalog.services.recommendations import current_recommendations
-    snapshot = current_recommendations(read_only=True).get("home_scholars")
+    snapshot = current_recommendations(read_only=True, placements=("home_scholars",)).get("home_scholars")
     result = {"revision_id": str(snapshot.pk) if snapshot else None, "source": snapshot.source if snapshot else "", "title": "学者推荐", "results": []}
     if snapshot:
         ids = list(snapshot.items.filter(scholar__isnull=False).order_by("position", "pk").values_list("scholar_id", flat=True)[:48])
@@ -305,7 +305,7 @@ def _recommendations():
 
 def _curated_topics():
     from catalog.services.recommendations import current_recommendations
-    snapshot = current_recommendations(read_only=True).get("home_topics")
+    snapshot = current_recommendations(read_only=True, placements=("home_topics",)).get("home_topics")
     if snapshot is None or snapshot.source != "manual":
         return []
     return [{"id": str(row.topic_id), "slug": row.topic.slug, "title": row.topic.name,
@@ -370,7 +370,15 @@ def _knowledge(profile, editions):
     from catalog.services.theory_graph import _SnapshotEntity
     direct = PersonNodeRelation.objects.filter(person_id=profile.person_id, status="published", node__status="published")
     # Work associations are material links, never a claim that this person coined a concept.
-    authored = scholar_editions(profile.person_id, ("author",), whole_only=True).filter(_SnapshotEntity("knowledge_node", OuterRef("pk")))
+    authored = scholar_editions(profile.person_id, ("author",), whole_only=True)
+    # Avoid repeating the JSON author/role match for every knowledge node. Keep
+    # the parameter set bounded; prolific authors retain the original full query.
+    revision_ids = list(authored.order_by().values_list("active_catalog_revision_id", flat=True)[:513])
+    if len(revision_ids) <= 512:
+        # Pin the matched version so a concurrent publication cannot substitute
+        # different authorship between the bounded read and the node lookup.
+        authored = public_editions().filter(active_catalog_revision_id__in=revision_ids)
+    authored = authored.filter(_SnapshotEntity("knowledge_node", OuterRef("pk")))
     return KnowledgeNode.objects.filter(status="published").alias(in_authored_material=Exists(authored)).filter(Q(pk__in=direct.values("node_id")) | Q(in_authored_material=True)).distinct()
 
 
@@ -467,11 +475,11 @@ def public_scholar_relations():
     return rows
 
 
-def _relation_rows(rows):
+def _relation_rows(rows, *, authenticated=False):
     from catalog.services.shared_curation import relation_payload
     result = []
     for row in rows:
-        value = relation_payload(row, public=True)
+        value = relation_payload(row, public=True, authenticated=authenticated)
         if value:
             result.append({key: value.get(key, "") for key in ("id", "source_scholar", "target_scholar", "source_name", "target_name", "source_slug", "target_slug", "relation_type", "direction", "summary", "source", "status")})
             result[-1]["relation_label"] = RELATION_LABELS.get(value["relation_type"], value["relation_type"])
@@ -535,10 +543,11 @@ def _evidence(profile, *, request=None, preview=False):
         active_revision__target_type="evidence_curation", active_revision__target_id=F("pk")).first()
     if owner is None:
         return []
+    authenticated = bool(getattr(getattr(request, "user", None), "is_authenticated", False))
     payload = (preview_published_curation("scholar", profile.pk, request=request) if preview
-               else curation_payload("scholar", profile.pk, public=True))
+               else curation_payload("scholar", profile.pk, public=True, authenticated=authenticated))
     items = payload["items"]
-    current = {kind: {str(row.pk): row for row in sources(kind, public=True).filter(pk__in=[item["source_id"] for item in items if item["source_type"] == kind])}
+    current = {kind: {str(row.pk): row for row in sources(kind, public=True, authenticated=authenticated).filter(pk__in=[item["source_id"] for item in items if item["source_type"] == kind])}
                for kind in ("span", "passage")}
     output = []
     for item in items:
@@ -598,7 +607,7 @@ def public_scholar_detail(slug, params=None, *, request=None, preview_profile=No
         relations = relations.filter(active_revision__materialized_preview__relation_type__in=kinds)
     if direction != "all":
         relations = relations.filter(**{("target_scholar" if direction == "incoming" else "source_scholar"): profile})
-    result["relations"] = _page(relations.order_by("-updated_at", "pk"), params, path, section="relations", transform=_relation_rows)
+    result["relations"] = _page(relations.order_by("-updated_at", "pk"), params, path, section="relations", transform=lambda rows: _relation_rows(rows, authenticated=bool(getattr(getattr(request, "user", None), "is_authenticated", False))))
     evidence = _evidence(profile, request=request, preview=preview_profile is not None)
     result["sources"] = _page(_sources(profile), params, path, section="sources")
     result["evidence"] = _page(evidence, params, path, section="evidence")

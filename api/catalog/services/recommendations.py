@@ -349,9 +349,11 @@ def current_snapshot(policy, *, now=None):
     return _generate_due_snapshot(policy, now)
 
 
-def current_recommendations(*, read_only=False):
+def current_recommendations(*, read_only=False, placements=None):
     payload = {}
     policies = RecommendationPolicy.objects.filter(enabled=True) if read_only else ensure_default_policies()
+    if placements is not None:
+        policies = policies.filter(placement__in=placements) if read_only else [policy for policy in policies if policy.placement in placements]
     now = timezone.now()
     for policy in policies:
         if policy.enabled:

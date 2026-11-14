@@ -100,7 +100,9 @@ class HomeView(APIView):
             nonlocal snapshots
             if snapshots is None:
                 # Public GETs must not create policies or publish a new snapshot.
-                snapshots = current_recommendations(read_only=True)
+                snapshots = current_recommendations(read_only=True, placements=(
+                    "home_featured", "home_random", "home_scholars", "home_topics",
+                ))
             return snapshots.get(placement)
 
         def works(placement, limit):

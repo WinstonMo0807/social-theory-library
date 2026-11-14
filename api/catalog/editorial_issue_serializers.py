@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.helpers import lazy_serializer
 from catalog.serializers import SiteConfigSerializer, AboutPageBlockSerializer
 from catalog.services.media import MEDIA_DISPLAY_USES
+from catalog.media_views import PublicCoverMediaSerializer
 
 
 class IssueTextMarkSerializer(serializers.Serializer):
@@ -87,6 +88,7 @@ class PublicEditorialCardSerializer(serializers.Serializer):
     curator = PublicEditorialCuratorSerializer()
     article_metadata = ArticleMetadataSerializer()
     cover_url = serializers.CharField(allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(read_only=True, allow_null=True)
     published_at = serializers.DateTimeField(allow_null=True)
     display_from = serializers.DateTimeField(allow_null=True)
     reading_minutes = serializers.IntegerField(allow_null=True)
@@ -185,6 +187,7 @@ class RecommendationIssueSerializer(serializers.Serializer):
     reading_minutes = serializers.IntegerField(read_only=True, allow_null=True)
     body_blocks = IssueBodyBlockSerializer(many=True, required=False)
     cover_url = serializers.CharField(required=False, allow_blank=True)
+    cover_media = PublicCoverMediaSerializer(read_only=True, allow_null=True)
     cover_rendition_id = serializers.UUIDField(required=False, allow_null=True)
     display_from = serializers.DateTimeField(required=False, allow_null=True)
     published_at = serializers.DateTimeField(read_only=True, allow_null=True)
