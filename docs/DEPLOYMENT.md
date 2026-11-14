@@ -1,3 +1,9 @@
+## 2026-11-14 E/C/B前端最终发布
+
+19:17:12 +0800最终Web镜像social-theory-library-web:4.0.0-20261114-library-reader-web-r2，sha256:2dfd93c2864b134a0310e8f1cb27d7fcd464b27022b518d0d70ca3ee00b41835。源码926b0aeb34ce/435ca27c3f01。实际成功发布目录/volume2/library/stl-releases/20261114-library-reader-r3，活动compose-command.json增加该目录release.compose.json，回退脚本recovery/rollback.py。复用已验证r2镜像，目录r3表示一次新的运行基线。
+
+首次19:09发布7dd9d189160e；第一次补发因检测到另一操作重建cloudflared而保护回退到初发Web，再以最新基线成功。最终3202运行文件匹配，7个HTTP入口200，107其他容器保持；edge配置SHA6b38fbebda02不变。API仍17204310147b，不改数据、schema、隧道或DNS。完整备份文件按字节数/SHA/原完整归档读取证明复核，回退只替换Web并保留当前数据。新L7方案仅本机比较，不是生产随机标识更新。
+
 ## 2026-11-14 公网链路与欢迎页预取版本
 
 13:32:21 +0800发布Web bebeb7feca02和首页范围gzip；13:43:05补发Web social-theory-library-web:4.0.0-20261114-welcome-prefetch-web-r1（sha256:774699aaabd4ecd67c2828d8b3c12fdf1eb2674fd22228ee3b2ac966b4576be2）。API仍sha256:17204310147baffc36eb8409314fd0f396d577713380d10d59aeb50842047bea、原CPU1核/shares0。无schema或worker变更；CPU对照曾同镜像重建API以精确恢复shares，详报告。

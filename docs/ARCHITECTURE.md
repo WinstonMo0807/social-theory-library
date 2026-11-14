@@ -1,3 +1,7 @@
+## 2026-11-14 书库浏览与私人工作台
+
+新增/library为现有公开WorkList API的独立前端视图，作品级created_at/title排序、服务端分页；搜索与探索继续使用原服务。/account全部次级路由统一ReaderWorkspace外框，导航/查找/新建只调度已有路由，子模块仍负责本人鉴权、数据、写入与任务。不建立第二套馆藏、私人资料库或身份体系。首页只调整最近入库至荐书区域，根入口/与/home职责保持。
+
 ## 2026-11-14 检索页内连续研究与原版页面
 
 S4检索复用既有发现/书目检索接口；SearchResearchDock在同页复用私人研究接口。每轮context_refs与scope独立快照，选段仍由服务端核对原文偏移；不新增私人资料库。SourceExcerpt清洗仅影响显示，引用继续使用原始来源。DiscoverySourcePage在读者展开时先校验来源及版本，再沿既有distribution access/PdfCanvas显示单页PDF，关闭自动预取；不新增检索任务、OCR或模型调用。结构提示是本地展示规则，不能视为结构识别的准确性保证，所有段落均保留原页入口。
