@@ -1,3 +1,9 @@
+## 2026-11-14 Cloudflare业务性能版本
+
+2026-11-14T04:24:06Z只替换API/Web。API镜像social-theory-library-api:4.0.0-20261114-cloudflare-business-api-r1（sha256:003be31e445555fe7c0d3e30ab967317705675931d25dcd3ee510806acb700f0）；Web为social-theory-library-web:4.0.0-20261114-cloudflare-business-web-r1（sha256:29a4a355ce500f523ffad433acb5750f6e64676244fe49fdca9aa848882d5163）。2份API源码与3184运行文件哈希一致，105其他容器保持。无schema迁移、媒体改写、worker更新、DNS或Cloudflare配置变更。
+
+活动入口仍/volume2/library/stl-releases/20261107-r1/public/compose-command.json，追加/volume2/library/stl-releases/20261114-cloudflare-business-r1/release.compose.json。该目录recovery/rollback.py有活动版本保护，恢复旧API/Web并保留当前数据。当天完整备份重新验SHA。显示偏好内联源码由prepare-performance-assets.mjs生成，generated.ts不进Git；runtime-config保持no-store。公网/内网匿名PDF各3种URL均401/private/no-store，公网DYNAMIC；API不强制缓存。源码12f0cd09，最终Git回执与详细限制见stl4/CLOUDFLARE_BUSINESS_PERFORMANCE_20261114.md。
+
 ## 2026-11-14 Web性能发布与代理协议
 
 现用Web镜像social-theory-library-web:4.0.0-20261114-network-web-r2（sha256:10a38bf0337d5828530363cd92c36698a15b6e628d6f2ce8eca7f2a77e80aa68）。构建会生成静态br/gzip、响应图片、字体内容哈希副本及派生字体CSS；运行配置不预压缩。源文件及许可证保留，生成产物不进Git。正常使用package.json的prebuild/build流程，不跳过prepare-performance-assets。

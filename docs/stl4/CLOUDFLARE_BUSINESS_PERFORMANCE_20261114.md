@@ -4,7 +4,7 @@
 
 用户要求解释202份字体，检查其已登录Cloudflare配置，在保证安全下直接调整网络，并采用高星项目的方法优化业务层，保持内容与架构联动。延续本会话已授权修改、验证、Git及公网发布范围；不购买服务、不暴露NAS公网端口、不改变鉴权或内容发布边界。
 
-共享工作区HEAD仍f29ddb22，远端main为上一轮2803b7c7，原暂存两文件保持。当前Web network-web-r2，源站文件/代理协议上一轮已验证。使用Ponytail full与应用开发规则；不加载研究/写作规则。没有Cloudflare专用连接器，沿用户现有Edge登录会话的独立检查标签页操作。
+开始时共享工作区HEAD为f29ddb22，远端main为上一轮2803b7c7，原暂存两文件保持。发布前Web为network-web-r2，源站文件/代理协议上一轮已验证。使用Ponytail full与应用开发规则；不加载研究/写作规则。没有Cloudflare专用连接器，沿用户现有Edge登录会话的独立检查标签页操作。
 
 ## 已核实
 
@@ -43,6 +43,10 @@ cloudflared实际协议为HTTP/2，重启次数0；近一小时24条错误均含
 
 现有媒体库按6条分页，默认API分页24条；旧媒体入口最多60条。书封和肖像选择服务已经生成320/640/1280请求宽度版本，实际宽度不超过原图。现有媒体variant_key按用途、裁切/焦点、元数据和宽度复用，不按页面无限复制。本轮前端按接口清单选择，未来图片自动适用。特别策划目前样例只有1280版本、部分旧封面无尺寸清单，仍保持原图；不能把所有图片优化都写成完成。
 
+新增内容不会自动意味着每次访问加载整个图库。新增图应继续走现有媒体选择/发布流程，原图按checksum识别重复、派生图按已有variant_key复用；当前普通上传只入原图，选择为书封/肖像才生成尺寸版本，不能把上传与发布混写成一个动作。原件、历史与权限保持。栏目配图的完整尺寸覆盖、旧封面补齐是C后续优化，未在GET请求期间生成文件，也未批量改写旧发布快照。
+
+2026-11-14只读容量快照：书库所在卷总9903778074624字节、可用4115939852288字节（约4.12 TB）。MediaAsset登记53张原图145245923字节，MediaRendition登记213份派生图17251866字节，合计约162 MB；不含旧目录文件、PDF、备份或其他服务，不能视作全站容量。单次快照无法计算月增长率。后续容量预算按原图、派生版本、历史和备份分别累计；访问预算按每页图片总字节×访问量评估，而不是用全图库总量估计每次页面流量。
+
 NAS读取快照：4核，MemTotal7998336kB、可用2091812kB，Swap总8191976kB/空闲2249856kB，两网口均2500Mbps且up；负载0.63/0.90/0.84，API约284MiB、Web241MiB。交换占用不等于正在持续交换，不能仅凭此要求购买内存；双2.5G不等于公网5G上行。未做占满家庭带宽的测试。
 
 优先核实公网实际上行及忙时排队，备份/同步错峰并按实际路由器能力采用SQM；持续换页时再评估内存，数据库磁盘等待明显时评估SSD。原架构下可选Smart Shield+Argo改善回源路由；公开不可撤回的构建资产可评估R2/CDN，私有PDF与可撤回媒体不直接公开托管。大陆专网Cloudflare China Network需Enterprise另购及ICP条件，普通Pro升级不等价。没有购买、迁移、清理历史或更改存储策略。
@@ -60,8 +64,17 @@ NAS读取快照：4核，MemTotal7998336kB、可用2091812kB，Swap总8191976kB/
 - https://developers.cloudflare.com/tunnel/reference/run-parameters/
 - https://developers.cloudflare.com/china-network/
 - https://developers.cloudflare.com/r2/pricing/
+- https://developers.cloudflare.com/images/polish/
 - https://openwrt.org/docs/guide-user/network/traffic-shaping/sqm
 
 ## 发布状态
 
-候选API003be31e4455与Web29a4a355ce50已暂存，仅2份API源码和3184份Web运行文件。尚未切换；准备精确API/Web配置差分、镜像回退和既有完整备份核验。worker、数据库、索引、任务、媒体原件、隧道保持。
+2026-11-14T04:24:06Z（北京时间12:24:06）完成API/Web发布。API为social-theory-library-api:4.0.0-20261114-cloudflare-business-api-r1，sha256:003be31e445555fe7c0d3e30ab967317705675931d25dcd3ee510806acb700f0；Web为social-theory-library-web:4.0.0-20261114-cloudflare-business-web-r1，sha256:29a4a355ce500f523ffad433acb5750f6e64676244fe49fdca9aa848882d5163。2份API源码与3184份Web运行文件逐项SHA一致，运行配置保持；5入口最终200，105个其他容器身份/镜像/配置保持，未观察到启动时间变化。worker、数据库、索引、任务、媒体原件、DNS、隧道及Cloudflare设置未变。
+
+发布目录/volume2/library/stl-releases/20261114-cloudflare-business-r1，恢复入口recovery/rollback.py，恢复API/Web旧镜像并保留当前数据。沿用当天已完整读验的数据库备份并重新验证SHA。源码检查点12f0cd09dce14058db13a5726b3a5954312163cb；最终文档提交和远端main SHA见tmp/cloudflare-business-20261114/final-receipt.json。共享HEAD和真实暂存区保持。
+
+发布后公网与内网/、/home、/api/catalog/home/各3次200，偏好代码已内联、旧外部偏好请求消失。内网/home完整HTML中位数2756ms，公网3578ms；公网首页首字节[520,551,470]ms。欢迎页公网首字节[1341,3298,5971]ms，显示链路仍有明显波动，不能称公网全面稳定或将源站25.9%解释为全站提速。采样使用identity编码，非浏览器LCP或CrUX指标。真实头像640w58362→320w11004字节，减少81.1%。
+
+真实公开版本所关联PDF，在内网与公网分别检查原URL、download参数、独立查询参数，均匿名401、private/no-store，公网DYNAMIC。首次Python urllib请求遇到403，未将其算作应用鉴权通过；随后与其余网络检查一致使用Node直接HTTP客户端完成上述验证。无会话、未下载PDF正文。探索匿名跳转公网HTTPS/内网HTTP各自正确。
+
+公网欢迎页内容已用浏览器读回；候选同代码桌面/窄屏截图与主题刷新验证已保存。后续浏览器连接不可用，未取得新PageSpeed报告，不能把发布前64分写成优化后成绩。未做正式全站E2E、全高DPI设备或230页视觉图集复验。证据在output/cloudflare-business-20261114中的deployment.json、public-after.json、pdf-after.json、home-equivalence.json、media-growth.json及portraits-desktop/mobile.jpg。
