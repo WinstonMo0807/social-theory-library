@@ -56,8 +56,8 @@ export function HomePublicView({ config, works, scholars, topics, randomWorks, i
       {editions.length > 1 ? <Link href="/recommendations" className="stl4-mobile-more">继续浏览特别策划 <ArrowRight size={15} /></Link> : null}
     </section>}
     <HomeDiscoveryCards scholars={scholars} topics={topics} sections={sections} homeLayout={homeLayout}/>
-    <section className="stl4-home-section" data-edit-section="recent" aria-labelledby="home-recent">
-      <header className="stl4-home-heading"><h2 id="home-recent">最近入库</h2><Link href="/explore?sort=newest">查看全部 <ArrowRight size={15} /></Link></header>
+    <section className="stl4-home-section home-recent-c" data-edit-section="recent" aria-labelledby="home-recent">
+      <header className="stl4-home-heading"><h2 id="home-recent">最近入库</h2><Link href="/library">查看全部 <ArrowRight size={15} /></Link></header>
       {works.length ? <div className="stl4-recent-grid">{works.slice(0, 4).map(work => <BookCard work={work} dense key={work.id} />)}</div> : <HomeSectionState section={sections?.works} empty="暂无公开馆藏。" />}
     </section>
     <HomeRandomBook works={randomWorks} section={sections?.random_works} />

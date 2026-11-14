@@ -99,3 +99,9 @@
   .site-masthead .reader-center-nav { width: 100%; gap: 0; }
   .site-masthead .reader-center-nav a { flex: 0 0 33.333%; justify-content: center; font-size: max(13px, var(--stl-readable-meta)); }
 }
+
+/* Global reader entry; account settings live inside the reader workspace. */
+.site-masthead .header-reader-center{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 12px;border:1px solid var(--line);border-radius:4px;white-space:nowrap;font:14px var(--sans);color:var(--ink);transition:background-color 160ms ease,border-color 160ms ease}
+.site-masthead .header-reader-center[aria-current=page]{background:var(--wash);border-color:var(--gold,#a08049)}
+.site-masthead .header-reader-center:focus-visible{outline:2px solid var(--gold,#a08049);outline-offset:3px}
+@media(max-width:700px){.site-masthead .header-reader-center{width:36px;min-width:36px;padding:0;border:0}.site-masthead .header-reader-center span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.site-masthead .header-reader-center svg{width:21px;height:21px}}

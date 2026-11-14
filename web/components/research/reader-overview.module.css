@@ -159,3 +159,29 @@
 }
 
 :global([data-stl-page-layout="account"]) .localTransfer { margin-block:0; padding-block:12px; }
+
+/* B workspace: overview is a reading desk; material actions retain their contracts. */
+:global(.reader-workspace) .overview{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:28px}
+:global(.reader-workspace) .navigation{grid-column:1/-1;padding:0 0 18px;margin:0;border-top:0;justify-content:flex-end}
+:global(.reader-workspace) .sections{display:none}
+:global(.reader-workspace) .localTransfer,:global(.reader-workspace) .materialSection,:global(.reader-workspace) .archiveTabs,:global(.reader-workspace) .state{grid-column:1/-1;margin:0}
+:global(.reader-workspace) .section{margin:0;min-width:0}
+:global(.reader-workspace) .section h2{font:500 23px/1.5 var(--serif)}
+:global(.reader-workspace) .readingSection{padding:26px;background:var(--paper);border-radius:6px}
+:global(.reader-workspace) .planSection{padding:26px;border:1px solid var(--line);border-radius:6px}
+:global(.reader-workspace) .reading{grid-template-columns:1fr;gap:18px}
+:global(.reader-workspace) .reading article{grid-template-columns:86px minmax(0,1fr);border:0;padding:0;background:transparent;gap:22px}
+:global(.reader-workspace) .reading h3{font-size:20px;font-weight:500;line-height:1.6}
+:global(.reader-workspace) .continue{padding:10px 13px;margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:4px}
+:global(.reader-workspace) .tasks{border:0;background:none}
+:global(.reader-workspace) .tasks article{grid-template-columns:20px minmax(0,1fr) auto;padding:16px 0;gap:10px}
+:global(.reader-workspace) .tasks time{grid-column:2;font-size:11px}
+:global(.reader-workspace) .tasks article>span{grid-column:3;grid-row:1}
+:global(.reader-workspace) .tasks article>a:last-child{grid-column:3;grid-row:2}
+:global(.reader-workspace) .materialSection{padding-top:12px}
+:global(.reader-workspace) .bulk{border-radius:5px;padding:14px 16px;background:var(--paper)}
+:global(.reader-workspace) .bulk:has(input:checked){border-color:var(--reader-gold);box-shadow:inset 3px 0 var(--reader-gold)}
+:global(.reader-workspace) .empty{padding:30px 16px;min-height:0;background:transparent}
+:global(.reader-workspace) .archive{display:block}
+:global(.reader-workspace) .archive .navigation{margin-bottom:22px}
+@container reader-content (max-width:850px){:global(.reader-workspace) .overview{grid-template-columns:1fr;gap:24px}:global(.reader-workspace) .readingSection,:global(.reader-workspace) .planSection{padding:22px}:global(.reader-workspace) .section>header{flex-wrap:wrap}:global(.reader-workspace) .view{flex-wrap:wrap}}

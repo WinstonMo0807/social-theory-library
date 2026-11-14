@@ -211,3 +211,8 @@
   :global([data-stl-page-layout="account"]) .exportOptions { grid-template-columns: minmax(0, 1fr); }
   :global([data-stl-page-layout="account"]) .retention label { padding: 16px 12px; }
 }
+
+
+/* Approved B workspace. */
+:global(.reader-workspace) .shell{padding:0;border:0;max-width:none;background:transparent}:global(.reader-workspace) .breadcrumb{display:none}:global(.reader-workspace) .heading{margin:0 0 28px}:global(.reader-workspace) .heading h1{font:500 34px/1.4 var(--serif)}:global(.reader-workspace) .layout{grid-template-columns:145px minmax(0,1fr);gap:24px}:global(.reader-workspace) .statusSidebar{grid-column:2}:global(.reader-workspace) .sidebar{padding:16px;background:var(--paper);border:1px solid var(--line);border-radius:5px}:global(.reader-workspace) .section{border-radius:5px;overflow:clip}:global(.reader-workspace) .sectionBody{padding:22px}:global(.reader-workspace) .selection{position:sticky;bottom:16px;z-index:5;box-shadow:0 4px 18px #00000010;border-radius:5px}:global(.reader-workspace) .feedback{border-radius:5px;padding:14px 18px}:global(.reader-workspace) .taskCards{gap:14px}
+@container reader-content (max-width:800px){:global(.reader-workspace) .layout{grid-template-columns:1fr}:global(.reader-workspace) .sidebar{display:block;padding:14px}:global(.reader-workspace) .sidebar nav{display:flex;flex-wrap:wrap;gap:8px}:global(.reader-workspace) .statusSidebar{grid-column:auto}:global(.reader-workspace) .sectionBody{padding:18px}}

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { stripTypeScriptTypes } from 'node:module';
+const source=await readFile(new URL('../lib/library-browse.ts',import.meta.url),'utf8');
+const {libraryParams,libraryHref,libraryApiQuery}=await import('data:text/javascript;base64,'+Buffer.from(stripTypeScriptTypes(source)).toString('base64'));
+const input=new URLSearchParams({q:'  社会与国家  ',kind:'book',page:'2',view:'list',sort:'title',owner:'other',redirect:'https://example.com'});
+assert.deepEqual(Object.fromEntries(libraryParams(input)),{q:'社会与国家',kind:'book',sort:'title',view:'list',page:'2'});
+assert.equal(libraryHref(input,{kind:'thesis',page:null}),'/library?q=%E7%A4%BE%E4%BC%9A%E4%B8%8E%E5%9B%BD%E5%AE%B6&kind=thesis&sort=title&view=list');
+assert.deepEqual(Object.fromEntries(libraryParams('page=-1&kind=private&sort=editions__publication_year&view=other')),{});
+assert.equal(libraryApiQuery('').get('ordering'),'-created_at,title');
+assert.deepEqual(Object.fromEntries(libraryApiQuery(input)),{q:'社会与国家',document_type:'book',page:'2',ordering:'title'});
+assert.equal(libraryParams('q='+encodeURIComponent('字'.repeat(200))).get('q').length,180);
+console.log('Library query: filter preservation, pagination reset, allowlisted parameters and work-level ordering passed');

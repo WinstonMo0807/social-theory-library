@@ -19,7 +19,6 @@ import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "r
 import { logoutCurrentSession } from "@/lib/api";
 import { defaultSiteConfig, type SiteConfig } from "@/lib/site-config";
 import { confirmUnsavedBeforeAccountChange } from "@/lib/use-unsaved-form";
-import { ReaderAccountMenu } from "./reader-account-menu";
 import { useActionGuard } from "@/lib/use-action-guard";
 import { usePublicNavigationReturn } from "@/lib/public-navigation-return";
 import { ActionButton, AsyncStatus } from "./action-feedback";
@@ -56,7 +55,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
     : pathname === href || pathname.startsWith(`${href}/`);
   const navigation = [
     ["/home", config.navigation.home],
-    ["/explore", config.navigation.explore === "探索" ? "书库检索" : config.navigation.explore],
+    ["/library", "书库"],
     ["/theories", config.navigation.theory_schools],
     ["/scholars", config.navigation.scholars],
     ["/topics", config.navigation.topics],
@@ -201,13 +200,14 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
         })}
       </nav>
       <div className="header-actions">
+        <Link className="header-reader-center" href="/account" prefetch={false} onClick={enterAccount} aria-current={pathname.startsWith("/account") ? "page" : undefined}><CircleUserRound size={19}/><span>{t("读者中心")}</span></Link>
         <Link className="icon-button header-search" href="/explore" prefetch={false} aria-label={t(config.navigation.search)}>
           <Search size={18} strokeWidth={1.7} />
         </Link>
         <ThemeToggle />
         <IconButton
           ref={menuButtonRef}
-          className={`icon-button menu-button${(readerCenterRoute || archiveRoute) && user ? " reader-account-menu-toggle" : ""}`}
+          className="icon-button menu-button"
           type="button"
           aria-label={t(open ? "关闭菜单" : "打开菜单")}
           aria-expanded={open}
@@ -220,10 +220,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
       <div className="header-context-actions">
         {pathname.startsWith("/account") && navigationReturn.source ? <Link className="header-return" aria-label={t("返回原页面")} title={t("返回原页面")} href={navigationReturn.source.href} prefetch={false} scroll={false} onClick={navigationReturn.requestReturn}><ArrowLeft size={17} /><span>{t("返回原页面")}</span></Link> : null}
         {evidenceRoute || theoryDetailRoute ? <form className="header-reference-search" action="/explore/original"><button type="submit" aria-label={t("搜索馆藏")}><Search size={17} /></button><label className="sr-only" htmlFor="evidence-header-query">{t("搜索书名、作者、概念")}</label><input id="evidence-header-query" name="q" type="search" maxLength={500} placeholder={t("搜索书名、作者、概念…")} /></form> : null}
-        {readerCenterRoute ? <nav className="reader-center-nav" aria-label={t("读者中心导航")}>{readerNavigation.map(([href, label]) => <Link key={href} href={href} prefetch={false}>{t(label)}</Link>)}</nav> : null}
         {evidenceRoute ? <EvidenceLanguageSwitch /> : null}
-        {evidenceRoute ? <Link className="header-reference-account" href={user ? "/account" : "/login?next=%2Faccount"} onClick={enterAccount} aria-label={t(user ? "读者中心" : "读者登录")}><CircleUserRound size={24} strokeWidth={1.6} /></Link> : null}
-        {(readerCenterRoute || archiveRoute) && user ? <ReaderAccountMenu key={user.id} user={user} onLogout={logout} onPreferences={() => setOpen(true)} pending={pendingAction === "logout"} error={logoutError} /> : null}
       </div>
       {logoutError && !open ? <p className="site-navigation-returned" role="alert">{logoutError}</p> : null}
       {navigationReturn.returned ? <p className="site-navigation-returned" role="status">{t("已返回先前页面")}</p> : null}
@@ -257,11 +254,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
               <div>
                 <Link href="/account" prefetch={false} onClick={enterAccount} aria-current={pathname === "/account" && searchParams.get("section") !== "settings" ? "page" : undefined}>
                   <CircleUserRound size={18} />
-                  <span><strong>{t("我的资料")}</strong></span><ChevronRight size={15} />
-                </Link>
-                <Link href="/account?section=settings" prefetch={false} onClick={enterAccount} aria-current={pathname === "/account" && searchParams.get("section") === "settings" ? "page" : undefined}>
-                  <Settings size={18} />
-                  <span><strong>{t("账户设置")}</strong></span><ChevronRight size={15} />
+                  <span><strong>{t("读者中心")}</strong></span><ChevronRight size={15} />
                 </Link>
                 {user ? <Link data-auth-full-page href="/login?next=%2Faccount" onClick={closeMenu}><CircleUserRound size={18} /><span><strong>{t("切换账户")}</strong><small>{t("登录另一账户，私人资料不会合并")}</small></span><ChevronRight size={15} /></Link> : null}
                 {user?.capabilities?.includes("access_back_office") ? <Link href="/admin" prefetch={false} onClick={closeMenu}><Settings size={18} /><span><strong>{t("管理后台")}</strong></span><ChevronRight size={15} /></Link> : null}

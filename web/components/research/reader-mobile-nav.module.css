@@ -1,2 +1,4 @@
 .nav { display:none; }
 @media(max-width:760px){.nav{display:flex;position:fixed;z-index:30;bottom:0;inset-inline:0;align-items:center;justify-content:space-around;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));min-height:58px;background:var(--night-white,#fff);border-top:1px solid var(--night-line,#e7e7e2);color:var(--night-ink,#0a2442);font:max(11px, var(--stl-readable-meta))/1.4 var(--font-serif),serif}.nav a{display:flex;align-items:center;flex-direction:column;gap:4px;min-width:44px;min-height:40px}.nav a[aria-current=page]{color:var(--night-gold,#ac7b30)}}
+
+:global(.reader-workspace) .nav{display:none}

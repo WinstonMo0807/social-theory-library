@@ -33,3 +33,25 @@
   :global([data-stl-page-layout="account"]) .panel { padding: 20px 16px 36px; }
   :global([data-stl-page-layout="account"]) .card { padding: 20px 16px; gap: 16px; }
 }
+
+/* B workspace: one navigation and a directly available document list. */
+:global(.reader-workspace) .readerNav{display:none}
+:global(.reader-workspace) .page{--ink:var(--reader-ink);--paper:var(--reader-paper);--surface:var(--reader-surface);--muted:var(--reader-muted);--line:var(--reader-line);padding:0;background:none}
+:global(.reader-workspace) .crumb{display:none}
+:global(.reader-workspace) .heading{margin:0 0 28px}
+:global(.reader-workspace) .heading h1{font:500 36px/1.4 var(--serif)}
+:global(.reader-workspace) .heading p{font:14px/1.8 var(--sans)}
+:global(.reader-workspace) .panel{border:0;background:transparent;min-height:0;padding:0;max-width:none}
+:global(.reader-workspace) .cards{gap:12px}
+:global(.reader-workspace) .card{padding:22px 24px;border-radius:5px;background:var(--surface);transition:background-color 160ms ease,border-color 160ms ease}
+:global(.reader-workspace) .card h3{font-size:20px;font-weight:500}
+:global(.reader-workspace) .card>a{padding:10px 14px;min-height:40px;border-radius:4px;background:var(--paper)}
+:global(.reader-workspace) .card>a svg{transition:transform 150ms ease-out}
+:global(.reader-workspace) .status::before{width:7px;height:7px}
+:global(.reader-workspace) .controls{padding:12px 0 20px;border-bottom:1px solid var(--line)}
+:global(.reader-workspace) .sectionTitle{margin-bottom:10px}
+:global(.reader-workspace) .mobile{display:none!important}
+:global(.reader-workspace) .panel[data-expanded=false] :is(.cards,.controls,.pager,.sectionTitle){display:flex}
+:global(.reader-workspace) .panel[data-expanded=false] .cards{display:grid}
+@media(hover:hover) and (pointer:fine){:global(.reader-workspace) .card:hover{border-color:var(--reader-gold)}:global(.reader-workspace) .card>a:hover svg{transform:translateX(3px)}}
+@container reader-content (max-width:650px){:global(.reader-workspace) .heading h1{font-size:29px}:global(.reader-workspace) .card{grid-template-columns:minmax(0,1fr) auto;padding:18px}:global(.reader-workspace) .card>div:first-child{grid-column:1/-1}:global(.reader-workspace) .controls,:global(.reader-workspace) .sectionTitle{flex-wrap:wrap}}

@@ -162,3 +162,20 @@
 @media (min-width: 1201px) {
   :global([data-stl-page-layout="account"]) .workspace { grid-template-columns: 18% minmax(0, 1fr) minmax(0, 1fr); }
 }
+
+/* B notes: compact filters with a broad editor and source pane. */
+:global(.reader-workspace) .crumb{display:none}
+:global(.reader-workspace) .heading{padding:0 0 26px}
+:global(.reader-workspace) .heading h1{font:500 34px/1.4 var(--serif);letter-spacing:0}
+:global(.reader-workspace) .heading small{font:12px var(--sans)}
+:global(.reader-workspace) .workspace{grid-template-columns:155px minmax(0,1fr) minmax(0,1.05fr);border:1px solid var(--line);border-radius:6px;overflow:clip}
+:global(.reader-workspace) .filters{padding:18px 14px;background:var(--paper)}
+:global(.reader-workspace) .records{padding:18px;min-width:0}
+:global(.reader-workspace) .detail{padding:22px;background:var(--surface);min-width:0}
+:global(.reader-workspace) .list>li{border-radius:5px;transition:background-color 160ms ease,border-color 160ms ease}
+:global(.reader-workspace) .list>li[data-focused=true]{box-shadow:inset 3px 0 var(--reader-gold);background:var(--paper)}
+:global(.reader-workspace) .list>li[data-selected=true]{border-color:var(--reader-gold)}
+:global(.reader-workspace) .editor textarea{min-height:200px;line-height:1.9}
+:global(.reader-workspace) .detail blockquote{border-left:2px solid var(--reader-gold);padding:16px 20px;background:var(--paper)}
+@container reader-content (max-width:1000px){:global(.reader-workspace) .workspace{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}:global(.reader-workspace) .filters{grid-column:1/-1;display:flex;gap:16px;flex-wrap:wrap;align-items:start;border:0;border-bottom:1px solid var(--line)}:global(.reader-workspace) .filters>.sectionTitle{width:100%}:global(.reader-workspace) .filters>.choice{flex:1 1 150px}:global(.reader-workspace) .filters fieldset{margin:8px 0}}
+@container reader-content (max-width:650px){:global(.reader-workspace) .workspace{display:block}:global(.reader-workspace) .heading h1{font-size:27px}:global(.reader-workspace) .detail{border:0;border-top:1px solid var(--line);padding:20px 16px}:global(.reader-workspace) .records{padding:16px}:global(.reader-workspace) .filters>.choice{flex:1 1 120px}}

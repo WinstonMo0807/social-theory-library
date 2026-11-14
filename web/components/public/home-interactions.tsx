@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { ArrowRight, BookOpen, LoaderCircle, Search, Shuffle } from "lucide-react";
 import { usePublicSession } from "@/components/public-session-provider";
-import { ScholarPortrait } from "@/components/ui";
+import { BookCover, ScholarPortrait } from "@/components/ui";
 import { apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
 import type { Scholar, Work } from "@/lib/data";
 import type { ApiWork } from "@/lib/api/public-catalog";
@@ -54,9 +54,13 @@ export function HomeDiscoveryCards({ scholars, topics, sections, homeLayout }: {
 }
 
 export function HomeRandomBook({ works, section }: { works: Work[]; section?: HomeSection }) {
-  const [index, setIndex] = useState<number | null>(null);
-  const work = index === null ? null : works[index];
-  return <section className="stl4-home-random" aria-label="随机荐读"><div><h2>{work?.title || "遇见一本好书"}</h2><p aria-live="polite">{work ? `${work.author} · ${work.year}` : section?.status === "unavailable" ? section.message : works.length ? null : "暂无可推荐的馆藏。"}</p></div><button type="button" disabled={!works.length} onClick={() => setIndex(current => current === null ? Math.floor(Math.random() * works.length) : works.length < 2 ? 0 : (current + 1 + Math.floor(Math.random() * (works.length - 1))) % works.length)}><Shuffle size={16} />{work ? "再换一本" : "随机推荐"}</button>{work ? <Link href={`/works/${work.slug}`}>查看馆藏 <ArrowRight size={16} /></Link> : null}</section>;
+  const [index, setIndex] = useState(0);
+  const work = works[index % Math.max(1, works.length)];
+  if (!work) return <section className="home-recommendation-empty"><h2>遇见一本好书</h2><EmptyDiscovery section={section}>暂无可推荐的馆藏。</EmptyDiscovery></section>;
+  return <section className="home-recommendation-c" aria-labelledby="home-recommendation-title">
+    <div className="home-recommendation-art"><span aria-hidden="true"/><Link key={work.id} href={`/works/${work.slug}`} aria-label={`查看《${work.title}》`}><BookCover work={work} size="large"/></Link></div>
+    <div className="home-recommendation-copy"><h2 id="home-recommendation-title">遇见一本好书</h2><div className="home-recommendation-text" key={work.id} aria-live="polite" aria-atomic="true"><h3><Link href={`/works/${work.slug}`}>{work.title}</Link></h3><p className="home-recommendation-author">{[work.author, work.year].filter(Boolean).join(" · ")}</p>{work.summary ? <p className="home-recommendation-description">{work.summary}</p> : null}</div><div className="home-recommendation-actions"><Link href={`/works/${work.slug}`}>查看这本书 <ArrowRight size={17}/></Link><button type="button" disabled={works.length < 2} onClick={() => setIndex(current => works.length < 2 ? 0 : (current + 1 + Math.floor(Math.random() * (works.length - 1))) % works.length)}><Shuffle size={16}/>再换一本</button></div></div>
+  </section>;
 }
 
 type ProgressRow = { id: string; asset: string; current_page: number; progress_ratio: number; updated_at?: string; work: ApiWork | null };

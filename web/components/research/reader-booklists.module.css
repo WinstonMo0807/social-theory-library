@@ -24,3 +24,8 @@
   :global([data-stl-page-layout="account"]) .rows article { padding-block: 18px; }
   :global([data-stl-page-layout="account"]) .heading { gap: 16px; }
 }
+
+
+/* Approved B workspace. */
+:global(.reader-workspace) .breadcrumb{display:none}:global(.reader-workspace) .heading{margin:0 0 28px}:global(.reader-workspace) .heading h1{font:500 34px/1.4 var(--serif)}:global(.reader-workspace) .columns{grid-template-columns:minmax(0,1fr) 230px;gap:28px}:global(.reader-workspace) .sidebar{padding:20px;background:var(--paper);border-radius:5px}:global(.reader-workspace) .toolbar{padding:14px 0 20px}:global(.reader-workspace) .rows article{padding:22px 12px;border-radius:4px}:global(.reader-workspace) .rows article.selected{box-shadow:inset 3px 0 var(--reader-gold)}:global(.reader-workspace) .copy h2{font-weight:500;font-size:20px}:global(.reader-workspace) .listRows article{border:1px solid var(--line);border-radius:5px;padding:24px;margin-bottom:14px}:global(.reader-workspace) .notice{padding:14px 18px;border-radius:5px}:global(.reader-workspace) .empty{padding:42px 20px}
+@container reader-content (max-width:800px){:global(.reader-workspace) .columns{grid-template-columns:1fr}:global(.reader-workspace) .sidebar{padding:18px}:global(.reader-workspace) .heading{flex-wrap:wrap}:global(.reader-workspace) .heading h1{font-size:28px}}

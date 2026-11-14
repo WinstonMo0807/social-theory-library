@@ -148,8 +148,10 @@
 
 .results-toolbar button {
   display: grid;
-  width: 30px;
-  height: 28px;
+  min-width: 36px;
+  min-height: 36px;
+  width: auto;
+  padding: 5px 10px;
   border: 1px solid var(--line);
   cursor: pointer;
   place-items: center;
@@ -306,23 +308,27 @@
 
 .scholar-results > div {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: 11px;
 }
 
 .scholar-results .scholar-card {
-  grid-template-columns: 62px 1fr;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  padding: 18px;
   border: 1px solid var(--line);
 }
 
 .scholar-results .scholar-portrait {
-  width: 62px;
-  height: 100%;
+  width: 72px;
+  height: 96px;
 }
 
 .scholar-results .scholar-card > div {
-  padding: 8px 5px 8px 0;
+  padding: 0;
 }
+.scholar-results .scholar-card > div > p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 
 .directory-search-results .secondary-link-list {
   border-top: 1px solid var(--line);

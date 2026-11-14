@@ -106,3 +106,8 @@
 @media (max-width: 700px) {
   :global([data-stl-page-layout="account"]) .questionScope { padding: 16px; gap: 16px; }
 }
+
+
+/* Approved B workspace. */
+:global(.reader-workspace) .crumb{display:none}:global(.reader-workspace) .heading{margin:0 0 28px}:global(.reader-workspace) .heading h1{font:500 34px/1.4 var(--serif)}:global(.reader-workspace) .layout{grid-template-columns:210px minmax(0,1fr);gap:28px}:global(.reader-workspace) .timeline{padding:16px;background:var(--paper);border:1px solid var(--line);border-radius:5px}:global(.reader-workspace) .main{min-width:0}:global(.reader-workspace) .side{grid-column:2;padding:20px;border:1px solid var(--line);border-radius:5px}:global(.reader-workspace) .turnHeader{padding:20px;border:1px solid var(--line);border-radius:5px;background:var(--surface)}:global(.reader-workspace) .branchRow{border-radius:4px}:global(.reader-workspace) .notice{padding:14px 18px;border-radius:5px}
+@container reader-content (max-width:800px){:global(.reader-workspace) .layout{grid-template-columns:1fr}:global(.reader-workspace) .side{grid-column:auto}:global(.reader-workspace) .timeline{max-height:300px;overflow:auto}}

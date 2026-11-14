@@ -207,7 +207,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
   const section = searchParams.get("section");
   const archiveView = searchParams.get("view") === "archive" && !section;
   const [selectedTab, selectTab] = useState<{ section: string | null; label: string } | null>(null);
-  const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : section === "history" ? "阅读历史" : section === "saved" ? "收藏" : "概览";
+  const active = selectedTab?.section === section ? selectedTab.label : section === "lists" ? "书单" : section === "settings" ? "账户设置" : section === "history" ? "阅读历史" : section === "saved" ? "收藏" : section === "submissions" ? "荐书投稿" : "概览";
   const setActive = (label: string) => { if (label === "书单") router.push("/account/collections"); else if (["笔记", "书签", "高亮与划线"].includes(label)) router.push(`/account/notes?kind=${label === "书签" ? "bookmark" : label === "高亮与划线" ? "excerpt" : "note"}`); else selectTab({ section, label }); };
   const [profile, setProfile] = useState<{ display_name: string; email: string } | null>(null);
   const [readerData, setReaderData] = useState<ReaderData>(emptyData);
@@ -505,7 +505,7 @@ function ReaderCenterWorkspace({ bootstrap }: { bootstrap: ReturnType<typeof use
       <div className="account-content">
         <nav className="reader-center-breadcrumb" aria-label="面包屑"><Link href="/home">首页</Link><ChevronRight size={12} /><span>{archiveView?"我的资料与研究档案":"读者中心"}</span></nav>
         <header className="reader-center-heading">
-          <div><h1>{archiveView?"我的资料与研究档案":"读者中心"} {!archiveView?<small className="reader-center-private"><LockKeyhole size={15} />仅本人可见</small>:null}</h1><p>{archiveView?"快速回到自己的研究、笔记、计划、稿件和未完成问题。":"继续阅读，整理笔记与研究。"}</p></div>
+          <div><h1>{archiveView?"我的资料":active === "概览" ? "继续你的阅读与研究" : active} {!archiveView?<small className="reader-center-private"><LockKeyhole size={15} />仅本人可见</small>:null}</h1>{active === "概览" ? <p>{archiveView?"回到保存的问题、材料和笔记。":"从上次停下的地方继续。"}</p> : null}</div>
           {!archiveView?<div className="reader-center-heading-actions">
             <details data-action-menu className="reader-center-mobile-create"><summary><Plus size={17}/>新建研究 <ChevronRight size={15}/></summary><div data-menu-panel><Link href="/explore/opinions">新建研究</Link><Link href="/explore/original">新建笔记</Link><Link href="/account/plans">新建计划</Link></div></details>
             <div className="reader-center-create-links" aria-label="创建资料">
