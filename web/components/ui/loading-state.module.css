@@ -23,3 +23,9 @@
 .row > span { display:grid; gap:12px; width:min(640px,75%); }.row b { display:block; height:9px; background:var(--wash,#eeebe5); border-radius:2px; }.row b:first-child { width:62%; height:14px; }.row b:last-child { width:80%; }
 @media(prefers-reduced-motion:no-preference) { .pulse i { animation:breathe 1.5s ease-in-out infinite; }.row { animation:breathe 2.4s ease-in-out infinite; }.row:nth-child(2) { animation-delay:160ms; }.row:nth-child(3) { animation-delay:320ms; } }
 @keyframes breathe { 50% { opacity:.4; } }
+@media(prefers-reduced-motion:no-preference) {
+  .identity:has(> [data-variant="j"]) > .wordmark { animation:wordsOpen 4.8s ease infinite; }
+  .identity:has(> [data-variant="k"]) > .wordmark { animation:inkWord 4.8s ease infinite; }
+}
+@keyframes wordsOpen { 0%,10%,95%,100% { opacity:.4; transform:translateY(5px); } 38%,80% { opacity:1; transform:translateY(0); } }
+@keyframes inkWord { 0%,24%,98%,100% { opacity:0; transform:translateY(8px); filter:blur(2px); } 52%,80% { opacity:1; transform:translateY(0); filter:blur(0); } }

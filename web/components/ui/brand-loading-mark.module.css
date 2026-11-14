@@ -2,19 +2,33 @@
 .mark[data-size="large"] { width:clamp(112px,24cqi,192px); }
 .mark[data-size="hero"] { width:min(72cqi,46svh,440px); }
 .canvas { display:block; width:100%; height:auto; overflow:visible; }
-.lines,.bookmark,.frame { display:none; }
+.lines { display:none; }
 .mark[data-variant="l6"] .lines { display:block; }
 .ink { stroke:var(--ink,#242424); transform-box:fill-box; transform-origin:right center; }
 .gold { stroke:#cc9847; transform-box:fill-box; transform-origin:left center; }
-.mark[data-variant="l7"] .frame { display:block; color:#b4a48a; opacity:.65; }
-.mark[data-variant="l7"] .bookmark { display:block; fill:#cc9847; }
+.paper { position:absolute; inset:4% 8% 12%; perspective:1000px; isolation:isolate; }
+.leftPage,.rightPage { position:absolute; top:0; bottom:0; width:50%; box-sizing:border-box; border:1px solid var(--line,#d9cbb1); background:var(--surface,#fffdf7); box-shadow:0 8px 14px #5b4a2d12; }
+.leftPage { left:0; --direction:-1; transform-origin:right center; }
+.rightPage { right:0; --direction:1; transform-origin:left center; background:var(--wash,#f5eddf); }
+.spine { position:absolute; top:2%; bottom:2%; left:50%; width:1px; background:var(--line,#d9cbb1); }
+.reveal { position:absolute; inset:11% 12.5% 18%; display:grid; place-items:center; z-index:1; }
+.reveal svg { display:block; width:100%; height:auto; overflow:visible; }
+.rule { position:absolute; left:20%; right:20%; bottom:6%; height:1px; background:#c39950; }
 @media(prefers-reduced-motion:no-preference) {
   .mark[data-variant="l5"] .symbol { animation:pages 2.4s ease-in-out infinite; }
   .mark[data-variant="l6"] .ink { animation:ink 2s ease-in-out infinite; }
   .mark[data-variant="l6"] .gold { animation:ink 2s ease-in-out infinite; }
-  .mark[data-variant="l7"] .bookmark { animation:bookmark 3s ease-in-out infinite; }
+  .mark[data-variant="j"] :is(.leftPage,.rightPage) { animation:joinPages 4.8s cubic-bezier(.5,0,.25,1) infinite; }
+  .mark[data-variant="j"] .rightPage { animation-delay:110ms; animation-fill-mode:backwards; }
+  .mark[data-variant="j"] :is(.reveal,.spine) { animation:joinMark 4.8s ease infinite; }
+  .mark[data-variant="k"] .reveal { mask-image:linear-gradient(to top,#000 38%,transparent 62%); mask-size:100% 260%; animation:inkReveal 4.8s cubic-bezier(.4,0,.2,1) infinite; }
+  .mark[data-variant="k"] .rule { animation:inkRule 4.8s ease infinite; }
 }
 @keyframes pages { 0%,100% { opacity:.3; clip-path:inset(45% 0 0); } 50%,78% { opacity:1; clip-path:inset(0); } }
 @keyframes ink { 0%,100% { transform:scaleX(.25); opacity:.35; } 50%,65% { transform:scaleX(1); opacity:1; } }
-@keyframes bookmark { 0%,100% { transform:translateX(0); } 50%,65% { transform:translateX(132px); } }
+@keyframes joinPages { 0%,8%,96%,100% { transform:translateX(calc(var(--direction) * 61%)) translateY(7%) rotateY(calc(var(--direction) * -55deg)); opacity:.3; } 38%,72% { transform:translateX(0) translateY(0) rotateY(calc(var(--direction) * -7deg)); opacity:1; } }
+@keyframes joinMark { 0%,16%,95%,100% { opacity:0; transform:scale(.96); } 40%,76% { opacity:1; transform:scale(1); } }
+@keyframes inkReveal { 0%,6%,100% { mask-position:0 0; opacity:.3; } 45%,78% { mask-position:0 100%; opacity:1; } 96% { mask-position:0 100%; opacity:0; } }
+@keyframes inkRule { 0%,20%,100% { transform:scaleX(.05); opacity:0; } 45%,80% { transform:scaleX(1); opacity:1; } 96% { opacity:0; } }
 :global([data-reader-motion="reduced"]) .mark * { animation:none!important; }
+:global([data-reader-motion="reduced"]) .mark .reveal { mask-image:none; }
