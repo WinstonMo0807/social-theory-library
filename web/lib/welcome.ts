@@ -1,13 +1,13 @@
 import type { HomeViewData } from "@/components/public/home-public-view";
 
-export type WelcomeBook = { id: string; title: string; author: string; coverImage?: string; available?: boolean };
+export type WelcomeBook = { id: string; title: string; author: string; coverImage?: string; coverSources?: { url: string; width: number; height: number }[]; available?: boolean };
 
 // Reuse the public homepage projection; the film never runs searches or infers relationships.
 export function welcomeDiscovery(home: Pick<HomeViewData, "scholars" | "topics" | "works" | "issue" | "issues">) {
   const theories = [...new Map(home.works.flatMap(work => work.theories || []).map(theory => [theory.slug, theory])).values()].slice(0, 3);
   const issue = home.issues?.[0] || home.issue;
   return {
-    scholars: home.scholars.slice(0, 3).map(({ name, originalName, years, portrait, slug }) => ({ name, originalName, years, portrait, slug })),
+    scholars: home.scholars.slice(0, 3).map(({ name, originalName, years, portrait, portraitSources, slug }) => ({ name, originalName, years, portrait, portraitSources, slug })),
     theories,
     topics: home.topics.slice(0, 4).map(({ name, slug }) => ({ name, slug })),
     issue: issue ? { title: issue.title, introduction: issue.introduction, coverImage: issue.cover_url, href: `/recommendations/${issue.slug}` } : null,

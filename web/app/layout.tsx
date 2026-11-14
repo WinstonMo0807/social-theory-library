@@ -1,7 +1,7 @@
 import { ActionMenuBehavior } from "@/components/ui/action-menu-behavior";
 import type { Metadata } from "next";
 import Script from "next/script";
-import { preferencesBootstrapSource } from "@/lib/performance-assets";
+import { preferencesBootstrapCode } from "@/lib/preferences-bootstrap.generated";
 import "./globals.css";
 import "./editorial-v2.css";
 import "./editorial-workspaces.css";
@@ -69,7 +69,7 @@ export default async function RootLayout({
     <html lang="zh-CN" data-typeset="A" data-typeface="balanced" suppressHydrationWarning>
       <head>
         <Script src="/runtime-config.js" strategy="beforeInteractive" />
-        <Script src={preferencesBootstrapSource} strategy="beforeInteractive" />
+        <Script id="stl-display-preferences" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: preferencesBootstrapCode }} />
       </head>
       <body>
         <PublicSessionProvider>

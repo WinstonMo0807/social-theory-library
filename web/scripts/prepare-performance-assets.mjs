@@ -23,6 +23,7 @@ if(process.argv.includes('--update-manifest')){
 }else manifest=JSON.parse(await readFile(manifestFile,'utf8'));
 if(digest(preferences)!==manifest.preferencesSha256)throw Error('Preference source changed: run prepare-performance-assets.mjs --update-manifest.');
 await writeFile(path.join(target,`preferences-${manifest.preferencesSha256.slice(0,16)}.js`),preferences);
+await writeFile(path.join(root,'lib/preferences-bootstrap.generated.ts'), `// Generated from the existing appearance and typography bootstraps.\nexport const preferencesBootstrapCode = ${JSON.stringify(preferences).replaceAll('<','\\u003c')};\n`);
 // Use the server's immutable /assets/ path with actual byte hashes. Keep the
 // approved font faces, unicode ranges and originals byte-for-byte otherwise.
 let fontCss=await readFile(path.join(root,'styles/tokens/type-fonts.css'),'utf8');

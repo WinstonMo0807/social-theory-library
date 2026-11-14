@@ -20,6 +20,9 @@ test('the single blocking preference asset preserves both previous scripts, incl
  const before=[read('../public/appearance-init.js'),read('../public/typography-init.js')];
  for(const options of [{},{blocked:true},{local:{library_theme:'dark',library_text_size:'large',library_font_family:'serif'}},{local:{library_theme:'system'},darkSystem:true},{hash:'#typography=B&font=song'},{session:{'stl-typeset-20261029':'B','stl-font-trial':'wenkai'}},{local:{library_theme:'invalid'},hash:'#font=invalid'}])assert.deepEqual(boot([combined],options),boot(before,options));
  assert.equal(createHash('sha256').update(combined).digest('hex'),manifest.preferencesSha256);
+ const inlineModule=ts.transpileModule(read('../lib/preferences-bootstrap.generated.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+ const inline={};new Function('exports',inlineModule)(inline);
+ assert.equal(inline.preferencesBootstrapCode,combined);
 });
 
 test('immutable font copies preserve the approved font faces and runtime configuration remains fresh',()=>{

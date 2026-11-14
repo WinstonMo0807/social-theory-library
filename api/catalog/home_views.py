@@ -59,7 +59,7 @@ class HomeResponseSerializer(serializers.Serializer):
     sections = HomeSectionsSerializer()
 
 
-def _collection(queryset, serializer, snapshot, target_field, limit, *, supplement=False):
+def _collection(queryset, serializer, snapshot, target_field, limit, *, supplement=False, context=None):
     """Recheck current visibility even when a recommendation snapshot is older."""
     selected = []
     if snapshot is not None:
@@ -70,7 +70,7 @@ def _collection(queryset, serializer, snapshot, target_field, limit, *, suppleme
     if not selected or supplement:
         selected.extend(queryset.exclude(pk__in=[row.pk for row in selected])[:limit - len(selected)])
     # No request/user context: public cards must not gain staff-only file access.
-    return list(serializer(selected, many=True).data), source
+    return list(serializer(selected, many=True, context=context or {}).data), source
 
 
 def _home_issues():
@@ -92,6 +92,9 @@ class HomeView(APIView):
             "hot_searches": [], "sections": {}, "home_layout": None,
         }
         snapshots = None
+        # Only identical public work cards within this response are reused.
+        # The next GET creates a fresh map and rechecks publication/withdrawal.
+        public_context = {"_public_work_cards": {}}
 
         def recommended(placement):
             nonlocal snapshots
@@ -104,13 +107,14 @@ class HomeView(APIView):
             return _collection(
                 public_work_queryset().order_by("-editions__first_published_at", "id"),
                 WorkCardSerializer, recommended(placement), "work", limit,
+                context=public_context,
             )
 
         def scholars():
             return _collection(
                 public_scholar_queryset().order_by("person__preferred_name", "id"),
                 ScholarProfileSerializer, recommended("home_scholars"), "scholar", 6,
-                supplement=True,
+                supplement=True, context=public_context,
             )
 
         def topics():
@@ -123,7 +127,7 @@ class HomeView(APIView):
                     work_relations__work__in=public_work_queryset(),
                 ),
             )).order_by("name", "id")
-            return _collection(queryset, TopicSerializer, recommended("home_topics"), "topic", 5)
+            return _collection(queryset, TopicSerializer, recommended("home_topics"), "topic", 5, context=public_context)
 
         loaders = {
             "home_layout": (lambda: (public_layout(), "published_site_revision"), "首页编排"),

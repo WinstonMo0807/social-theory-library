@@ -497,6 +497,12 @@ class EditionCompactSerializer(serializers.ModelSerializer):
         edition = self.context.get("preview_edition")
         return edition is not None and edition.pk == obj.pk
 
+    def _public_snapshot(self, obj):
+        snapshot = getattr(self, "_representation_snapshot", None)
+        if snapshot is not None and snapshot[0] is obj:
+            return snapshot[1]
+        return {} if self._previewing(obj) else active_catalog_snapshot(obj)
+
     class Meta:
         model = Edition
         fields = (
@@ -540,14 +546,14 @@ class EditionCompactSerializer(serializers.ModelSerializer):
         if self.context.get("preview_edition") is not None:
             rows = journal_contents_snapshot(obj)
         else:
-            snapshot = active_catalog_snapshot(obj)
+            snapshot = self._public_snapshot(obj)
             rows = snapshot.get("journal_contents", []) if snapshot else []
         return public_journal_contents(rows)
 
     @extend_schema_field(PublicContributionSnapshotSerializer(many=True))
     def get_contributors(self, obj):
         from catalog.services.contribution_scope import public_contribution_scope
-        snapshot = {} if self._previewing(obj) else active_catalog_snapshot(obj)
+        snapshot = self._public_snapshot(obj)
         if snapshot:
             return [
                 {
@@ -582,7 +588,7 @@ class EditionCompactSerializer(serializers.ModelSerializer):
                 return None
             asset = queryset.filter(pk=values.get("reader_asset")).first()
             return AssetCompactSerializer(asset).data if asset else None
-        snapshot = active_catalog_snapshot(obj)
+        snapshot = self._public_snapshot(obj)
         if snapshot:
             asset_id = (snapshot.get("document") or {}).get("asset_id")
             queryset = queryset.filter(pk=asset_id) if asset_id else queryset.none()
@@ -592,8 +598,14 @@ class EditionCompactSerializer(serializers.ModelSerializer):
         return AssetCompactSerializer(asset).data if asset else None
 
     def to_representation(self, instance):
-        data = super().to_representation(instance)
+        # Resolve withdrawal-sensitive taxonomy once per edition representation.
+        # Discard it immediately: a later serialization must recheck current state.
         snapshot = {} if self._previewing(instance) else active_catalog_snapshot(instance)
+        self._representation_snapshot = (instance, snapshot)
+        try:
+            data = super().to_representation(instance)
+        finally:
+            del self._representation_snapshot
         values = snapshot.get("edition") if snapshot else None
         if not isinstance(values, dict):
             return data
@@ -885,10 +897,18 @@ class WorkCardSerializer(serializers.ModelSerializer):
         ]
 
     def to_representation(self, instance):
+        # Opt-in only for the public homepage's single read. Nested scholar/topic
+        # cards share this map; no user, model instance or process cache is used.
+        projections = self.context.get("_public_work_cards")
+        key = (type(self), instance.pk)
+        if projections is not None and key in projections:
+            return projections[key]
         data = super().to_representation(instance)
         snapshot = self._public_snapshot(instance)
         values = snapshot.get("work") if snapshot else None
         if not isinstance(values, dict):
+            if projections is not None:
+                projections[key] = data
             return data
         for field_name in (
             "document_type",
@@ -906,6 +926,8 @@ class WorkCardSerializer(serializers.ModelSerializer):
                 continue
             output_name = "translation_of" if field_name == "translation_of_id" else field_name
             data[output_name] = values[field_name]
+        if projections is not None:
+            projections[key] = data
         return data
 
 

@@ -46,7 +46,7 @@ function DiscoveryView({ kind, discovery, interactive = false }: { kind: "schola
   if (kind === "scholars") return <div className={styles.scholarRegister} inert={!interactive}>
     {discovery.scholars.length ? discovery.scholars.map(person => <Link href={`/scholars/${person.slug}`} className={styles.scholarEntry} key={person.slug}>
       <div><strong>{person.name}</strong>{person.originalName !== person.name ? <span>{person.originalName}</span> : null}{!person.portrait && person.years ? <span className={styles.scholarYears}>{person.years}</span> : null}</div>
-      {person.portrait ? <img src={person.portrait} alt="" width={62} height={70} /> : <ScholarPortraitFallback name={person.name} identity={person.slug} className={styles.scholarFallback}/>}
+      {person.portrait ? <img src={person.portrait} srcSet={person.portraitSources?.map(row => `${row.url} ${row.width}w`).join(", ")} sizes="62px" alt="" width={62} height={70} loading="lazy" decoding="async" /> : <ScholarPortraitFallback name={person.name} identity={person.slug} className={styles.scholarFallback}/>}
     </Link>) : <div className={styles.organizingView}><span>生平与著述</span><TextLines /><span>研究问题</span><TextLines /></div>}
     <div className={styles.registerFooter}><span>生平</span><span>著述</span><span>思想与论争</span></div>
   </div>;
@@ -119,7 +119,7 @@ function WorkflowDemo({ books, brandConfig, copy, history, discovery }: { books:
       <div className={`${styles.demoPanel} ${styles.resultsPanel}`}>
         <div className={styles.demoBar}><Search size={17} /><span>{copy.results}</span><span>原文节选</span></div>
         <div className={styles.demoResults}>{books.length ? books.map((entry, index) => <div className={styles.resultRow} key={entry.id} data-row={index}>
-          {entry.coverImage ? <img src={entry.coverImage} alt="" width={46} height={64} /> : <BookOpen size={28} />}
+          {entry.coverImage ? <img src={entry.coverImage} srcSet={entry.coverSources?.map(row => `${row.url} ${row.width}w`).join(", ")} sizes="46px" alt="" width={46} height={64} decoding="async" /> : <BookOpen size={28} />}
           <div><strong>{entry.title}</strong><span>{entry.author}</span><TextLines highlighted={index === 0} /></div><ArrowRight size={17} />
         </div>) : <div className={styles.emptyIllustration}><BookOpen size={32} /><span>查找文献与原文</span><TextLines highlighted /></div>}</div>
       </div>
