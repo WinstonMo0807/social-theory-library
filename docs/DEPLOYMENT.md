@@ -1,3 +1,9 @@
+## 2026-11-14 内容增长与查询性能版本
+
+2026-11-14T04:58:15Z仅替换API/Web。API为social-theory-library-api:4.0.0-20261114-growth-performance-api-r1（sha256:17204310147baffc36eb8409314fd0f396d577713380d10d59aeb50842047bea），Web为social-theory-library-web:4.0.0-20261114-growth-performance-web-r1（sha256:545f7734273217c8c30e7106a15693948e507b12d9e643c8144732c3ae9f5529）。10份API与3184运行文件哈希一致，105其他容器保持，无schema迁移或worker更新。
+
+发布目录/volume2/library/stl-releases/20261114-growth-performance-r1，活动compose指针仍20261107-r1/public/compose-command.json。当天完整备份重新验SHA，recovery/rollback.py带活动版本保护，仅回退API/Web保留数据。发布后沿既有服务为3张主图增6张小图，原件/主图SHA保持；回退不需删除小图。源代码07e53659，最终Git回执见tmp/growth-performance-20261114/final-receipt.json；公网与权限验证见stl4/GROWTH_PERFORMANCE_20261114.md。
+
 ## 2026-11-14 Cloudflare业务性能版本
 
 2026-11-14T04:24:06Z只替换API/Web。API镜像social-theory-library-api:4.0.0-20261114-cloudflare-business-api-r1（sha256:003be31e445555fe7c0d3e30ab967317705675931d25dcd3ee510806acb700f0）；Web为social-theory-library-web:4.0.0-20261114-cloudflare-business-web-r1（sha256:29a4a355ce500f523ffad433acb5750f6e64676244fe49fdca9aa848882d5163）。2份API源码与3184运行文件哈希一致，105其他容器保持。无schema迁移、媒体改写、worker更新、DNS或Cloudflare配置变更。
