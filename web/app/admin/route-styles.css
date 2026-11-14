@@ -1,4 +1,5 @@
 /* Route-owned styles, retaining their original cascade order. */
+@import "../../styles/features/admin/editorial-workspaces-current.css";
 @import "../../styles/layout/admin-shell.css";
 @import "../../styles/features/admin/dashboard.css";
 @import "../../styles/components/admin-page-title.css";

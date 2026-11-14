@@ -25,6 +25,7 @@
 .demo { position: relative; isolation: isolate; width: 100%; aspect-ratio: 2 / 1; min-height: 440px; margin: 0; border-radius: 12px; overflow: clip; background: color-mix(in srgb, var(--story-gold) 13%, var(--story-paper)); }
 .timeline { position: absolute; inset: 0; --film-duration: 42s; }
 .grain { position: absolute; inset: -8%; width: 116%; height: 116%; fill: var(--story-gold); opacity: .22; pointer-events: none; }
+.grain > svg { display: block; width: 100%; height: 100%; }
 .timeline .grain { animation: grainDrift var(--film-duration) ease-in-out infinite; }
 .demoFrame { position: absolute; top: 50%; left: 50%; width: 78%; height: 380px; border-radius: 8px; background: var(--story-sheet); box-shadow: 0 12px 32px #382d170c; border: 1px solid var(--story-line); transform: translate(-50%, -50%) scaleY(.58); animation: frameMorph var(--film-duration) cubic-bezier(.65,0,.35,1) infinite both; }
 .brandPanel { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; pointer-events: none; animation: brandScene var(--film-duration) var(--story-ease) infinite both; }
@@ -83,7 +84,7 @@
 .demo[data-playing="false"] .timeline, .demo[data-playing="false"] .timeline *, .demo[data-playing="false"] .timeline *::before { animation-play-state: paused; }
 .topicTrail { display: flex; justify-content: space-evenly; flex-wrap: wrap; gap: 24px 40px; padding: 58px 0 66px; font: 500 clamp(17px, 2vw, 23px)/1.5 var(--serif); }
 .philosophy { position: relative; overflow: hidden; background: #292820; color: #f7f4ee; padding: 82px max(48px, calc((100% - 1180px) / 2)); }
-.philosophy > div { position: relative; }
+.philosophy > div:not(.grain) { position: relative; }
 .philosophy .grain { left: 48%; width: 70%; opacity: .35; }
 .philosophy h2 { font-size: clamp(28px, 3.3vw, 46px); }
 .philosophy p { margin-top: 22px; color: #e0d7c7; max-width: 34em; }
@@ -407,3 +408,10 @@
  .researchFollowUp { padding: 12px; }
  .researchFollowUp > svg { right: 10px; bottom: 16px; width: 15px; }
 }
+
+/* Keep the original demo geometry while its off-screen code is deferred. */
+.demoMount { width: 100%; }
+.demoPlaceholder .brandPanel { animation: none; opacity: 1; }
+.demoPlaceholder .brandPanel :global(.brand-identity) { animation: none; }
+.demoPlaceholder .brandPanel :global(.brand-identity-symbol) { animation: none; }
+.demoPlaceholder .brandPanel :global(.brand-identity-words) { visibility: hidden; }

@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep the library tunnel on its verified optional egress path
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /volume2/library/stl-network/tunnel-egress.py
+TimeoutStartSec=45
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true

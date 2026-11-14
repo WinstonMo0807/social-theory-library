@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the library tunnel route and retain direct fallback
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=15s
+AccuracySec=1s
+Unit=stl-tunnel-egress.service
+
+[Install]
+WantedBy=timers.target

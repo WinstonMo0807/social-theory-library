@@ -4,15 +4,13 @@ import Script from "next/script";
 import { preferencesBootstrapCode } from "@/lib/preferences-bootstrap.generated";
 import { runtimeApiBootstrap } from "@/lib/runtime-api-bootstrap";
 import "./globals.css";
-import "./editorial-v2.css";
-import "./editorial-workspaces.css";
 import "../styles/features/home/home-v307.css";
 import "../styles/features/admin/evidence-curation.css";
 import "../styles/knowledge-v307.css";
 import "../styles/features/home/home-stl4.css";
 import "../styles/tokens/appearance.css";
 import "../styles/layout/brand-identity.css";
-import "../styles/tokens/type-fonts.generated.css";
+import { fontStylesheet } from "@/lib/font-stylesheet.generated";
 import "../styles/tokens/typography.css";
 import "../styles/tokens/typeface.css";
 import "../styles/layout/site-masthead.css";
@@ -70,6 +68,7 @@ export default async function RootLayout({
   return (
     <html lang="zh-CN" data-typeset="A" data-typeface="balanced" suppressHydrationWarning>
       <head>
+        <link rel="stylesheet" href={fontStylesheet} precedence="fonts" />
         {runtimeBootstrap === null ? <Script src="/runtime-config.js" strategy="beforeInteractive" /> :
           <Script id="stl-runtime-config" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: runtimeBootstrap }} />}
         <Script id="stl-display-preferences" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: preferencesBootstrapCode }} />

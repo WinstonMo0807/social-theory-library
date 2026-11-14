@@ -8,8 +8,12 @@ const serverManifest=JSON.parse(await readFile(path.join(client,'../server/.vite
 const main=[...new Set(Object.values(serverManifest).filter(entry=>entry.isEntry).flatMap(entry=>entry.css??[]))];
 assert.equal(main.length,1,'Expected one shared stylesheet; review the budget after a bundler change.');
 const css=await readFile(path.join(client,main[0])),compressed=await readFile(path.join(client,main[0]+'.br'));
-assert.ok(css.length<=1_270_000,`Shared CSS grew to ${css.length} bytes; check route ownership.`);
-assert.ok(compressed.length<=160_000,`Shared Brotli CSS grew to ${compressed.length} bytes.`);
+assert.ok(css.length<=800_000,`Shared CSS grew to ${css.length} bytes; check route ownership.`);
+assert.ok(compressed.length<=105_000,`Shared Brotli CSS grew to ${compressed.length} bytes.`);
+const fontModule=await readFile(path.join(client,'../../lib/font-stylesheet.generated.ts'),'utf8');
+const fontPath=fontModule.match(/"(\/assets\/performance\/font-faces-[a-f0-9]+\.css)"/)[1];
+const fonts=await readFile(path.join(client,fontPath.slice(1)+'.br'));
+assert.ok(compressed.length+fonts.length<=128_000,'Shared CSS plus font definitions exceeded the combined delivery budget.');
 let verified=0;
 async function verify(directory){
  for(const entry of await readdir(directory,{withFileTypes:true})){
@@ -23,4 +27,4 @@ async function verify(directory){
  }
 }
 await verify(client);
-console.log(JSON.stringify({sharedCss:css.length,brotliCss:compressed.length,verifiedVariants:verified,budgets:'passed'}));
+console.log(JSON.stringify({sharedCss:css.length,brotliCss:compressed.length,fontDefinitionsBrotli:fonts.length,combinedBrotli:compressed.length+fonts.length,verifiedVariants:verified,budgets:'passed'}));

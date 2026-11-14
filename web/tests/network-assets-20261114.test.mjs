@@ -36,6 +36,10 @@ test('immutable font copies preserve the approved font faces and runtime configu
   css=css.replaceAll(src,target);
  }
  assert.equal(read('../styles/tokens/type-fonts.generated.css'),css);
+ const fontModule=ts.transpileModule(read('../lib/font-stylesheet.generated.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+ const fontExport={};new Function('exports',fontModule)(fontExport);
+ assert.equal(read('../public'+fontExport.fontStylesheet),css,'The independent stylesheet preserves every face and unicode range');
+ assert.match(fontExport.fontStylesheet,new RegExp(createHash('sha256').update(css).digest('hex').slice(0,24)));
  const code=ts.transpileModule(read('../next.config.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
  const exported={};new Function('exports',code)(exported);
  return exported.default.headers().then(rules=>{

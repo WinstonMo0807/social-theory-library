@@ -26,7 +26,7 @@
 .brand > button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
 .brand > button:hover { background: var(--paper, #f7f4ee); color: var(--ink); }
 .copy h2 { margin: 0 0 12px; font: 600 calc(1.25rem + var(--stl-readable-step, 0rem))/1.5 var(--content-text, var(--sans)); text-wrap: balance; overflow-wrap: anywhere; }
-.copy p { margin: 0; color: var(--muted, #5c6267); font: inherit; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dialog .copy p { margin: 0; color: var(--muted, #5c6267); font: inherit; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
 .card > ul { margin: 16px 0 0; padding-left: 22px; line-height: 1.8; overflow-wrap: anywhere; }
 .card > label { display: grid; gap: 8px; margin-top: 22px; line-height: 1.6; }
 .card textarea { width: 100%; min-height: 104px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper, #f7f4ee); color: inherit; font: inherit; line-height: 1.75; resize: vertical; caret-color: var(--ink); }
