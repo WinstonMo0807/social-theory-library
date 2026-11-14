@@ -44,18 +44,18 @@ function StoryScene({ chapter, books }: { chapter: number; books: StoryBook[] })
 
 function DiscoveryView({ kind, discovery, interactive = false }: { kind: "scholars" | "theories" | "topics" | "issue"; discovery: WelcomeDiscovery; interactive?: boolean }) {
   if (kind === "scholars") return <div className={styles.scholarRegister} inert={!interactive}>
-    {discovery.scholars.length ? discovery.scholars.map(person => <Link href={`/scholars/${person.slug}`} className={styles.scholarEntry} key={person.slug}>
+    {discovery.scholars.length ? discovery.scholars.map(person => <Link prefetch={false} href={`/scholars/${person.slug}`} className={styles.scholarEntry} key={person.slug}>
       <div><strong>{person.name}</strong>{person.originalName !== person.name ? <span>{person.originalName}</span> : null}{!person.portrait && person.years ? <span className={styles.scholarYears}>{person.years}</span> : null}</div>
       {person.portrait ? <img src={person.portrait} srcSet={person.portraitSources?.map(row => `${row.url} ${row.width}w`).join(", ")} sizes="62px" alt="" width={62} height={70} loading="lazy" decoding="async" /> : <ScholarPortraitFallback name={person.name} identity={person.slug} className={styles.scholarFallback}/>}
     </Link>) : <div className={styles.organizingView}><span>生平与著述</span><TextLines /><span>研究问题</span><TextLines /></div>}
     <div className={styles.registerFooter}><span>生平</span><span>著述</span><span>思想与论争</span></div>
   </div>;
   if (kind === "theories") return <div className={styles.theoryRegister} inert={!interactive}>
-    <div className={styles.theoryIndex}>{discovery.theories.length ? discovery.theories.map(theory => <Link href={`/theories/nodes/${theory.slug}`} key={theory.slug}><span className={styles.indexMark} /><strong>{theory.name}</strong><ArrowRight size={17} /></Link>) : <div><span className={styles.indexMark} /><strong>理论传统</strong><ArrowRight size={17} /></div>}</div>
+    <div className={styles.theoryIndex}>{discovery.theories.length ? discovery.theories.map(theory => <Link prefetch={false} href={`/theories/nodes/${theory.slug}`} key={theory.slug}><span className={styles.indexMark} /><strong>{theory.name}</strong><ArrowRight size={17} /></Link>) : <div><span className={styles.indexMark} /><strong>理论传统</strong><ArrowRight size={17} /></div>}</div>
     <div className={styles.conceptIndex}><span>核心概念</span><span>代表论著</span><span>不同解释</span></div>
   </div>;
-  if (kind === "topics") return <div className={styles.topicIndex} inert={!interactive}>{discovery.topics.length ? discovery.topics.map(topic => <Link href={`/topics/${topic.slug}`} key={topic.slug}><span>{topic.name}</span><ArrowRight size={18} /></Link>) : <div><span>从关心的问题出发</span><ArrowRight size={18} /></div>}</div>;
-  return <Link href={discovery.issue?.href || '/recommendations'} className={styles.issueFeature} inert={!interactive}>
+  if (kind === "topics") return <div className={styles.topicIndex} inert={!interactive}>{discovery.topics.length ? discovery.topics.map(topic => <Link prefetch={false} href={`/topics/${topic.slug}`} key={topic.slug}><span>{topic.name}</span><ArrowRight size={18} /></Link>) : <div><span>从关心的问题出发</span><ArrowRight size={18} /></div>}</div>;
+  return <Link prefetch={false} href={discovery.issue?.href || '/recommendations'} className={styles.issueFeature} inert={!interactive}>
     <img src={discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp"} {...(discovery.issue?.coverSources?.length ? { srcSet: discovery.issue.coverSources.map(row => `${row.url} ${row.width}w`).join(", "), sizes: "(max-width: 760px) 100vw, 50vw" } : editorialImageSources(discovery.issue?.coverImage || "/editorial/generated-20261030/editorial.webp", "(max-width: 760px) 100vw, 50vw"))} alt="" width={720} height={460} loading="lazy" decoding="async" />
     <div><strong>{discovery.issue?.title || "跟随策划，展开阅读"}</strong>{discovery.issue?.introduction ? <p>{discovery.issue.introduction}</p> : null}<ArrowRight size={21} /></div>
   </Link>;
@@ -150,26 +150,26 @@ export function HomeFeatureStory({ books, closingImage, brandConfig, compareCopy
         {compareCopy ? <div className={styles.copyOptions} id="welcome-copy" role="group" aria-label="欢迎卡片文案方案">{copyOptions.map((option, index) => <button type="button" key={option.id} aria-pressed={copyIndex === index} onClick={() => setCopyIndex(index)}>{option.label}</button>)}</div> : null}
         <h1 id="welcome-title">{copy.title.map((line, index) => <span key={index}>{line}</span>)}</h1><p>{copy.lead}</p><a data-library-entry href="/home" className={styles.primary}>{texts.enter_label} <ArrowRight size={21} aria-hidden="true" /></a></div>
       <WorkflowDemo books={books} brandConfig={brandConfig} copy={copy} history={texts} discovery={discovery} />
-      <nav className={styles.topicTrail} aria-label="探索书库"><Link href="/scholars">学者</Link><Link href="/theories">理论流派</Link><Link href="/topics">主题</Link><Link href="/explore/original">原文</Link><Link href="/recommendations">特别策划</Link></nav>
+      <nav className={styles.topicTrail} aria-label="探索书库"><Link prefetch={false} href="/scholars">学者</Link><Link prefetch={false} href="/theories">理论流派</Link><Link prefetch={false} href="/topics">主题</Link><Link prefetch={false} href="/explore/original">原文</Link><Link prefetch={false} href="/recommendations">特别策划</Link></nav>
     </section>
     <section className={styles.philosophy} aria-labelledby="welcome-philosophy"><GrainField /><div><h2 id="welcome-philosophy">{texts.philosophy_title}</h2><p>{texts.philosophy_body}</p></div></section>
     <section className={styles.collections} aria-label="认识书库">
       <header className={styles.sectionHeading}><h2>{texts.discovery_theory_title}</h2><p>{texts.discovery_theory_body}</p></header>
-      <div className={styles.collectionPair}>{([['scholars', '/scholars', texts.history_scholars], ['theories', '/theories', texts.history_theories]] as const).map(([kind, href, title]) => <article key={kind}><Link href={href} className={styles.collectionHeading}><h3>{title}</h3><ArrowRight size={21} /></Link><DiscoveryView kind={kind} discovery={discovery} interactive /></article>)}</div>
+      <div className={styles.collectionPair}>{([['scholars', '/scholars', texts.history_scholars], ['theories', '/theories', texts.history_theories]] as const).map(([kind, href, title]) => <article key={kind}><Link prefetch={false} href={href} className={styles.collectionHeading}><h3>{title}</h3><ArrowRight size={21} /></Link><DiscoveryView kind={kind} discovery={discovery} interactive /></article>)}</div>
       <header className={styles.sectionHeading}><h2>{texts.discovery_issue_title}</h2><p>{texts.discovery_issue_body}</p></header>
-      <div className={styles.collectionPair}><article><Link href="/topics" className={styles.collectionHeading}><h3>主题</h3><ArrowRight size={21} /></Link><DiscoveryView kind="topics" discovery={discovery} interactive /></article><article><Link href="/recommendations" className={styles.collectionHeading}><h3>特别策划</h3><ArrowRight size={21} /></Link><DiscoveryView kind="issue" discovery={discovery} interactive /></article></div>
+      <div className={styles.collectionPair}><article><Link prefetch={false} href="/topics" className={styles.collectionHeading}><h3>主题</h3><ArrowRight size={21} /></Link><DiscoveryView kind="topics" discovery={discovery} interactive /></article><article><Link prefetch={false} href="/recommendations" className={styles.collectionHeading}><h3>特别策划</h3><ArrowRight size={21} /></Link><DiscoveryView kind="issue" discovery={discovery} interactive /></article></div>
     </section>
     <section className={styles.features} id="library-features" aria-labelledby="welcome-features">
       <header className={styles.sectionHeading}><h2 id="welcome-features">{texts.features_title}</h2><p>{texts.features_body}</p></header>
       {chapters.map((chapter, index) => <article className={styles.featureRow} key={chapter.href} aria-labelledby={`welcome-feature-${index}`}>
-        <div className={styles.featureCopy}><h3 id={`welcome-feature-${index}`}>{chapter.title}</h3><p>{chapter.text}</p><Link href={chapter.href} className={styles.textLink}>{chapter.action} <ArrowRight size={18} aria-hidden="true" /></Link></div>
+        <div className={styles.featureCopy}><h3 id={`welcome-feature-${index}`}>{chapter.title}</h3><p>{chapter.text}</p><Link prefetch={false} href={chapter.href} className={styles.textLink}>{chapter.action} <ArrowRight size={18} aria-hidden="true" /></Link></div>
         <div className={styles.visual}><StoryScene chapter={index} books={books} /></div>
       </article>)}
     </section>
     <section className={styles.principles} aria-labelledby="welcome-principles"><div className={styles.sectionHeading}><h2 id="welcome-principles">{texts.principles_title}</h2></div><div className={styles.principleGrid}>
       <div><h3>{texts.principle_source_title}</h3><p>{texts.principle_source_body}</p></div><div><h3>{texts.principle_context_title}</h3><p>{texts.principle_context_body}</p></div><div><h3>{texts.principle_debate_title}</h3><p>{texts.principle_debate_body}</p></div><div><h3>{texts.principle_judgment_title}</h3><p>{texts.principle_judgment_body}</p></div>
     </div></section>
-    <section className={styles.invitation} aria-labelledby="welcome-invitation"><div><h2 id="welcome-invitation">{texts.invitation_title}</h2><p>{texts.invitation_body}</p><Link href="/explore" className={styles.textLink}>浏览馆藏 <ArrowRight size={18} aria-hidden="true" /></Link></div><img src={closingImage} {...editorialImageSources(closingImage, "(max-width: 760px) 100vw, 50vw")} alt="" width={1536} height={1024} loading="lazy" decoding="async" /></section>
+    <section className={styles.invitation} aria-labelledby="welcome-invitation"><div><h2 id="welcome-invitation">{texts.invitation_title}</h2><p>{texts.invitation_body}</p><Link prefetch={false} href="/explore" className={styles.textLink}>浏览馆藏 <ArrowRight size={18} aria-hidden="true" /></Link></div><img src={closingImage} {...editorialImageSources(closingImage, "(max-width: 760px) 100vw, 50vw")} alt="" width={1536} height={1024} loading="lazy" decoding="async" /></section>
     <section className={styles.faq} aria-labelledby="welcome-faq"><h2 id="welcome-faq">{texts.faq_title}</h2><div>
       <section data-content-section><header data-section-heading>{texts.faq_read_title}<Plus size={20} aria-hidden="true" /></header><p>{texts.faq_read_body}</p></section>
       <section data-content-section><header data-section-heading>{texts.faq_cite_title}<Plus size={20} aria-hidden="true" /></header><p>{texts.faq_cite_body}</p></section>
