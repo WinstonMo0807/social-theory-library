@@ -1,3 +1,9 @@
+## 2026-11-15 J/K 动效Web发布
+
+2026-11-15T02:25:22+08:00上线social-theory-library-web:4.0.0-20261115-brand-jk-web-r1，sha256:3a765e1d5a469bd3ba25671f7f634073a47822d94ff1b3e3368a83858746c003。源码2f00473a8f6ec5c98b14bc06657f2b9a42ab1400，父版本c9ac4fb0。发布目录/volume2/library/stl-releases/20261115-brand-jk-r1；活动compose-command.json沿原位置，在最新香港回源/CSS发布的参数后仅附加本轮Web image overlay。API仍17204310147b，隧道、DNS、edge配置及其他容器保持。3210运行文件哈希与107非Web容器核对通过。
+
+恢复入口为本轮recovery/rollback.py，回到ceae47ee0972并保留现有网络overlay；脚本检查活动指针和Web镜像，拒绝覆盖更新的发布。源码、镜像、配置与完整数据库备份证明均保留。本轮没有数据库/schema/后台任务变更。
+
 ## 2026-11-14 香港隧道与CSS/字体/演示优化
 
 网络20261114-edge-egress-r3于19:34:17生效，Web20261114-edge-css-r1于19:38:38生效。当前Web sha256:ceae47ee09725e800057485ce50c106f80e916c4216c17ca11b27cdcb8d906c3，API仍17204310147b。活动compose-command.json沿原位置，保留前一轮library-reader-r3和新增网络overlay；107其他容器保护、3210文件哈希及备份归档全量校验通过。Nginx配置SHA仍6b38fbebda02，仅reload重解析Web地址。
