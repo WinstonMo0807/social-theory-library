@@ -22,7 +22,7 @@ from catalog.services.discovery_sources import fingerprint, source_header, sourc
 pytestmark = pytest.mark.django_db
 
 
-def fixture_source(count=7):
+def fixture_source(count=7, *, publication_year=2020):
     work = Work.objects.create(title="正式检索材料", document_type="book")
     edition = Edition.objects.create(work=work, state="published")
     asset = Asset.objects.create(edition=edition, kind="normalized", status="ready", validation_status="valid",
@@ -38,7 +38,7 @@ def fixture_source(count=7):
     revision = CatalogPublicationRevision.objects.create(edition=edition, revision=1, status="active",
         metadata_ready=True, fulltext_ready=True, reader_asset=asset, document_revision=document,
         snapshot={"work": {"title": work.title, "document_type": "book", "language": "zh"},
-                  "edition": {"publication_year": 2020}}, content_fingerprint=uuid4().hex)
+                  "edition": {"publication_year": publication_year}}, content_fingerprint=uuid4().hex)
     edition.active_catalog_revision = revision
     edition.save(update_fields=["active_catalog_revision"])
     generation = SemanticIndexVersion.discovery_objects.create(uid=f"discovery-test-{uuid4().hex}",
@@ -120,9 +120,11 @@ def test_anonymous_capability_and_owner_are_not_interchangeable(reader_user, adm
 
 
 def test_cursor_is_bound_to_session():
-    _, _, _, docs = fixture_source(4)
+    _, _, _, docs = fixture_source(7)
     first, other = make_session(docs), make_session(docs)
-    cursor = sessions.serialize_session(first, ["public"])["next_cursor"]
+    page = sessions.serialize_session(first, ["public"])
+    assert len(page["passages"]) == 6
+    cursor = page["next_cursor"]
     with pytest.raises(ValidationError):
         sessions.serialize_session(other, ["public"], cursor=cursor)
 

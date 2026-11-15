@@ -1,6 +1,8 @@
 import { ApiRequestError, apiRequest, getServerSessionCredential } from "../api";
 import type { DiscoveryContext, DiscoveryCoverage, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "./discovery.types";
 
+export const DEFAULT_DISCOVERY_PASSAGES = 6;
+
 export function canKeepDiscoveryContext(item: DiscoveryPassage, next: DiscoverySearch) {
   return !next.source_changed && next.passages.some(row => row.id === item.id && row.asset_id === item.asset_id &&
     row.document_revision_id === item.document_revision_id && row.excerpt === item.excerpt);

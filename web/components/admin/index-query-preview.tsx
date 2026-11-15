@@ -1,4 +1,6 @@
 "use client";
+
+import { DEFAULT_DISCOVERY_PASSAGES } from "@/lib/api/discovery.client";
 import { SourceText } from "@/components/source-text";
 
 
@@ -26,7 +28,7 @@ const states: Record<string, string> = { queued: "等待检索", running: "正�
 const localHref = (value: string) => value.startsWith("/") && !value.startsWith("//") && !/[\\\u0000-\u001f\u007f]/.test(value) ? value : "";
 
 export function IndexQueryPreview({ owner, workId="", editionId="", onSelect }: { owner: string; workId?: string; editionId?: string; onSelect?: (id:string)=>void }) {
-  const [query, setQuery] = useState(""), [session, setSession] = useState(""), [limit, setLimit] = useState(3), [tab, setTab] = useState("passages"), [notice, setNotice] = useState("");
+  const [query, setQuery] = useState(""), [session, setSession] = useState(""), [limit, setLimit] = useState(DEFAULT_DISCOVERY_PASSAGES), [tab, setTab] = useState("passages"), [notice, setNotice] = useState("");
   const [advanced,setAdvanced]=useState(false),[kind,setKind]=useState(""),[language,setLanguage]=useState(""),[yearMin,setYearMin]=useState(""),[yearMax,setYearMax]=useState(""),[scope,setScope]=useState<NonNullable<QueryFilters["search_scope"]>>("all");
   const filters:QueryFilters={...(scope!=="all"?{search_scope:scope}:{}),...(kind?{document_types:[kind as NonNullable<QueryFilters["document_types"]>[number]]}:{}),...(language?{languages:[language as NonNullable<QueryFilters["languages"]>[number]]}:{}),...(yearMin?{year_min:Number(yearMin)}:{}),...(yearMax?{year_max:Number(yearMax)}:{})};
   const invalidYears=Boolean(yearMin&&yearMax&&Number(yearMin)>Number(yearMax));
@@ -43,7 +45,7 @@ export function IndexQueryPreview({ owner, workId="", editionId="", onSelect }: 
   function accept(receipt: Receipt | null) {
     if (!receipt) return;
     if (receipt.state === "cancelled") { setNotice("未执行的原查询请求已停止。"); return; }
-    if (receipt.session_id) { setSession(receipt.session_id); setLimit(3); setNotice(""); }
+    if (receipt.session_id) { setSession(receipt.session_id); setLimit(DEFAULT_DISCOVERY_PASSAGES); setNotice(""); }
   }
   async function act(action: "cancel" | "retry") {
     if (!data) return;

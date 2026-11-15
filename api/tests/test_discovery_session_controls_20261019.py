@@ -1,9 +1,9 @@
-"""PDF 30–32 session controls; synthetic cases for unified acceptance, not run yet."""
+"""Session display controls using immutable synthetic publication fixtures."""
 from copy import deepcopy
 
 import pytest
 from rest_framework.exceptions import ValidationError
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from catalog.discovery_views import DiscoverySearchDetailView
 from catalog.models import Asset, EvidenceSpan
@@ -14,12 +14,7 @@ pytestmark = pytest.mark.django_db
 
 
 def source_with_year(year, count=1):
-    edition, asset, spans, documents = fixture_source(count)
-    revision = edition.active_catalog_revision
-    revision.snapshot = {**revision.snapshot,
-                         "edition": {**revision.snapshot["edition"], "publication_year": year}}
-    revision.save(update_fields=["snapshot"])
-    return asset, spans, documents
+    return fixture_source(count, publication_year=year)[1:]
 
 
 @pytest.mark.parametrize("sort,order", [
@@ -149,12 +144,13 @@ def test_additions_are_unique_current_sources_and_reset_for_next_attempt(monkeyp
     assert all(not row["is_new"] for row in after["passages"])
 
 
-def test_detail_get_accepts_sort_without_changing_task_identity():
+def test_detail_get_accepts_sort_without_changing_task_identity(admin_user):
     _, _, older = source_with_year(1990)
     _, _, newer = source_with_year(2020)
-    session = make_session([*older, *newer])
+    session = make_session([*older, *newer], owner=admin_user)
     request = APIRequestFactory().get("/api/catalog/discovery-search/", {"sort": "year_desc", "limit": "1"},
                                      HTTP_X_DISCOVERY_TOKEN="test-capability")
+    force_authenticate(request, user=admin_user)
     response = DiscoverySearchDetailView.as_view()(request, session_id=session.pk)
     assert response.status_code == 200
     assert response.data["sort"] == "year_desc"

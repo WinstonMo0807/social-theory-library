@@ -17,7 +17,7 @@ import { ArrowRight, ChevronDown, FileSearch, LayoutGrid, List, LoaderCircle, Qu
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { ApiRequestError, apiRequest, getServerSessionCredential, normalizePublicResourceUrl, subscribeToSessionChanges } from "@/lib/api";
-import { actOnDiscoverySearch, canKeepDiscoveryContext, canRetryDiscoveryRead, createDiscoverySearch, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
+import { DEFAULT_DISCOVERY_PASSAGES, actOnDiscoverySearch, canKeepDiscoveryContext, canRetryDiscoveryRead, createDiscoverySearch, readDiscoveryContext, readDiscoverySearch, removeDiscoveryDocument } from "@/lib/api/discovery.client";
 import type { DiscoveryContext, DiscoveryCuration, DiscoveryEntity, DiscoveryFilters, DiscoveryPassage, DiscoverySearch, DiscoverySort } from "@/lib/api/discovery.types";
 import type { SearchPayload } from "@/lib/api/search.types";
 import { CollectionLink } from "./collection-link";
@@ -79,7 +79,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
   const [facetBusy, setFacetBusy] = useState(false);
   const resultRef = useRef<DiscoverySearch | null>(null);
   const tokenRef = useRef("");
-  const shownRef = useRef(3);
+  const shownRef = useRef(DEFAULT_DISCOVERY_PASSAGES);
   const sortRef = useRef<DiscoverySort>("relevance");
   const actionRef = useRef("");
   const requestRevision = useRef(0);
@@ -243,11 +243,11 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
     const revision = ++requestRevision.current;
     setBusy(action); setError("");
     try {
-      let limit = action === "sort" ? 3 : shownRef.current;
+      let limit = action === "sort" ? DEFAULT_DISCOVERY_PASSAGES : shownRef.current;
       const sort = nextSort || sortRef.current;
       if (action === "more") {
         if (!current.next_cursor) return;
-        const page = await readDiscoverySearch(current.id, tokenRef.current, { cursor: current.next_cursor, limit: 3, sort });
+        const page = await readDiscoverySearch(current.id, tokenRef.current, { cursor: current.next_cursor, limit: DEFAULT_DISCOVERY_PASSAGES, sort });
         limit = Math.min(440, shownRef.current + page.passages.length);
       } else if (action === "expand" || action === "cancel" || action === "retry") {
         await actOnDiscoverySearch(current.id, tokenRef.current, action, current.generation ?? current.task_progress?.generation);
@@ -279,7 +279,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
       const next = await pending;
       if (revision !== requestRevision.current) return;
       createRef.current = pending;
-      tokenRef.current = ""; shownRef.current = 3; sortRef.current = "relevance";
+      tokenRef.current = ""; shownRef.current = DEFAULT_DISCOVERY_PASSAGES; sortRef.current = "relevance";
       contextRevision.current += 1; contextItemRef.current = null;
       setContextItem(null); setContext(null); setSelectedId(""); setSummaryOpen(false);
       pollStarted.current = Date.now(); setPollPaused(false);
@@ -404,7 +404,7 @@ export function DiscoverySearchWorkspace({ initialQuery, initialFilters, legacyR
         {(result?.added_count || 0) > 0 ? <p className={styles.resultStatus} role="status">{t("本轮新增 {count} 段可阅读原文", { count: result?.added_count || 0 })}</p> : null}
         <div className={`${styles.cardList} ${view === "grid" ? styles.resultGrid : ""}`}>{result?.passages.map((item, index) => <EvidenceResultCard key={item.id} item={item} index={index} selected={selected?.id === item.id && !summaryHidden} fresh={item.is_new === true} returnTo={returnTo(item)} onSelect={() => selectEvidence(item)} onContext={() => void openContext(item)} onFollowup={()=>setResearchSeed({ref:asResearchMaterial(item),serial:Date.now()})} />)}</div>
         {!result?.passages.length && !isRunning && busy !== "create" ? <section className={styles.empty}><FileSearch size={29} aria-hidden="true" /><h3>{!initialQuery ? t("从你关心的问题开始") : result?.status === "failed" ? t("原文通道暂未完成") : result?.status === "canceled" ? t("本次检索已取消") : error ? t("还没有可显示的结果") : t("本次未找到可展示的原文")}</h3><p>{!initialQuery ? t("输入概念、研究问题或近似引句，查找馆内相关原文。") : t("可以调整关键词、减少筛选条件，或扩大检索范围。")}</p>{initialQuery ? <Link href={`/explore/original?context=global&q=${encodeURIComponent(initialQuery)}`} className="button secondary">{t("转到原文检索")}<ArrowRight size={14} /></Link> : null}</section> : null}
-        {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? t("正在读取") : t("查看更多材料")}<ChevronDown size={15} /></button> : null}{(result.can_retry || result.status === "failed" || result.status === "partial") && !isRunning ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("retry")}>{busy === "retry" ? t("正在重试") : result.status === "canceled" ? t("基于保留材料继续检索") : t("重试当前范围")}<RefreshCw size={14} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? t("正在提交") : t("扩大研究范围")}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />{t("刷新本次结果")}</button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void restart()}>{busy === "restart" ? t("正在重新开始") : t("重新开始检索")}</button> : null}</div><p>{t("默认展示三段。查看更多读取本次已找到的材料；扩大研究范围会继续查找材料，已找到的原文会保留。")}</p></footer> : null}
+        {result ? <footer className={styles.more}><div className={styles.actions}>{result.next_cursor ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("more")}>{busy === "more" ? t("正在读取") : t("查看更多材料")}<ChevronDown size={15} /></button> : null}{(result.can_retry || result.status === "failed" || result.status === "partial") && !isRunning ? <button type="button" className="button secondary" disabled={Boolean(busy)} onClick={() => void sessionAction("retry")}>{busy === "retry" ? t("正在重试") : result.status === "canceled" ? t("基于保留材料继续检索") : t("重试当前范围")}<RefreshCw size={14} /></button> : null}{result.can_expand && !isRunning ? <button type="button" className="button" disabled={Boolean(busy)} onClick={() => void sessionAction("expand")}>{busy === "expand" ? t("正在提交") : t("扩大研究范围")}<Search size={14} /></button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void sessionAction("refresh")}><RefreshCw size={13} />{t("刷新本次结果")}</button> : null}{!isRunning ? <button className="text-link" type="button" disabled={Boolean(busy)} onClick={() => void restart()}>{busy === "restart" ? t("正在重新开始") : t("重新开始检索")}</button> : null}</div><p>{t("默认展示六段。查看更多读取本次已找到的材料；扩大研究范围会继续查找材料，已找到的原文会保留。")}</p></footer> : null}
         {result?.documents && (result.documents.tracked > 0 || result.documents.excluded_count > 0) ? <DiscoveryDocumentProgress data={result.documents} busy={Boolean(busy)} onRemove={id => { pollStarted.current = Date.now(); void documentAction(id, true); }} onView={id => void documentAction(id)} onAdjust={() => { setFilterOpen(true); void loadFacets(); }} /> : null}
         <SearchResearchDock question={initialQuery} searchPhase={busy==="create"||isRunning?"running":error||result?.status==="failed"?"error":!initialQuery?"idle":result?.passages.length?"ready":"empty"} filters={result?.filters||initialFilters} materials={(result?.passages||[]).map(asResearchMaterial)} seed={researchSeed} onInspect={ref=>{setResearchCitation(ref);setSummaryHidden(false);if(window.matchMedia('(max-width:1100px)').matches)setSummaryOpen(true);}}/>
       </section>

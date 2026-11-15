@@ -42,6 +42,7 @@ CURSOR_SALT = "catalog.discovery.cursor.v1"
 ACTIVE = ("queued", "running")
 MAX_MATERIALIZED = 400
 MAX_VISIBLE_PASSAGES = MAX_MATERIALIZED + 40
+DEFAULT_PASSAGE_LIMIT = 6
 STALE_MINUTES = {"queued": 30, "running": 15}
 
 
@@ -1099,7 +1100,7 @@ def _year_order(row: dict, sort: str) -> tuple[int, int, int]:
             row["_position"])
 
 
-def serialize_session(session, access_statuses, *, cursor="", limit=3, sort="relevance") -> dict:
+def serialize_session(session, access_statuses, *, cursor="", limit=DEFAULT_PASSAGE_LIMIT, sort="relevance") -> dict:
     if sort not in DISPLAY_SORTS:
         raise ValidationError({"sort": "请选择相关度、出版年份从新到旧或从旧到新。"})
     offset = 0

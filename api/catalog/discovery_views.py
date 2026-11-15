@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from catalog.services.discovery_sessions import (
     cancel_session, create_session, expand_session, get_session, normalize_filters,
-    serialize_session, session_access, retry_session, DISPLAY_SORTS,
+    serialize_session, session_access, retry_session, DISPLAY_SORTS, DEFAULT_PASSAGE_LIMIT,
 )
 from catalog.services.api_contract import (
     CANONICAL_DISCOVERY_ENDPOINT,
@@ -280,7 +280,7 @@ class DiscoveryView(APIView):
 
     def payload(self, request, session):
         try:
-            limit = int(request.query_params.get("limit", 3))
+            limit = int(request.query_params.get("limit", DEFAULT_PASSAGE_LIMIT))
         except (TypeError, ValueError):
             raise ValidationError({"limit": "每页数量必须为整数。"})
         payload = serialize_session(
