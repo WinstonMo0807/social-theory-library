@@ -6,7 +6,7 @@ from django.http import Http404
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .catalog_search_serializers import CatalogEditionSerializer
+from .catalog_search_serializers import CatalogEditionSerializer, catalog_reader_access_statuses
 from .media_views import PublicCoverMediaSerializer
 from .models import KnowledgeNode, Topic
 from .public_response_serializers import (
@@ -80,7 +80,8 @@ class PublicWorkDetailSerializer(WorkDetailSerializer):
         edition = self._public_edition(obj)
         if not self.get_edition(obj)["readable_asset"]:
             return []
-        return public_outline(edition.active_catalog_revision.reader_asset, access_statuses=["inherit", "public"])
+        return public_outline(edition.active_catalog_revision.reader_asset,
+                              access_statuses=catalog_reader_access_statuses(self.context.get("request")))
 
     @extend_schema_field(PublicTheoryAssociationSerializer(many=True))
     def get_theory_associations(self, obj):

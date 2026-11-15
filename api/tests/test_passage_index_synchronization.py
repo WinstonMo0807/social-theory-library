@@ -2,10 +2,12 @@ from unittest.mock import Mock, call, patch
 from types import SimpleNamespace
 
 import pytest
+import httpx
 
 from django.test import override_settings
 
 from ingestion.services.indexing import (
+    _wait_task,
     _indexed_asset_document_ids,
     _remove_stale_asset_documents,
     index_asset,
@@ -17,6 +19,52 @@ def _response(payload):
     response.json.return_value = payload
     response.raise_for_status.return_value = None
     return response
+
+
+@override_settings(MEILISEARCH_URL="http://meilisearch:7700")
+def test_wait_task_survives_slow_index_and_transient_status_read():
+    clock = [0.0]
+    def sleep(seconds):
+        clock[0] += seconds
+    def get(*args, **kwargs):
+        if clock[0] == 1:
+            clock[0] += kwargs["timeout"]
+            raise httpx.ReadTimeout("busy indexing")
+        return _response({"status": "succeeded" if clock[0] >= 348 else "processing"})
+    with (
+        patch("ingestion.services.indexing.time.monotonic", side_effect=lambda: clock[0]),
+        patch("ingestion.services.indexing.time.sleep", side_effect=sleep),
+        patch("ingestion.services.indexing.httpx.get", side_effect=get) as poll,
+        patch("ingestion.services.indexing.httpx.post") as post,
+    ):
+        assert _wait_task({"taskUid": 40696}, timeout=600)["status"] == "succeeded"
+    assert clock[0] == 348
+    assert all(c.args[0].endswith("/tasks/40696") for c in poll.call_args_list)
+    post.assert_not_called()
+
+
+@override_settings(MEILISEARCH_URL="http://meilisearch:7700")
+def test_wait_task_read_timeouts_do_not_extend_deadline():
+    clock = [0.0]
+    def get(*args, **kwargs):
+        clock[0] += kwargs["timeout"]
+        raise httpx.ReadTimeout("busy indexing")
+    with (
+        patch("ingestion.services.indexing.time.monotonic", side_effect=lambda: clock[0]),
+        patch("ingestion.services.indexing.time.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)),
+        patch("ingestion.services.indexing.httpx.get", side_effect=get),
+    ):
+        with pytest.raises(TimeoutError, match="40696"):
+            _wait_task({"taskUid": 40696}, timeout=8)
+    assert clock[0] == 8
+
+
+@pytest.mark.parametrize("status", ["failed", "canceled"])
+@override_settings(MEILISEARCH_URL="http://meilisearch:7700")
+def test_wait_task_preserves_explicit_failure(status):
+    with patch("ingestion.services.indexing.httpx.get", return_value=_response({"status": status, "error": {"message": "invalid document"}})):
+        with pytest.raises(RuntimeError, match="invalid document"):
+            _wait_task({"taskUid": 4}, timeout=600)
 
 
 @override_settings(MEILISEARCH_URL="http://meilisearch:7700")

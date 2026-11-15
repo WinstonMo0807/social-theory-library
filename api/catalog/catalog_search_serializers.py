@@ -10,6 +10,18 @@ from .serializers import AssetCompactSerializer, EditionCompactSerializer, Perso
 from .services.publication_eligibility import active_catalog_snapshot
 
 
+def catalog_reader_access_statuses(request=None):
+    """Catalog readers may use registered files after ordinary sign-in.
+
+    Staff access to private processing files belongs to the admin workspace,
+    not the public catalog.
+    """
+    statuses = {Asset.AccessStatus.PUBLIC, Asset.AccessStatus.INHERIT}
+    if getattr(getattr(request, "user", None), "is_authenticated", False):
+        statuses.add(Asset.AccessStatus.REGISTERED)
+    return statuses
+
+
 class CatalogSearchQuery(serializers.Serializer):
     q = serializers.CharField(max_length=500, allow_blank=True, default="")
     match = serializers.ListField(child=serializers.ChoiceField(choices=["title", "author", "keyword", "abstract", "fulltext"]), min_length=1, max_length=5, default=["title", "author", "keyword", "abstract"])
@@ -89,7 +101,7 @@ class CatalogEditionSerializer(EditionCompactSerializer):
                 if asset.access_status != Asset.AccessStatus.PRIVATE:
                     ready = asset.status == Asset.Status.READY and asset.validation_status == Asset.ValidationStatus.VALID and bool(asset.file)
                     data["access_state"] = asset.access_status if ready else "unavailable"
-                    if ready and asset.access_status in {Asset.AccessStatus.PUBLIC, Asset.AccessStatus.INHERIT}:
+                    if ready and asset.access_status in catalog_reader_access_statuses(self.context.get("request")):
                         data["readable_asset"] = AssetCompactSerializer(asset).data
                         data["access_state"] = "readable"
         data["availability"] = "readable" if data["readable_asset"] else "metadata"

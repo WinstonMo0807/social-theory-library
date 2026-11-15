@@ -56,3 +56,37 @@ def test_publication_stops_waiting_for_its_exhausted_projection_owner():
     state.projected_revision = 1; state.save(update_fields=["projected_revision"])
     event.status = "pending"; event.save(update_fields=["status"])
     assert process_knowledge_event(event.pk).status == "completed"
+
+
+@pytest.mark.django_db
+def test_authorized_publication_retry_restarts_exhausted_same_projection(admin_user):
+    from django.utils import timezone
+    from catalog.models import DomainChangeEvent, KnowledgePublicationEvent
+    from catalog.services.knowledge_publication import retry_knowledge_publication
+    work = Work.objects.create(title="Manual publication recovery")
+    source = DomainChangeEvent.objects.create(object_type="work", object_id=work.pk,
+        canonical_revision=1, change_kind="publish", processed_at=timezone.now(),
+        idempotency_key="manual-publication-recovery-source")
+    event = KnowledgePublicationEvent.objects.create(event_type="entity_published",
+        object_type="work", object_id=work.pk, domain_event=source,
+        status="failed", attempts=3, idempotency_key="manual-publication-recovery-event")
+    with patch("catalog.services.projection_refresh._schedule_job_capability"), patch(
+        "catalog.services.knowledge_publication.dispatch_knowledge_event"
+    ):
+        job = queue_projection_refresh(target_type="work", target_id=str(work.pk), source_event=source)
+        job.status = "failed"
+        job.attempt = job.max_attempts
+        job.error_code = "TimeoutError"
+        job.save()
+        retried = retry_knowledge_publication(event.pk, actor=admin_user)
+        job.refresh_from_db()
+        assert retried.pk == event.pk and retried.status == "pending"
+        assert job.status == "pending" and job.attempt == 0 and not job.error_code
+        assert job.stats["manual_retry"]["previous_status"] == "failed"
+        assert ProcessingJob.objects.filter(idempotency_key=job.idempotency_key).count() == 1
+        # A repeat click while pending must not replace or reset the active job.
+        job.attempt = 1
+        job.save(update_fields=["attempt"])
+        retry_knowledge_publication(event.pk, actor=admin_user)
+        job.refresh_from_db()
+        assert job.attempt == 1

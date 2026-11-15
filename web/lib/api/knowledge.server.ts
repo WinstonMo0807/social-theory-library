@@ -43,11 +43,11 @@ export async function loadTheorySystemNodesPage(filters: {type?: string; discipl
 export async function loadKnowledgeNode(slug: string): Promise<KnowledgeNodeDetail | null> {
   try {
     const payload = await serverRequest<KnowledgeNodeDetail>(
-      `/catalog/theory-system/nodes/${encodeURIComponent(slug)}/`,
+      `/catalog/theory-system/nodes/${encodeURIComponent(slug)}/`, { forwardSession: true },
     );
     const [evidenceCuration, placements] = await Promise.all([
-      serverRequest<PublishedEvidenceCuration>(`/catalog/evidence-curation/node/${payload.id}/`),
-      serverRequest<{public_detail: NonNullable<KnowledgeNodeDetail["public_detail"]>}>(`/catalog/content-placements/node/${payload.id}/`),
+      serverRequest<PublishedEvidenceCuration>(`/catalog/evidence-curation/node/${payload.id}/`, { forwardSession: true }),
+      serverRequest<{public_detail: NonNullable<KnowledgeNodeDetail["public_detail"]>}>(`/catalog/content-placements/node/${payload.id}/`, { forwardSession: true }),
     ]);
     return { ...payload, evidenceCuration, public_detail: placements.public_detail };
   } catch (error) {

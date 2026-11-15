@@ -417,4 +417,6 @@ class PublicPlacementView(EditorialErrorMixin, APIView):
     @extend_schema(responses=PlacementReadSerializer)
     def get(self, request, page_type, page_id):
         # Anonymous requests cannot select a draft or a historical publication.
-        return Response(service.read(page_type, page_id, public=True))
+        return Response(service.read(page_type, page_id, public=True,
+                        authenticated=bool(request.user.is_authenticated)),
+                        headers={"Cache-Control": "private, no-store", "Vary": "Cookie, Authorization"})

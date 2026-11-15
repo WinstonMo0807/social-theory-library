@@ -595,7 +595,8 @@ class KnowledgeRelationSerializer(serializers.ModelSerializer):
         from catalog.relation_source_anchor import anchor_material
         if not obj.evidence_span_id or self.context.get("omit_relation_material"):
             return None
-        return anchor_material(obj.evidence_span, obj.source_document_revision_id, public=not self.private_relation_source)
+        return anchor_material(obj.evidence_span, obj.source_document_revision_id, public=not self.private_relation_source,
+            authenticated=bool(getattr(getattr(self.context.get("request"), "user", None), "is_authenticated", False)))
 
     def validate(self, attrs):
         source = attrs.get("source_node", getattr(self.instance, "source_node", None))

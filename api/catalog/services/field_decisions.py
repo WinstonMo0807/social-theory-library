@@ -478,7 +478,7 @@ def _decision_map(edition: Edition) -> dict[str, CatalogFieldDecision]:
 def field_readiness(edition: Edition) -> list[FieldReadiness]:
     decisions = _decision_map(edition)
     values, formally_confirmed = formal_field_values(edition)
-    required = set(required_fields(values.get("document_type"), has_document=document_required(edition)))
+    required = set(required_fields(values.get("document_type"), has_document=document_required(edition), values=values))
     field_names = sorted(required | set(REVIEWABLE_OPTIONAL_FIELDS) | set(decisions) | set(values))
     result = []
     for field_name in field_names:

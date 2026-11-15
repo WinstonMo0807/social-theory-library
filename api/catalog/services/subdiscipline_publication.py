@@ -213,14 +213,15 @@ def public_subdiscipline_data(obj, context):
             sources.append(evidence)
 
     if obj.editorial_status == "published":
-        placements = content_placements.read("subdiscipline", obj.pk, public=True)
+        authenticated = bool(getattr(getattr(context.get("request"), "user", None), "is_authenticated", False))
+        placements = content_placements.read("subdiscipline", obj.pk, public=True, authenticated=authenticated)
         for item in placements["items"]:
             source = item["source"]
             if source.get("type") != "span" or not isinstance(source.get("text"), str) or not source["text"]:
                 continue
             # Resolve once more through the same strict asset/page gate used by
             # relation excerpts; saved placements never relax current access.
-            span = shared_curation.sources("span", public=True).filter(pk=source["id"]).first()
+            span = shared_curation.sources("span", public=True, authenticated=authenticated).filter(pk=source["id"]).first()
             if span is None or str(span.document_revision_id) != source["document_revision_id"]:
                 continue
             checked = legacy_evidence_fields(SimpleNamespace(

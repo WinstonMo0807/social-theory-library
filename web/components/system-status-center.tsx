@@ -23,7 +23,7 @@ function statusLabel(value: unknown) {
   if (value === true) return "可用";
   if (value === false) return "不可用";
   const text = String(value ?? "unknown");
-  return ({ healthy: "正常", current: "当前", configured: "已配置", not_configured: "未配置", disabled: "未启用", not_tested: "尚未测试", available: "可用", insufficient_corpus: "证据不足", unavailable: "不可用", down: "服务不可用", not_available: "暂无", missing: "缺失", local_cache: "本地缓存", unknown: "尚未探测", true: "是", false: "否" } as Record<string, string>)[text] ?? text;
+  return ({ healthy: "正常", current: "当前", configured: "已配置", not_configured: "未配置", disabled: "未启用", not_tested: "尚未测试", available: "可用", partial: "部分就绪", prepared: "已准备", not_ready: "待建立", insufficient_corpus: "证据不足", unavailable: "不可用", down: "服务不可用", not_available: "暂无", missing: "缺失", local_cache: "本地缓存", unknown: "尚未确认", true: "是", false: "否" } as Record<string, string>)[text] ?? text;
 }
 
 const keyLabels: Record<string, string> = {
@@ -33,7 +33,7 @@ const keyLabels: Record<string, string> = {
   control: "任务控制连接", heartbeat_at: "最近心跳", active_version: "活动版本",
   uid: "活动 UID", db_ready_chunks: "已就绪原文片段", meilisearch_document_count: "Meilisearch 文档",
   expected_document_count: "预期文档", model: "模型", model_revision: "模型版本",
-  local_path: "本地路径", offline_mode: "离线模式", revision: "词典版本",
+  local_path: "本地路径", offline_mode: "离线模式", revision: "版本标识",
   generation: "当前索引批次", entries: "当前词条", public_active_entries: "公开词条",
   admin_resolvable_entries: "后台词条", pending_events: "待处理事件", failed_events: "失败事件",
   provider: "服务商", capability: "能力", profile: "服务配置", health: "正常检查",
@@ -41,6 +41,16 @@ const keyLabels: Record<string, string> = {
   credential_configured: "凭据已配置", endpoint_configured: "服务地址已配置", restart_may_be_required: "可能需要重启",
   document_count: "文档数量", schema: "索引结构", model_health: "模型正常状态", reason: "原因",
   id: "编号", completed_at: "完成时间", checksum: "校验值", size: "大小", source: "来源",
+  checked_at: "检查时间", on_demand: "按需启动", available: "可用性", local_required: "需要本地模型",
+  active_generation: "活动索引批次", index_uid: "活动索引", dimensions: "向量维度",
+  coverage: "当前公开修订覆盖", eligible_editions: "可检索版本", published_editions: "已发布版本",
+  indexed_editions: "关键词已完成版本", vector_editions: "语义已完成版本", projected_editions: "原文已完成版本",
+  pending_editions: "待完成版本", index_pending_editions: "待建立索引版本", vector_pending_editions: "待建立向量版本",
+  passage_count: "已完成原文片段", text_pending_editions: "正文待完成版本", bibliographic_editions: "仅书目版本",
+  partial: "覆盖尚未完整", manifest_ready: "模型文件已准备", models: "模型状态", embedding: "编码模型",
+  reranker: "重排模型", loaded: "当前已加载", inference_completed: "本次启动后已执行",
+  artifact_id: "模型制品标识", embedding_artifact: "编码模型制品", reranker_artifact: "重排模型制品",
+  backend: "推理引擎", threads: "计算线程", batch_size: "单次批量", pipeline: "处理版本", error_code: "错误代码",
 };
 
 function serviceState(value: StatusValue) {

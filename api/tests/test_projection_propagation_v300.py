@@ -5,6 +5,7 @@ from hashlib import sha256
 from uuid import uuid4
 
 import pytest
+import httpx
 from django.utils import timezone
 
 from catalog.models import (
@@ -309,8 +310,10 @@ def test_direct_postgres_projections_become_current_after_real_coordinator_run(
     )
 
 
+@pytest.mark.parametrize("index_error", [None, httpx.ConnectError("Connection refused"),
+    httpx.ReadTimeout("Search timeout"), RuntimeError("Index task failed"), TimeoutError("Index task timed out")])
 def test_fulltext_fallback_stays_failed_then_bounded_retry_can_finish(
-    monkeypatch,
+    monkeypatch, index_error,
 ):
     work, _edition, _asset = _work_with_asset()
     record_canonical_change(
@@ -330,12 +333,17 @@ def test_fulltext_fallback_stays_failed_then_bounded_retry_can_finish(
         "catalog.services.projection_refresh._semantic_projection",
         semantic_current,
     )
-    monkeypatch.setattr(
-        "ingestion.services.indexing.index_asset",
-        lambda *args, **kwargs: {
+    def unavailable_index(*args, **kwargs):
+        if index_error is not None:
+            raise index_error
+        return {
             "backend": "database-fallback",
             "warning": "Meilisearch unavailable",
-        },
+        }
+
+    monkeypatch.setattr(
+        "ingestion.services.indexing.index_asset",
+        unavailable_index,
     )
     failed = run_projection_refresh_job(str(job.id), task_id=job.task_id)
     fulltext = ProjectionState.objects.get(
@@ -346,6 +354,10 @@ def test_fulltext_fallback_stays_failed_then_bounded_retry_can_finish(
     assert failed.status == ProcessingJob.Status.FAILED
     assert fulltext.status == ProjectionState.Status.FAILED
     assert fulltext.projected_revision == 0
+    assert set(ProjectionState.objects.filter(
+        object_type="work", object_id=work.pk,
+        projection_type__in=[ProjectionState.ProjectionType.PUBLIC, ProjectionState.ProjectionType.KNOWLEDGE_GRAPH],
+    ).values_list("status", flat=True)) == {ProjectionState.Status.CURRENT}
 
     register_executor_heartbeat(
         executor_id="nas-projection-retry",

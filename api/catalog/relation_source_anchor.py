@@ -8,6 +8,7 @@ from drf_spectacular.utils import extend_schema_field
 from catalog.services.shared_curation import sources
 from catalog.services.publication_eligibility import current_retrieval_source_q
 from catalog.services.text import page_text_range
+from catalog.services.semantic_search import viewer_access_statuses
 
 
 class RelationAnchorInput(serializers.Serializer):
@@ -56,13 +57,16 @@ class RelationAnchorField(serializers.Field):
 
 
 def ensure_relation_anchor_publication(relation):
-    if relation.evidence_span_id and not anchor_material(relation.evidence_span, relation.source_document_revision_id, public=True):
-        raise ValidationError("所选原文已失效或不能公开。请核对准确版本，或明确移除此引用后重新保存；原草稿仍保留。")
+    if relation.evidence_span_id:
+        material = anchor_material(relation.evidence_span, relation.source_document_revision_id)
+        if not material["public_eligible"]:
+            raise ValidationError("所选原文已失效或不能公开。请核对准确版本，或明确移除此引用后重新保存；原草稿仍保留。")
 
 
-def public_anchor_rows():
-    # Only anonymous-readable, activated files can supply public relation text.
-    return sources("span", public=True).filter(current_retrieval_source_q(asset_prefix="page__asset", access_statuses=("public", "inherit")),
+def public_anchor_rows(*, authenticated=False):
+    # Publication can cite registered-reader material; anonymous responses
+    # continue to use the default restricted-to-anonymous queryset.
+    return sources("span", public=True, authenticated=authenticated).filter(current_retrieval_source_q(asset_prefix="page__asset", access_statuses=viewer_access_statuses(authenticated=authenticated), require_fulltext=False),
         document_revision_id=F("page__asset__edition__active_catalog_revision__document_revision_id"))
 
 
@@ -82,14 +86,14 @@ def choose_anchor(reference):
     return span, span.document_revision
 
 
-def anchor_material(span, pinned_revision, *, public=False, eligible=None):
+def anchor_material(span, pinned_revision, *, public=False, authenticated=False, eligible=None):
     empty = {"available": False, "public_eligible": False, "detail": "原文位置或版本已经失效，原引用编号仍保留，请重新核对。",
         "title": "", "edition_label": "", "work_id": None, "edition_id": None, "asset_id": None,
         "document_revision_id": None, "pdf_page": None, "printed_page_label": "", "quote": "", "reader_href": ""}
     if not valid_locator(span, pinned_revision):
         return None if public else empty
     if eligible is None:
-        eligible = public_anchor_rows().filter(pk=span.pk).exists()
+        eligible = public_anchor_rows(authenticated=authenticated if public else True).filter(pk=span.pk).exists()
     if public and not eligible:
         return None
     page, asset = span.page, span.page.asset

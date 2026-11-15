@@ -381,6 +381,17 @@ def recover_stalled_processing_jobs(*, limit: int = 100, job_id=None) -> dict[st
         requeued = 0
         exhausted = 0
         for job in jobs:
+            plan = (job.stats or {}).get("projection_plan") or {}
+            semantic = ((job.stats or {}).get("projection_results") or {}).get("semantic") or {}
+            if (job.job_type == ProcessingJob.JobType.PROJECTION_REFRESH
+                    and job.status == ProcessingJob.Status.RUNNING
+                    and semantic.get("status") == "delegated"
+                    and (plan.get("discovery_sources") is not None or plan.get("semantic_job_ids"))):
+                # The coordinator has returned while its specialist owns the
+                # work. Its old heartbeat is not evidence of an interrupted task.
+                from catalog.services.projection_refresh import reconcile_delegated_projection_job
+                transaction.on_commit(lambda jid=str(job.pk): reconcile_delegated_projection_job(jid))
+                continue
             if job.job_type in PROCESSING_PAUSE_KEYS and (
                     job.pause_requested_at or processing_workload_paused(job.job_type)):
                 # A killed worker cannot acknowledge the user's pause itself.

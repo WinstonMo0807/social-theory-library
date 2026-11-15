@@ -9,7 +9,7 @@ export function loadTopicDirectory(params: TopicSearchParams = {}) {
 export async function loadTopic(slug: string, section: TopicViewSection = "overview", params: TopicSearchParams = {}) {
   const query = topicQuery(params, { section: ["history", "dimensions", "methods", "timeline", "subdisciplines", "theory-schools"].includes(section) ? "overview" : section });
   query.delete("view"); query.delete("layout");
-  try { return await serverRequest<PublicTopicDetail>(`/catalog/topics/${encodeURIComponent(slug)}/?${query}`); }
+  try { return await serverRequest<PublicTopicDetail>(`/catalog/topics/${encodeURIComponent(slug)}/?${query}`, { forwardSession: true }); }
   catch (error) { if (error instanceof ServerApiError && error.status === 404) return null; throw error; }
 }
 export function loadTopicPage(query = "", filters: TopicSearchParams = {}, page = 1) { return loadTopicDirectory({ ...filters, q: query, page: String(page) }); }

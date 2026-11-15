@@ -134,8 +134,11 @@ def system_health_snapshot() -> dict:
         last_error="" if meili_http.get("reachable") else str(meili_http.get("detail") or ""),
         detail=str(meili_http.get("detail") or ""),
     )
-    semantic_config = current_semantic_runtime()
-    model_health = semantic_model_health(semantic_config)
+    if getattr(settings, "DISCOVERY_ENABLED", False):
+        from catalog.services.discovery_health import discovery_model_status
+        model_health = discovery_model_status()
+    else:
+        model_health = semantic_model_health(current_semantic_runtime())
     embedding = _component(
         model_health["configured"],
         model_health["available"],

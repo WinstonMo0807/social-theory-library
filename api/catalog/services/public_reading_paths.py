@@ -18,6 +18,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from catalog.models import Discipline, EditorialRevision, KnowledgeNode, Page, ReadingPath, Topic
 from catalog.services.publication_eligibility import public_editions
+from catalog.services.semantic_search import viewer_access_statuses
 
 PATH_FIELDS = ("title", "slug", "introduction", "learning_goal", "audience", "difficulty", "estimated_reading",
                "estimated_weeks", "prerequisite", "learning_questions", "related_debate_ids", "curator_note", "credits")
@@ -127,6 +128,7 @@ def _projection_context(raws):
 
 def _projection(path, raw, selected, versions, *, request=None, preview=False, context=None):
     groups = raw.get("stage_groups") or []
+    access = viewer_access_statuses(authenticated=bool(getattr(getattr(request, "user", None), "is_authenticated", False)))
     context = context or _projection_context([raw])
     editions, nodes, pages = context["editions"], context["nodes"], context["pages"]
     topics = [_link(row, "topic") for key, row in context["topics"].items() if key in _ids(raw.get("topics", []))]
@@ -172,8 +174,8 @@ def _projection(path, raw, selected, versions, *, request=None, preview=False, c
                     pinned = bool(row.get("asset") or row.get("document_revision"))
                     exact = bool(asset and document and str(asset.pk) == str(row.get("asset")) and str(document.pk) == str(row.get("document_revision"))
                         and asset.edition_id == edition.pk and document.asset_id == asset.pk and document.source_checksum == asset.sha256)
-                    readable = bool(exact and active.fulltext_ready and asset.kind == "normalized" and asset.status == "ready"
-                        and asset.validation_status == "valid" and asset.access_status in {"public", "inherit"} and asset.file)
+                    readable = bool(exact and document.is_active and asset.sha256 and asset.kind == "normalized" and asset.status == "ready"
+                        and asset.validation_status == "valid" and asset.access_status in access and asset.file)
                     start, end = row.get("page_start") or 1, row.get("page_end") or row.get("page_start") or 1
                     located = bool(readable and 1 <= start <= end <= (asset.page_count or 0) and (asset.pk, start) in pages and (asset.pk, end) in pages)
                     material["source_status"] = "available" if located else "revision_changed" if pinned and not exact else "no_fulltext"

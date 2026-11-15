@@ -120,6 +120,13 @@ def _query_lexicon_status() -> dict[str, Any]:
 
 
 def _semantic_status() -> dict[str, Any]:
+    if getattr(settings, "DISCOVERY_ENABLED", False):
+        value = _discovery_status()
+        coverage = value.get("coverage") or {}
+        return {**value, "source": "discovery", "reason": (
+            f"当前观点索引已覆盖 {coverage.get('vector_editions', 0)} / {coverage.get('eligible_editions', 0)} 个可检索版本；按当前公开修订核对。"
+            if value.get("active_generation") else "当前观点索引尚未就绪，请查看索引与任务。"
+        ), "status": "partial" if value.get("status") == "current" and coverage.get("partial") else value.get("status", "unknown")}
     try:
         active = active_semantic_index_version()
     except Exception:
@@ -331,8 +338,21 @@ def _backup_status() -> dict[str, Any]:
 def system_status_snapshot() -> dict[str, Any]:
     from ingestion.services.r2_staging import r2_staging_status
 
-    semantic_runtime = current_semantic_runtime()
-    embedding_health = semantic_model_health(semantic_runtime)
+    if getattr(settings, "DISCOVERY_ENABLED", False):
+        from catalog.services.discovery_health import discovery_model_status
+        embedding = discovery_model_status()
+    else:
+        semantic_runtime = current_semantic_runtime()
+        embedding_health = semantic_model_health(semantic_runtime)
+        embedding = {
+            "status": ("available" if embedding_health.get("available") is True else
+                       "unknown" if embedding_health.get("available") is None else "unavailable"),
+            "model": semantic_runtime.get("model_repo_id") or semantic_runtime.get("model"),
+            "revision": semantic_runtime.get("model_revision"),
+            "local_path": semantic_runtime.get("model_local_path"),
+            "offline_mode": semantic_runtime.get("offline_mode"),
+            "local_required": True, "health": embedding_health,
+        }
     return {
         "generated_at": timezone.now(),
         "database": _database_status(),
@@ -342,21 +362,7 @@ def system_status_snapshot() -> dict[str, Any]:
         "query_lexicon": _query_lexicon_status(),
         "semantic": _semantic_status(),
         "discovery": _discovery_status(),
-        "embedding": {
-            "status": (
-                "available"
-                if embedding_health.get("available") is True
-                else "unknown"
-                if embedding_health.get("available") is None
-                else "unavailable"
-            ),
-            "model": semantic_runtime.get("model_repo_id") or semantic_runtime.get("model"),
-            "revision": semantic_runtime.get("model_revision"),
-            "local_path": semantic_runtime.get("model_local_path"),
-            "offline_mode": semantic_runtime.get("offline_mode"),
-            "local_required": True,
-            "health": embedding_health,
-        },
+        "embedding": embedding,
         "ai": _ai_status(),
         "web_enrichment": _web_status(),
         "backup": _backup_status(),

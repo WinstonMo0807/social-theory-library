@@ -28,7 +28,7 @@ export type ReadingPathPage = { count: number; next: string | null; previous: st
 export type ReadingPathSearchParams = Record<string, string | string[] | undefined>;
 export type ReadingPathFilters = Record<string, string>;
 export const readingPathFilterKeys = ["q", "topic", "discipline", "difficulty", "node", "page"] as const;
-export const pathDifficultyLabels: Record<string, string> = { beginner: "初级", intermediate: "进阶", advanced: "深入" };
+export const pathDifficultyLabels: Record<string, string> = { beginner: "入门", intermediate: "中级", advanced: "进阶" };
 export function readingPathFilters(raw: ReadingPathSearchParams): ReadingPathFilters {
   return Object.fromEntries(readingPathFilterKeys.flatMap(key => { const value = raw[key], text = (Array.isArray(value) ? value[0] : value)?.trim(); return text ? [[key, text]] : []; }));
 }

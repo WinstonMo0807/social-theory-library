@@ -132,7 +132,7 @@ def _edition_details(edition, source, *, span=None):
             "publisher": data.get("publisher") or "", "image_url": image}
 
 
-def _source(target, *, public=False):
+def _source(target, *, public=False, authenticated=False):
     """Resolve current permission and labels without copying catalog text into a draft."""
     kind = target.get("type")
     if not isinstance(kind, str):
@@ -168,7 +168,7 @@ def _source(target, *, public=False):
         reader = edition.active_catalog_revision.reader_asset if eligible else None
         from catalog.services.publication_eligibility import current_retrieval_source_q
         readable = bool(reader and public_editions().filter(pk=edition.pk).filter(current_retrieval_source_q(
-            asset_prefix="active_catalog_revision__reader_asset", access_statuses=("public", "inherit") if public else viewer_access_statuses())).exists())
+            asset_prefix="active_catalog_revision__reader_asset", access_statuses=viewer_access_statuses(authenticated=authenticated or not public))).exists())
         document_id = str(edition.active_catalog_revision.document_revision_id) if readable else ""
         source = {"type": kind, "id": str(key), "work_id": str(edition.work_id),
                   "edition_id": str(edition.pk), "title": title, "edition_label": label,
@@ -187,13 +187,13 @@ def _source(target, *, public=False):
             "href": f"/theories/nodes/{row.slug}", "summary": row.definition or row.summary,
             "public_eligible": row.status == "published", "edit_url": f"/admin/theories/{key}"}
     if kind == "span":
-        row = get_object_or_404(shared_curation.sources("span", public=public), pk=key)
+        row = get_object_or_404(shared_curation.sources("span", public=public, authenticated=authenticated), pk=key)
         if row.is_stale:
             raise ValidationError("原文已失效，请重新选择准确的文档修订。")
         reference = {"type": kind, "id": str(key), "document_revision_id": str(row.document_revision_id)}
         if target.get("document_revision_id") and str(target["document_revision_id"]) != reference["document_revision_id"]:
             raise ValidationError("原文修订已改变，不能自动改绑来源。")
-        source = shared_curation.source_payload("span", row, public=public)
+        source = shared_curation.source_payload("span", row, public=public, authenticated=authenticated)
         source.update(_edition_details(row.page.asset.edition, source, span=row), section=row.section)
         if source["reader_url"]:
             source["reader_url"] += f"&revision={reference['document_revision_id']}"
@@ -203,7 +203,7 @@ def _source(target, *, public=False):
     raise ValidationError({"target": "请选择已有作品、出版版本、知识节点、学者、策划或原文。"})
 
 
-def _landing(value, reference, *, public=False):
+def _landing(value, reference, *, public=False, authenticated=False):
     if reference["type"] not in {"work", "edition"} or not isinstance(value, dict) or set(value) != {"asset_id", "document_revision_id", "pdf_page"}:
         raise ValidationError({"reading_target": "阅读落点须指向所选出版版本的文件、文档修订和物理页。"})
     page_number = value["pdf_page"]
@@ -212,7 +212,7 @@ def _landing(value, reference, *, public=False):
     rows = DocumentRevision.objects.filter(asset_id=shared_curation.identifier(value["asset_id"]), asset__edition_id=reference["edition_id"])
     if public:
         rows = rows.filter(active_document_revision_q(revision_prefix=""), asset__kind="normalized", asset__status="ready",
-                           asset__validation_status="valid", asset__access_status__in=viewer_access_statuses())
+                           asset__validation_status="valid", asset__access_status__in=viewer_access_statuses(authenticated=authenticated))
     document = get_object_or_404(rows, pk=shared_curation.identifier(value["document_revision_id"]))
     get_object_or_404(Page, asset_id=document.asset_id, index=page_number)
     return {"asset_id": str(document.asset_id), "document_revision_id": str(document.pk), "pdf_page": page_number}
@@ -318,11 +318,11 @@ def _normalize(items, *, existing=None, page_type=None):
     return result
 
 
-def _resolved_items(items, *, public=False):
+def _resolved_items(items, *, public=False, authenticated=False):
     output, problems = [], []
     for item in items:
         try:
-            reference, source = _source(item["target"], public=public)
+            reference, source = _source(item["target"], public=public, authenticated=authenticated)
             if reference != item["target"]:
                 raise ValidationError("来源身份改变，请重新选取。")
             usage = item.get("concept_usage")
@@ -335,12 +335,12 @@ def _resolved_items(items, *, public=False):
                     problems.append({"item_id": item["id"], "code": "concept_usage_unconfirmed", "detail": "概念用法须人工确认归属，并关联已核实人物。"})
                 source["usage_author"] = {"id": str(person.pk), "name": person.preferred_name} if person else None
             if item.get("reading_target"):
-                landing = _landing(item["reading_target"], reference, public=public)
+                landing = _landing(item["reading_target"], reference, public=public, authenticated=authenticated)
                 source["reader_target"] = landing
                 source["reader_url"] = f"/reader/{landing['asset_id']}?page={landing['pdf_page']}&revision={landing['document_revision_id']}"
                 if not public:
                     try:
-                        _landing(landing, reference, public=True)
+                        _landing(landing, reference, public=True, authenticated=True)
                     except (Http404, ValidationError):
                         problems.append({"item_id": item["id"], "code": "reading_target_not_public", "detail": "指定阅读落点的文件或文档修订尚未公开或已失效。", "edit_url": source.get("edit_url", "")})
             if public:
@@ -362,7 +362,7 @@ def _resolved_items(items, *, public=False):
     return output, problems
 
 
-def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
+def read(page_type, page_id, *, actor=None, public=False, revision_id=None, authenticated=False):
     if not public:
         authorize(actor, page_type)
     parent = parent_object(page_type, page_id, public=public, actor=actor)
@@ -376,7 +376,7 @@ def read(page_type, page_id, *, actor=None, public=False, revision_id=None):
     else:
         selected = latest
     data = deepcopy(selected.materialized_preview) if selected else {"items": []}
-    items, problems = _resolved_items(data.get("items", []), public=public)
+    items, problems = _resolved_items(data.get("items", []), public=public, authenticated=authenticated)
     result = {"schema_version": 1, "page_type": page_type, "page_id": str(parent.pk),
               "revision_id": str(selected.pk) if selected else None,
               "configured": bool(selected), "items": items, "groups": _groups(data.get("groups"), data.get("items", [])),
@@ -578,9 +578,9 @@ def command(page_type, page_id, data, actor):
         _, problems = _resolved_items(publishable)
         if problems:
             raise ValidationError({"source_problems": problems})
-        # Re-read through the public boundary: a source may be hidden even if
-        # its bibliographic record exists (exact OCR revision, access, file).
-        visible, _ = _resolved_items(publishable, public=True)
+        # Publish sources available to signed-in readers; each read still applies
+        # its actual viewer boundary, exact document revision and asset state.
+        visible, _ = _resolved_items(publishable, public=True, authenticated=True)
         if len(visible) != len(publishable):
             raise ValidationError("存在不可公开的准确来源，请核对原文或版本。")
         revision = latest

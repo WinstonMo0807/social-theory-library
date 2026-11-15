@@ -110,6 +110,7 @@ export type TheoryWorkRelation = {
 };
 
 export type NormalizedKnowledgeRelation = {
+  source_material?: components["schemas"]["RelationAnchorMaterial"] | null;
   evidence?: TheoryEvidence[];
   id: string;
   source_node: string;

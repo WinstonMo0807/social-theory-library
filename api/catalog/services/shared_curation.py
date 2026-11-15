@@ -40,7 +40,7 @@ def target_title(row):
     return row.person.preferred_name if isinstance(row, ScholarProfile) else row.canonical_name_zh if isinstance(row, KnowledgeNode) else row.name
 
 
-def sources(kind, *, public=False):
+def sources(kind, *, public=False, authenticated=False):
     if kind not in {"span", "passage"}:
         raise ValidationError("原文来源类型无效。")
     model = EvidenceSpan if kind == "span" else Passage
@@ -49,19 +49,22 @@ def sources(kind, *, public=False):
         queryset = queryset.select_related("document_revision")
     if public:
         queryset = queryset.filter(page__asset__kind="normalized", page__asset__status="ready",
-                                   page__asset__validation_status="valid", page__asset__access_status__in=viewer_access_statuses())
-        queryset = queryset.filter(active_document_revision_q(revision_prefix="document_revision"), is_stale=False) if kind == "span" else queryset.filter(active_document_q(asset_prefix="page__asset"))
+                                   page__asset__validation_status="valid", page__asset__access_status__in=viewer_access_statuses(authenticated=authenticated))
+        # Exact curated references remain readable while the search index rebuilds.
+        queryset = queryset.filter(active_document_revision_q(revision_prefix="document_revision", require_fulltext=False), is_stale=False) if kind == "span" else queryset.filter(active_document_q(asset_prefix="page__asset", require_fulltext=False))
     return queryset
 
 
-def source_payload(kind, row, *, public=False):
+def source_payload(kind, row, *, public=False, authenticated=False):
     page, asset = row.page, row.page.asset
     edition = asset.edition
     if page.index < 1 or (asset.page_count and page.index > asset.page_count):
         raise ValidationError("原文页序超出所选文件范围。")
     if kind == "span" and (row.document_revision.asset_id != asset.pk or row.page_number != page.index):
         raise ValidationError("原文版本、文件与页面定位不一致。")
-    eligible = sources(kind, public=True).filter(pk=row.pk).exists()
+    # Publication may include material available to signed-in readers. Reader
+    # responses still resolve each source against the actual viewer's access.
+    eligible = sources(kind, public=True, authenticated=authenticated or not public).filter(pk=row.pk).exists()
     snapshot = (edition.active_catalog_revision.snapshot or {}) if edition.active_catalog_revision_id else {}
     title = snapshot.get("work", {}).get("title") if eligible else edition.work.title
     text = row.original_text if kind == "span" else row.text
@@ -80,9 +83,9 @@ def source_payload(kind, row, *, public=False):
             "reader_url": locator if eligible or (not public and asset.kind == "normalized" and asset.status == "ready") else "", "public_eligible": eligible}
 
 
-def curation_payload(kind, key, *, public=False):
+def curation_payload(kind, key, *, public=False, authenticated=False):
     parent = target(kind, key, public=public)
-    return _curation_payload_for_parent(kind, parent, public=public)
+    return _curation_payload_for_parent(kind, parent, public=public, authenticated=authenticated)
 
 
 def preview_published_curation(kind, key, *, request):
@@ -91,10 +94,10 @@ def preview_published_curation(kind, key, *, request):
     from rest_framework.exceptions import PermissionDenied
     if not has_capability(getattr(request, "user", None), Capability.ACCESS_BACK_OFFICE):
         raise PermissionDenied("原文编辑预览需要后台访问权限。")
-    return _curation_payload_for_parent(kind, target(kind, key), public=True)
+    return _curation_payload_for_parent(kind, target(kind, key), public=True, authenticated=True)
 
 
-def _curation_payload_for_parent(kind, parent, *, public):
+def _curation_payload_for_parent(kind, parent, *, public, authenticated=False):
     row = EvidenceCuration.objects.select_related("active_revision").filter(object_type=kind, object_id=parent.pk).first()
     revision = row.active_revision if public and row else revisions._latest("evidence_curation", row.pk) if row else None
     data = deepcopy(revision.materialized_preview) if revision else {"items": []}
@@ -102,7 +105,7 @@ def _curation_payload_for_parent(kind, parent, *, public):
     refs = {str(item.pk): item for item in EvidenceCurationReference.objects.filter(curation=row, pk__in=reference_ids)} if row else {}
     output = []
     # A bounded curation has at most 100 entries; source objects are batched.
-    source_rows = {source_kind: {str(source.pk): source for source in sources(source_kind, public=public).filter(pk__in=
+    source_rows = {source_kind: {str(source.pk): source for source in sources(source_kind, public=public, authenticated=authenticated).filter(pk__in=
                     [getattr(ref, "span_id" if source_kind == "span" else "passage_id") for ref in refs.values()])}
                    for source_kind in ("span", "passage")}
     for item in data["items"]:
@@ -117,7 +120,7 @@ def _curation_payload_for_parent(kind, parent, *, public):
         if public and ref.document_revision_id != source_row.page.asset.edition.active_catalog_revision.document_revision_id:
             continue
         try:
-            resolved = source_payload(source_kind, source_row, public=public)
+            resolved = source_payload(source_kind, source_row, public=public, authenticated=authenticated)
         except ValidationError:
             if public:
                 continue
@@ -174,7 +177,7 @@ def publish_curation(kind, key, expected, actor):
     if not revision or revision.status != "draft":
         raise ValidationError("没有待发布原文策展草稿。")
     for item in revision.materialized_preview["items"]:
-        source_row = sources(item["source_type"], public=True).filter(pk=item["source_id"]).first()
+        source_row = sources(item["source_type"], public=True, authenticated=True).filter(pk=item["source_id"]).first()
         reference = EvidenceCurationReference.objects.get(pk=item["id"], curation=row)
         if source_row is None or not source_payload(item["source_type"], source_row)["public_eligible"] or reference.document_revision_id != source_row.page.asset.edition.active_catalog_revision.document_revision_id:
             raise ValidationError("所选原文的准确版本、文件或文档修订尚未公开，不能发布。")
@@ -184,7 +187,7 @@ def publish_curation(kind, key, expected, actor):
     return curation_payload(kind, key)
 
 
-def relation_payload(row, *, public=False, include_source=True):
+def relation_payload(row, *, public=False, include_source=True, authenticated=False):
     revision = row.active_revision if public else revisions._latest("scholar_relation", row.pk)
     data = deepcopy(revision.materialized_preview) if revision else {}
     if public:
@@ -203,7 +206,7 @@ def relation_payload(row, *, public=False, include_source=True):
         # Public text must be pinned both in the published snapshot and original row.
         matches = reference == {"span_id": str(row.evidence_span_id), "document_revision_id": str(row.source_document_revision_id)}
         if not public or matches:
-            query = public_anchor_rows() if public else sources("span")
+            query = public_anchor_rows(authenticated=authenticated) if public else sources("span")
             span = query.filter(pk=reference["span_id"]).first()
             material = anchor_material(span, reference["document_revision_id"], public=public, eligible=True if public else None)
     data["source_anchor"] = None if public else reference

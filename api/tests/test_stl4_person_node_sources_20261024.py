@@ -4,7 +4,7 @@ from uuid import uuid4
 from django.db.models.deletion import ProtectedError
 import pytest
 
-from catalog.models import Asset, Edition, EvidenceSpan, KnowledgeNode, Page, Person, PersonNodeRelation, ScholarProfile, Work
+from catalog.models import Asset, CatalogPublicationRevision, Edition, EvidenceSpan, KnowledgeNode, Page, Person, PersonNodeRelation, ScholarProfile, Work
 from catalog.relation_source_anchor import RelationAnchorInput
 from .v304_helpers import activate_catalog_revision
 
@@ -15,7 +15,7 @@ def material():
     work = Work.objects.create(title="仅用于验收的原文材料")
     edition = Edition.objects.create(work=work, state="published", version_label="原版", public_slug=f"anchor-{uuid4()}")
     asset = Asset.objects.create(edition=edition, kind="normalized", status="ready", validation_status="valid",
-        access_status="public", file="test/relation-anchor.pdf", sha256="d" * 64, page_count=1)
+        access_status="public", file="test/relation-anchor.pdf", sha256=sha256(uuid4().bytes).hexdigest(), page_count=1)
     page = Page.objects.create(asset=asset, index=1, text="作为关系依据的准确原文。", width=600, height=900)
     publication = activate_catalog_revision(edition, reader_asset=asset)
     span = EvidenceSpan.objects.create(document_revision=publication.document_revision, page=page, page_number=1,
@@ -38,8 +38,10 @@ def send(client, actor, url, body):
     return client.post(url, body, format="json", HTTP_X_EDITOR_OWNER=str(actor.pk), HTTP_IDEMPOTENCY_KEY=str(uuid4()))
 
 
-def test_original_quote_is_pinned_and_not_accepted_as_editable_input(api_client, admin_user):
+@pytest.mark.parametrize("fulltext_ready", [True, False])
+def test_original_quote_is_pinned_and_not_accepted_as_editable_input(api_client, admin_user, fulltext_ready):
     span, _, _, scholar, node, body = setup()
+    CatalogPublicationRevision.objects.filter(document_revision_id=span.document_revision_id).update(fulltext_ready=fulltext_ready)
     url = f"/api/catalog/admin/scholars/{scholar.pk}/links/node/"
     api_client.force_authenticate(admin_user)
     saved = send(api_client, admin_user, url, body)
@@ -58,6 +60,7 @@ def test_original_quote_is_pinned_and_not_accepted_as_editable_input(api_client,
     source = public.data["edges"][0]["evidence"][0]
     assert source["quote"] == span.original_text and source["document_revision_id"] == str(span.document_revision_id)
     assert f"passage={span.pk}" in source["reader_href"] and f"revision={span.document_revision_id}" in source["reader_href"]
+    assert CatalogPublicationRevision.objects.get(document_revision_id=span.document_revision_id).fulltext_ready is fulltext_ready
 
 
 @pytest.mark.parametrize("damage", ["text", "offset", "stale", "checksum", "registered", "revision"])

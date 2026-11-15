@@ -11,6 +11,7 @@ from __future__ import annotations
 from hashlib import sha256
 import uuid
 
+import httpx
 from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
@@ -807,11 +808,16 @@ def _fulltext_projection(assets: list[Asset], tracked: dict, *, catalog_revision
     results = []
     failures = []
     for asset in assets:
-        result = index_asset(
-            asset,
-            is_public=asset.edition.state == "published",
-            catalog_revision=catalog_revision if catalog_revision and catalog_revision.edition_id == asset.edition_id else None,
-        )
+        try:
+            result = index_asset(
+                asset,
+                is_public=asset.edition.state == "published",
+                catalog_revision=catalog_revision if catalog_revision and catalog_revision.edition_id == asset.edition_id else None,
+            )
+        except (httpx.HTTPError, RuntimeError, TimeoutError) as exc:
+            # Search failures belong to this projection. Public metadata and
+            # knowledge relations must still execute and report their results.
+            result = {"backend": "failed", "warning": str(exc)}
         results.append({"asset_id": str(asset.id), **result})
         if result.get("backend") not in VERIFIED_FULLTEXT_BACKENDS:
             failures.append(
@@ -1581,7 +1587,11 @@ def reconcile_projection_runtime(*, limit: int = 50) -> dict[str, int]:
     delegated = 0
     for job in ProcessingJob.objects.filter(
         job_type=ProcessingJob.JobType.PROJECTION_REFRESH,
-        status=ProcessingJob.Status.RUNNING,
+    ).filter(
+        Q(status=ProcessingJob.Status.RUNNING)
+        | Q(status=ProcessingJob.Status.FAILED, error_code="max_attempts_exhausted",
+            stats__projection_results__semantic__status="delegated",
+            stats__projection_plan__has_key="discovery_sources")
     ).order_by("updated_at")[: max(1, min(int(limit), 100))]:
         before = job.status
         current = reconcile_delegated_projection_job(job.id)

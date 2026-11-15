@@ -66,7 +66,10 @@ def edition_inventory():
     # copied workflow status table. Missing author decisions can use approved
     # canonical contributions, exactly as the existing field reader does.
     contributors = Contribution.objects.filter(edition_id=OuterRef("pk"), role="author", approved=True)
-    queryset = queryset.annotate(q_authors=Exists(contributors))
+    book_editors = Contribution.objects.filter(
+        edition_id=OuterRef("pk"), role__in=("chief_editor", "editor"), approved=True,
+    ).filter(Q(scope={}) | Q(scope__kind="edition"))
+    queryset = queryset.annotate(q_authors=Exists(contributors), q_book_editors=Exists(book_editors))
     incomplete = Q(q_conflict=True)
     for document_type in ("book", "journal_article", "journal_issue", "thesis", "report", "chapter", "other"):
         for field in required_fields(document_type, has_document=False):
@@ -82,6 +85,8 @@ def edition_inventory():
             condition = Q(work__document_type=document_type) & Q(**{alias: False})
             if field == "authors":
                 condition &= Q(q_authors=False)
+                if document_type == "book":
+                    condition &= Q(q_book_editors=False)
             else:
                 column = f"work__{field}" if FIELD_CONTRACTS[field].domain_object == "work" else field
                 present = Q(**{f"{column}__isnull": False})

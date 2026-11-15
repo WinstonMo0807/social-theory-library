@@ -120,7 +120,7 @@ export function LegacyTheoryPublicView({ entity }: { entity: ApiTheorySchool }) 
       </section>
       <section className={`${styles.section} ${styles.questionsArea}`} id="questions">
         <header className={styles.sectionHeading}><h2>核心观点与问题</h2></header>
-        <div className={styles.propositions}>{entity.core_questions.map((question, index) => <p key={`${question}-${index}`}><span className={styles.questionMark}>?</span><span>{question}</span></p>)}</div>
+        <div className={styles.propositions}>{entity.core_questions.map((question, index) => <p key={`${question}-${index}`}><span className={styles.questionNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><span>{question}</span></p>)}</div>
         {!entity.core_questions.length ? <p className={styles.empty}>核心问题尚待编辑。</p> : null}
         <Link className={styles.readLink} href={`${base}/concepts`}>浏览核心概念<ArrowRight size={14} /></Link>
       </section>

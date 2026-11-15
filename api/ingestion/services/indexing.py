@@ -19,19 +19,27 @@ def _wait_task(task_payload: dict, timeout: float = 45) -> dict:
         return task_payload
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        response = httpx.get(
-            f"{settings.MEILISEARCH_URL.rstrip('/')}/tasks/{task_uid}",
-            headers=_headers(),
-            timeout=5,
-        )
-        response.raise_for_status()
+        try:
+            response = httpx.get(
+                f"{settings.MEILISEARCH_URL.rstrip('/')}/tasks/{task_uid}",
+                headers=_headers(),
+                timeout=min(5, max(0.001, deadline - time.monotonic())),
+            )
+            response.raise_for_status()
+        except (httpx.ReadTimeout, httpx.HTTPStatusError) as exc:
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code != 408:
+                raise
+            # The accepted task can still be running during a slow status read.
+            # Poll that same task within the original deadline; do not resubmit.
+            time.sleep(min(1, max(0, deadline - time.monotonic())))
+            continue
         payload = response.json()
         if payload.get("status") == "succeeded":
             return payload
         if payload.get("status") in {"failed", "canceled"}:
             error = payload.get("error", {})
             raise RuntimeError(error.get("message") or f"Meilisearch 任务 {task_uid} 失败。")
-        time.sleep(0.15)
+        time.sleep(min(1, max(0, deadline - time.monotonic())))
     raise TimeoutError(f"等待 Meilisearch 任务 {task_uid} 超时。")
 
 
@@ -248,7 +256,10 @@ def index_asset(asset: Asset, *, is_public: bool | None = None, catalog_revision
             timeout=30,
         )
         response.raise_for_status()
-        task = _wait_task(response.json())
+        # A complete book can take several minutes on the bounded NAS index.
+        # Keep waiting for this accepted task instead of resubmitting the book
+        # after the short metadata-operation timeout.
+        task = _wait_task(response.json(), timeout=600)
         removed = _remove_stale_asset_documents(
             str(asset.id),
             {passage["id"] for passage in passages},

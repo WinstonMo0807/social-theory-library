@@ -302,7 +302,7 @@ def _attach_evidence(edges, request):
         if all(str(data.get(f"{side}_scholar")) == str(getattr(row, f"{side}_scholar_id")) for side in ("source", "target")) and data.get("source_anchor") == {
                 "span_id": str(row.evidence_span_id), "document_revision_id": str(row.source_document_revision_id)}:
             links[("ScholarRelation", str(row.pk))] = row
-    anchors = {str(span.pk): span for span in public_anchor_rows().filter(pk__in=[row.evidence_span_id for row in links.values() if row.evidence_span_id])}
+    anchors = {str(span.pk): span for span in public_anchor_rows(authenticated=bool(getattr(getattr(request, "user", None), "is_authenticated", False))).filter(pk__in=[row.evidence_span_id for row in links.values() if row.evidence_span_id])}
     for edge in edges:
         row = links.get((edge["model"], edge["entity_id"]))
         if row is None or not row.evidence_span_id:

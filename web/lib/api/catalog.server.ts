@@ -46,10 +46,12 @@ export async function loadCatalogOverview(): Promise<{
 }
 
 // Deduplicate metadata/page reads only within this server render.
-export const loadWork = cache(async (slug: string): Promise<Work | null> => {
+export const loadWork = cache(async (slug: string, forwardSession = false): Promise<Work | null> => {
   try {
-    return adaptWork(await serverRequest<ApiWork>(`/catalog/works/${encodeURIComponent(slug)}/`));
+    return adaptWork(await serverRequest<ApiWork>(`/catalog/works/${encodeURIComponent(slug)}/`, { forwardSession }));
   } catch (error) {
+    // An expired sign-in must not hide otherwise public bibliography.
+    if (forwardSession && error instanceof ServerApiError && error.status === 401) return loadWork(slug);
     if (error instanceof ServerApiError && error.status === 404) return null;
     if (!allowDemoFallback) throw error;
     return demoWorks.find((item) => item.slug === slug) ?? null;

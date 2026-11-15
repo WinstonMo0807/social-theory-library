@@ -60,7 +60,7 @@ def test_invalid_source_fails_closed_but_original_note_and_archive_remain_availa
     service.publish_relation(saved["id"], saved["edit_version"], admin_user)
     row = ScholarRelation.objects.get(pk=saved["id"])
     if damage == "private":
-        Asset.objects.filter(pk=asset.pk).update(access_status="registered")
+        Asset.objects.filter(pk=asset.pk).update(access_status="restricted")
     elif damage == "stale":
         EvidenceSpan.objects.filter(pk=span.pk).update(is_stale=True)
     else:
@@ -88,7 +88,7 @@ def test_reference_input_is_strict_and_private_source_cannot_publish(admin_user)
         service.save_relation(None, {**data, "source_anchor": {**reference(span), "quote": "不能改写原文"}}, admin_user)
     with pytest.raises(ValidationError):
         service.save_relation(None, {**data, "source_anchor": {**reference(span), "document_revision_id": str(uuid4())}}, admin_user)
-    Asset.objects.filter(pk=asset.pk).update(access_status="registered")
+    Asset.objects.filter(pk=asset.pk).update(access_status="restricted")
     saved = service.save_relation(None, data, admin_user)
     assert not saved["source_material"]["public_eligible"] and not saved["source_material"]["reader_href"]
     with pytest.raises(ValidationError):
@@ -97,3 +97,30 @@ def test_reference_input_is_strict_and_private_source_cannot_publish(admin_user)
     service.publish_relation(saved["id"], cleared["edit_version"], admin_user)
     row = ScholarRelation.objects.get(pk=saved["id"])
     assert row.evidence_span_id is None and row.source_document_revision_id is None
+
+
+def test_registered_source_can_support_public_relation_without_anonymous_quote(admin_user):
+    from catalog.relation_source_anchor import anchor_material
+    first, second = profiles()
+    span, asset, _ = material()
+    Asset.objects.filter(pk=asset.pk).update(access_status="registered")
+    saved = service.save_relation(None, payload(first, second, span), admin_user)
+    assert saved["source_material"]["public_eligible"]
+    assert saved["source_material"]["quote"] == span.original_text
+    service.publish_relation(saved["id"], saved["edit_version"], admin_user)
+    row = ScholarRelation.objects.get(pk=saved["id"])
+    assert row.status == "published" and row.evidence_span_id == span.pk
+    assert service.relation_payload(row, public=True)["source_material"] is None
+    assert not graph_material(row)
+    assert anchor_material(span, span.document_revision_id, public=True) is None
+
+
+@pytest.mark.parametrize("access", ["restricted", "private"])
+def test_staff_only_source_still_cannot_publish(admin_user, access):
+    first, second = profiles()
+    span, asset, _ = material()
+    Asset.objects.filter(pk=asset.pk).update(access_status=access)
+    saved = service.save_relation(None, payload(first, second, span), admin_user)
+    assert not saved["source_material"]["public_eligible"]
+    with pytest.raises(ValidationError):
+        service.publish_relation(saved["id"], saved["edit_version"], admin_user)

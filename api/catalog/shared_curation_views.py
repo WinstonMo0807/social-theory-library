@@ -164,7 +164,9 @@ class PublicEvidenceCurationView(EditorialErrorMixin, APIView):
 
     @extend_schema(responses=EvidenceCurationSerializer)
     def get(self, request, object_type, object_id):
-        return Response(service.curation_payload(object_type, object_id, public=True))
+        return Response(service.curation_payload(object_type, object_id, public=True,
+                        authenticated=bool(request.user.is_authenticated)),
+                        headers={"Cache-Control": "private, no-store", "Vary": "Cookie, Authorization"})
 
 
 class AdminScholarRelationListView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):
@@ -219,7 +221,7 @@ class PublicScholarRelationListView(APIView):
         if request.query_params.get("scholar"):
             key = service.identifier(request.query_params["scholar"])
             rows = rows.filter(Q(source_scholar_id=key) | Q(target_scholar_id=key))
-        return Response(paged(request, rows.order_by("-updated_at", "pk"), lambda row: service.relation_payload(row, public=True)))
+        return Response(paged(request, rows.order_by("-updated_at", "pk"), lambda row: service.relation_payload(row, public=True, authenticated=bool(request.user.is_authenticated))))
 
 
 class ArchiveScholarRelationView(ScholarRelationCommandMixin, EditorialErrorMixin, AdminPrivateResponseMixin, APIView):

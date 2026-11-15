@@ -1767,7 +1767,7 @@ def retry_knowledge_publication(event_id, *, actor) -> KnowledgePublicationEvent
         resolve_domain_change(event.domain_event_id)
         event.domain_event.refresh_from_db()
     queue_projection_refresh(target_type=event.object_type, target_id=str(event.object_id), actor=actor,
-                             source_event=event.domain_event, force=True, preserve_attempts=True)
+                             source_event=event.domain_event, force=True)
     ProjectionState.objects.filter(object_type=event.object_type, object_id=event.object_id, status="failed").update(
         status="stale", stale_reason="管理员请求重新处理", updated_at=now,
     )

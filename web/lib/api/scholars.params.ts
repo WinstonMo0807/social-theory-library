@@ -4,7 +4,7 @@ export const scholarSections: { id: ScholarSection; label: string; editor: strin
   { id: "overview", label: "概览", editor: "identity" }, { id: "works", label: "主要作品", editor: "works" },
   { id: "concepts", label: "核心概念", editor: "concepts" }, { id: "questions", label: "理论问题", editor: "questions" },
   { id: "timeline", label: "生平与时间线", editor: "timeline" }, { id: "relations", label: "相关争论与学者", editor: "network" },
-  { id: "paths", label: "专题与阅读路径", editor: "paths" }, { id: "sources", label: "人物资料来源", editor: "sources" },
+  { id: "paths", label: "专题与阅读路径", editor: "paths" }, { id: "sources", label: "人物简介", editor: "sources" },
   { id: "evidence", label: "代表原文", editor: "passages" },
 ];
 const aliases: Record<string, ScholarSection> = { network: "relations", biography: "sources", theories: "concepts", "concept-map": "concepts", "frequently-read": "relations", passages: "evidence", reading: "paths", "reading-paths": "paths", identity: "overview" };

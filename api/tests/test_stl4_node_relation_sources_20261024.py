@@ -57,7 +57,7 @@ def test_public_quotes_fail_closed_and_stale_original_can_still_be_withdrawn(api
     relation = KnowledgeRelation.objects.create(source_node=first, target_node=second, relation_type="criticizes", status="published",
         evidence_span=span, source_document_revision=span.document_revision)
     if damage == "private":
-        Asset.objects.filter(pk=asset.pk).update(access_status="registered")
+        Asset.objects.filter(pk=asset.pk).update(access_status="restricted")
     elif damage == "stale":
         EvidenceSpan.objects.filter(pk=span.pk).update(is_stale=True)
     else:
@@ -81,7 +81,7 @@ def test_public_quotes_fail_closed_and_stale_original_can_still_be_withdrawn(api
 
 def test_private_anchor_may_be_saved_but_not_published_or_forged(api_client, admin_user):
     span, asset, _ = material()
-    Asset.objects.filter(pk=asset.pk).update(access_status="registered")
+    Asset.objects.filter(pk=asset.pk).update(access_status="restricted")
     first, second = node(), node()
     api_client.force_authenticate(admin_user)
     payload = {"source_node": str(first.pk), "target_node": str(second.pk), "relation_type": "criticizes", "direction": "directed", "status": "published", "source_anchor": reference(span)}

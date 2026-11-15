@@ -133,6 +133,17 @@ FIELD_DEPENDENCIES["edition_match"] = _IDENTITY
 REQUIRED_FIELDS = {kind: tuple(field.name for field in FIELDS if kind in field.required_for) for kind in DOCUMENT_TYPES}
 
 
-def required_fields(document_type, *, has_document=True):
+def required_fields(document_type, *, has_document=True, values=None):
     names = REQUIRED_FIELDS.get(document_type, REQUIRED_FIELDS["book"])
+    # Edited books have editors as their principal responsibility. Keep the
+    # actual role, and require its confirmation instead of inventing an author.
+    if document_type == "book" and values and not values.get("authors"):
+        scopes = values.get("contributor_scopes", [])
+        for field, role in (("chief_editors", "chief_editor"), ("editors", "editor")):
+            identifiers = {str(value) for value in values.get(field, [])}
+            if any(str(row.get("person_id")) in identifiers and row.get("role") == role
+                   and (row.get("scope") or {}).get("kind", "edition") == "edition"
+                   for row in scopes):
+                names = tuple(field if name == "authors" else name for name in names)
+                break
     return tuple(name for name in names if has_document or name != "file")

@@ -157,11 +157,13 @@ class DiscoveryIndexView(AdminPrivateResponseMixin, APIView):
                      "message": "本页只展示已保存索引记录，模型当前运行状态请查看服务状态。"}
         else:
             try:
-                health = inference_health()
+                health = inference_health(allow_unready=True)
                 emb = bool(health.get("models", {}).get("embedding", {}).get("inference_completed"))
                 rer = bool(health.get("models", {}).get("reranker", {}).get("inference_completed"))
                 model = {"ready": emb and rer, "embedding_ready": emb, "reranker_ready": rer,
-                         "message": "本地编码与重排已实际执行。" if emb and rer else "模型文件已准备，尚未完成本次服务启动后的编码和重排确认。"}
+                         "message": "本地编码与重排已实际执行。" if emb and rer else
+                         "模型文件已准备，尚未完成本次服务启动后的编码和重排确认。" if health.get("manifest_ready") else
+                         "模型文件或清单未就绪，请核对本地模型部署。"}
             except DiscoveryInferenceError:
                 model = {"ready": False, "embedding_ready": False, "reranker_ready": False,
                          "message": "本地推理服务暂不可用；请检查模型准备与容器状态。"}

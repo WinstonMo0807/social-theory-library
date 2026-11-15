@@ -35,6 +35,7 @@ from catalog.models import (
 from ingestion.models import FieldLock, UploadItem
 from ingestion.services.candidate_decisions import accept_candidates_from_review
 from ingestion.services.files import canonical_pdf_filename
+from catalog.contracts.fields import required_fields
 
 from .admin_workflow import BIBLIOGRAPHY_FIELDS, WORK_FIELDS, record_step_decision
 from .canonical_identity import (
@@ -43,7 +44,6 @@ from .canonical_identity import (
     mapped_node_for_legacy,
 )
 from .field_decisions import (
-    REQUIRED_FIELDS,
     SECTION_FIELDS,
     field_value_present,
     formal_field_values,
@@ -129,9 +129,17 @@ def _approved_author_names(edition: Edition) -> list[str]:
 def _refresh_edition_metadata(edition: Edition) -> None:
     work = edition.work
     authors = _approved_author_names(edition)
+    editors = list(dict.fromkeys(
+        row.person.preferred_name
+        for row in edition.contributions.filter(
+            role__in=(Contribution.Role.CHIEF_EDITOR, Contribution.Role.EDITOR), approved=True,
+        ).select_related("person").order_by("order", "created_at")
+        if (row.scope or {}).get("kind", "edition") == "edition"
+    ))
+    primary_names = authors or (editors if work.document_type == "book" else [])
     edition.canonical_filename = canonical_pdf_filename(
         work.title,
-        authors,
+        primary_names,
         edition.publication_year,
     )
     edition.citation_data = {
@@ -147,6 +155,7 @@ def _refresh_edition_metadata(edition: Edition) -> None:
         }[work.document_type],
         "title": work.title,
         "author": [{"literal": name} for name in authors],
+        "editor": [{"literal": name} for name in editors],
         "issued": {
             "date-parts": [[
                 edition.publication_date.year,
@@ -166,7 +175,7 @@ def _refresh_edition_metadata(edition: Edition) -> None:
     }
     checks = [
         bool(work.title.strip()),
-        bool(authors),
+        bool(primary_names),
         bool(edition.publication_year),
         bool(edition.citation_data),
         bool(edition.canonical_filename),
@@ -705,7 +714,7 @@ def save_workflow_section(
     after, _ = formal_field_values(edition)
     changed_fields = {name for name in after if _json_safe(before.get(name)) != _json_safe(after[name])}
     invalidate_dependent_fields(edition, changed_fields, actor=actor)
-    required = set(REQUIRED_FIELDS.get(edition.work.document_type, REQUIRED_FIELDS["book"]))
+    required = set(required_fields(edition.work.document_type, values=after))
     section_fields = set(SECTION_FIELDS.get(step_key, ()))
     # A partial scalar PATCH confirms only supplied fields. Collection sections
     # replace the explicit selection, so an empty optional role is a valid N/A.
@@ -779,7 +788,7 @@ def save_editorial_workflow_section(edition, step_key, values, *, actor, confirm
         reviewed.add("theories")
     if step_key == "bibliography" and "publisher_authority_id" in values:
         reviewed.add("publisher")
-    required = set(REQUIRED_FIELDS.get(after.get("document_type"), REQUIRED_FIELDS["book"]))
+    required = set(required_fields(after.get("document_type"), values=after))
     for name in reviewed | changed:
         if name not in changed and not confirm_section:
             continue
