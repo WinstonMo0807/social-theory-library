@@ -1,10 +1,16 @@
-# STL 本机策展 MCP
+# STL 策展 MCP
+
+智能体上传已接入：新增`stl_prepare_uploads`和`stl_get_ingestion_status`，共九个工具。文件字节由`upload_client.py`直接传至受保护的上传通道，批次、分片、权限、文件规则、查重和处理策略完全复用网站原接口。MCP不再做本轮拟加的文件哈希预检、格式/大小/数量判断或客户端去重。按用户要求本轮不运行额外测试或文件试传。见 [上传交付](../../docs/stl4/MCP_UPLOAD_DELIVERY_20261112.md)。
+
+最新授权：本人使用的网关已配置`work_scope = "catalog"`，草稿权限覆盖现有及以后入库的Work，不再逐书更新清单。每次操作仍在原库确认作品存在、账户能力、关联目标、人工锁与版本，不能发布或访问私人笔记；获得权限不等于自动启动策展或OCR。保留`selected`模式用于明确的有限试用，未配置时默认`selected`，未知模式拒绝初始化业务适配；`allowed_work_ids`在catalog模式下只保留为回退清单和抽样依据，不限制新书。范围配置只由受信运维修改，不是MCP工具参数。
+
+2026-11-12追加：按用户最新授权，已增加受保护的公网Streamable HTTP方式。本机默认`stl`现连接HTTPS，原stdio配置保留为停用的`stl_local`。两种方式使用同一工具和领域服务。部署、安全审查与实际验证见 [公网交付记录](../../docs/stl4/PUBLIC_MCP_SECURITY_20261112.md)。下文的“不监听HTTP”仅描述原stdio方式。
 
 本机 Codex → 本机 stdio MCP → 固定 SSH 主机/密钥 → 现有 API 容器内短生命令分派进程 → 原 Django 领域服务。
 
 不监听 HTTP，不创建公网 `/mcp`，不修改 Nginx、Docker 运行配置、数据库 schema 或生产源码，不重启服务。不加载 OCR/大模型，不启动索引。SSH 提供认证和传输加密，`StrictHostKeyChecking=yes`；此方式使用原有运维通道，未来面向多用户才考虑独立作用域令牌/HTTP。
 
-远端只接受8种固定动作，工具不能传 SQL、Python、shell、URL、actor、权限、发布/删除/合并/恢复/人工锁命令。账户、token_version 和能力每次重查，写入作品清单由本机可信配置限定，跨对象编辑须属于该作品的已有或待发布关联。SSH 端本身仍是高权限运维凭据，必须只由可信本机启动器持有；这不是对不可信本机用户的隔离沙箱。
+远端只接受固定动作，工具不能传 SQL、Python、shell、URL、actor、权限、发布/删除/合并/恢复/人工锁命令。账户、token_version 和能力每次重查，写入作品清单由本机可信配置限定，跨对象编辑须属于该作品的已有或待发布关联。SSH 端本身仍是高权限运维凭据，必须只由可信本机启动器持有；这不是对不可信本机用户的隔离沙箱。
 
 ## 安装与注册
 
@@ -43,3 +49,42 @@ Codex 已打开聊天的工具列表未必热更新；新聊天或应用重载�
 `.local/stl-mcp/journal.sqlite3` 保存计划、要求、原请求编号和每次调用耗时；远端使用现有 AuditEvent 回执，不新建业务表。`bridge.stderr.log` 只用于故障诊断。这些文件可能包含书目/原文/草稿，均不入 Git。删除本机 journal 会丢失便捷续做入口，原远端草稿/回执仍保留；不要用新计划盲目重做未知写入。
 
 计时报告必须区分接口耗时、人工/模型核查时间、后台等待，以及首次完整策展或对已有馆藏的维护。复用已完成内容是有效提速，但不能据此宣称从空白完成整书策展的耗时。
+
+## 受保护的公网方式
+
+`public_server.py`提供单用户`/mcp`，同一七工具经`DjangoBridge`调用API镜像中的现有领域服务；无SSH密钥、任意命令或OAuth身份模拟。认证文件只有随机令牌SHA-256及绝对到期时间，每次请求重读；删除、轮换或到期立即阻断新请求。`actor_id`/`token_version`/作品写入清单取自只读受信配置，不能从工具参数改写。
+
+认证先于MCP解析，检查重复认证头、Host和Origin，限制2MB请求、两路并发；Nginx另设独立速率和连接限制。无Cookie认证，不开放匿名工具发现。没有动态OAuth注册端点；面向多个用户的OAuth授权尚未实现。
+
+NAS镜像的Python为3.12，依赖在电脑下载和解包，不在NAS安装或构建：
+
+```powershell
+./.local/stl-mcp/venv/Scripts/python.exe -m pip download --index-url https://pypi.org/simple --only-binary=:all: --no-deps --platform manylinux_2_28_x86_64 --platform manylinux2014_x86_64 --implementation cp --python-version 3.12 --abi cp312 --dest .local/stl-mcp/public-build/wheels -r tools/stl_mcp/linux-requirements.lock
+./.local/stl-mcp/venv/Scripts/python.exe -X utf8 tools/stl_mcp/build_public.py
+```
+
+构建目录只放对应平台的固定wheel。产物、清单、认证摘要与可信配置放在忽略目录。Windows DPAPI加密随机令牌，不在日志、命令行、仓库或Codex TOML保存明文。`credentials.py`是凭据辅助程序，**不要直接运行到终端**；Codex的`http_headers_helper`通过管道接收它的JSON输出。
+
+上传产物及`deploy/mcp/deploy.py`、`nginx-location.conf`到一个新NAS release后，由现有受信SSH运维执行：
+
+```sh
+sudo -n python3 /volume2/library/stl-releases/RELEASE/deploy.py stage /volume2/library/stl-releases/RELEASE
+# 先在容器内通过受信stdin令牌做真实HTTP协议只读验证，再接入口。
+sudo -n python3 /volume2/library/stl-releases/RELEASE/deploy.py expose /volume2/library/stl-releases/RELEASE
+```
+
+脚本核对原镜像和文件哈希，保存现有容器身份及Nginx原模板/编译配置，复用已有API镜像新增`stl-mcp`，无宿主机端口。它只挂载两个只读馆藏目录、只读配置/代码和独立计划目录，无Docker socket、模型、备份或私人文件挂载。API环境中的数据库等凭据只在NAS本地转入受限env文件，不输出、不上传本机。服务限制512MiB/0.5CPU，根文件系统只读、移除capabilities、禁止提权。
+
+`expose`只在原模板增加两个limit zone及`/mcp`两条location，保留绑定文件inode，经`nginx -t`后reload；不重启现有服务，不改DNS、Tunnel、数据库或索引。回退同脚本的`rollback`动作，只在当前模板哈希仍等于本次候选时恢复，避免覆盖后续变更。关闭令牌可先移走认证文件，使新请求返回503，再撤回代理；保留journal与原业务回执。
+
+`verify_http.py`检查匿名/错误令牌、错误来源，两种协议、工具清单和三书上下文，默认从DPAPI取令牌，仅只读。脚本需本次本机三书配置。已迁移的旧计划仍使用相同ID和digest；NAS journal与原本机journal各保留，迁移不执行业务保存。新计划在当前MCP服务的journal中持久化，跨服务端点切换时必须明确迁移，不能盲目重建。
+
+## 上传文件
+
+```powershell
+& 'F:/agent skills/书库开发3/.local/stl-mcp/venv/Scripts/python.exe' -X utf8 'F:/agent skills/书库开发3/tools/stl_mcp/upload_client.py' 'F:/待上传/文献.pdf'
+```
+
+上述文件为使用示例。可传多个文件，规则及处理策略由网站决定；`--access`、`--ocr`、`--duplicates`仅透传网站策略，不填时使用网站默认值。程序立即输出并保存request_id；中断后使用同一辅助程序的`--resume 请求UUID`，从原网站已接收分片继续。凭据由现有DPAPI辅助程序或STL_MCP_TOKEN环境变量提供，不写入命令参数或回执。
+
+也可直接调用`stl_prepare_uploads(request_id, files=[{name,size}], policy={...})`取得批次和上传路径，再交由客户端传输；`stl_get_ingestion_status(request_id)`返回网站状态及已生成的Work/Edition ID，随后使用原策展工具。此通道新增入库文件；已有阅读文件的替换继续走网站版本与文件工作区。

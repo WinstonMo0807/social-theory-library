@@ -1,3 +1,9 @@
+## 2026-11-15 已有公网 MCP 与源码统一
+
+tools/stl_mcp 已补回既有 Streamable HTTP 安全/上传接入，与当前 stl-mcp 的四个运行模块匹配。复用网站身份、权限、入库和机器待审草稿，没有新增正式数据库或发布权限；下文 11-12 的“只有本机 stdio”是更早状态。当前计算服务已迁至 Mac，文件仍在 NAS；deploy/mcp 的 NAS 脚本保留为历史材料，本轮没有执行或发布。来源核对见 stl4/SOURCE_RECONCILIATION_20261115.md。
+
+RAG/持续 Wiki 的完整知识底层改造继续保留在 codex/stl-knowledge-intelligence（b3019d16），不随此次公网代码整理合并。
+
 ## 2026-11-14 隧道出口与静态交付优化
 
 业务继续为同一Django、Vinext、数据库、队列、搜索和NAS存储。仅cloudflared出站到Cloudflare的两个官方IPv4目标网段经既有mihomo香港出口，内部桥隔离，无新公开监听。主QUIC连接、停止态HTTP2备用和小型systemd守护沿同一隧道/源站工作，没有第二套书库或新身份系统。CSS采用既有admin路由样式，字体定义独立内容哈希文件，欢迎演示React.lazy按视口加载；接口和内容契约不变。见stl4/EDGE_CSS_PERFORMANCE_20261114.md。

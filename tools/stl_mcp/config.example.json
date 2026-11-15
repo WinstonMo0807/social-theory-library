@@ -4,6 +4,7 @@
   "container": "social-science-library-api-1",
   "actor_id": 1,
   "token_version": 0,
+  "work_scope": "selected",
   "allowed_work_ids": [],
   "timeout_seconds": 90,
   "required_sections": ["bibliography", "contributors", "summary", "classification", "knowledge", "scholars", "relations", "evidence", "reading_paths", "media", "editorial"]

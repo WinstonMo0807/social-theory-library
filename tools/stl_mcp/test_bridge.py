@@ -30,6 +30,18 @@ class JournalChecks(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bridge.prepare([{"key": "one"}], [])
 
+    def test_scope_mode_is_only_taken_from_validated_trusted_config(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            config = {"host": "unused", "identity_file": "unused", "container": "unused", "actor_id": 1,
+                      "token_version": 0, "allowed_work_ids": [], "work_scope": "catalog"}
+            path.write_text(json.dumps(config))
+            self.assertEqual(Bridge(path).domain_config["work_scope"], "catalog")
+            config["work_scope"] = "catlog"
+            path.write_text(json.dumps(config))
+            with self.assertRaises(ValueError):
+                Bridge(path)
+
 
 if __name__ == "__main__":
     unittest.main()

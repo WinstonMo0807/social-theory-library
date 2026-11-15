@@ -13,7 +13,7 @@ import re
 import sys
 import time
 import traceback
-from uuid import UUID
+from uuid import UUID, uuid5
 
 
 def fingerprint(value):
@@ -45,11 +45,18 @@ def require(user, capability):
         raise PermissionError("账户没有当前业务操作权限。")
 
 
+def write_allowed(work_id):
+    mode = CONFIG.get("work_scope", "selected")
+    if mode not in {"selected", "catalog"}:
+        raise PermissionError("未知的策展授权模式，停止写入。")
+    return mode == "catalog" or str(work_id) in CONFIG["allowed_work_ids"]
+
+
 def scope(work_id):
     from catalog.models import Work
     work_id = identity(work_id)
-    if work_id not in CONFIG["allowed_work_ids"]:
-        raise PermissionError("该作品未列入本机策展写入范围。")
+    if not write_allowed(work_id):
+        raise PermissionError("该作品未列入策展写入范围。")
     return Work.objects.get(pk=work_id)
 
 
@@ -73,7 +80,7 @@ def search(args, user):
         rows = list(qs.order_by("title", "id")[:limit + 1])
         result.append({"query": query, "has_more": len(rows) > limit, "results": [
             {"id": str(row.pk), "title": row.title, "editions": list(row.editions.values("id", "version_label", "publication_year", "state", "is_primary")),
-             "write_allowed": str(row.pk) in CONFIG["allowed_work_ids"]} for row in rows[:limit]]})
+             "write_allowed": write_allowed(row.pk)} for row in rows[:limit]]})
     return {"ok": True, "queries": result}
 
 
@@ -183,7 +190,7 @@ def context(args, user):
                "workflow": workflow, "scholars": scholars, "assets": assets,
                "drafts": [{"id": str(r.pk), "created_by": str(r.created_by_id), "changed_fields": r.changed_fields} for r in drafts],
                "claims": list(CuratedClaim.objects.filter(work=work).values("id", "kind", "proposition", "status")),
-               "write_allowed": key in CONFIG["allowed_work_ids"], "review_url": f"/admin/library/works/{key}?edition={edition.pk}",
+               "write_allowed": write_allowed(key), "review_url": f"/admin/library/works/{key}?edition={edition.pk}",
                "semantic_review": "not_evaluated"}
         if args.get("include_candidates", True):
             from ingestion.models import UploadItem
@@ -312,6 +319,89 @@ def creation_serializer(op, user):
     return serializer
 
 
+def catalog_edit_guard(op, data, current, user):
+    """Resolve wrappers to the exact edited Edition before checking its locks."""
+    from catalog.services.field_locks import scoped_locks
+    from catalog.contracts.fields import FIELDS
+    from catalog.services.editorial_revision import _work_edition_section_snapshot
+    kind = op["target_type"]
+    selected = op.get("edition_id") or (op["target_id"] if kind == "edition" else None)
+    edition = edition_for(op["work_id"], selected)
+    if kind == "edition" and str(edition.pk) != identity(op["target_id"]):
+        raise PermissionError("编辑版本提示与实际目标不一致，不能借其他版本绕过人工锁。")
+    affected = set(data)
+    for section in ("bibliography", "contributors", "reader"):
+        if kind != "work" or section not in data:
+            continue
+        wrapper = data[section]
+        if not isinstance(wrapper, dict) or str(wrapper.get("edition_id")) != str(edition.pk) or not isinstance(wrapper.get("values"), dict):
+            raise ValueError("版本分区必须明确指向本次选定版本。")
+        affected.update(wrapper["values"])
+        if section == "contributors":
+            previous = current.get(section)
+            if not isinstance(previous, dict) or str(previous.get("edition_id")) != str(edition.pk):
+                previous = {"values": _work_edition_section_snapshot(edition, section)}
+            preserve_collections(previous["values"], wrapper["values"])
+    for section in ("contributors", "classification", "knowledge"):
+        if section in data:
+            affected.update(field.name for field in FIELDS if field.section == section)
+    if "publisher_authority" in affected:
+        affected.add("publisher_authority_id")
+    if "isbn" in affected:
+        affected.update({"isbn10", "isbn13"})
+    if affected & set(scoped_locks(edition).values_list("field_name", flat=True)):
+        raise ValueError("修改涉及人工锁定字段，不能自动覆盖。")
+
+
+def authorized_spans():
+    from catalog.models import EvidenceSpan
+    from django.db.models import F
+    return EvidenceSpan.objects.select_related("document_revision", "page__asset").filter(
+        is_stale=False, document_revision__is_active=True,
+        document_revision__source_checksum=F("page__asset__sha256"),
+        page__asset__kind="normalized", page__asset__is_current=True, page__asset__status="ready",
+        page__asset__validation_status="valid", page__asset__access_status__in=["public", "registered"])
+
+
+def redact_sources(value):
+    """Historical receipts and curation reads recheck current source access."""
+    identifiers = set()
+    def collect(row):
+        if isinstance(row, dict):
+            candidates = [row.get("span_id")]
+            if row.get("source_type") == "span":
+                candidates.append(row.get("source_id"))
+            for candidate in candidates:
+                try:
+                    identifiers.add(identity(candidate))
+                except (ValueError, TypeError):
+                    pass
+            for item in row.values():
+                collect(item)
+        elif isinstance(row, list):
+            for item in row:
+                collect(item)
+    collect(value)
+    from catalog.relation_source_anchor import valid_locator
+    allowed = {str(row.pk) for row in authorized_spans().filter(pk__in=identifiers) if valid_locator(row, row.document_revision_id)} if identifiers else set()
+    def clean(row):
+        if isinstance(row, list):
+            return [clean(item) for item in row]
+        if not isinstance(row, dict):
+            return row
+        result = {key: clean(item) for key, item in row.items()}
+        if row.get("source_type") and "source_id" in row and "source" in row:
+            if row["source_type"] != "span" or str(row["source_id"]) not in allowed:
+                result["source"] = {"available": False, "detail": "来源当前不在MCP原文访问范围，原引用身份保留。"}
+        if row.get("span_id") and "text" in row and str(row["span_id"]) not in allowed:
+            result.update(text="", valid_locator=False, source_unavailable=True)
+        reference = row.get("source_anchor")
+        if isinstance(reference, dict) and str(reference.get("span_id")) not in allowed and "source_material" in result:
+            result["source_material"] = {"available": False, "detail": "来源当前不可用。"}
+        return result
+    return clean(value)
+
+
 def validate_operation(op, user):
     from common.capabilities import Capability
     work = scope(op["work_id"])
@@ -336,15 +426,7 @@ def validate_operation(op, user):
         if others:
             raise ValueError("此对象有其他编辑者的草稿，不能自动合并。")
         if kind in {"work", "edition"}:
-            from catalog.services.field_locks import scoped_locks
-            edition = edition_for(work.pk, op.get("edition_id") or (str(target.pk) if kind == "edition" else None))
-            locks = set(scoped_locks(edition).values_list("field_name", flat=True))
-            affected = set(data)
-            aliases = {"contributors": {"authors", "translators", "editors"}, "classification": {"disciplines", "subdisciplines"}, "knowledge": {"theories", "topics", "nodes"}}
-            for field in list(affected):
-                affected.update(aliases.get(field, set()))
-            if affected & locks:
-                raise ValueError("修改涉及人工锁定字段，不能自动覆盖。")
+            catalog_edit_guard(op, data, current["data"], user)
         clean = changed_editorial_patch(target_type=kind, target=target, patch=data)
         preserve_collections(current["data"], data)
         return {"current": {key: current["data"].get(key) for key in data}, "proposed": data, "changed_fields": sorted(clean),
@@ -372,6 +454,8 @@ def validate_operation(op, user):
             if (not row.document_revision.is_active or row.document_revision.source_checksum != row.page.asset.sha256
                     or not valid_locator(row, row.document_revision_id)):
                 raise ValueError("来源的当前修订或原文定位已失效。")
+            if not authorized_spans().filter(pk=row.pk).exists():
+                raise PermissionError("所选原文不在MCP允许的访问范围。")
             source_payload("span", row)
         current = curation_payload(op["target_type"], op["target_id"])
         if current.get("id"):
@@ -407,10 +491,11 @@ def validate_operation(op, user):
 def preserve_collections(current, proposed):
     """Draft editing must not silently drop collection members on replacement."""
     protected = {"contributors", "disciplines", "subdisciplines", "topics", "theories", "nodes", "aliases",
-                 "discipline_links", "subdiscipline_links", "topic_links", "representative_works", "items", "timeline_relations"}
+                 "discipline_links", "subdiscipline_links", "topic_links", "representative_works", "items", "timeline_relations",
+                 "discipline_relations", "theory_relations", "subdiscipline_relations", "stage_groups", "stages"}
     def key(row):
         if isinstance(row, dict):
-            for name in ("person_id", "source_id", "work_id", "node_id", "topic_id", "discipline_id", "subdiscipline_id", "id"):
+            for name in ("person_id", "source_id", "work_id", "node_id", "topic_id", "discipline_id", "subdiscipline_id", "theory_school_id", "id"):
                 if name in row:
                     return (name, str(row[name]), str(row.get("role", "")))
             return fingerprint(row)
@@ -421,6 +506,9 @@ def preserve_collections(current, proposed):
             if name in protected and isinstance(previous, list) and isinstance(value, list):
                 if {key(v) for v in previous} - {key(v) for v in value}:
                     raise ValueError(f"{name}是整组保存；本轮不能隐式移除已有成员。请保留原成员或交由原编辑器明确处理。")
+                old_by_key = {key(item): item for item in previous}
+                for item in value:
+                    preserve_collections(old_by_key.get(key(item)), item)
             preserve_collections(previous, value)
 
 
@@ -455,7 +543,11 @@ def target_in_scope(op, user):
     if op["kind"] == "evidence_curation":
         kind = {"node": "knowledge_node", "scholar": "scholar_profile", "topic": "topic"}.get(kind)
     if op["kind"] == "scholar_relation":
-        return  # endpoints are checked against existing profiles in validation
+        if key:
+            original = ScholarRelation.objects.get(pk=identity(key))
+            if not Contribution.objects.filter(edition__work_id=op["work_id"], person__scholar_profile__pk__in=[original.source_scholar_id, original.target_scholar_id]).exists():
+                raise PermissionError("原学者关系不属于授权作品，不能通过更换端点纳入范围。")
+        return  # new endpoints are checked in validation as well
     work_id = op["work_id"]
     if kind in {"work", "edition"}:
         return  # exact Work/Edition membership is checked in validation
@@ -713,8 +805,115 @@ def safe_error(error):
     return "服务端异常；请保留原计划编号，查阅本机bridge.stderr.log后恢复。"
 
 
+UPLOAD_ACTION = "mcp.upload.prepared"
+
+
+class WebsiteUploadError(ValueError):
+    def __init__(self, status_code, data):
+        self.status_code, self.data = status_code, data
+        super().__init__(str(data))
+
+
+def upload_view(view, method, data, user, **kwargs):
+    """Use the website's own permissions, validation and upload behavior."""
+    from rest_framework.test import APIRequestFactory, force_authenticate
+    factory = APIRequestFactory()
+    headers = {"HTTP_X_EDITOR_OWNER": str(user.pk), "HTTP_HOST": "books.winstonmo.com", "HTTP_X_FORWARDED_PROTO": "https"}
+    if method == "get":
+        request = factory.get("/api/ingestion/", data, **headers)
+    else:
+        request = factory.post("/api/ingestion/", data, format="multipart" if "chunk" in data else "json",
+                               **headers)
+    force_authenticate(request, user=user)
+    response = view.as_view()(request, **kwargs)
+    if response.status_code >= 400:
+        raise WebsiteUploadError(response.status_code, response.data)
+    return response.data
+
+
+def prepare_uploads(args, user):
+    from django.conf import settings
+    from django.db import transaction
+    from ingestion.models import AuditEvent
+    from ingestion.upload_workspace import UploadWorkspaceView
+    files = args["files"]
+    policy = {**(args.get("policy") or {}), "expected_count": len(files)}
+    with transaction.atomic():
+        # The original command supplies owner locking, request replay and policy
+        # validation. The MCP record only maps that receipt to the file handles.
+        result = upload_view(UploadWorkspaceView, "post", {"action": "reserve", "request_id": args["request_id"],
+                                                         "policy": policy}, user)
+        request_id = str(result["request_id"])
+        prior = AuditEvent.objects.filter(actor=user, action=UPLOAD_ACTION, request_id=request_id).first()
+        if prior:
+            return {"ok": True, "replayed": True, **prior.after}
+        manifest = {"request_id": request_id, "batch_id": str(result["batch"]["id"]),
+                    "chunk_bytes": settings.MAX_UPLOAD_CHUNK_BYTES, "files": []}
+        for index, row in enumerate(files):
+            key = str(uuid5(UUID(request_id), str(index)))
+            manifest["files"].append({"id": key, "name": row["name"], "size": row["size"],
+                                       "upload_path": f"/mcp/uploads/{request_id}/{key}"})
+        AuditEvent.objects.create(actor=user, action=UPLOAD_ACTION, request_id=request_id,
+                                  object_type="UploadBatch", object_id=manifest["batch_id"], after=manifest)
+    return {"ok": True, "replayed": False, **manifest}
+
+
+def upload_manifest(request_id, user):
+    from ingestion.models import AuditEvent
+    return AuditEvent.objects.get(actor=user, action=UPLOAD_ACTION, request_id=identity(request_id)).after
+
+
+def upload_file(manifest, file_id):
+    result = next((row for row in manifest["files"] if row["id"] == file_id), None)
+    if result is None:
+        raise ValueError("文件不属于此上传计划。")
+    return result
+
+
+def upload_result(data, file):
+    from ingestion.models import UploadItem
+    result = {"ok": data.get("accepted", True), "file_id": file["id"], "name": file["name"], "transfer_complete": bool(data["complete"]),
+              "received_indices": data.get("received_indices", [])}
+    raw = data.get("item")
+    if raw:
+        fields = ("id", "sha256", "byte_size", "status", "workflow_state", "dispatch_status", "error_code", "error_message", "edition")
+        result["item"] = {key: raw.get(key) for key in fields}
+        item = UploadItem.objects.select_related("edition").get(pk=raw["id"])
+        result["item"]["work_id"] = str(item.edition.work_id) if item.edition_id else None
+        result["item"]["edition_id"] = str(item.edition_id) if item.edition_id else None
+    return result
+
+
+def upload_file_status(manifest, file, user):
+    from ingestion.views import BatchItemChunkUploadView
+    data = upload_view(BatchItemChunkUploadView, "get", {"client_token": file["id"]}, user, batch_id=manifest["batch_id"])
+    return upload_result(data, file)
+
+
+def ingestion_status(args, user):
+    manifest = upload_manifest(args["request_id"], user)
+    rows = [upload_file_status(manifest, file, user) for file in manifest["files"]]
+    return {"ok": True, "request_id": manifest["request_id"], "batch_id": manifest["batch_id"], "files": rows,
+            "all_received": all(row["transfer_complete"] for row in rows),
+            "detail": "上传和处理状态由网站返回；收到文件不等于策展或发布完成。"}
+
+
+def receive_upload_chunk(request_id, file_id, index, content, user):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from ingestion.views import BatchItemChunkUploadView
+    manifest = upload_manifest(request_id, user)
+    file = upload_file(manifest, file_id)
+    chunk_size = manifest["chunk_bytes"]
+    data = {"client_token": file["id"], "source_filename": file["name"], "total_size": file["size"],
+            "total_chunks": (file["size"] + chunk_size - 1) // chunk_size, "chunk_size": chunk_size, "chunk_index": index,
+            "chunk": SimpleUploadedFile(file["name"], content, content_type="application/octet-stream")}
+    result = upload_view(BatchItemChunkUploadView, "post", data, user, batch_id=manifest["batch_id"])
+    return upload_result(result, file)
+
+
 ACTIONS = {"search": search, "resolve": resolve, "context": context, "sources": sources, "prepare": prepare,
-           "save": save, "receipts": receipts, "jobs": jobs}
+           "save": save, "receipts": receipts, "jobs": jobs, "upload_prepare": prepare_uploads,
+           "ingestion_status": ingestion_status}
 
 
 def main():
@@ -738,6 +937,7 @@ def main():
             # Library/framework diagnostics must not corrupt the line protocol.
             with contextlib.redirect_stdout(sys.stderr):
                 result = ACTIONS[action](request.get("arguments", {}), actor())
+                result = redact_sources(result)
         except Exception as error:
             result = {"ok": False, "code": "domain_error", "detail": safe_error(error)}
         print(json.dumps({"id": request.get("id"), "result": result}, cls=DjangoJSONEncoder, ensure_ascii=False), flush=True)
