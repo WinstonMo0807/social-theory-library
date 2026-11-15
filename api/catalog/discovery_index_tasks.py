@@ -2,7 +2,7 @@
 from celery import shared_task
 
 
-@shared_task(bind=True, name="catalog.tasks.process_discovery_index_job", soft_time_limit=600, time_limit=660)
+@shared_task(bind=True, name="catalog.tasks.process_discovery_index_job", soft_time_limit=840, time_limit=900)
 def process_discovery_index_job(self, job_id):
     from catalog.services.discovery_indexing import run_job
     return run_job(job_id, str(self.request.id or ""))

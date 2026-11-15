@@ -28,7 +28,9 @@ def ensure_service(name, *, url="", unix_socket=""):
                     pipeline.get("stl:service-stopping:" + name)
                     return bool(pipeline.execute()[-1])
     parsed = urlsplit(url) if url else None
-    deadline = time.monotonic() + 15
+    # Offline manifest verification and model imports can exceed 15 seconds
+    # after an idle shutdown. Wait for that same service to listen.
+    deadline = time.monotonic() + (90 if name == "inference" else 15)
     while True:
         try:
             stopping = signal()

@@ -1,3 +1,7 @@
+## 2026-11-15 观点索引服务恢复与重试监测
+
+2026-11-15T23:32:43+08:00 完成最终 r3 后端发布，四个角色 7 份文件一致，推理 r1；原任务自然结束后替换，原活动索引及检查点保留。23 本全文恢复完成，22 个原失败已全部明确重试，观点索引仍由原生服务补齐。测试、负载实测及已验证备份/回退入口见 [恢复记录](stl4/INDEX_RECOVERY_20261115.md)。
+
 ## 2026-11-15 导航修正Web发布
 
 2026-11-15T13:38:54+08:00上线social-theory-library-web:4.0.0-20261115-navigation-search-web-r2，sha256:8b89e98a2cfe0bd87a21fdef95cda9623fbeaa372e56296968843a92b372130d，源码6a2facae84780b8b47ed9bdcebae0aa062b8f1e3。发布目录/volume2/library/stl-releases/20261115-navigation-search-r2。活动Compose仅在当前J/K与香港回源overlay后追加web.image；API/数据库/网络配置保持。3210运行文件与107其他容器核验通过。私有recovery/rollback.py可回到326b8e1a8a02，检查活动指针和当前镜像后才执行；旧镜像、环境、配置及已完整校验的备份证明保留。

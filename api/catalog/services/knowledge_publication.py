@@ -155,6 +155,15 @@ def normalize_changed_fields(
     return sorted(fields)
 
 
+def _document_quality_ready(revision: DocumentRevision) -> bool:
+    assessment = revision.quality_assessments.order_by("-created_at").first()
+    return bool(
+        assessment is not None
+        and float(assessment.fulltext_quality or 0) >= FULLTEXT_QUALITY_THRESHOLD
+        and float(assessment.semantic_quality or 0) >= SEMANTIC_QUALITY_THRESHOLD
+    )
+
+
 def _current_document(edition: Edition, *, content_asset_id=None) -> tuple[Asset | None, DocumentRevision | None, bool]:
     assets = edition.assets.filter(
             kind=Asset.Kind.NORMALIZED,
@@ -177,13 +186,7 @@ def _current_document(edition: Edition, *, content_asset_id=None) -> tuple[Asset
     )
     if revision is None:
         return asset, None, False
-    assessment = revision.quality_assessments.order_by("-created_at").first()
-    ready = bool(
-        assessment is not None
-        and float(assessment.fulltext_quality or 0) >= FULLTEXT_QUALITY_THRESHOLD
-        and float(assessment.semantic_quality or 0) >= SEMANTIC_QUALITY_THRESHOLD
-    )
-    return asset, revision, ready
+    return asset, revision, _document_quality_ready(revision)
 
 
 def catalog_snapshot(edition: Edition, *, content_asset_id=None) -> tuple[dict, list[dict]]:
@@ -931,10 +934,10 @@ def create_catalog_publication_event(
         quality_ready = bool(
             _asset is not None and document_revision is not None
             and snapshot["document"].get("quality_ready")
-            and (
-                document_base.fulltext_ready
-                or (pending_base is not None and (document_base.provenance or {}).get("requested_fulltext_ready"))
-            )
+            # A failed derived delivery does not make the captured text
+            # unqualified. Keep requesting its index on the next metadata edit;
+            # activation still requires a successful fulltext delivery.
+            and _document_quality_ready(document_revision)
         )
     else:
         _asset, document_revision, quality_ready = _current_document(edition, content_asset_id=content_asset_id)

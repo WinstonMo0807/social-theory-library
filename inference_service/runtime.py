@@ -551,6 +551,7 @@ class Runtime:
                 # slice forever; start exactly at the first uncovered character.
                 start = previous_end
                 continue
+            budget_end = end
             preferred = [value for value in boundaries
                          if max(previous_end + 1, start + (end - start) // 2) <= value <= end]
             if end < len(text) and preferred:
@@ -558,6 +559,16 @@ class Runtime:
             original = text[start:end]
             normalized = self.normalize(original)
             prepared = heading + normalized
+            token_count = self.count("passage: " + prepared)
+            if token_count > max_tokens:
+                # Token counts are not monotonic in character length: cutting
+                # at a sentence boundary can split a merged token. Fall back
+                # to the exact slice already checked by the budget search.
+                end = budget_end
+                original = text[start:end]
+                normalized = self.normalize(original)
+                prepared = heading + normalized
+                token_count = self.count("passage: " + prepared)
             flags = []
             if title_clipped:
                 flags.append("title_token_clipped")
@@ -567,7 +578,7 @@ class Runtime:
                 flags.append("possible_text_noise")
             chunks.append({"text": original, "start": start, "end": end,
                            "normalized_text": normalized, "embedding_text": prepared,
-                           "token_count": self.count("passage: " + prepared), "truncated": False,
+                           "token_count": token_count, "truncated": False,
                            "quality_flags": flags})
             if len(chunks) > 512:
                 raise InferenceError("too_many_chunks", "单次文字过长，请按原始页分批。", 422)

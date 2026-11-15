@@ -10,6 +10,7 @@ import threading
 import time
 from uuid import UUID, uuid4, uuid5
 
+import httpx
 from django.conf import settings
 from django.db import connection, transaction
 from django.db.models import F, Q
@@ -71,18 +72,28 @@ def enabled():
     return bool(getattr(settings, "DISCOVERY_ENABLED", False))
 
 
-def wait_index_task(payload, timeout=120):
+def wait_index_task(payload, timeout=300):
     task_id = payload.get("taskUid")
     if task_id is None:
         raise DiscoveryIndexError("missing_task", "索引服务未返回可核对的写入任务。")
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        result = meili("GET", f"/tasks/{task_id}", timeout=10)
+        try:
+            result = meili("GET", f"/tasks/{task_id}", timeout=min(10, max(.001, deadline - time.monotonic())))
+        except DiscoveryIndexError as exc:
+            cause = exc.__cause__
+            if not (isinstance(cause, httpx.ReadTimeout) or
+                    isinstance(cause, httpx.HTTPStatusError) and cause.response.status_code == 408):
+                raise
+            # The accepted task may still complete. Poll its identity without
+            # submitting another write or spending a source retry.
+            time.sleep(min(1, max(0, deadline - time.monotonic())))
+            continue
         if result.get("status") == "succeeded":
             return result
         if result.get("status") in {"failed", "canceled"}:
             raise DiscoveryIndexError("write_failed", "索引写入失败，原有效版本仍保留。")
-        time.sleep(.3)
+        time.sleep(min(1, max(0, deadline - time.monotonic())))
     raise DiscoveryIndexError("write_timeout", "索引写入尚未完成，请在处理中心重试。")
 
 
@@ -690,9 +701,16 @@ def _reconcile():
     # those tasks is not a lost worker lease; only running work uses 15 minutes.
     queued_stale = timezone.now() - timedelta(seconds=QUEUED_STALLED_SECONDS)
     interrupted = Q(status="running", updated_at__lt=stale) | Q(status="pending", updated_at__lt=queued_stale)
-    for job in ProcessingJob.objects.filter(interrupted, job_type=JOB_TYPE)[:20]:
+    jobs = list(ProcessingJob.objects.filter(interrupted, job_type=JOB_TYPE)[:20])
+    from common.broker_presence import broker_delivery_ids
+    queued_ids = broker_delivery_ids() if any(job.status == "pending" for job in jobs) else frozenset()
+    for job in jobs:
         if discovery_recovery_window(job)[1] is None:
             # This coordinator intentionally sleeps between source tasks.
+            continue
+        if job.status == "pending" and job.task_id and (queued_ids is None or job.task_id in queued_ids):
+            # A bounded CPU slice can also wait for model/index I/O. Confirm
+            # delivery loss before charging a queued source another attempt.
             continue
         ProcessingJob.objects.filter(interrupted, pk=job.pk, task_id=job.task_id).update(
             status="failed", error_code="worker_interrupted", error_kind="retryable",

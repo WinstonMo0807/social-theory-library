@@ -139,6 +139,7 @@ def test_serialized_cpu_queue_wait_is_not_a_lost_running_lease(monkeypatch):
         rows.append(job)
     monkeypatch.setattr(indexing, "active_generation", lambda: None)
     monkeypatch.setattr(indexing, "finish_builds", lambda: None)
+    monkeypatch.setattr("common.broker_presence.broker_delivery_ids", lambda: frozenset())
     indexing._reconcile()
     for job in rows:
         job.refresh_from_db()
