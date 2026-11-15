@@ -1,3 +1,7 @@
+## 2026-11-15 导航修正Web发布
+
+2026-11-15T13:38:54+08:00上线social-theory-library-web:4.0.0-20261115-navigation-search-web-r2，sha256:8b89e98a2cfe0bd87a21fdef95cda9623fbeaa372e56296968843a92b372130d，源码6a2facae84780b8b47ed9bdcebae0aa062b8f1e3。发布目录/volume2/library/stl-releases/20261115-navigation-search-r2。活动Compose仅在当前J/K与香港回源overlay后追加web.image；API/数据库/网络配置保持。3210运行文件与107其他容器核验通过。私有recovery/rollback.py可回到326b8e1a8a02，检查活动指针和当前镜像后才执行；旧镜像、环境、配置及已完整校验的备份证明保留。
+
 ## 2026-11-15 J/K 动效Web发布
 
 2026-11-15T02:25:22+08:00上线social-theory-library-web:4.0.0-20261115-brand-jk-web-r1，sha256:3a765e1d5a469bd3ba25671f7f634073a47822d94ff1b3e3368a83858746c003。源码2f00473a8f6ec5c98b14bc06657f2b9a42ab1400，父版本c9ac4fb0。发布目录/volume2/library/stl-releases/20261115-brand-jk-r1；活动compose-command.json沿原位置，在最新香港回源/CSS发布的参数后仅附加本轮Web image overlay。API仍17204310147b，隧道、DNS、edge配置及其他容器保持。3210运行文件哈希与107非Web容器核对通过。
