@@ -55,11 +55,12 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
     : pathname === href || pathname.startsWith(`${href}/`);
   const navigation = [
     ["/home", config.navigation.home],
-    ["/library", "书库"],
+    ["/explore", config.navigation.explore],
     ["/theories", config.navigation.theory_schools],
     ["/scholars", config.navigation.scholars],
     ["/topics", config.navigation.topics],
     ["/recommendations", "特别策划"],
+    ["/account", "读者中心"],
   ] as const;
   const archiveRoute = pathname === "/account" && searchParams.get("view") === "archive" && !searchParams.has("section");
   const readerCenterRoute = pathname === "/account" && !preview && !archiveRoute;
@@ -90,7 +91,6 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
     ["/account/research", "我的研究"], ["/account/notes", "笔记"], ["/account/plans", "阅读计划"],
     ["/account/collections", "书单"], ["/account/citation-audits", "引文体检"], ["/account/confirmed-notes", "已确认笔记"],
   ];
-  const headerNavigation = supportRoute ? [...navigation, ["/about", "关于"]] : navigation;
 
   useLayoutEffect(() => {
     const header = headerRef.current;
@@ -184,8 +184,8 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
         <Wordmark config={config} />
       </Link>
       <nav className="desktop-nav" aria-label={t("主导航")}>
-        {headerNavigation.map(([href, label]) => {
-          const active = href === "/about" && supportRoute ? true : href.includes("?") ? `${pathname}?${searchParams}` === href : isActive(href);
+        {navigation.map(([href, label]) => {
+          const active = isActive(href);
           return (
             <Link
               aria-current={active ? "page" : undefined}
@@ -193,14 +193,14 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
               href={href}
               key={href}
               prefetch={false}
+              onClick={href === "/account" ? enterAccount : undefined}
             >
-              {t(evidenceRoute && href === "/theories" ? "理论" : label)}
+              {t(label)}
             </Link>
           );
         })}
       </nav>
       <div className="header-actions">
-        <Link className="header-reader-center" href="/account" prefetch={false} onClick={enterAccount} aria-current={pathname.startsWith("/account") ? "page" : undefined}><CircleUserRound size={19}/><span>{t("读者中心")}</span></Link>
         <Link className="icon-button header-search" href="/explore" prefetch={false} aria-label={t(config.navigation.search)}>
           <Search size={18} strokeWidth={1.7} />
         </Link>
@@ -243,7 +243,7 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
 
             <nav className="site-menu-nav" aria-label={t("书库导航")}>
               {navigation.map(([href, label]) => (
-                <Link href={href} key={href} prefetch={false} onClick={closeMenu} aria-current={isActive(href) ? "page" : undefined}>
+                <Link href={href} key={href} prefetch={false} onClick={href === "/account" ? enterAccount : closeMenu} aria-current={isActive(href) ? "page" : undefined}>
                   <strong>{t(label)}</strong>
                   <ChevronRight size={15} />
                 </Link>
@@ -252,10 +252,6 @@ export function SiteHeader({ config = defaultSiteConfig, preview = false, previe
 
             <div className="site-menu-tools">
               <div>
-                <Link href="/account" prefetch={false} onClick={enterAccount} aria-current={pathname === "/account" && searchParams.get("section") !== "settings" ? "page" : undefined}>
-                  <CircleUserRound size={18} />
-                  <span><strong>{t("读者中心")}</strong></span><ChevronRight size={15} />
-                </Link>
                 {user ? <Link data-auth-full-page href="/login?next=%2Faccount" onClick={closeMenu}><CircleUserRound size={18} /><span><strong>{t("切换账户")}</strong><small>{t("登录另一账户，私人资料不会合并")}</small></span><ChevronRight size={15} /></Link> : null}
                 {user?.capabilities?.includes("access_back_office") ? <Link href="/admin" prefetch={false} onClick={closeMenu}><Settings size={18} /><span><strong>{t("管理后台")}</strong></span><ChevronRight size={15} /></Link> : null}
                 <Link href="/help" prefetch={false} onClick={closeMenu} aria-current={isActive("/help") ? "page" : undefined}><CircleHelp size={18} /><span><strong>{t("使用帮助")}</strong></span><ChevronRight size={15} /></Link>
