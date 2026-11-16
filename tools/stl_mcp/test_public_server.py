@@ -84,6 +84,31 @@ class PublicChecks(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.request(headers=[(b"authorization", b"Bearer " + self.token.encode())]), 400)
         self.assertEqual(self.calls, 0)
 
+    async def test_persistent_clients_are_individually_revocable_without_restart(self):
+        second = secrets.token_urlsafe(48)
+        self.config["tokens"] = [
+            {"token_sha256": self.config["token_sha256"], "persistent": True, "expires_at": None},
+            {"token_sha256": hashlib.sha256(second.encode()).hexdigest(), "expires_at": time.time() - 1},
+        ]
+        self.store()
+        self.assertEqual(await self.request(), 200)
+        self.assertEqual(await self.request(token=second), 401)
+        self.config["tokens"][1].update(persistent=True, expires_at=None)
+        self.store()
+        self.assertEqual(await self.request(token=second), 200)
+        self.config["tokens"].pop(0)
+        self.store()
+        self.assertEqual(await self.request(), 401)
+        self.assertEqual(await self.request(token=second), 200)
+
+    async def test_missing_or_malformed_lifetime_never_becomes_persistent(self):
+        for invalid in ({"expires_at": None}, {"persistent": True}, {"expires_at": True},
+                        {"expires_at": float("inf")}, {"expires_at": None, "persistent": "true"}):
+            self.config["tokens"] = [{"token_sha256": self.config["token_sha256"], **invalid}]
+            self.store()
+            self.assertEqual(await self.request(), 503)
+        self.assertEqual(self.calls, 0)
+
     async def test_request_limit_method_and_paths(self):
         self.assertEqual(await self.request(headers={b"content-length": b"2000001"}), 413)
         self.assertEqual(await self.request(method="PUT"), 405)

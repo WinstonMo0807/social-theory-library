@@ -1,3 +1,9 @@
+## 2026-11-16 阅读访问与维护凭据
+
+11:57:24 +08:00 发布 Web `social-science-library-web:reader-access-20261116-r2`，image `sha256:baef232d276346987ac75fb5a9171e57ac049e6031be3e34ea4f7f1a23b350a8`，此前首版 e142de99ea8c，任务前 d7603b1b2406。仅 Web 更新，3195 个构建文件逐字节一致，runtime-config 另按入口脚本验证，其他 18 个运行容器保持。原 API/worker/模型与活动索引保持。
+
+MCP 挂载源码和认证配置已单独更新并重启；显式持久 token 摘要支持分别撤销，原摘要保留。配置属主 100:101、0600，原文件备份在 `/srv/stl/reader-access-20261116/`。Mac 通过钥匙串 helper 连接；NAS 与 GitHub 使用持久 SSH 文件，GitHub 仅本仓库读写。Web overlay 原件及 MCP 源码/认证原件已备份，未改数据库或文件权限等级。详情及准确验收边界见 [记录](stl4/READER_ACCESS_CREDENTIALS_20261116.md)。
+
 ## 2026-11-16 默认六段发布与实测记录
 
 11 月 15 日 23:52:48 仅更新 API r4（8f193119a6b4）与 Web discovery-six（d7603b1b2406），索引 worker r3 与推理 r1 保持运行。3196 个 Web 文件及 2 个 API 文件核验通过，公网五题均显示六条原文并 completed。现网 Web 源码基于原 6a2facae 加 4 个展示修改；未带入其他待发布修复。详情与镜像回退见 [六段与耗时记录](stl4/DISCOVERY_SIX_AND_LATENCY_20261115.md)。

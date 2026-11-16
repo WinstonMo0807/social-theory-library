@@ -1,5 +1,7 @@
 # STL 策展 MCP
 
+2026-11-16：按用户明确授权，HTTP 认证支持长期、独立撤销的多个客户端。原单项 `token_sha256` / 数值 `expires_at` 配置继续兼容；新 `tokens` 数组最多 8 项，每项必须显式设置有限到期时间，或同时设置 `persistent: true` 与 `expires_at: null`。没有有效期不会隐式转永久。移除某项摘要可立即撤销；配置只由受信运维写入，权限须保持服务用户可读，不能由 MCP 工具修改。主机、Origin、并发、Winston 绑定与领域权限保持。Mac 客户端通过系统钥匙串和 Codex `http_headers_helper` 连接，配置与仓库不保存明文密钥。见 [阅读与长期凭据记录](../../docs/stl4/READER_ACCESS_CREDENTIALS_20261116.md)。
+
 智能体上传已接入：新增`stl_prepare_uploads`和`stl_get_ingestion_status`，共九个工具。文件字节由`upload_client.py`直接传至受保护的上传通道，批次、分片、权限、文件规则、查重和处理策略完全复用网站原接口。MCP不再做本轮拟加的文件哈希预检、格式/大小/数量判断或客户端去重。按用户要求本轮不运行额外测试或文件试传。见 [上传交付](../../docs/stl4/MCP_UPLOAD_DELIVERY_20261112.md)。
 
 最新授权：本人使用的网关已配置`work_scope = "catalog"`，草稿权限覆盖现有及以后入库的Work，不再逐书更新清单。每次操作仍在原库确认作品存在、账户能力、关联目标、人工锁与版本，不能发布或访问私人笔记；获得权限不等于自动启动策展或OCR。保留`selected`模式用于明确的有限试用，未配置时默认`selected`，未知模式拒绝初始化业务适配；`allowed_work_ids`在catalog模式下只保留为回退清单和抽样依据，不限制新书。范围配置只由受信运维修改，不是MCP工具参数。

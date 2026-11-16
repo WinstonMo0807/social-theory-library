@@ -1,6 +1,6 @@
 """Authenticated single-user Streamable HTTP; no account/OAuth impersonation.
 
-The NAS stores only a random bearer token's SHA-256 digest and expiry. Requests
+The server stores only random bearer digests and explicit lifetime policies. Requests
 re-read that file, so removing/rotating a token revokes it without a restart.
 Credentials never enter tool arguments, URLs, responses or request logs.
 """
@@ -33,12 +33,24 @@ class ProtectedMCP:
         if len(raw) > 32768:
             raise ValueError("MCP authentication configuration is too large")
         config = json.loads(raw)
-        digest = config.get("token_sha256", "")
-        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
-            raise ValueError("MCP requires a SHA-256 bearer digest")
-        if (not config.get("allowed_hosts") or not isinstance(config.get("expires_at"), (int, float))
-                or not math.isfinite(config["expires_at"])):
-            raise ValueError("MCP requires explicit hosts and token expiry")
+        # Preserve existing expiring clients; persistent credentials must be
+        # explicitly configured by the trusted operator, never by an MCP tool.
+        tokens = config.get("tokens", [config])
+        if not isinstance(tokens, list) or not 1 <= len(tokens) <= 8 or not config.get("allowed_hosts"):
+            raise ValueError("MCP requires explicit hosts and bounded credentials")
+        for token in tokens:
+            if not isinstance(token, dict):
+                raise ValueError("Invalid MCP credential")
+            digest = token.get("token_sha256", "")
+            if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+                raise ValueError("MCP requires a SHA-256 bearer digest")
+            expiry = token.get("expires_at")
+            if token.get("persistent") is True:
+                if "expires_at" not in token or expiry is not None:
+                    raise ValueError("Persistent MCP credentials require explicit null expiry")
+            elif type(expiry) not in (int, float) or not math.isfinite(expiry):
+                raise ValueError("MCP requires an explicit credential lifetime")
+        config["_tokens"] = tokens
         return config
 
     async def response(self, send, status, code, data=None):
@@ -73,7 +85,12 @@ class ProtectedMCP:
         if not authorization.startswith(b"Bearer ") or not 20 <= len(authorization) <= 512:
             return await self.response(send, 401, "unauthorized")
         digest = hashlib.sha256(authorization[7:]).hexdigest()
-        if time.time() >= config["expires_at"] or not secrets.compare_digest(digest, config["token_sha256"]):
+        now = time.time()
+        authorized = False
+        for token in config["_tokens"]:
+            matches = secrets.compare_digest(digest, token["token_sha256"])
+            authorized |= matches and (token.get("persistent") is True or now < token["expires_at"])
+        if not authorized:
             return await self.response(send, 401, "unauthorized")
         host = values[b"host"].decode("ascii", errors="replace").casefold()
         if host not in config["allowed_hosts"]:

@@ -10,6 +10,7 @@ import { SharedCitationButton } from "./shared-citation-overlay";
 import { WorkCitationPanel } from "./work-citation-panel";
 import { MediaPlacement } from "./media-placement";
 import { WorkDetailEvidence } from "./work-detail-evidence";
+import { WorkReaderSessionRefresh } from "./work-reader-session-refresh";
 import { BookCard, BookCover } from "./ui";
 import { Dialog } from "./ui/dialog";
 import { Tabs } from "./ui/tabs";
@@ -53,6 +54,8 @@ function WorkDetailContent({ work, relatedWorks = [], preview, footer }: Props) 
   const version = work.version;
   const versions = work.versions?.length ? work.versions : version ? [version] : [];
   const readable = Boolean(!preview && work.readerHref);
+  const loginRequired = !preview && !readable && version?.access_state === "registered";
+  const loginHref = `/login?next=${encodeURIComponent(`/works/${work.slug}`)}`;
   const translators = version?.contributors.filter(row => row.role === "translator" && row.scope?.kind !== "chapter").map(row => row.person.preferred_name).join("、");
   const tags = [...(work.theories ?? []).map(row => ({ ...row, href: `/theories/nodes/${row.slug}` })), ...(work.topics ?? []).map(row => ({ ...row, href: `/topics/${row.slug}` }))];
   const missing = [!work.author || work.author === "作者待补" ? "作者" : "", !version?.publication_year ? "出版年" : "", !version?.publisher ? "出版机构" : ""].filter(Boolean);
@@ -84,6 +87,7 @@ function WorkDetailContent({ work, relatedWorks = [], preview, footer }: Props) 
   ] : baseSections.filter(row => row.key !== "scholars" || mobile || active === "scholars").map(row => row.key === "citation" ? { ...row, content: <>{row.content}{contributorDetails}</> } : row);
   const mobileSections = [{ key: "summary", title: "内容简介", content: <Summary text={work.summary} /> }, ...sections];
   return <>
+    {!preview ? <WorkReaderSessionRefresh loginRequired={loginRequired} /> : null}
     <div className={`page-shell work-detail ${styles.page} ${article ? styles.article : ""}`} data-work-kind={article ? "article" : "book"} data-work-readable={readable}>
       {preview ? <div className="admin-page-preview-banner" role="status"><ShieldCheck size={16} /><strong>草稿预览</strong><span>{preview.draftRevision ? `已保存草稿第 ${preview.draftRevision.revision} 版` : "当前编目草稿"}{preview.draftRevision?.hasConflict ? "，存在待处理冲突" : "，尚未向读者公开"}</span><Link href={preview.returnHref}>返回编辑</Link></div> : null}
       <nav className={`breadcrumbs ${styles.breadcrumbs}`} aria-label="当前位置">{preview ? <span>前台页面效果 / {work.title}</span> : <><Link href="/home">首页</Link><span>›</span><Link href="/explore">书库检索</Link><span>›</span><span>{work.kind}</span><span>›</span><span aria-current="page">{work.title}</span></>}</nav>
@@ -104,7 +108,7 @@ function WorkDetailContent({ work, relatedWorks = [], preview, footer }: Props) 
         </aside>
         {tags.length ? <div className={styles.tags}>{tags.map(tag => preview ? <span key={tag.href}>{tag.name}</span> : <Link key={tag.href} href={tag.href}>{tag.name}</Link>)}</div> : null}
         {!article ? <div className={`work-summary ${styles.summary}`}><h2>内容简介</h2><Summary text={work.summary} /></div> : null}
-        {!preview && (!readable || missing.length > 0) ? <div className={styles.sourceNotice}><Info size={16} /><p>{!readable ? "当前版本暂无可在线阅读的公开文件，可查看书目信息及其他版本。" : ""}{missing.length > 0 ? ` ${missing.join("、")}信息尚待补充。` : ""}</p></div> : null}
+        {!preview && (!readable || missing.length > 0) ? <div className={styles.sourceNotice}><Info size={16} /><p>{loginRequired ? <>此版本须登录后在线阅读。<Link href={loginHref}>登录阅读</Link></> : !readable ? "当前版本暂无可在线阅读的文件，可查看书目信息及其他版本。" : ""}{missing.length > 0 ? ` ${missing.join("、")}信息尚待补充。` : ""}</p></div> : null}
       </section>
       <div className={`work-body ${styles.body}`}>
         {mobile && !article ? <div className={styles.accordions}>{mobileSections.map(row => <details data-disclosure="collection" key={row.key} open={Boolean(expanded[row.key])} onToggle={event => { const open = event.currentTarget.open; setExpanded(current => current[row.key] === open ? current : { ...current, [row.key]: open }); }}><summary>{row.title}<ChevronDown size={16} /></summary>{expanded[row.key] ? <div id={`work-section-${row.key}`}>{row.content}</div> : null}</details>)}</div> : <><Tabs className={styles.tabs} aria-label="作品详情" items={sections.map(row => ({ value: row.key, label: row.title, id: `work-tab-${row.key}`, panelId: `work-section-${row.key}` }))} value={active} onChange={setActive} />{sections.map(row => <section className={styles.tabPanel} id={`work-section-${row.key}`} role="tabpanel" aria-labelledby={`work-tab-${row.key}`} tabIndex={0} hidden={active !== row.key} key={row.key}>{active === row.key ? <><h2>{row.title}</h2>{row.content}</> : null}</section>)}</>}
