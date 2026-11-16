@@ -167,7 +167,9 @@ server {
         sendfile on;
         tcp_nopush on;
         aio threads;
-        directio 8m;
+        # Reuse Linux's reclaimable page cache for repeated PDF ranges over NFS.
+        # Direct I/O forces each reader to fetch the same bytes from the NAS.
+        directio off;
         open_file_cache max=500 inactive=60s;
         open_file_cache_valid 120s;
         add_header Accept-Ranges bytes always;

@@ -1,3 +1,9 @@
+## 2026-11-16 NAS、R2 与子学科阅读修复
+
+12:33:51 +08:00 发布 Web `social-science-library-web:subdiscipline-reader-20261116-r2`，image `sha256:ee733ea00a902490213b674c5e59e6632e04fecd44af1b6a4f74e2950e10df17`。3198 个运行文件验证通过，11 项前端检查、类型/构建/预算通过；其他 18 个容器保持。旧镜像 c3413a7415be / baef232d2763 与 overlay 备份保留。
+
+Nginx 持久模板及运行配置中受保护 PDF 的 directio 改为 off，经语法检查热加载；内部路径、逐请求鉴权与 Cloudflare 缓存绕过保持。NAS 无引用旧书库镜像清理完成，未动卷/馆藏/导出。R2 云端 CORS 已按用户确认保存，规则快照 `deploy/r2/upload-staging.cors.json`，仅签名 PUT 来源从旧 NAS 转为 Mac。生命周期不变。12:40:09 同步持久 Compose 的八角色预期 origins，仅以原镜像重建 API，其他 18 个运行容器保持，ready 200；首轮探针缺代理头导致自动回退再重发的经过已如实记录。完整证据、备份位置和边界见 [维护记录](stl4/NAS_STORAGE_R2_READER_20261116.md)。
+
 ## 2026-11-16 阅读访问与维护凭据
 
 11:57:24 +08:00 发布 Web `social-science-library-web:reader-access-20261116-r2`，image `sha256:baef232d276346987ac75fb5a9171e57ac049e6031be3e34ea4f7f1a23b350a8`，此前首版 e142de99ea8c，任务前 d7603b1b2406。仅 Web 更新，3195 个构建文件逐字节一致，runtime-config 另按入口脚本验证，其他 18 个运行容器保持。原 API/worker/模型与活动索引保持。

@@ -1,5 +1,6 @@
 
 import { SourceText } from "@/components/source-text";
+import { WorkReaderSessionRefresh } from "@/components/work-reader-session-refresh";
 import { DefaultCover } from "@/components/default-cover";
 import Image from "next/image";
 import Link from "next/link";
@@ -47,6 +48,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
   const worksPage = item.works_pagination;
   const worksHref = (page: number) => `/subdisciplines/${encodeURIComponent(item.slug)}?works_page=${page}#works`;
   return <>
+    {!preview ? <WorkReaderSessionRefresh loginRequired={Boolean(item.readerSessionPending)} /> : null}
     <article className={`${styles.page} ${styles.detailPage}`}>
       <header className={styles.detailHero} id="overview" data-edit-section="identity">
         <nav className={styles.breadcrumb} aria-label="面包屑">
@@ -99,7 +101,7 @@ export function SubdisciplinePublicView({ item, footer, preview = false }: { ite
               {work.cover_url ? <MediaPlacement uses={work.cover_media?.display_uses} fallback={<DefaultCover className={styles.bookPlaceholder} title={work.title} />}><img src={work.cover_url} alt={`《${work.title}》封面`} loading="lazy" /></MediaPlacement> : <span className={styles.bookPlaceholder}><FileText size={25} aria-hidden="true" /><span>暂无封面</span></span>}
               <div><h3>{work.detail_href ? <Link href={work.detail_href}>{work.title}</Link> : work.title}</h3><small>{[work.author, work.year, work.publisher].filter(value => value !== "" && value !== null).join(" · ") || "出版信息未提供"}</small>
                 {work.relation_label ? <p>{work.relation_label}</p> : null}
-                <div className={styles.workActions}>{work.detail_href ? <Link className={styles.primary} href={work.detail_href}>查看版本</Link> : null}{work.reader_href ? <Link href={work.reader_href} target="_blank" rel="noopener noreferrer">阅读原文</Link> : <span className={styles.unavailable}>这一版本暂无可读原文</span>}</div>
+                <div className={styles.workActions}>{work.detail_href ? <Link className={styles.primary} href={work.detail_href}>查看版本</Link> : null}{work.reader_href ? <Link href={work.reader_href} target="_blank" rel="noopener noreferrer">阅读原文</Link> : <span className={styles.unavailable}>请查看版本及阅读权限</span>}</div>
                 {work.evidence ? <section data-content-section className={styles.relationSource}><header data-section-heading>查看关联依据</header><SourceExcerpt source={work.evidence} /></section> : null}
               </div>
             </article>)}</div> : worksPage?.count ? <div className={styles.empty}><p>当前页没有可展示的文献，公开状态可能已变化。</p><a href={worksHref(worksPage.page)}>重新载入本页文献</a></div> : <p className={styles.empty}>尚无与本子学科建立公开关联的核心文献。</p>}

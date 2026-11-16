@@ -1,0 +1,23 @@
+[
+  {
+    "AllowedOrigins": [
+      "https://books.winstonmo.com",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "http://192.168.5.8:3000",
+      "http://192.168.5.8:18080",
+      "http://192.168.5.8:18082",
+      "http://192.168.5.8:18084"
+    ],
+    "AllowedMethods": [
+      "PUT"
+    ],
+    "AllowedHeaders": [
+      "Content-Type"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ],
+    "MaxAgeSeconds": 3600
+  }
+]

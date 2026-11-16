@@ -40,13 +40,20 @@ export async function loadSubdisciplines(discipline = "", query = ""): Promise<S
   return (await loadSubdisciplinePage(discipline, query)).results;
 }
 
-export async function loadSubdiscipline(slug: string, worksPage: string | number = 1): Promise<(Omit<Subdiscipline, "works"> & { works: Work[] }) | null> {
+export async function loadSubdiscipline(slug: string, worksPage: string | number = 1, forwardSession = true): Promise<(Omit<Subdiscipline, "works"> & { works: Work[]; readerSessionPending?: boolean }) | null> {
   const path = `/catalog/subdisciplines/${encodeURIComponent(slug)}/`;
   const paginationQuery = String(worksPage) === "1" ? "" : `?${new URLSearchParams({ works_page: String(worksPage) })}`;
   try {
-    const payload = await serverRequest<Subdiscipline>(`${path}${paginationQuery}`);
-    return { ...payload, works: payload.works.map(adaptWork) };
+    const payload = await serverRequest<Subdiscipline>(`${path}${paginationQuery}`, { forwardSession });
+    const { cookies } = await import("next/headers");
+    const sessionPresent = forwardSession && Boolean((await cookies()).get(process.env.JWT_ACCESS_COOKIE_NAME || "stl_access")?.value);
+    // Browsers omit expired cookies entirely. The client may still recover
+    // through its refresh cookie after this anonymous server render.
+    return { ...payload, works: payload.works.map(adaptWork), ...(!sessionPresent ? { readerSessionPending: true } : {}) };
   } catch (error) {
+    if (forwardSession && error instanceof ServerApiError && error.status === 401) {
+      return loadSubdiscipline(slug, worksPage, false);
+    }
     if (error instanceof ServerApiError && error.status === 400 && paginationQuery) {
       throw new SubdisciplineWorksPageError("invalid");
     }
@@ -55,7 +62,7 @@ export async function loadSubdiscipline(slug: string, worksPage: string | number
       // A paginated 404 may mean either a missing entity or a page that no
       // longer exists. Recheck only this failure, without guessing from HTML.
       try {
-        await serverRequest<Subdiscipline>(path);
+        await serverRequest<Subdiscipline>(path, { forwardSession });
       } catch (firstPageError) {
         if (firstPageError instanceof ServerApiError && firstPageError.status === 404) return null;
         throw firstPageError;
